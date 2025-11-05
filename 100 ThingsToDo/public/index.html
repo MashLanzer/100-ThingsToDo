@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Lista de Amor Kawaii - Crea y gestiona listas de tareas románticas con tu pareja">
-    <title>Lista de Amor Kawaii</title> 
+    <meta name="description" content="ThingsToDo Kawaii - Crea y gestiona listas de tareas románticas con tu pareja">
+    <title>ThingsToDo Kawaii</title> 
 
         <!-- ============================================ -->
     <!-- ======> AÑADE ESTAS LÍNEAS DE CÓDIGO <======= -->
@@ -45,7 +45,7 @@
                         </svg>
                     </div>
 
-                    <h1 class="home-title">Lista de Amor</h1>
+                    <h1 class="home-title">ThingsToDo</h1>
                     <p class="home-subtitle">Kawaii</p>
                     <p class="home-description">
                         Crea y gestiona listas de tareas románticas con tu pareja
@@ -364,8 +364,6 @@
                     <h4>Agradecimientos:</h4>
                     <ul>
                         <li>------</li>
-                        <li>-----</li>
-                        <li>----</li>
                     </ul>
                 </div>
                 
@@ -573,10 +571,16 @@
                 <!-- App 2: Capsula del tiempo -->
                     <div class="app-icon" data-app="timecapsule">
         <div class="app-icon-bg" style="background: #f6eac2;">⏳</div>
-        <span class="app-name">Cápsula</span>
+        <span class="app-name">Cápsula Temporal</span>
     </div>
+          <!-- App 2: Metas -->
+        <div class="app-icon" data-app="budget">
+        <div class="app-icon-bg" style="background: #d4edda;">💰</div>
+        <span class="app-name">Metas Futuras</span>
+    </div>
+
                 <!-- App : Próximamente... -->
-                <div class="app-icon disabled">
+                <div class="app-icon disabled"> 
                     <div class="app-icon-bg">✨</div>
                     <span class="app-name">Próximamente</span>
                 </div>
@@ -645,7 +649,67 @@
     </div>
 </div>
 <!-- ============================================ -->
- 
+
+
+<!-- Vista Principal de Metas (Lista de presupuestos) -->
+<div id="phone-view-budget" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-home-btn">‹</button>
+        <span>Nuestras Metas</span>
+    </div>
+    <div class="app-content-body">
+        <div id="goals-list" class="goals-list">
+            <!-- Las metas se cargarán aquí -->
+            <div id="goals-empty-state" class="capsules-empty-state">
+                <div class="empty-icon">🎯</div>
+                <p>¡Vamos a por nuestro primer objetivo! Crea una nueva meta de ahorro.</p>
+            </div>
+        </div>
+        <button id="go-to-create-goal-btn" class="btn btn-primary" style="margin-top: auto;">
+            + Nueva Meta de Ahorro
+        </button>
+    </div>
+</div>
+
+<!-- Vista para Crear/Ver una Meta -->
+<div id="phone-view-goaldetail" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-budget-list-btn">‹</button>
+        <span id="goal-detail-title">Detalle de la Meta</span>
+    </div>
+    <div class="app-content-body goal-detail-body">
+        <!-- Contenedor para crear una nueva meta -->
+        <div id="create-goal-container">
+            <input type="text" id="goal-name-input" class="input" placeholder="Nombre de la meta (ej: Viaje a Japón)">
+            <input type="number" id="goal-total-input" class="input" placeholder="Cantidad total (€)">
+            <button id="save-goal-btn" class="btn btn-primary">Empezar a Ahorrar</button>
+        </div>
+
+        <!-- Contenedor para ver una meta existente -->
+        <div id="view-goal-container" style="display: none;">
+            <div class="piggy-bank-progress">
+                <div class="piggy-bank-icon">🐖</div>
+                <div class="piggy-bank-bar">
+                    <div id="piggy-bank-fill" class="piggy-bank-fill"></div>
+                </div>
+            </div>
+            <div class="goal-summary">
+                <p>Ahorrado: <strong id="goal-current-amount">0€</strong></p>
+                <p>Objetivo: <strong id="goal-total-amount">0€</strong></p>
+            </div>
+            <div class="contribution-form">
+                <input type="number" id="contribution-amount-input" class="input" placeholder="Añadir aportación (€)">
+                <button id="add-contribution-btn" class="btn btn-primary">Aportar</button>
+            </div>
+            <div id="goal-contributions-list" class="contributions-list">
+                <!-- Las aportaciones se listarán aquí -->
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ============================================ -->
+
+
 
         </div>
         <button id="close-phone-modal-btn" class="phone-home-button"></button>

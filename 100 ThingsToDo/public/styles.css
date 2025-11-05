@@ -1718,3 +1718,151 @@ button, a, input, textarea {
   font-size: 0.9rem;
   color: var(--primary);
 }
+
+
+
+/* ============================================ */
+/* ESTILOS PARA LA APP "PRESUPUESTO COMPARTIDO" */
+/* ============================================ */
+
+.goals-list {
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.goal-item {
+  background: white;
+  border-radius: 1rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  cursor: pointer;
+}
+
+.goal-icon {
+  font-size: 2rem;
+  background-color: #d4edda;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.goal-info {
+  flex: 1;
+}
+.goal-info p {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.goal-info .goal-progress-text {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+
+/* Detalle de la meta */
+.goal-detail-body {
+  justify-content: flex-start;
+  gap: 1.5rem;
+  padding-top: 1rem;
+}
+
+#create-goal-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+#view-goal-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.piggy-bank-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.piggy-bank-icon {
+  font-size: 3rem;
+  animation: bounce-gentle 2s ease-in-out infinite;
+}
+
+.piggy-bank-bar {
+  flex: 1;
+  height: 25px;
+  background-color: #e9ecef;
+  border-radius: 25px;
+  border: 2px solid var(--border);
+  overflow: hidden;
+}
+
+.piggy-bank-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #a8e063, #56ab2f);
+  width: 0%; /* Se actualizará con JS */
+  border-radius: 25px;
+  transition: width 0.5s ease-out;
+}
+
+.goal-summary {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 0.9rem;
+  color: var(--muted-foreground);
+}
+.goal-summary strong {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.contribution-form {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+.contribution-form .input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.contributions-list {
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.contribution-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.contribution-item:nth-child(odd) {
+  background-color: #f8f9fa;
+}
+.contribution-item-user {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.contribution-item-amount {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #28a745;
+}

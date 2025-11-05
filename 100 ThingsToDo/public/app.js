@@ -22,7 +22,8 @@ import {
   deleteDoc, 
   query, 
   orderBy,
-  Timestamp 
+  Timestamp,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 // Importar módulo de parejas
 import { 
@@ -114,6 +115,7 @@ let selectedIcon = 'clipboard';
 let coupleData = null;
 let sortableInstance = null;
 let currentSurpriseTask = null;
+let currentGoalId = null;
 
 // ============================================
 // ELEMENTOS DEL DOM
@@ -230,6 +232,26 @@ const backToCapsuleListBtn = document.querySelector('.back-to-capsule-list-btn')
 const capsuleMessageInput = document.getElementById('capsule-message-input');
 const capsuleUnlockDateInput = document.getElementById('capsule-unlock-date-input');
 const saveCapsuleBtn = document.getElementById('save-capsule-btn');
+
+// ... al final de la sección de elementos del DOM ...
+
+// Elementos de Presupuesto Compartido
+const goalsList = document.getElementById('goals-list');
+const goalsEmptyState = document.getElementById('goals-empty-state');
+const goToCreateGoalBtn = document.getElementById('go-to-create-goal-btn');
+const backToBudgetListBtn = document.querySelector('.back-to-budget-list-btn');
+const goalDetailTitle = document.getElementById('goal-detail-title');
+const createGoalContainer = document.getElementById('create-goal-container');
+const viewGoalContainer = document.getElementById('view-goal-container');
+const goalNameInput = document.getElementById('goal-name-input');
+const goalTotalInput = document.getElementById('goal-total-input');
+const saveGoalBtn = document.getElementById('save-goal-btn');
+const piggyBankFill = document.getElementById('piggy-bank-fill');
+const goalCurrentAmount = document.getElementById('goal-current-amount');
+const goalTotalAmount = document.getElementById('goal-total-amount');
+const contributionAmountInput = document.getElementById('contribution-amount-input');
+const addContributionBtn = document.getElementById('add-contribution-btn');
+const goalContributionsList = document.getElementById('goal-contributions-list');
 
 
 
@@ -1234,7 +1256,25 @@ appIcons.forEach(icon => {
 });
 
 
+// Listeners para la app de Presupuesto Compartido
+goToCreateGoalBtn.addEventListener('click', openCreateGoalView);
+backToBudgetListBtn.addEventListener('click', () => showPhoneApp('budget'));
+saveGoalBtn.addEventListener('click', handleSaveGoal);
+addContributionBtn.addEventListener('click', handleAddContribution);
 
+// Modifica el listener del icono de la app
+appIcons.forEach(icon => {
+  icon.addEventListener('click', () => {
+    const appName = icon.dataset.app;
+    if (appName) {
+      // ... (código existente para 'surprise' y 'timecapsule')
+      if (appName === 'budget') {
+        renderGoalsList();
+        showPhoneApp(appName);
+      }
+    }
+  });
+});
 
 
 
@@ -1658,9 +1698,158 @@ async function handleSaveCapsule() {
 }
 
 
+// ============================================
+// FUNCIONES DE FIRESTORE - METAS DE AHORRO
+// ============================================
+
+async function createGoal(name, total) {
+  if (!currentCoupleId) return;
+  const goalRef = doc(collection(db, 'couples', currentCoupleId, 'goals'));
+  await setDoc(goalRef, {
+    name,
+    total: Number(total),
+    current: 0,
+    createdAt: Timestamp.now(),
+  });
+  return goalRef.id;
+}
+
+async function getGoals() {
+  if (!currentCoupleId) return [];
+  const goalsRef = collection(db, 'couples', currentCoupleId, 'goals');
+  const q = query(goalsRef, orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function getGoal(goalId) {
+  if (!currentCoupleId) return null;
+  const goalRef = doc(db, 'couples', currentCoupleId, 'goals', goalId);
+  const goalSnap = await getDoc(goalRef);
+  return goalSnap.exists() ? { id: goalSnap.id, ...goalSnap.data() } : null;
+}
+
+async function addContribution(goalId, amount) {
+  if (!currentCoupleId || !currentUser) return;
+  const goalRef = doc(db, 'couples', currentCoupleId, 'goals', goalId);
+  const contributionsRef = collection(goalRef, 'contributions');
+  
+  // Añadir la aportación
+  await addDoc(contributionsRef, {
+    amount: Number(amount),
+    userId: currentUser.uid,
+    userName: currentUser.displayName,
+    createdAt: Timestamp.now(),
+  });
+
+  // Actualizar el total en el documento principal de la meta
+  const goal = await getGoal(goalId);
+  const newCurrent = (goal.current || 0) + Number(amount);
+  await updateDoc(goalRef, { current: newCurrent });
+}
+
+async function getContributions(goalId) {
+  if (!currentCoupleId) return [];
+  const contributionsRef = collection(db, 'couples', currentCoupleId, 'goals', goalId, 'contributions');
+  const q = query(contributionsRef, orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => doc.data());
+}
 
 
 
+// ============================================
+// FUNCIONES DE UI - METAS DE AHORRO
+// ============================================
+
+
+
+async function renderGoalsList() {
+  const goals = await getGoals();
+  goalsList.innerHTML = '';
+  if (goals.length === 0) {
+    goalsList.appendChild(goalsEmptyState);
+    goalsEmptyState.style.display = 'block';
+  } else {
+    goalsEmptyState.style.display = 'none';
+    goals.forEach(goal => {
+      const percentage = goal.total > 0 ? (goal.current / goal.total) * 100 : 0;
+      const item = document.createElement('div');
+      item.className = 'goal-item';
+      item.onclick = () => openGoalDetail(goal.id);
+      item.innerHTML = `
+        <div class="goal-icon">🎯</div>
+        <div class="goal-info">
+          <p>${goal.name}</p>
+          <span class="goal-progress-text">${Math.round(percentage)}% completado</span>
+        </div>
+      `;
+      goalsList.appendChild(item);
+    });
+  }
+}
+
+function openCreateGoalView() {
+  currentGoalId = null;
+  goalDetailTitle.textContent = 'Nueva Meta';
+  createGoalContainer.style.display = 'flex';
+  viewGoalContainer.style.display = 'none';
+  goalNameInput.value = '';
+  goalTotalInput.value = '';
+  showPhoneApp('goaldetail');
+}
+
+async function openGoalDetail(goalId) {
+  currentGoalId = goalId;
+  createGoalContainer.style.display = 'none';
+  viewGoalContainer.style.display = 'flex';
+  
+  const goal = await getGoal(goalId);
+  const contributions = await getContributions(goalId);
+  
+  if (goal) {
+    goalDetailTitle.textContent = goal.name;
+    const percentage = goal.total > 0 ? (goal.current / goal.total) * 100 : 0;
+    piggyBankFill.style.width = `${Math.min(percentage, 100)}%`;
+    goalCurrentAmount.textContent = `${goal.current.toFixed(2)}€`;
+    goalTotalAmount.textContent = `${goal.total.toFixed(2)}€`;
+    
+    goalContributionsList.innerHTML = '';
+    contributions.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'contribution-item';
+      item.innerHTML = `
+        <span class="contribution-item-user">${c.userName}</span>
+        <strong class="contribution-item-amount">+${c.amount.toFixed(2)}€</strong>
+      `;
+      goalContributionsList.appendChild(item);
+    });
+  }
+  showPhoneApp('goaldetail');
+}
+
+async function handleSaveGoal() {
+  const name = goalNameInput.value.trim();
+  const total = goalTotalInput.value;
+  if (!name || !total || Number(total) <= 0) {
+    alert('Por favor, introduce un nombre y una cantidad total válida.');
+    return;
+  }
+  await createGoal(name, total);
+  await renderGoalsList();
+  showPhoneApp('budget');
+}
+
+async function handleAddContribution() {
+  const amount = contributionAmountInput.value;
+  if (!amount || Number(amount) <= 0) {
+    alert('Introduce una cantidad válida para aportar.');
+    return;
+  }
+  await addContribution(currentGoalId, amount);
+  await openGoalDetail(currentGoalId); // Recargar la vista
+  contributionAmountInput.value = '';
+}
 
 
 
