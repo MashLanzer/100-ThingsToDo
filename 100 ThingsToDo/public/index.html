@@ -63,7 +63,7 @@
                         </div>
                         <div class="feature-card glass">
                             <div class="feature-icon">🚀</div>
-                            <p class="feature-text">Rápido</p>
+                            <p class="feature-text">Parejas</p>
                         </div>
                     </div>
                 </div>
@@ -82,6 +82,14 @@
                     </div>
                     <div class="header-right">
                         <span id="user-name" class="user-name"></span>
+                        <button id="couple-btn" class="btn-icon" title="Gestionar Pareja">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </svg>
+</button>
                         <button id="logout-btn" class="btn-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -201,6 +209,86 @@
             </main>
         </div>
     </div>
+
+
+    <!-- Modal de Pareja -->
+<div id="couple-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">💕 Gestionar Pareja</h2>
+            <button id="close-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- Vista: Sin pareja vinculada -->
+            <div id="couple-unlinked-view" style="display: none;">
+                <div class="couple-section">
+                    <h3 class="couple-section-title">Tu Código Único</h3>
+                    <p class="couple-section-desc">Comparte este código con tu pareja para vincular sus cuentas</p>
+                    <div class="couple-code-display">
+                        <span id="user-couple-code" class="couple-code">------</span>
+                        <button id="copy-code-btn" class="btn-icon-small" title="Copiar código">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="couple-divider">
+                    <span>o</span>
+                </div>
+                
+                <div class="couple-section">
+                    <h3 class="couple-section-title">Vincular con Pareja</h3>
+                    <p class="couple-section-desc">Ingresa el código de tu pareja para compartir planes</p>
+                    <div class="couple-input-group">
+                        <input type="text" id="partner-code-input" class="input couple-input" placeholder="Ej: AB12CD" maxlength="6">
+                        <button id="link-partner-btn" class="btn btn-primary">Vincular</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Vista: Pareja vinculada -->
+            <div id="couple-linked-view" style="display: none;">
+                <div class="couple-linked-card">
+                    <div class="couple-linked-icon">💑</div>
+                    <h3 class="couple-linked-title">Vinculado con</h3>
+                    <p id="partner-name-display" class="couple-linked-name">---</p>
+                    <p id="linked-date-display" class="couple-linked-date">---</p>
+                    
+                    <div class="couple-linked-info">
+                        <p class="couple-info-text">
+                            ✨ Ahora pueden compartir planes y tareas juntos
+                        </p>
+                    </div>
+                    
+                    <button id="unlink-partner-btn" class="btn btn-outline btn-danger">
+                        Desvincular Pareja
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Vista: Cargando -->
+            <div id="couple-loading-view" style="display: block;">
+                <div class="couple-loading">
+                    <svg class="heart-icon animate-heart-beat" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                    <p class="couple-loading-text">Cargando...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
     <!-- Firebase SDK -->
     <script type="module" src="app.js"></script>

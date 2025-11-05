@@ -24,6 +24,13 @@ import {
   orderBy,
   Timestamp 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+// Importar módulo de parejas
+import { 
+  getUserCoupleCode, 
+  linkWithPartner, 
+  unlinkPartner,
+  initializeUserProfile 
+} from './scr/couple.js';
 
 // Configuración de Firebase
 const firebaseConfig = {
@@ -72,6 +79,7 @@ let currentUser = null;
 let currentCoupleId = null;
 let currentPlanId = null;
 let selectedIcon = 'clipboard';
+let coupleData = null;
 
 // ============================================
 // ELEMENTOS DEL DOM
@@ -112,6 +120,21 @@ const createTaskBtn = document.getElementById('create-task-btn');
 const cancelTaskBtn = document.getElementById('cancel-task-btn');
 const tasksContainer = document.getElementById('tasks-container');
 const tasksEmptyState = document.getElementById('tasks-empty-state');
+
+// Modal de Pareja
+const coupleBtn = document.getElementById('couple-btn');
+const coupleModal = document.getElementById('couple-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const coupleLoadingView = document.getElementById('couple-loading-view');
+const coupleUnlinkedView = document.getElementById('couple-unlinked-view');
+const coupleLinkedView = document.getElementById('couple-linked-view');
+const userCoupleCode = document.getElementById('user-couple-code');
+const copyCodeBtn = document.getElementById('copy-code-btn');
+const partnerCodeInput = document.getElementById('partner-code-input');
+const linkPartnerBtn = document.getElementById('link-partner-btn');
+const partnerNameDisplay = document.getElementById('partner-name-display');
+const linkedDateDisplay = document.getElementById('linked-date-display');
+const unlinkPartnerBtn = document.getElementById('unlink-partner-btn');
 
 // ============================================
 // FUNCIONES DE NAVEGACIÓN
@@ -172,11 +195,24 @@ async function handleLogout() {
 }
 
 // Observador de estado de autenticación
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
-    currentCoupleId = `couple-${user.uid}`;
     userName.textContent = user.displayName || user.email;
+    
+    // Inicializar perfil del usuario
+    await initializeUserProfile(db, user);
+    
+    // Obtener datos de pareja
+    const coupleInfo = await getUserCoupleCode(db, user.uid);
+    
+    // Si tiene pareja vinculada, usar coupleId compartido
+    if (coupleInfo.partnerId) {
+      currentCoupleId = [user.uid, coupleInfo.partnerId].sort().join('_');
+    } else {
+      currentCoupleId = `couple-${user.uid}`;
+    }
+    
     navigateToDashboard();
   } else {
     currentUser = null;
@@ -552,6 +588,182 @@ async function handleDeleteTask(taskId) {
   }
 }
 
+
+
+// ============================================
+// FUNCIONES DEL MODAL DE PAREJA
+// ============================================
+
+function openCoupleModal() {
+  coupleModal.style.display = 'flex';
+  loadCoupleData();
+}
+
+function closeCoupleModal() {
+  coupleModal.style.display = 'none';
+}
+
+async function loadCoupleData() {
+  try {
+    // Mostrar loading
+    coupleLoadingView.style.display = 'block';
+    coupleUnlinkedView.style.display = 'none';
+    coupleLinkedView.style.display = 'none';
+    
+    // Obtener datos de pareja
+    coupleData = await getUserCoupleCode(db, currentUser.uid);
+    
+    if (coupleData.partnerId) {
+      // Usuario tiene pareja vinculada
+      showLinkedView();
+    } else {
+      // Usuario no tiene pareja vinculada
+      showUnlinkedView();
+    }
+  } catch (error) {
+    console.error('Error al cargar datos de pareja:', error);
+    alert('Error al cargar información de pareja');
+    closeCoupleModal();
+  }
+}
+
+function showUnlinkedView() {
+  coupleLoadingView.style.display = 'none';
+  coupleUnlinkedView.style.display = 'block';
+  coupleLinkedView.style.display = 'none';
+  
+  userCoupleCode.textContent = coupleData.code;
+  partnerCodeInput.value = '';
+}
+
+function showLinkedView() {
+  coupleLoadingView.style.display = 'none';
+  coupleUnlinkedView.style.display = 'none';
+  coupleLinkedView.style.display = 'block';
+  
+  partnerNameDisplay.textContent = coupleData.partnerName;
+  
+  if (coupleData.linkedAt) {
+    linkedDateDisplay.textContent = `Vinculados desde ${coupleData.linkedAt.toLocaleDateString('es-ES')}`;
+  } else {
+    linkedDateDisplay.textContent = '';
+  }
+}
+
+async function handleCopyCode() {
+  try {
+    await navigator.clipboard.writeText(coupleData.code);
+    
+    // Cambiar icono temporalmente
+    copyCodeBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    `;
+    
+    setTimeout(() => {
+      copyCodeBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      `;
+    }, 2000);
+  } catch (error) {
+    console.error('Error al copiar código:', error);
+    alert('No se pudo copiar el código');
+  }
+}
+
+async function handleLinkPartner() {
+  const partnerCode = partnerCodeInput.value.trim().toUpperCase();
+  
+  if (!partnerCode) {
+    alert('Por favor, ingresa un código');
+    return;
+  }
+  
+  if (partnerCode.length !== 6) {
+    alert('El código debe tener 6 caracteres');
+    return;
+  }
+  
+  if (partnerCode === coupleData.code) {
+    alert('No puedes vincularte contigo mismo');
+    return;
+  }
+  
+  try {
+    linkPartnerBtn.disabled = true;
+    linkPartnerBtn.textContent = 'Vinculando...';
+    
+    const result = await linkWithPartner(
+      db, 
+      currentUser.uid, 
+      currentUser.displayName || currentUser.email,
+      partnerCode
+    );
+    
+    // Actualizar coupleId global
+    currentCoupleId = result.coupleId;
+    
+    // Recargar datos
+    await loadCoupleData();
+    
+    // Recargar planes con el nuevo coupleId
+    await loadPlans();
+    
+    alert(`¡Vinculado exitosamente con ${result.partnerName}! 💕`);
+  } catch (error) {
+    console.error('Error al vincular:', error);
+    
+    if (error.message === 'Código no encontrado') {
+      alert('Código no encontrado. Verifica que sea correcto.');
+    } else if (error.message === 'No puedes vincularte contigo mismo') {
+      alert('No puedes usar tu propio código.');
+    } else if (error.message.includes('ya está vinculado')) {
+      alert('Este código ya está vinculado con otra persona.');
+    } else {
+      alert('Error al vincular. Por favor, intenta de nuevo.');
+    }
+  } finally {
+    linkPartnerBtn.disabled = false;
+    linkPartnerBtn.textContent = 'Vincular';
+  }
+}
+
+async function handleUnlinkPartner() {
+  if (!confirm('¿Estás seguro de que quieres desvincular tu pareja? Los planes creados juntos ya no serán compartidos.')) {
+    return;
+  }
+  
+  try {
+    unlinkPartnerBtn.disabled = true;
+    unlinkPartnerBtn.textContent = 'Desvinculando...';
+    
+    await unlinkPartner(db, currentUser.uid);
+    
+    // Actualizar coupleId global
+    currentCoupleId = `couple-${currentUser.uid}`;
+    
+    // Recargar datos
+    await loadCoupleData();
+    
+    // Recargar planes
+    await loadPlans();
+    
+    alert('Pareja desvinculada correctamente');
+  } catch (error) {
+    console.error('Error al desvincular:', error);
+    alert('Error al desvincular. Por favor, intenta de nuevo.');
+  } finally {
+    unlinkPartnerBtn.disabled = false;
+    unlinkPartnerBtn.textContent = 'Desvincular Pareja';
+  }
+}
+
+
+
 // ============================================
 // EVENT LISTENERS
 // ============================================
@@ -570,6 +782,27 @@ backBtn.addEventListener('click', navigateToDashboard);
 newTaskBtn.addEventListener('click', toggleNewTaskForm);
 createTaskBtn.addEventListener('click', handleCreateTask);
 cancelTaskBtn.addEventListener('click', toggleNewTaskForm);
+
+// Modal de Pareja
+coupleBtn.addEventListener('click', openCoupleModal);
+closeModalBtn.addEventListener('click', closeCoupleModal);
+copyCodeBtn.addEventListener('click', handleCopyCode);
+linkPartnerBtn.addEventListener('click', handleLinkPartner);
+unlinkPartnerBtn.addEventListener('click', handleUnlinkPartner);
+
+// Cerrar modal al hacer click en el overlay
+coupleModal.addEventListener('click', (e) => {
+  if (e.target === coupleModal) {
+    closeCoupleModal();
+  }
+});
+
+// Enter key en input de código
+partnerCodeInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    handleLinkPartner();
+  }
+});
 
 // Enter key handlers
 planTitleInput.addEventListener('keypress', (e) => {
