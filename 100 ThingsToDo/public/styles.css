@@ -981,3 +981,11 @@ button, a, input, textarea {
 }
 
 
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+  max-height: 150px; /* Altura máxima para mostrar 3 filas y un poco más */
+  overflow-y: auto; /* Habilitar el scroll vertical */
+  padding-right: 0.5rem; /* Espacio para la barra de scroll */
+}

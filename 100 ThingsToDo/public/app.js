@@ -69,6 +69,33 @@ const KAWAII_ICONS = {
   laptop: '💻',
   envelope: '💌',
   flower: '🌸',
+  // Nuevos Iconos 
+  pizza: '🍕', // Comida, cenas, cocinar
+  movie: '🎬', // Películas, series, cine
+  travel: '✈️', // Viajes, escapadas, vacaciones
+  book: '📚', // Lectura, estudio, aprender
+  music: '🎶', // Música, conciertos, bailar
+  camera: '📸', // Fotos, recuerdos, álbum
+  bath: '🛁', // Relax, spa, cuidado personal
+  game: '🎲', // Juegos de mesa, diversión
+  money: '💰', // Finanzas, ahorro, compras
+  house: '🏠', // Hogar, mudanza, decoración
+  car: '🚗', // Paseos, coche, transporte
+  star: '⭐', // Metas, deseos, sueños
+  ring: '💍', // Compromiso, boda, aniversario
+  balloon: '🎈', // Celebraciones, cumpleaños
+  // --- ÍCONOS KAWAII EXTRA ---
+  cat: '🐈',
+  dog: '🐕',
+  bear: '🐻',
+  bunny: '🐰',
+  cloud: '☁️',
+  sun: '☀️',
+  rainbow: '🌈',
+  ice_cream: '🍦',
+  sushi: '🍣',
+  cactus: '🌵',
+  estrellas: '✨',
 };
 
 // ============================================
