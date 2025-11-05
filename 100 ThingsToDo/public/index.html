@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Lista de Amor Kawaii - Crea y gestiona listas de tareas románticas con tu pareja">
-    <title>Lista de Amor Kawaii</title>
+    <title>Lista de Amor Kawaii</title> 
+
+        <!-- ============================================ -->
+    <!-- ======> AÑADE ESTAS LÍNEAS DE CÓDIGO <======= -->
+    <!-- ============================================ -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#8B6F47">
+    <!-- ============================================ -->
     
     <!-- Google Fonts - Fuentes Kawaii -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,6 +20,8 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
 </head>
 <body>
     <!-- Contenedor principal de la aplicación -->
@@ -78,10 +87,28 @@
                         <svg class="heart-icon-header" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
                             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                         </svg>
-                        <h1 class="header-title">Lista de Amor</h1>
+                        <h1 class="header-title">ThingsToDo</h1>
                     </div>
                     <div class="header-right">
                         <span id="user-name" class="user-name"></span>
+
+
+                                                <!-- ===> AÑADE ESTE BOTÓN <=== -->
+<button id="stats-btn" class="btn-icon" title="Ver Estadísticas" style="display: none;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 20V10M18 20V4M6 20V16"/>
+    </svg>
+</button>
+
+
+
+
+<!-- ===> AÑADE ESTE BOTÓN <=== 
+<button id="open-notifications-modal-btn" class="btn-icon" title="Configurar Notificaciones">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+    </svg>
+</button> -->
                         <button id="couple-btn" class="btn-icon" title="Gestionar Pareja">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -90,6 +117,18 @@
         <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
     </svg>
 </button>
+
+                            <!-- ============================================ -->
+    <!-- ======> NUEVO BOTÓN DE "TELÉFONO" <======= -->
+    <!-- ============================================ -->
+    <button id="open-phone-modal-btn" class="btn-icon" title="Centro de Actividades">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+        </svg>
+    </button>
+
+    
                         <button id="logout-btn" class="btn-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -111,7 +150,26 @@
                         </svg>
                         Crear Nuevo Plan
                     </button>
+
+
+
                 </div>
+
+
+
+
+                    <!-- ============================================ -->
+    <!-- ======> AÑADE ESTE BLOQUE DE CÓDIGO <======= -->
+    <!-- ============================================ -->
+    <div id="link-partner-banner" class="link-partner-banner" style="display: none;">
+        <div class="banner-icon">💌</div>
+        <div class="banner-text">
+            <h3>¡Conecta con tu pareja!</h3>
+            <p>Comparte tu código o ingresa el de tu pareja para empezar a crear planes juntos.</p>
+        </div>
+        <button id="go-to-couple-modal-btn" class="btn btn-primary">Vincular ahora</button>
+    </div>
+    <!-- ============================================ -->
 
                 <!-- Formulario de nuevo plan -->
                 <div id="new-plan-form" class="form-card" style="display: none;">
@@ -286,9 +344,276 @@
                     <p class="couple-loading-text">Cargando...</p>
                 </div>
             </div>
+
+                    <!-- ============================================ -->
+        <!-- ======> AÑADE ESTA NUEVA VISTA AQUÍ <======= -->
+        <!-- ============================================ -->
+        <div id="couple-about-view" style="display: none;">
+            <div class="about-section">
+                <div class="about-icon">💖</div>
+                <h3 class="about-title">ThingsToDo Kawaii</h3>
+                <p class="about-version">Versión 1.0</p>
+                <p class="about-description">
+                    Creada con amor para ayudar a las parejas a organizar sus sueños y metas juntos.
+                </p>
+                
+                <div class="credits-section">
+                    <h4>Hecho por:</h4>
+                    <p>[¡MashLanzer!]</p>
+                    
+                    <h4>Agradecimientos:</h4>
+                    <ul>
+                        <li>------</li>
+                        <li>-----</li>
+                        <li>----</li>
+                    </ul>
+                </div>
+                
+                <button id="back-to-couple-view-btn" class="btn btn-outline">Volver</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- ======> AÑADE ESTE PIE DE MODAL AQUÍ <======= -->
+    <!-- ============================================ -->
+    <div class="modal-footer">
+        <button id="open-about-view-btn" class="btn-link">Acerca de esta App</button>
+    </div>
+</div>
+
+</div>
+
+
+
+    
+
+
+
+<!-- ============================================ -->
+<!-- ======> AÑADE ESTE MODAL DE EDICIÓN <======= -->
+<!-- ============================================ -->
+<div id="edit-plan-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">✏️ Editar Plan</h2>
+            <button id="close-edit-modal-btn" class="btn-icon">
+                <!-- SVG de cierre (X) -->
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="edit-plan-id-input">
+            <input type="text" id="edit-plan-title-input" class="input" placeholder="Título del plan">
+            <textarea id="edit-plan-desc-input" class="textarea" placeholder="Descripción (opcional)" rows="3"></textarea>
+            <div class="form-actions">
+                <button id="update-plan-btn" class="btn btn-primary">Guardar Cambios</button>
+                <button id="delete-plan-btn" class="btn btn-outline btn-danger">Eliminar Plan</button>
+            </div>
         </div>
     </div>
 </div>
+
+
+<!-- ============================================ -->
+<!-- ======> AÑADE ESTE MODAL DE ESTADÍSTICAS <== -->
+<!-- ============================================ -->
+<div id="stats-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">📊 Estadísticas de Pareja</h2>
+            <button id="close-stats-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div id="stats-modal-body" class="modal-body">
+            <!-- Vista de Carga -->
+            <div id="stats-loading-view">
+                <div class="couple-loading">
+                    <svg class="heart-icon animate-heart-beat" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                    <p class="couple-loading-text">Calculando logros...</p>
+                </div>
+            </div>
+            <!-- Contenido de Estadísticas -->
+            <div id="stats-content-view" style="display: none;">
+                <!-- Estadísticas Generales -->
+                <div class="stats-section">
+                    <h3 class="stats-section-title">Resumen General</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-total-plans">0</div>
+                            <div class="stat-label">Planes Creados</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-completed-plans">0</div>
+                            <div class="stat-label">Planes Completados</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-total-tasks">0</div>
+                            <div class="stat-label">Tareas Totales</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-completion-percentage">0%</div>
+                            <div class="stat-label">Completado</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Estadísticas Individuales -->
+                <div class="stats-section">
+                    <h3 class="stats-section-title">Aportación Individual</h3>
+                    <div class="stats-comparison">
+                        <div class="stat-person">
+                            <div class="stat-person-name" id="stat-user-name">Tú</div>
+                            <div class="stat-person-value" id="stat-user-tasks">0</div>
+                            <div class="stat-person-label">Tareas completadas</div>
+                        </div>
+                        <div class="stat-divider">💕</div>
+                        <div class="stat-person">
+                            <div class="stat-person-name" id="stat-partner-name">Pareja</div>
+                            <div class="stat-person-value" id="stat-partner-tasks">0</div>
+                            <div class="stat-person-label">Tareas completadas</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- ============================================ -->
+<!-- ====> MODAL PARA ACTIVAR NOTIFICACIONES <==== -->
+<!-- ============================================ -->
+<div id="notifications-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">🔔 Activar Notificaciones</h2>
+            <button id="close-notifications-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+            <p class="about-description">
+                ¿Quieres recibir un aviso cuando tu pareja complete una tarea o cree un nuevo plan?
+            </p>
+            <button id="enable-notifications-btn" class="btn btn-primary">Sí, activar notificaciones</button>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- ============================================ -->
+<!-- ======> MODAL DE TAREA SORPRESA <======= -->
+<!-- ============================================ -->
+<div id="surprise-task-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">¡Tarea Sorpresa!</h2>
+            <button id="close-surprise-modal-btn" class="btn-icon">
+                <!-- ... SVG de cierre (X) ... -->
+            </button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+            <div id="surprise-task-content" class="surprise-task-reveal">
+                <div class="surprise-emoji"></div>
+                <p class="surprise-text"></p>
+            </div>
+            <div class="form-actions" style="margin-top: 1.5rem;">
+                <button id="accept-surprise-task-btn" class="btn btn-primary">¡Aceptamos el reto!</button>
+                <button id="reroll-surprise-task-btn" class="btn btn-outline">Otra, por favor</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- ============================================ -->
+<!-- ======> MODAL DEL TELÉFONO KAWAII <======= -->
+<!-- ============================================ -->
+<div id="phone-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="phone-container">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+            <!-- Pantalla de inicio del teléfono -->
+            <div id="phone-homescreen" class="phone-app-view">
+                <div class="phone-header">
+                    <span class="time">10:30</span>
+                    <span class="icons">📶 🔋</span>
+                </div>
+                <div class="app-grid">
+                    <!-- App 1: Tarea Sorpresa -->
+                    <div class="app-icon" data-app="surprise">
+                        <div class="app-icon-bg" style="background: #ffdeeb;">🎁</div>
+                        <span class="app-name">Reto Diario</span>
+                    </div>
+
+                    <!-- App 2: Próximamente... -->
+                    <div class="app-icon disabled">
+                        <div class="app-icon-bg">✨</div>
+                        <span class="app-name">Próximamente</span>
+                    </div>
+                    
+                    <!-- Puedes añadir más "apps" aquí -->
+
+                </div>
+            </div>
+
+<!-- ... dentro del .phone-screen ... -->
+
+<!-- Pantalla de la App "Tarea Sorpresa" (VERSIÓN MEJORADA) -->
+<div id="phone-app-surprise" class="phone-app-view" style="display: none;">
+    <div class="app-content-header">
+        <button class="back-to-home-btn">‹</button>
+        <span>Reto Diario</span>
+    </div>
+    <div class="app-content-body surprise-app-body">
+        <div class="surprise-card">
+            <div class="surprise-card-inner">
+                <!-- Lado frontal de la tarjeta (la pregunta) -->
+                <div class="surprise-card-front">
+                    <div class="question-mark">?</div>
+                    <p>¿Listos para un nuevo reto?</p>
+                </div>
+                <!-- Lado trasero de la tarjeta (la respuesta) -->
+                <div class="surprise-card-back">
+                    <div class="surprise-emoji"></div>
+                    <p class="surprise-text"></p>
+                </div>
+            </div>
+        </div>
+        <div class="surprise-actions">
+            <button id="reroll-surprise-task-btn" class="btn btn-outline">Buscar otra idea</button>
+            <button id="accept-surprise-task-btn" class="btn btn-primary">¡Aceptamos!</button>
+        </div>
+    </div>
+</div>
+
+
+        </div>
+        <button id="close-phone-modal-btn" class="phone-home-button"></button>
+    </div>
+</div>
+
+
 
 
     <!-- Firebase SDK -->

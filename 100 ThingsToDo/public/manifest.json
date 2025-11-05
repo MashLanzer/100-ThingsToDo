@@ -1,0 +1,21 @@
+{
+  "name": "Lista de Amor Kawaii",
+  "short_name": "ListaAmor",
+  "description": "Crea y gestiona listas de tareas románticas con tu pareja.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#FFFBF7",
+  "theme_color": "#8B6F47",
+  "icons": [
+    {
+      "src": "/images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

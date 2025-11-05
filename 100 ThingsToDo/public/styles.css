@@ -989,3 +989,604 @@ button, a, input, textarea {
   overflow-y: auto; /* Habilitar el scroll vertical */
   padding-right: 0.5rem; /* Espacio para la barra de scroll */
 }
+
+
+/* ============================================ */
+/* BANNER PARA VINCULAR PAREJA                  */
+/* ============================================ */
+
+.link-partner-banner {
+  background: linear-gradient(135deg, var(--pink-light), var(--secondary));
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.banner-icon {
+  font-size: 3rem;
+  animation: bounce-gentle 2s ease-in-out infinite;
+}
+
+.banner-text {
+  flex: 1;
+}
+
+.banner-text h3 {
+  color: var(--primary);
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.banner-text p {
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+}
+
+/* Responsive para el banner */
+@media (max-width: 600px) {
+  .link-partner-banner {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+}
+
+
+/* ============================================ */
+/* ANIMACIÓN PARA BOTÓN ACTIVADO                */
+/* ============================================ */
+
+@keyframes button-activated {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 8px 16px rgba(139, 111, 71, 0.15);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 12px 24px rgba(139, 111, 71, 0.25);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 8px 16px rgba(139, 111, 71, 0.15);
+  }
+}
+
+.btn-activated-animation {
+  animation: button-activated 0.8s ease-out;
+}
+
+
+/* Estilos para acciones en la tarjeta de plan */
+.plan-card {
+  position: relative; /* Necesario para posicionar las acciones */
+  /* ... otros estilos ... */
+}
+
+.plan-card-actions {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+}
+
+
+/* ============================================ */
+/* ESTILOS PARA DRAG & DROP (SORTABLEJS)        */
+/* ============================================ */
+
+.task-item.sortable-chosen {
+  opacity: 0.8;
+  background-color: var(--secondary);
+}
+
+.task-ghost {
+  opacity: 0.4;
+  background-color: var(--pink-light);
+  border: 2px dashed var(--primary);
+}
+
+
+.task-completed-by {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin-top: 0.25rem;
+}
+
+
+/* ============================================ */
+/* MODAL DE ESTADÍSTICAS                        */
+/* ============================================ */
+
+.stats-section {
+  margin-bottom: 2rem;
+}
+
+.stats-section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.stat-card {
+  background-color: #f9f9f9;
+  border-radius: 1rem;
+  padding: 1rem;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.stats-comparison {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background-color: #f9f9f9;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+}
+
+.stat-person {
+  text-align: center;
+}
+
+.stat-person-name {
+  font-weight: 600;
+  color: var(--muted-foreground);
+  margin-bottom: 0.5rem;
+}
+
+.stat-person-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--pink);
+}
+
+.stat-person-label {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+
+.stat-divider {
+  font-size: 2.5rem;
+  color: var(--pink);
+  animation: heart-beat 1.5s ease-in-out infinite;
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .stats-comparison {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+}
+
+
+/* ============================================ */
+/* ESTILOS PARA "ACERCA DE" Y PIE DE MODAL      */
+/* ============================================ */
+
+/* Estilos para el pie del modal */
+.modal-footer {
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  background-color: #fdfbf9;
+  border-bottom-left-radius: 1.5rem;
+  border-bottom-right-radius: 1.5rem;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.5rem;
+}
+
+.btn-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+/* Estilos para la vista "Acerca de" */
+.about-section {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.about-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.about-title {
+  font-size: 1.5rem;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.about-version {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+.about-description {
+  color: var(--muted-foreground);
+  max-width: 350px;
+  margin: 0 auto 1.5rem auto;
+}
+
+.credits-section {
+  background-color: #f9f9f9;
+  border-radius: 1rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border);
+}
+
+.credits-section h4 {
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.credits-section p,
+.credits-section ul {
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+}
+
+.credits-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.credits-section ul li::before {
+  content: '✨';
+  margin-right: 0.5rem;
+}
+
+
+/* ============================================ */
+/* ESTILOS PARA WIDGET DE TAREA SORPRESA (NUEVO) */
+/* ============================================ */
+
+/* Botón de Regalo Simplificado */
+.btn-surprise {
+  background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+  color: #333;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+
+.btn-surprise:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 16px rgba(161, 196, 253, 0.3);
+}
+
+/* Widget de Tarea Sorpresa */
+.surprise-widget {
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  animation: fadeInDown 0.5s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.widget-header h3 {
+  color: var(--primary);
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.widget-content {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+#surprise-widget-emoji {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: bounce-gentle 1.5s ease-in-out;
+}
+
+#surprise-widget-text {
+  font-size: 1.25rem;
+  color: var(--foreground);
+  font-weight: 500;
+  min-height: 50px;
+}
+
+.widget-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+
+
+/* ============================================ */
+/* ESTILOS PARA EL TELÉFONO KAWAII              */
+/* ============================================ */
+
+.phone-container {
+  position: relative;
+  width: 320px;
+  height: 650px;
+  background-color: var(--pink-light);
+  border-radius: 40px;
+  border: 8px solid white;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.2), inset 0 4px 12px rgba(255,255,255,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: modalSlideIn 0.4s ease-out;
+}
+
+.phone-notch {
+  position: absolute;
+  top: 15px;
+  width: 120px;
+  height: 25px;
+  background-color: white;
+  border-radius: 0 0 15px 15px;
+  z-index: 2;
+}
+
+.phone-screen {
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  background: linear-gradient(160deg, #fffbf7 0%, #fdeef4 100%);
+  border-radius: 30px;
+  overflow: hidden;
+  position: relative;
+}
+
+.phone-home-button {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 5px;
+  background-color: rgba(0,0,0,0.2);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Contenido de la pantalla */
+.phone-app-view {
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.phone-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  padding: 0.5rem 1rem;
+}
+
+.app-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  align-content: flex-start;
+}
+
+.app-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+.app-icon-bg {
+  width: 60px;
+  height: 60px;
+  border-radius: 15px;
+  background-color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease;
+}
+
+.app-icon:hover .app-icon-bg {
+  transform: scale(1.1);
+}
+
+.app-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.app-icon.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Estilos para las "apps" internas */
+.app-content-header {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--primary);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.back-to-home-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary);
+  cursor: pointer;
+  padding-right: 1rem;
+}
+
+.app-content-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+
+/* ============================================ */
+/* REDISEÑO DE LA APP "RETO DIARIO"             */
+/* ============================================ */
+
+.surprise-app-body {
+  justify-content: space-around; /* Distribuye mejor el espacio */
+}
+
+.surprise-card {
+  background-color: transparent;
+  width: 220px;
+  height: 300px;
+  perspective: 1000px; /* Efecto 3D */
+  margin: 1rem auto;
+}
+
+.surprise-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+}
+
+/* Clase que se añade con JS para voltear la tarjeta */
+.surprise-card.is-flipped .surprise-card-inner {
+  transform: rotateY(180deg);
+}
+
+.surprise-card-front, .surprise-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden; /* Safari */
+  backface-visibility: hidden;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.surprise-card-front {
+  background: linear-gradient(160deg, #ffdeeb 0%, #c2e9fb 100%);
+  color: var(--primary);
+}
+
+.surprise-card-front .question-mark {
+  font-size: 5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.surprise-card-front p {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.surprise-card-back {
+  background: white;
+  color: var(--foreground);
+  transform: rotateY(180deg);
+}
+
+.surprise-card-back .surprise-emoji {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.surprise-card-back .surprise-text {
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.surprise-actions {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
