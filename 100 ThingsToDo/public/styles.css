@@ -1590,3 +1590,131 @@ button, a, input, textarea {
   gap: 0.75rem;
   width: 100%;
 }
+
+/* ============================================ */
+/* REDISEÑO DE BOTONES DE APP "RETO DIARIO"     */
+/* ============================================ */
+
+.surprise-actions {
+  display: flex;
+  justify-content: center; /* Centra los botones horizontalmente */
+  gap: 1rem; /* Espacio entre los botones */
+  width: 100%;
+  margin-top: 1.5rem;
+}
+
+/* Estilo base para los dos botones, ahora más pequeños */
+.surprise-actions .btn {
+  font-size: 0.8rem; /* Letra más pequeña */
+  padding: 0.6rem 1rem; /* Relleno reducido para hacerlo más compacto */
+  font-weight: 700; /* Letra un poco más gruesa para que se lea bien */
+  flex-grow: 1; /* Permite que los botones crezcan para ocupar el espacio */
+  max-width: 120px; /* Ancho máximo para que no se estiren demasiado */
+}
+
+/* Ajuste específico para el botón principal (Aceptar) */
+.surprise-actions .btn-primary {
+  /* No necesita cambios adicionales, hereda el tamaño base */
+}
+
+/* Ajuste específico para el botón secundario (Otra idea) */
+.surprise-actions .btn-outline {
+  border-width: 1.5px; /* Un borde un poco más fino y delicado */
+}
+
+
+/* ... al final de la sección de ESTILOS PARA EL TELÉFONO KAWAII ... */
+
+.phone-app-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.phone-app-view {
+  /* ... estilos existentes ... */
+  position: absolute; /* Permite que las vistas se superpongan */
+  top: 0;
+  left: 0;
+  opacity: 0; /* Ocultas por defecto */
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  pointer-events: none; /* No se puede hacer clic en ellas cuando están ocultas */
+}
+
+.phone-app-view.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto; /* Se puede interactuar con la vista activa */
+}
+
+
+/* ============================================ */
+/* ESTILOS PARA LA APP "CÁPSULA DEL TIEMPO"     */
+/* ============================================ */
+
+.capsules-list {
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.capsules-empty-state {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--muted-foreground);
+}
+.capsules-empty-state .empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.capsule-item {
+  background: white;
+  border-radius: 1rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.capsule-item:hover {
+  transform: scale(1.03);
+}
+
+.capsule-icon {
+  font-size: 2.5rem;
+}
+
+.capsule-info {
+  flex: 1;
+}
+.capsule-info p {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.capsule-info .capsule-date {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+
+.capsule-item.locked .capsule-icon {
+  filter: grayscale(80%);
+}
+
+/* Estilos para el formulario de creación */
+#phone-view-createcapsule .app-content-body {
+  gap: 1rem;
+  justify-content: flex-start;
+  padding-top: 1rem;
+}
+#phone-view-createcapsule label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--primary);
+}

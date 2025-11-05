@@ -208,14 +208,28 @@ const closePhoneModalBtn = document.getElementById('close-phone-modal-btn');
 const phoneHomescreen = document.getElementById('phone-homescreen');
 const appIcons = document.querySelectorAll('.app-icon');
 const backToHomeBtns = document.querySelectorAll('.back-to-home-btn');
+const phoneTimeDisplay = document.getElementById('phone-time-display');
+
 
 const surpriseCard = document.querySelector('.surprise-card'); // Obtenemos la tarjeta una sola vez
 
 // Reutilizamos las referencias de la tarea sorpresa, pero las hacemos más específicas
-const surpriseEmoji = document.querySelector('#phone-app-surprise .surprise-emoji');
-const surpriseText = document.querySelector('#phone-app-surprise .surprise-text');
-const acceptSurpriseTaskBtn = document.querySelector('#phone-app-surprise #accept-surprise-task-btn');
-const rerollSurpriseTaskBtn = document.querySelector('#phone-app-surprise #reroll-surprise-task-btn');
+// CORRECCIÓN
+const surpriseEmoji = document.querySelector('#phone-view-surprise .surprise-emoji');
+const surpriseText = document.querySelector('#phone-view-surprise .surprise-text');
+const acceptSurpriseTaskBtn = document.querySelector('#phone-view-surprise #accept-surprise-task-btn');
+const rerollSurpriseTaskBtn = document.querySelector('#phone-view-surprise #reroll-surprise-task-btn');
+
+// ... al final de la sección de elementos del DOM ...
+
+// Elementos de la Cápsula del Tiempo
+const capsulesList = document.getElementById('capsules-list');
+const capsulesEmptyState = document.getElementById('capsules-empty-state');
+const goToCreateCapsuleBtn = document.getElementById('go-to-create-capsule-btn');
+const backToCapsuleListBtn = document.querySelector('.back-to-capsule-list-btn');
+const capsuleMessageInput = document.getElementById('capsule-message-input');
+const capsuleUnlockDateInput = document.getElementById('capsule-unlock-date-input');
+const saveCapsuleBtn = document.getElementById('save-capsule-btn');
 
 
 
@@ -1198,6 +1212,40 @@ acceptSurpriseTaskBtn.addEventListener('click', acceptSurpriseTask);
 
 
 
+// Listeners para la app de Cápsula del Tiempo
+goToCreateCapsuleBtn.addEventListener('click', () => showPhoneApp('createcapsule'));
+backToCapsuleListBtn.addEventListener('click', () => showPhoneApp('timecapsule'));
+saveCapsuleBtn.addEventListener('click', handleSaveCapsule);
+
+// Modifica el listener del icono de la app para que cargue las cápsulas al abrir
+appIcons.forEach(icon => {
+  icon.addEventListener('click', () => {
+    const appName = icon.dataset.app;
+    if (appName) {
+      if (appName === 'surprise') {
+        // ... (código existente)
+      } else if (appName === 'timecapsule') {
+        // ===> AÑADE ESTO <===
+        loadAndRenderCapsules();
+        showPhoneApp(appName);
+      }
+    }
+  });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 goToCoupleModalBtn.addEventListener('click', openCoupleModal);
 
@@ -1264,6 +1312,12 @@ renderIconGrid();
 // Mostrar pantalla de carga inicialmente
 showLoading();
 
+// ===> AÑADE ESTAS LÍNEAS PARA EL RELOJ <===
+// Llama a la función una vez para que la hora no aparezca vacía al principio
+updatePhoneClock(); 
+
+// Configura un intervalo para que la función se ejecute cada segundo (1000 milisegundos)
+setInterval(updatePhoneClock, 1000);
 
 // ============================================
 // FUNCIONES DEL MODAL DE ESTADÍSTICAS
@@ -1382,15 +1436,20 @@ function closePhoneModal() {
   showPhoneApp('homescreen');
 }
 
+// VERSIÓN CORREGIDA Y MEJORADA
 function showPhoneApp(appName) {
+  // 1. Oculta todas las vistas quitando la clase 'active'
   document.querySelectorAll('.phone-app-view').forEach(view => {
-    view.style.display = 'none';
+    view.classList.remove('active');
   });
-  const appToShow = document.getElementById(`phone-app-${appName}`);
-  if (appToShow) {
-    appToShow.style.display = 'flex';
+
+  // 2. Muestra la vista solicitada añadiendo la clase 'active'
+  const viewToShow = document.getElementById(`phone-view-${appName}`);
+  if (viewToShow) {
+    viewToShow.classList.add('active');
   }
 }
+
 
 // Función simplificada para generar y mostrar el contenido de la tarea
 function updateSurpriseContent() {
@@ -1447,6 +1506,169 @@ async function acceptSurpriseTask() {
     acceptSurpriseTaskBtn.textContent = '¡Aceptamos!';
   }
 }
+
+
+
+// ============================================
+// FUNCIONES DE UTILIDAD
+// ============================================
+
+/**
+ * Actualiza el reloj del teléfono con la hora actual.
+ */
+function updatePhoneClock() {
+  const now = new Date();
+  let hours = now.getHours();
+  let minutes = now.getMinutes();
+
+  // Añade un cero a la izquierda si los minutos son menores de 10
+  // Ejemplo: 10:05 en lugar de 10:5
+  minutes = minutes < 10 ? '0' + minutes : minutes;
+
+  // Formatea la hora final
+  const timeString = `${hours}:${minutes}`;
+
+  // Actualiza el contenido del span
+  if (phoneTimeDisplay) {
+    phoneTimeDisplay.textContent = timeString;
+  }
+}
+
+
+// ============================================
+// FUNCIONES DE FIRESTORE - CÁPSULAS DEL TIEMPO
+// ============================================
+
+async function createCapsule(message, unlockDate) {
+  if (!currentCoupleId || !currentUser) return;
+  
+  try {
+    const capsulesRef = collection(db, 'couples', currentCoupleId, 'capsules');
+    await addDoc(capsulesRef, {
+      message,
+      unlockDate: Timestamp.fromDate(new Date(unlockDate)),
+      createdBy: currentUser.uid,
+      creatorName: currentUser.displayName,
+      createdAt: Timestamp.now(),
+    });
+  } catch (error) {
+    console.error('Error al crear la cápsula:', error);
+    throw error;
+  }
+}
+
+async function getCapsules() {
+  if (!currentCoupleId) return [];
+  
+  try {
+    const capsulesRef = collection(db, 'couples', currentCoupleId, 'capsules');
+    const q = query(capsulesRef, orderBy('unlockDate', 'asc'));
+    const snapshot = await getDocs(q);
+    
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      unlockDate: doc.data().unlockDate.toDate(),
+    }));
+  } catch (error) {
+    console.error('Error al obtener cápsulas:', error);
+    return [];
+  }
+}
+
+// ============================================
+// FUNCIONES DE UI - CÁPSULA DEL TIEMPO
+// ============================================
+
+async function loadAndRenderCapsules() {
+  const capsules = await getCapsules();
+  capsulesList.innerHTML = ''; // Limpiar la lista
+  
+  if (capsules.length === 0) {
+    capsulesList.appendChild(capsulesEmptyState);
+    capsulesEmptyState.style.display = 'block';
+  } else {
+    capsulesEmptyState.style.display = 'none';
+    const now = new Date();
+    
+    capsules.forEach(capsule => {
+      const isLocked = capsule.unlockDate > now;
+      const item = document.createElement('div');
+      item.className = `capsule-item ${isLocked ? 'locked' : 'unlocked'}`;
+      item.onclick = () => openCapsule(capsule, isLocked);
+      
+      item.innerHTML = `
+        <div class="capsule-icon">${isLocked ? '🔒' : '🔓'}</div>
+        <div class="capsule-info">
+          <p>Cápsula de ${capsule.creatorName}</p>
+          <span class="capsule-date">
+            ${isLocked ? `Se abre el ${capsule.unlockDate.toLocaleDateString()}` : `Abierta el ${capsule.unlockDate.toLocaleDateString()}`}
+          </span>
+        </div>
+      `;
+      capsulesList.appendChild(item);
+    });
+  }
+}
+
+function openCapsule(capsule, isLocked) {
+  if (isLocked) {
+    alert(`¡Paciencia! ⏳\n\nEsta cápsula del tiempo no se puede abrir hasta el ${capsule.unlockDate.toLocaleDateString()}.\n\nFue creada por ${capsule.creatorName}.`);
+  } else {
+    alert(`🎉 ¡Cápsula del Tiempo Abierta! 🎉\n\nMensaje de ${capsule.creatorName}:\n\n"${capsule.message}"`);
+  }
+}
+
+async function handleSaveCapsule() {
+  const message = capsuleMessageInput.value.trim();
+  const unlockDate = capsuleUnlockDateInput.value;
+
+  if (!message || !unlockDate) {
+    alert('Por favor, escribe un mensaje y elige una fecha de apertura.');
+    return;
+  }
+
+  // Validar que la fecha sea en el futuro
+  const today = new Date();
+  const selectedDate = new Date(unlockDate);
+  today.setHours(0, 0, 0, 0); // Poner la hora a cero para comparar solo fechas
+  if (selectedDate <= today) {
+    alert('La fecha de apertura debe ser en el futuro.');
+    return;
+  }
+
+  try {
+    saveCapsuleBtn.disabled = true;
+    saveCapsuleBtn.textContent = 'Sellando...';
+    
+    await createCapsule(message, unlockDate);
+    
+    // Limpiar formulario y volver a la lista
+    capsuleMessageInput.value = '';
+    capsuleUnlockDateInput.value = '';
+    showPhoneApp('timecapsule');
+    await loadAndRenderCapsules();
+
+  } catch (error) {
+    alert('No se pudo sellar la cápsula. Inténtalo de nuevo.');
+  } finally {
+    saveCapsuleBtn.disabled = false;
+    saveCapsuleBtn.textContent = 'Sellar Cápsula';
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

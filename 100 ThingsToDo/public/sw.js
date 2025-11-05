@@ -1,6 +1,6 @@
 // sw.js - Versión Mejorada
 
-const CACHE_NAME = 'lista-amor-v4'; // <-- Versión actualizada
+const CACHE_NAME = 'lista-amor-v5'; // <-- Versión actualizada
 const URLS_TO_CACHE = [
   '/',
   '/index.html',

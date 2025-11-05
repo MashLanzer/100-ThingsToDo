@@ -1,6 +1,6 @@
 {
-  "name": "Lista de Amor Kawaii",
-  "short_name": "ListaAmor",
+  "name": "ThingsToDo Kawaii",
+  "short_name": "ThingsToDo",
   "description": "Crea y gestiona listas de tareas románticas con tu pareja.",
   "start_url": "/index.html",
   "display": "standalone",
