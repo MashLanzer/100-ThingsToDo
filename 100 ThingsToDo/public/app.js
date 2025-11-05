@@ -163,6 +163,31 @@ const partnerNameDisplay = document.getElementById('partner-name-display');
 const linkedDateDisplay = document.getElementById('linked-date-display');
 const unlinkPartnerBtn = document.getElementById('unlink-partner-btn');
 
+
+
+// ============================================
+// FUNCIONES DE UI - DASHBOARD
+// ============================================
+
+/**
+ * Actualiza el estado del botón "Crear Nuevo Plan" basado en si el usuario tiene pareja.
+ * @param {boolean} isLinked - True si el usuario está vinculado con una pareja.
+ */
+function updateNewPlanButtonState(isLinked) {
+  if (isLinked) {
+    newPlanBtn.disabled = false;
+    newPlanBtn.title = 'Crear un nuevo plan compartido';
+  } else {
+    newPlanBtn.disabled = true;
+    newPlanBtn.title = 'Vincula una pareja para crear planes compartidos';
+  }
+}
+
+
+
+
+
+
 // ============================================
 // FUNCIONES DE NAVEGACIÓN
 // ============================================
@@ -232,6 +257,9 @@ onAuthStateChanged(auth, async (user) => {
     
     // Obtener datos de pareja
     const coupleInfo = await getUserCoupleCode(db, user.uid);
+
+        // ===> AÑADIR ESTA LÍNEA <===
+    updateNewPlanButtonState(!!coupleInfo.partnerId);
     
     // Si tiene pareja vinculada, usar coupleId compartido
     if (coupleInfo.partnerId) {
@@ -739,6 +767,9 @@ async function handleLinkPartner() {
     
     // Recargar planes con el nuevo coupleId
     await loadPlans();
+
+        // ===> AÑADIR ESTA LÍNEA <===
+    updateNewPlanButtonState(true);
     
     alert(`¡Vinculado exitosamente con ${result.partnerName}! 💕`);
   } catch (error) {
@@ -778,6 +809,9 @@ async function handleUnlinkPartner() {
     
     // Recargar planes
     await loadPlans();
+
+        // ===> AÑADIR ESTA LÍNEA <===
+    updateNewPlanButtonState(false);
     
     alert('Pareja desvinculada correctamente');
   } catch (error) {
