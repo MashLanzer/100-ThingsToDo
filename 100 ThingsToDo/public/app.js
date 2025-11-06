@@ -2483,19 +2483,35 @@ async function openPlaylistDetail(playlistId, playlistName) {
   const songs = await getSongsFromPlaylist(playlistId);
   songList.innerHTML = '';
   if (songs.length > 0) {
-    songs.forEach(song => {
-      const item = document.createElement('div');
-      item.className = 'song-item';
-      item.innerHTML = `
-        <span class="song-icon">🎧</span>
-        <div class="song-info">
-          <p class="song-title">${song.name}</p>
-          <span class="song-added-by">Añadida por ${song.addedBy}</span>
-        </div>
-        <button class="play-song-btn" onclick="playSong('${song.url}', '${song.name}', '${song.addedBy}')">▶</button>
-      `;
-      songList.appendChild(item);
-    });
+// DESPUÉS (CÓDIGO CORREGIDO)
+songs.forEach(song => {
+  const item = document.createElement('div');
+  item.className = 'song-item';
+
+  // Creamos el contenido del item sin el botón
+  item.innerHTML = `
+    <span class="song-icon">🎧</span>
+    <div class="song-info">
+      <p class="song-title">${song.name}</p>
+      <span class="song-added-by">Añadida por ${song.addedBy}</span>
+    </div>
+  `;
+
+  // Creamos el botón por separado
+  const playButton = document.createElement('button');
+  playButton.className = 'play-song-btn';
+  playButton.textContent = '▶';
+
+  // Añadimos el listener de clic, que llamará a la función playSong
+  playButton.addEventListener('click', () => {
+    playSong(song.url, song.name, song.addedBy);
+  });
+
+  // Añadimos el botón al item y el item a la lista
+  item.appendChild(playButton);
+  songList.appendChild(item);
+});
+
   } else {
     songList.innerHTML = '<p style="text-align: center; font-size: 0.8rem; color: #aaa;">Añade la primera canción a esta playlist.</p>';
   }
@@ -2548,8 +2564,8 @@ function getYouTubeVideoId(url) {
   return (match && match[2].length === 11) ? match[2] : null;
 }
 
-// Función global para reproducir la canción
-window.playSong = function(url, name, addedBy) {
+
+function playSong(url, name, addedBy) {
   const videoId = getYouTubeVideoId(url);
   if (!videoId) {
     alert("El enlace de YouTube no es válido y no se puede reproducir.");
@@ -2563,7 +2579,6 @@ window.playSong = function(url, name, addedBy) {
   // Limpiar el contenedor y crear el iframe
   youtubePlayerContainer.innerHTML = '';
   const iframe = document.createElement('iframe');
-  // Usamos el modo "embed" con autoplay para una mejor experiencia
   iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
   iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
   iframe.allowFullscreen = true;
