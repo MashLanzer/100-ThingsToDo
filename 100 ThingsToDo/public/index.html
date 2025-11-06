@@ -491,6 +491,37 @@
 
 
 <!-- ============================================ -->
+<!-- ======> MODAL DE CONFIRMACIÓN DE SALIDA <======= -->
+<!-- ============================================ -->
+<div id="logout-confirm-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 class="modal-title">¿Ya te vas?</h2>
+            <button id="close-logout-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+            <div class="confirm-icon">👋</div>
+            <p class="confirm-text">
+                ¿Estás seguro de que quieres cerrar sesión?
+            </p>
+            <div class="form-actions confirm-actions">
+                <button id="cancel-logout-btn" class="btn btn-outline">Cancelar</button>
+                <button id="confirm-logout-btn" class="btn btn-danger">Sí, salir</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ============================================ -->
+
+
+
+<!-- ============================================ -->
 <!-- ====> MODAL PARA ACTIVAR NOTIFICACIONES <==== -->
 <!-- ============================================ -->
 <div id="notifications-modal" class="modal" style="display: none;">
@@ -549,6 +580,17 @@
 <div id="phone-modal" class="modal" style="display: none;">
     <div class="modal-overlay"></div>
     <div class="phone-container">
+
+            <!-- ============================================ -->
+    <!-- ======> NUEVO BOTÓN DE SWITCH <======= -->
+    <!-- ============================================ 
+    <button id="device-switch-btn" class="device-switch-btn" title="Cambiar a modo Tablet">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="18" rx="2"></rect>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+        </svg>
+    </button> -->
+
         <div class="phone-notch"></div>
 <!-- ... dentro de <div id="phone-modal"> ... -->
 <div class="phone-screen">
@@ -563,6 +605,18 @@
                 <span class="icons">📶 🔋</span>
             </div>
             <div class="app-grid">
+                     <!-- App 0: Diario -->
+                    <div class="app-icon" data-app="journal">
+        <div class="app-icon-bg" style="background: #c3e6cb;">🗓️</div>
+        <span class="app-name">Diario</span>
+    </div>
+
+        <!-- App : Musica -->
+        <div class="app-icon" data-app="soundtrack">
+        <div class="app-icon-bg" style="background: #a2d2ff;">🎧</div>
+        <span class="app-name">Sonidos</span>
+    </div>
+
                 <!-- App 1: Tarea Sorpresa -->
                 <div class="app-icon" data-app="surprise">
                     <div class="app-icon-bg" style="background: #ffdeeb;">🎁</div>
@@ -710,7 +764,183 @@
 <!-- ============================================ -->
 
 
+<!-- Vista Principal del Diario (Calendario) -->
+<div id="phone-view-journal" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-home-btn">‹</button>
+        <span>Nuestro Diario</span>
+    </div>
+    <div class="app-content-body journal-calendar-body">
+        <div class="calendar-header">
+            <button id="journal-prev-month-btn">‹</button>
+            <h3 id="journal-month-year"></h3>
+            <button id="journal-next-month-btn">›</button>
+        </div>
+        <div id="journal-calendar-grid" class="calendar-grid">
+            <!-- Los días del calendario se generarán aquí -->
+        </div>
+                <div id="journal-preview-widget" class="journal-preview" style="display: none;">
+            <h4>Último Recuerdo</h4>
+            <div class="preview-content">
+                <img id="preview-image" src="">
+                <div class="preview-text">
+                    <p id="preview-date"></p>
+                    <p id="preview-snippet"></p>
+                </div>
+            </div>
+        </div>
+        <!-- ============================================ -->
+    </div>
+</div>
 
+
+<div id="phone-view-journalread" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-journal-btn">‹</button>
+        <span id="journal-read-date"></span>
+    </div>
+    <div class="app-content-body journal-read-body">
+        
+        <!-- ============================================ -->
+        <!-- ======> NUEVO CARRUSEL DE FOTOS <======= -->
+        <!-- ============================================ -->
+        <div id="journal-carousel-container" class="carousel-container">
+            <div id="journal-carousel-track" class="carousel-track">
+                <!-- Las imágenes se cargarán aquí con JS -->
+            </div>
+            <button id="carousel-prev-btn" class="carousel-button prev">‹</button>
+            <button id="carousel-next-btn" class="carousel-button next">›</button>
+            <div id="carousel-dots" class="carousel-dots">
+                <!-- Los puntos indicadores se cargarán aquí -->
+            </div>
+        </div>
+        <!-- ============================================ -->
+
+        <div id="journal-read-text" class="journal-text-display">
+            <!-- El texto del diario se mostrará aquí -->
+        </div>
+        <button id="go-to-edit-entry-btn" class="btn btn-outline" style="margin-top: auto;">
+            ✏️ Editar Recuerdo
+        </button>
+    </div>
+</div>
+<!-- ============================================ -->
+
+
+<!-- Vista para Ver/Editar la Entrada de un Día -->
+<div id="phone-view-journalentry" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-journal-btn">‹</button>
+        <span id="journal-entry-date"></span>
+    </div>
+    <div class="app-content-body journal-entry-body">
+<div id="journal-gallery-container" class="journal-gallery">
+    <!-- Las imágenes se añadirán aquí con JS -->
+    <div id="journal-add-photo-btn" class="add-photo-button">
+        <p>+</p>
+        <span>Añadir foto</span>
+    </div>
+    <input type="file" id="journal-image-input" accept="image/*" multiple style="display: none;">
+</div>
+        <textarea id="journal-entry-text" class="textarea" placeholder="¿Qué pasó este día tan especial?..." rows="5"></textarea>
+        <button id="save-journal-entry-btn" class="btn btn-primary">Guardar Recuerdo</button>
+    </div>
+</div>
+<!-- ============================================ -->
+
+
+
+<!-- Vista Principal (Lista de Playlists) -->
+<div id="phone-view-soundtrack" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="homescreen">‹</button>
+        <span>Nuestra Banda Sonora</span>
+    </div>
+    <div class="app-content-body">
+        <div id="playlists-list" class="playlists-list">
+            <!-- Las playlists se cargarán aquí -->
+        </div>
+        <div class="form-actions" style="width: 100%; margin-top: auto;">
+            <input type="text" id="new-playlist-name-input" class="input" placeholder="Nombre de la nueva playlist...">
+            <button id="create-playlist-btn" class="btn btn-primary">Crear</button>
+        </div>
+    </div>
+</div>
+
+<!-- Vista de una Playlist (El Casete) -->
+<div id="phone-view-playlistdetail" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="soundtrack">‹</button>
+        <span id="playlist-detail-title"></span>
+    </div>
+    <div class="app-content-body cassette-player-body">
+        <div class="cassette-player">
+            <div class="cassette-label" id="cassette-label-title"></div>
+            <div class="cassette-windows">
+                <div class="cassette-spool left"></div>
+                <div class="cassette-spool right"></div>
+            </div>
+        </div>
+        <div id="song-list" class="song-list">
+            <!-- Las canciones se cargarán aquí -->
+        </div>
+        <button id="go-to-add-song-btn" class="btn btn-primary" style="margin-top: auto;">+ Añadir Canción</button>
+    </div>
+</div>
+
+<!-- Vista para Añadir una Canción -->
+<div id="phone-view-addsong" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="playlistdetail">‹</button>
+        <span>Añadir a la Playlist</span>
+    </div>
+    <div class="app-content-body add-song-body">
+        <input type="text" id="song-name-input" class="input" placeholder="Nombre de la canción">
+        <input type="text" id="youtube-link-input" class="input" placeholder="Pega el enlace de YouTube aquí">
+        <button id="save-song-btn" class="btn btn-primary">Guardar Canción</button>
+    </div>
+</div>
+
+<!-- Vista para Tocar la Canción -->
+<div id="phone-view-player" class="phone-app-view">
+    <div class="app-content-header">
+        <!-- Este botón nos llevará de vuelta a la lista de canciones -->
+        <button class="phone-back-btn" data-target="playlistdetail">‹</button>
+        <span>Reproduciendo...</span>
+    </div>
+    <div class="app-content-body player-body">
+        <!-- El reproductor de YouTube se insertará aquí -->
+        <div id="youtube-player-container" class="youtube-player-container"></div>
+
+        <!-- El Tocadiscos Animado -->
+        <div class="turntable-container">
+            <div class="turntable-arm"></div>
+            <div class="turntable-disc">
+                <div class="disc-label"></div>
+            </div>
+        </div>
+        <div class="now-playing-info">
+            <p id="player-song-title">Cargando canción...</p>
+            <span id="player-added-by"></span>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
         </div>
         <button id="close-phone-modal-btn" class="phone-home-button"></button>
     </div>

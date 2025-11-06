@@ -898,7 +898,7 @@ const tasks = [
         ]
     },
     {
-        emoji: ' fortaleza',
+        emoji: ' Fortaleza',
         text: 'Construir el mejor fuerte de cojines y mantas posible.',
         subtasks: [
             { icon: 'house', title: 'Reunir todos los cojines, mantas y sábanas de la casa' },
@@ -954,7 +954,7 @@ const tasks = [
         ]
     },
     {
-        emoji: ' Capsule',
+        emoji: ' 💊 ',
         text: 'Preparar una cápsula del tiempo para abrir en vuestro próximo aniversario.',
         subtasks: [
             { icon: 'box', title: 'Buscar una caja de zapatos o una caja bonita' },

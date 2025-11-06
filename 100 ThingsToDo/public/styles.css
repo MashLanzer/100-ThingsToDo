@@ -1866,3 +1866,892 @@ button, a, input, textarea {
   font-weight: 700;
   color: #28a745;
 }
+
+
+/* ============================================ */
+/* ESTILOS PARA LA APP "DIARIO DE PAREJA"       */
+/* ============================================ */
+
+.journal-calendar-body {
+  padding: 0;
+  justify-content: flex-start;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  width: 100%;
+}
+.calendar-header h3 {
+  color: var(--primary);
+  font-size: 1.2rem;
+}
+.calendar-header button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  width: 100%;
+  padding: 0 10px 10px 10px;
+}
+
+.calendar-day {
+  aspect-ratio: 1 / 1; /* Hace que los días sean cuadrados */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
+}
+.calendar-day.other-month {
+  color: #ccc;
+}
+.calendar-day:not(.other-month):hover {
+  background-color: var(--pink-light);
+}
+/* POR ESTA NUEVA REGLA: */
+.day-entry-indicator {
+  position: absolute;
+  bottom: 4px; /* Ajusta la posición vertical */
+  right: 6px;  /* Ajusta la posición horizontal */
+  font-size: 12px; /* Tamaño del corazón más grande */
+  line-height: 1;
+  opacity: 0.8;
+}
+
+/* Vista de la entrada del diario */
+.journal-entry-body {
+  justify-content: flex-start;
+  gap: 1.5rem;
+  padding-top: 1rem;
+}
+
+.polaroid-container {
+  transform: rotate(-3deg); /* Ladea la foto para un look más casual */
+  transition: transform 0.3s ease;
+}
+.polaroid-container:hover {
+  transform: rotate(0deg) scale(1.05);
+}
+
+.polaroid {
+  background: white;
+  padding: 15px 15px 70px 15px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+
+.polaroid-image-wrapper {
+  width: 200px;
+  height: 200px;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.polaroid-image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-prompt {
+  position: absolute;
+  text-align: center;
+  color: #aaa;
+}
+.upload-prompt p {
+  font-size: 3rem;
+  line-height: 1;
+  margin: 0;
+}
+.upload-prompt span {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+
+/* ... al final de la sección de estilos del Diario ... */
+
+.calendar-day.today {
+  background-color: var(--primary);
+  color: white;
+}
+.calendar-day.today:hover {
+  background-color: rgba(139, 111, 71, 0.8); /* Un poco más oscuro al pasar el ratón */
+}
+
+
+/* En la sección de estilos del Diario */
+
+.journal-entry-body {
+  justify-content: flex-start;
+  gap: 1.5rem;
+  padding-top: 1rem;
+  overflow-y: auto; /* <== AÑADE ESTA LÍNEA */
+}
+
+
+/* REEMPLAZA los estilos de .polaroid-container, .polaroid, etc. POR ESTOS: */
+
+.journal-gallery {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+  padding: 10px;
+  background-color: #fdf6e3; /* Un fondo tipo corcho */
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  min-height: 100px;
+}
+
+.gallery-thumbnail {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.gallery-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.add-photo-button {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.add-photo-button:hover {
+  background-color: #f0f0f0;
+}
+.add-photo-button p {
+  font-size: 2rem;
+  line-height: 1;
+  margin: 0;
+}
+.add-photo-button span {
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+
+/* ============================================ */
+/* ESTILOS PARA LAS NUEVAS MEJORAS DEL DIARIO   */
+/* ============================================ */
+
+/* Vista de Solo Lectura */
+.journal-read-body {
+  justify-content: flex-start;
+  gap: 1.5rem;
+  padding-top: 1rem;
+  overflow-y: auto;
+}
+
+.journal-text-display {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 15px;
+  width: 100%;
+  min-height: 100px;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap; /* Respeta los saltos de línea del textarea */
+  color: var(--foreground);
+}
+
+/* Widget de Previsualización */
+.journal-preview {
+  margin: 15px;
+  padding: 15px;
+  background-color: white;
+  border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+  cursor: pointer;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.journal-preview h4 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.preview-content {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+#preview-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.preview-text #preview-date {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.preview-text #preview-snippet {
+  font-size: 0.9rem;
+  color: var(--foreground);
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Limita el texto a 2 líneas */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* ============================================ */
+/* ESTILOS PARA EL CARRUSEL DE FOTOS DEL DIARIO */
+/* ============================================ */
+
+.carousel-container {
+  width: 100%;
+  aspect-ratio: 4 / 3; /* Proporción para las fotos */
+  position: relative;
+  overflow: hidden;
+  border-radius: 15px;
+  background-color: #f0f0f0;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.carousel-track {
+  display: flex;
+  height: 100%;
+  transition: transform 0.5s ease-in-out;
+}
+
+.carousel-slide {
+  width: 100%;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.carousel-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.carousel-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(255, 255, 255, 0.7);
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.carousel-button.prev {
+  left: 10px;
+}
+.carousel-button.next {
+  right: 10px;
+}
+
+.carousel-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.carousel-dot.active {
+  background-color: white;
+}
+
+
+/* En la sección de estilos del Widget de Previsualización */
+
+.preview-content {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start; /* <== AÑADE ESTA LÍNEA */
+}
+
+/* ... */
+
+.preview-text {
+  min-width: 0; /* <== AÑADE ESTA LÍNEA CLAVE */
+}
+
+.preview-text #preview-date {
+  /* ... (sin cambios) ... */
+}
+
+.preview-text #preview-snippet {
+  /* ... (sin cambios, pero asegúrate de que estas propiedades estén aquí) ... */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* En la sección de estilos de la Vista de Solo Lectura */
+
+/* REEMPLAZA la regla .journal-read-body existente por esta: */
+.journal-read-body {
+  display: flex; /* <== AÑADIDO */
+  flex-direction: column; /* <== AÑADIDO */
+  justify-content: flex-start;
+  gap: 1.5rem;
+  padding-top: 1rem;
+  overflow: hidden; /* <== CAMBIADO de 'auto' a 'hidden' para controlar el scroll nosotros */
+}
+
+/* REEMPLAZA la regla .journal-text-display existente por esta: */
+.journal-text-display {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 15px;
+  width: 100%;
+  flex-shrink: 1; /* <== AÑADIDO: Permite que este elemento se encoja si no hay espacio */
+  overflow-y: auto; /* <== AÑADIDO: El scroll ahora está DENTRO del cuadro de texto */
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: var(--foreground);
+}
+
+
+/* REEMPLAZA las reglas antiguas de .day-entry-indicator y .calendar-day.has-entry */
+
+/* POR ESTAS NUEVAS REGLAS */
+.calendar-day.has-entry {
+  position: relative;
+  z-index: 1;
+}
+
+.calendar-day.has-entry::before {
+  content: '❤️';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 28px; /* Tamaño del corazón, un poco más grande que el círculo */
+  color: var(--pink-light); /* Un color rosa muy suave */
+  opacity: 0.8;
+  z-index: -1; /* Lo ponemos DETRÁS del número */
+}
+
+.calendar-day.today.has-entry {
+  color: white; /* Asegura que el número siga siendo blanco aunque tenga un recuerdo */
+}
+
+
+/* REEMPLAZA toda la sección de .journal-preview por esta */
+
+.journal-preview {
+  margin: 15px;
+  padding: 15px;
+  background: #fffaf0; /* Un color crema, como papel viejo */
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  cursor: pointer;
+  border: 1px solid #f0e6d2;
+  position: relative; /* Para el pin */
+  transition: transform 0.2s ease;
+}
+.journal-preview:hover {
+  transform: translateY(-3px);
+}
+
+/* El "pin" que sujeta la nota */
+.journal-preview::before {
+  content: '📌';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%) rotate(15deg);
+  font-size: 20px;
+  opacity: 0.8;
+}
+
+.journal-preview h4 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  margin-bottom: 12px;
+  text-align: center;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 8px;
+}
+
+.preview-content {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+#preview-image {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  border: 3px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.preview-text {
+  min-width: 0;
+}
+
+.preview-text #preview-date {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.preview-text #preview-snippet {
+  font-size: 0.85rem;
+  color: var(--foreground);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* REEMPLAZA las reglas de .back-to-home-btn, .back-to-capsule-list-btn, etc. */
+/* POR ESTA ÚNICA REGLA GENÉRICA */
+
+.phone-back-btn {
+  background: none;
+  border: none;
+  font-size: 1.8rem; /* Un poco más grande para mejor visibilidad */
+  font-weight: bold;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 0 1rem 0 0; /* Ajusta el espaciado */
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+.phone-back-btn:hover {
+  transform: translateX(-3px);
+}
+
+
+/* ============================================ */
+/* ESTILOS PARA EL MODAL DE CONFIRMACIÓN        */
+/* ============================================ */
+
+/* Un modificador para hacer el modal más pequeño y coqueto */
+.modal-content.modal-sm {
+  max-width: 400px;
+}
+
+.confirm-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  animation: wave-animation 2s ease-in-out infinite;
+}
+
+/* Animación para la manita que saluda */
+@keyframes wave-animation {
+  0% { transform: rotate(0deg); }
+  10% { transform: rotate(14deg); }
+  20% { transform: rotate(-8deg); }
+  30% { transform: rotate(14deg); }
+  40% { transform: rotate(-4deg); }
+  50% { transform: rotate(10deg); }
+  60% { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.confirm-text {
+  font-size: 1.1rem;
+  color: var(--muted-foreground);
+  margin-bottom: 1.5rem;
+}
+
+.confirm-actions {
+  justify-content: center;
+}
+
+
+
+/* ============================================ */
+/* ESTILOS PARA EL MODO TABLET                  */
+/* ============================================ */
+
+/* Botón para cambiar de dispositivo */
+.device-switch-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(0,0,0,0.1);
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+  color: white;
+}
+.device-switch-btn:hover {
+  background: rgba(0,0,0,0.3);
+}
+
+/* --- Estilos cuando está en modo Tablet --- */
+
+.phone-container.is-tablet {
+  width: 80vw; /* Ocupa el 80% del ancho de la pantalla */
+  max-width: 800px; /* Un máximo para pantallas grandes */
+  height: 80vh; /* Ocupa el 80% de la altura */
+  max-height: 600px;
+  background-color: #e8eaf6; /* Un color de fondo diferente para la tablet */
+}
+
+/* La pantalla de la tablet es más ancha */
+.phone-container.is-tablet .phone-screen {
+  background: white; /* Fondo blanco limpio */
+}
+
+/* El notch y el botón de home se ocultan en modo tablet */
+.phone-container.is-tablet .phone-notch,
+.phone-container.is-tablet .phone-home-button {
+  display: none;
+}
+
+/* La rejilla de apps tiene más columnas */
+.phone-container.is-tablet .app-grid {
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  padding: 2rem;
+}
+
+.phone-container.is-tablet .app-icon-bg {
+  width: 80px;
+  height: 80px;
+  font-size: 2.5rem;
+}
+
+.phone-container.is-tablet .app-name {
+  font-size: 0.9rem;
+}
+
+/* Adaptar las apps internas al modo tablet */
+.phone-container.is-tablet .app-content-body {
+  flex-direction: row; /* Pone los elementos en horizontal */
+  align-items: flex-start;
+  gap: 2rem;
+  padding: 2rem;
+}
+
+/* Ejemplo: Adaptar el Diario a la vista de tablet */
+.phone-container.is-tablet #phone-view-journalread .journal-read-body {
+  align-items: flex-start;
+}
+.phone-container.is-tablet #phone-view-journalread .carousel-container {
+  width: 50%; /* El carrusel ocupa la mitad */
+  max-width: 400px;
+}
+.phone-container.is-tablet #phone-view-journalread .journal-text-display {
+  flex: 1; /* El texto ocupa el resto del espacio */
+  height: 100%;
+  max-height: 400px; /* Limita la altura para que el scroll funcione */
+}
+
+
+/* ============================================ */
+/* ESTILOS PARA LA APP "BANDA SONORA"           */
+/* ============================================ */
+
+.playlists-list {
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.playlist-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  cursor: pointer;
+}
+.playlist-item-icon {
+  font-size: 1.5rem;
+}
+.playlist-item-name {
+  font-weight: 600;
+}
+
+/* Vista del Casete */
+.cassette-player-body {
+  justify-content: flex-start;
+  gap: 1.5rem;
+}
+
+.cassette-player {
+  width: 100%;
+  height: 150px;
+  background: #e0e0e0;
+  border-radius: 10px;
+  border: 1px solid #bdbdbd;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+}
+
+.cassette-label {
+  background: #f5f5f5;
+  height: 40px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  margin-bottom: 10px;
+  padding: 5px;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cassette-windows {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+}
+
+.cassette-spool {
+  flex: 1;
+  background: #333;
+  border-radius: 5px;
+  border: 5px solid #f5f5f5;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+}
+
+.song-list {
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.song-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.song-item:hover {
+  background-color: #f8f9fa;
+}
+
+.song-icon {
+  font-size: 1.5rem;
+  color: var(--primary);
+}
+
+.song-info {
+  flex: 1;
+}
+.song-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.song-added-by {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.play-song-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  color: var(--pink);
+}
+
+/* Vista de Añadir Canción */
+.add-song-body {
+  justify-content: flex-start;
+  padding-top: 2rem;
+  gap: 1rem;
+  width: 100%;
+}
+
+
+/* ============================================ */
+/* ESTILOS PARA EL REPRODUCTOR (TOCADISCOS)     */
+/* ============================================ */
+
+.player-body {
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: #333; /* Fondo oscuro para que resalte el reproductor */
+}
+
+.youtube-player-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.youtube-player-container iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.turntable-container {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin-top: 1rem;
+}
+
+.turntable-disc {
+  width: 100%;
+  height: 100%;
+  background: #222;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 5px solid #555;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+/* Animación del disco girando */
+@keyframes spin-disc {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.turntable-disc.playing {
+  animation: spin-disc 2s linear infinite;
+}
+
+.disc-label {
+  width: 70px;
+  height: 70px;
+  background: var(--pink);
+  border-radius: 50%;
+  border: 3px solid #fff;
+}
+
+.turntable-arm {
+  width: 100px;
+  height: 15px;
+  background: #ccc;
+  border-radius: 10px;
+  position: absolute;
+  top: -10px;
+  right: -20px;
+  transform-origin: bottom right;
+  transform: rotate(-30deg);
+  transition: transform 0.5s ease-in-out;
+  z-index: 10;
+}
+.turntable-arm::after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  background: #888;
+  border-radius: 50%;
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+}
+
+.turntable-container.playing .turntable-arm {
+  transform: rotate(0deg);
+}
+
+.now-playing-info {
+  text-align: center;
+  color: white;
+}
+#player-song-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+#player-added-by {
+  font-size: 0.8rem;
+  color: #ccc;
+}

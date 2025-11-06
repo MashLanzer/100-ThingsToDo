@@ -23,8 +23,18 @@ import {
   query, 
   orderBy,
   Timestamp,
-  setDoc
+  setDoc,
+  where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// ... al principio de app.js, junto a las otras importaciones de Firebase ...
+import { 
+  getStorage, 
+  ref, 
+  uploadBytes, 
+  getDownloadURL 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
 // Importar módulo de parejas
 import { 
   getUserCoupleCode, 
@@ -54,6 +64,7 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // ============================================
 // ICONOS KAWAII
@@ -116,6 +127,15 @@ let coupleData = null;
 let sortableInstance = null;
 let currentSurpriseTask = null;
 let currentGoalId = null;
+// ===> AÑADE ESTAS LÍNEAS AQUÍ <===
+let currentJournalDate = new Date();
+let selectedJournalDate = null;
+let journalEntriesCache = new Map();
+// ===> AÑADE ESTAS LÍNEAS AQUÍ <===
+let currentSlideIndex = 0;
+let slides = [];
+let currentPlaylistId = null;
+
 
 // ============================================
 // ELEMENTOS DEL DOM
@@ -252,6 +272,78 @@ const goalTotalAmount = document.getElementById('goal-total-amount');
 const contributionAmountInput = document.getElementById('contribution-amount-input');
 const addContributionBtn = document.getElementById('add-contribution-btn');
 const goalContributionsList = document.getElementById('goal-contributions-list');
+
+// Elementos del Diario de Pareja
+const journalCalendarGrid = document.getElementById('journal-calendar-grid');
+const journalMonthYear = document.getElementById('journal-month-year');
+const journalPrevMonthBtn = document.getElementById('journal-prev-month-btn');
+const journalNextMonthBtn = document.getElementById('journal-next-month-btn');
+const backToJournalBtn = document.querySelector('.back-to-journal-btn');
+const journalEntryDate = document.getElementById('journal-entry-date');
+const journalGalleryContainer = document.getElementById('journal-gallery-container');
+const journalAddPhotoBtn = document.getElementById('journal-add-photo-btn');
+const journalImageInput = document.getElementById('journal-image-input');
+const journalEntryText = document.getElementById('journal-entry-text');
+const saveJournalEntryBtn = document.getElementById('save-journal-entry-btn');
+
+// ... al final de la sección de elementos del DOM ...
+
+// Elementos de la Vista de Lectura del Diario
+const journalReadDate = document.getElementById('journal-read-date');
+const journalReadGallery = document.getElementById('journal-read-gallery');
+const journalReadText = document.getElementById('journal-read-text');
+const goToEditEntryBtn = document.getElementById('go-to-edit-entry-btn');
+
+// Elementos del Widget de Previsualización
+const journalPreviewWidget = document.getElementById('journal-preview-widget');
+const previewImage = document.getElementById('preview-image');
+const previewDate = document.getElementById('preview-date');
+const previewSnippet = document.getElementById('preview-snippet');
+
+// Elementos del Carrusel del Diario
+const carouselContainer = document.getElementById('journal-carousel-container');
+const carouselTrack = document.getElementById('journal-carousel-track');
+const carouselPrevBtn = document.getElementById('carousel-prev-btn');
+const carouselNextBtn = document.getElementById('carousel-next-btn');
+const carouselDots = document.getElementById('carousel-dots');
+
+// Elementos del Modal de Confirmación de Salida
+const logoutConfirmModal = document.getElementById('logout-confirm-modal');
+const closeLogoutModalBtn = document.getElementById('close-logout-modal-btn');
+const cancelLogoutBtn = document.getElementById('cancel-logout-btn');
+const confirmLogoutBtn = document.getElementById('confirm-logout-btn');
+
+// ... al final de la sección de elementos del DOM ...
+
+// Elementos del Switch de Dispositivo
+const phoneContainer = document.querySelector('.phone-container');
+const deviceSwitchBtn = document.getElementById('device-switch-btn');
+
+// Elementos de la Banda Sonora
+const playlistsList = document.getElementById('playlists-list');
+const newPlaylistNameInput = document.getElementById('new-playlist-name-input');
+const createPlaylistBtn = document.getElementById('create-playlist-btn');
+const playlistDetailTitle = document.getElementById('playlist-detail-title');
+const cassetteLabelTitle = document.getElementById('cassette-label-title');
+const songList = document.getElementById('song-list');
+const goToAddSongBtn = document.getElementById('go-to-add-song-btn');
+const songNameInput = document.getElementById('song-name-input');
+const youtubeLinkInput = document.getElementById('youtube-link-input');
+const saveSongBtn = document.getElementById('save-song-btn');
+
+// Elementos del Reproductor de Música (Tocadiscos)
+const youtubePlayerContainer = document.getElementById('youtube-player-container');
+const turntableContainer = document.querySelector('.turntable-container');
+const turntableDisc = document.querySelector('.turntable-disc');
+const playerSongTitle = document.getElementById('player-song-title');
+const playerAddedBy = document.getElementById('player-added-by');
+
+
+
+
+
+
+
 
 
 
@@ -1144,7 +1236,36 @@ async function handleUnlinkPartner() {
 loginBtn.addEventListener('click', handleLogin);
 
 // Dashboard
-logoutBtn.addEventListener('click', handleLogout);
+// NUEVO BLOQUE DE CÓDIGO
+logoutBtn.addEventListener('click', () => {
+  logoutConfirmModal.style.display = 'flex'; // Abre el modal de confirmación
+});
+
+// Función para cerrar el modal
+function closeLogoutConfirmModal() {
+  logoutConfirmModal.style.display = 'none';
+}
+
+// Listeners para los botones del nuevo modal
+closeLogoutModalBtn.addEventListener('click', closeLogoutConfirmModal);
+cancelLogoutBtn.addEventListener('click', closeLogoutConfirmModal);
+confirmLogoutBtn.addEventListener('click', () => {
+  closeLogoutConfirmModal(); // Cierra el modal
+  handleLogout(); // Ejecuta la función de logout que ya tenías
+});
+
+// Listener para cerrar el modal al hacer clic en el overlay
+logoutConfirmModal.addEventListener('click', (e) => {
+  if (e.target === logoutConfirmModal) {
+    closeLogoutConfirmModal();
+  }
+});
+
+
+
+
+
+
 newPlanBtn.addEventListener('click', toggleNewPlanForm);
 createPlanBtn.addEventListener('click', handleCreatePlan);
 cancelPlanBtn.addEventListener('click', toggleNewPlanForm);
@@ -1176,6 +1297,8 @@ editPlanModal.addEventListener('click', (e) => {
   }
 });
 
+
+
 // ... al final de la sección de listeners ...
 statsBtn.addEventListener('click', openStatsModal);
 closeStatsModalBtn.addEventListener('click', closeStatsModal);
@@ -1183,6 +1306,95 @@ statsModal.addEventListener('click', (e) => {
   if (e.target === statsModal) {
     closeStatsModal();
   }
+});
+
+
+
+// Listeners para la app de Banda Sonora
+createPlaylistBtn.addEventListener('click', handleCreatePlaylist);
+goToAddSongBtn.addEventListener('click', goToAddSongView);
+saveSongBtn.addEventListener('click', handleSaveSong);
+
+
+
+
+
+
+
+
+
+// En la sección EVENT LISTENERS
+
+// REEMPLAZA todos los bloques de appIcons.forEach por este único bloque:
+
+appIcons.forEach(icon => {
+  icon.addEventListener('click', () => {
+    const appName = icon.dataset.app;
+    if (!appName) return; // Si el icono no tiene data-app, no hacer nada
+
+    // Usamos una estructura switch para manejar cada app
+    switch (appName) {
+      case 'surprise':
+        updateSurpriseContent();
+        showPhoneApp('surprise');
+        setTimeout(() => {
+          if (surpriseCard) surpriseCard.classList.add('is-flipped');
+        }, 100);
+        break;
+      
+      case 'timecapsule':
+        loadAndRenderCapsules();
+        showPhoneApp('timecapsule');
+        break;
+        
+      case 'budget':
+        renderGoalsList();
+        showPhoneApp('budget');
+        break;
+        
+      case 'journal':
+        currentJournalDate = new Date();
+        fetchJournalEntriesForMonth();
+        showPhoneApp('journal');
+        break;
+        
+      case 'soundtrack':
+        renderPlaylists();
+        showPhoneApp('soundtrack');
+        break;
+        
+      // Puedes añadir más casos aquí para futuras apps
+      // default:
+      //   console.log(`App "${appName}" no reconocida.`);
+    }
+  });
+});
+
+// En la sección EVENT LISTENERS
+
+// REEMPLAZA todos los bloques de allPhoneBackBtns.forEach por este único bloque:
+
+const allPhoneBackBtns = document.querySelectorAll('.phone-back-btn');
+allPhoneBackBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetApp = btn.dataset.target;
+    if (!targetApp) return;
+
+    // Lógica especial para la playlist
+    if (targetApp === 'playlistdetail') {
+      const currentPlaylistName = playlistDetailTitle.textContent;
+      openPlaylistDetail(currentPlaylistId, currentPlaylistName);
+      return; // Salimos para no ejecutar el showPhoneApp genérico
+    }
+    
+    // Lógica genérica para todas las demás apps
+    showPhoneApp(targetApp);
+    
+    // Lógica extra si volvemos al homescreen
+    if (targetApp === 'homescreen' && surpriseCard) {
+      surpriseCard.classList.remove('is-flipped');
+    }
+  });
 });
 
 
@@ -1200,24 +1412,6 @@ phoneModal.addEventListener('click', (e) => {
   }
 });
 
-// Listeners para los iconos de las apps
-appIcons.forEach(icon => {
-  icon.addEventListener('click', () => {
-    const appName = icon.dataset.app;
-    if (appName) {
-      if (appName === 'surprise') {
-        // 1. Actualiza el contenido de la tarjeta
-        updateSurpriseContent();
-        // 2. Muestra la pantalla de la app
-        showPhoneApp(appName);
-        // 3. Inicia la animación de volteo
-        setTimeout(() => {
-          surpriseCard.classList.add('is-flipped');
-        }, 100); // Pequeño delay para que el efecto sea visible
-      }
-    }
-  });
-});
 
 // Listeners para los botones de "volver"
 backToHomeBtns.forEach(btn => {
@@ -1239,21 +1433,6 @@ goToCreateCapsuleBtn.addEventListener('click', () => showPhoneApp('createcapsule
 backToCapsuleListBtn.addEventListener('click', () => showPhoneApp('timecapsule'));
 saveCapsuleBtn.addEventListener('click', handleSaveCapsule);
 
-// Modifica el listener del icono de la app para que cargue las cápsulas al abrir
-appIcons.forEach(icon => {
-  icon.addEventListener('click', () => {
-    const appName = icon.dataset.app;
-    if (appName) {
-      if (appName === 'surprise') {
-        // ... (código existente)
-      } else if (appName === 'timecapsule') {
-        // ===> AÑADE ESTO <===
-        loadAndRenderCapsules();
-        showPhoneApp(appName);
-      }
-    }
-  });
-});
 
 
 // Listeners para la app de Presupuesto Compartido
@@ -1262,19 +1441,99 @@ backToBudgetListBtn.addEventListener('click', () => showPhoneApp('budget'));
 saveGoalBtn.addEventListener('click', handleSaveGoal);
 addContributionBtn.addEventListener('click', handleAddContribution);
 
-// Modifica el listener del icono de la app
-appIcons.forEach(icon => {
-  icon.addEventListener('click', () => {
-    const appName = icon.dataset.app;
-    if (appName) {
-      // ... (código existente para 'surprise' y 'timecapsule')
-      if (appName === 'budget') {
-        renderGoalsList();
-        showPhoneApp(appName);
-      }
+
+
+
+
+// Nuevo listener para el botón de añadir foto
+journalAddPhotoBtn.addEventListener('click', () => journalImageInput.click());
+
+journalImageInput.addEventListener('change', (e) => {
+  const files = e.target.files;
+  if (files.length > 0) {
+    for (const file of files) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'gallery-thumbnail';
+        thumb.innerHTML = `<img src="${event.target.result}" alt="Previsualización">`;
+        journalGalleryContainer.insertBefore(thumb, journalAddPhotoBtn);
+      };
+      reader.readAsDataURL(file);
     }
-  });
+  }
 });
+
+saveJournalEntryBtn.addEventListener('click', handleSaveJournalEntry);
+
+
+// Event Listeners para los botones del carrusel
+carouselPrevBtn.addEventListener('click', () => {
+  moveToSlide(currentSlideIndex - 1);
+});
+carouselNextBtn.addEventListener('click', () => {
+  moveToSlide(currentSlideIndex + 1);
+});
+
+
+
+// Listener para el botón "Editar" en la vista de solo lectura
+goToEditEntryBtn.addEventListener('click', () => {
+  if (selectedJournalDate) {
+    openJournalEditView(selectedJournalDate);
+  }
+});
+
+
+
+
+
+
+
+// ... en la sección EVENT LISTENERS ...
+
+// Listener para el switch de Teléfono/Tablet
+deviceSwitchBtn.addEventListener('click', () => {
+  // toggle() añade la clase si no está, y la quita si ya está. ¡Es mágico!
+  phoneContainer.classList.toggle('is-tablet');
+
+  // Cambiar el icono y el título del botón para que el usuario sepa qué hace
+  const isTablet = phoneContainer.classList.contains('is-tablet');
+  if (isTablet) {
+    deviceSwitchBtn.title = "Cambiar a modo Teléfono";
+    // Icono de teléfono
+    deviceSwitchBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>`;
+  } else {
+    deviceSwitchBtn.title = "Cambiar a modo Tablet";
+    // Icono de tablet
+    deviceSwitchBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"></rect><line x1="2" y1="12" x2="22" y2="12"></line></svg>`;
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1288,6 +1547,13 @@ appIcons.forEach(icon => {
 
 
 goToCoupleModalBtn.addEventListener('click', openCoupleModal);
+
+
+
+
+
+
+
 
 
 // Cerrar modal al hacer click en el overlay
@@ -1474,21 +1740,20 @@ function closePhoneModal() {
   surpriseCard.classList.remove('is-flipped');
   // Y volvemos a la pantalla de inicio del teléfono
   showPhoneApp('homescreen');
-}
 
-// VERSIÓN CORREGIDA Y MEJORADA
-function showPhoneApp(appName) {
-  // 1. Oculta todas las vistas quitando la clase 'active'
-  document.querySelectorAll('.phone-app-view').forEach(view => {
-    view.classList.remove('active');
-  });
-
-  // 2. Muestra la vista solicitada añadiendo la clase 'active'
-  const viewToShow = document.getElementById(`phone-view-${appName}`);
-  if (viewToShow) {
-    viewToShow.classList.add('active');
+   // ===> AÑADE UNA COMPROBACIÓN DE SEGURIDAD <===
+  if (phoneContainer && deviceSwitchBtn) {
+    phoneContainer.classList.remove('is-tablet');
+    deviceSwitchBtn.title = "Cambiar a modo Tablet";
+    deviceSwitchBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"></rect><line x1="2" y1="12" x2="22" y2="12"></line></svg>`;
+  }  
+  if (surpriseCard) {
+    surpriseCard.classList.remove('is-flipped');
   }
+
 }
+
+
 
 
 // Función simplificada para generar y mostrar el contenido de la tarea
@@ -1546,6 +1811,26 @@ async function acceptSurpriseTask() {
     acceptSurpriseTaskBtn.textContent = '¡Aceptamos!';
   }
 }
+
+
+// VERSIÓN NUEVA E INTELIGENTE (LA QUE QUEREMOS CONSERVAR)
+function showPhoneApp(appName) {
+  // Detener animaciones si no estamos en la pantalla del reproductor
+  if (appName !== 'player') {
+    if (turntableContainer) turntableContainer.classList.remove('playing');
+    if (turntableDisc) turntableDisc.classList.remove('playing');
+    if (youtubePlayerContainer) youtubePlayerContainer.innerHTML = '';
+  }
+
+  document.querySelectorAll('.phone-app-view').forEach(view => {
+    view.classList.remove('active');
+  });
+  const viewToShow = document.getElementById(`phone-view-${appName}`);
+  if (viewToShow) {
+    viewToShow.classList.add('active');
+  }
+}
+
 
 
 
@@ -1850,6 +2135,464 @@ async function handleAddContribution() {
   await openGoalDetail(currentGoalId); // Recargar la vista
   contributionAmountInput.value = '';
 }
+
+// ============================================
+// FUNCIONES DEL CARRUSEL DE FOTOS
+// ============================================
+
+
+
+function setupCarousel(imageUrls) {
+  carouselTrack.innerHTML = '';
+  carouselDots.innerHTML = '';
+  slides = [];
+  currentSlideIndex = 0;
+
+  if (!imageUrls || imageUrls.length === 0) {
+    carouselContainer.style.display = 'none';
+    return;
+  }
+  
+  carouselContainer.style.display = 'block';
+
+  imageUrls.forEach((url, index) => {
+    // Crear slide
+    const slide = document.createElement('div');
+    slide.className = 'carousel-slide';
+    slide.innerHTML = `<img src="${url}" alt="Recuerdo ${index + 1}">`;
+    carouselTrack.appendChild(slide);
+    slides.push(slide);
+
+    // Crear dot indicador
+    const dot = document.createElement('button');
+    dot.className = 'carousel-dot';
+    dot.addEventListener('click', () => moveToSlide(index));
+    carouselDots.appendChild(dot);
+  });
+
+  // Mostrar/ocultar botones de navegación
+  carouselPrevBtn.style.display = slides.length > 1 ? 'flex' : 'none';
+  carouselNextBtn.style.display = slides.length > 1 ? 'flex' : 'none';
+  
+  updateCarousel();
+}
+
+function moveToSlide(index) {
+  if (index < 0 || index >= slides.length) return;
+  currentSlideIndex = index;
+  updateCarousel();
+}
+
+function updateCarousel() {
+  // Mover el track
+  carouselTrack.style.transform = `translateX(-${currentSlideIndex * 100}%)`;
+
+  // Actualizar los dots
+  const dots = carouselDots.children;
+  for (let i = 0; i < dots.length; i++) {
+    dots[i].classList.toggle('active', i === currentSlideIndex);
+  }
+}
+
+
+
+
+
+
+// ============================================
+// FUNCIONES DE UI - DIARIO DE PAREJA
+// ============================================
+
+
+
+function renderJournalCalendar() {
+  journalCalendarGrid.innerHTML = '';
+  const year = currentJournalDate.getFullYear();
+  const month = currentJournalDate.getMonth();
+  
+  journalMonthYear.textContent = `${currentJournalDate.toLocaleString('es-ES', { month: 'long' })} ${year}`;
+  
+  const firstDayOfMonth = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const today = new Date(); // Obtenemos la fecha de hoy
+  const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  
+  // Rellenar días del mes anterior
+  for (let i = 0; i < (firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1); i++) {
+    const dayCell = document.createElement('div');
+    dayCell.className = 'calendar-day other-month';
+    journalCalendarGrid.appendChild(dayCell);
+  }
+  
+  // Rellenar días del mes actual
+  for (let i = 1; i <= daysInMonth; i++) {
+    const dayCell = document.createElement('div');
+    dayCell.className = 'calendar-day';
+    dayCell.textContent = i;
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+
+        // ===> MODIFICACIÓN: Comprobar si es el día de hoy <===
+    const currentDayStr = `${year}-${month}-${i}`;
+    if (currentDayStr === todayStr) {
+      dayCell.classList.add('today');
+    }
+    
+    if (journalEntriesCache.has(dateStr)) {
+            // ===> MODIFICACIÓN: Añadir un span en lugar de una clase <===
+      const indicator = document.createElement('span');
+      indicator.className = 'day-entry-indicator';
+      indicator.textContent = '❤️';
+      dayCell.classList.add('has-entry');
+    
+    }
+    
+    dayCell.onclick = () => handleDayClick(new Date(year, month, i));
+
+    journalCalendarGrid.appendChild(dayCell);
+  }
+}
+
+async function fetchJournalEntriesForMonth() {
+  if (!currentCoupleId) return;
+  const year = currentJournalDate.getFullYear();
+  const month = currentJournalDate.getMonth();
+  const startOfMonth = new Date(year, month, 1);
+  const endOfMonth = new Date(year, month + 1, 0);
+
+  const entriesRef = collection(db, 'couples', currentCoupleId, 'journal');
+  const q = query(entriesRef, where('date', '>=', startOfMonth), where('date', '<=', endOfMonth));
+  const snapshot = await getDocs(q);
+  
+  journalEntriesCache.clear();
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    const date = data.date.toDate();
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    journalEntriesCache.set(dateStr, data);
+  });
+  renderJournalCalendar();
+  updateJournalPreview();
+}
+
+
+// REEMPLAZA la antigua función openJournalEntry por estas DOS:
+
+// 1. La nueva función que decide a dónde ir
+async function handleDayClick(date) {
+  selectedJournalDate = date;
+  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+  if (journalEntriesCache.has(dateStr)) {
+    // Si el día tiene contenido, vamos a la vista de lectura
+    openJournalReadView(journalEntriesCache.get(dateStr));
+  } else {
+    // Si el día está vacío, vamos directamente a la vista de edición
+    openJournalEditView(date);
+  }
+}
+
+// 2. La nueva función para la vista de LECTURA Carrusel
+function openJournalReadView(entry) {
+  journalReadDate.textContent = entry.date.toDate().toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+  
+  // ===> MODIFICACIÓN: Configurar el carrusel <===
+  setupCarousel(entry.imageUrls);
+
+  // Rellenar el texto
+  journalReadText.textContent = entry.text || 'No hay nada escrito para este día.';
+  
+  showPhoneApp('journalread');
+}
+
+
+async function openJournalEditView(date) {
+  selectedJournalDate = date;
+  journalEntryDate.textContent = date.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  
+  // Resetear la vista
+  journalEntryText.value = '';
+  journalGalleryContainer.querySelectorAll('.gallery-thumbnail').forEach(el => el.remove()); // Limpiar galería
+  journalImageInput.value = null;
+
+  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  
+  if (journalEntriesCache.has(dateStr)) {
+    const entry = journalEntriesCache.get(dateStr);
+    journalEntryText.value = entry.text || '';
+    // Si hay imágenes, renderizarlas
+    if (entry.imageUrls && entry.imageUrls.length > 0) {
+      entry.imageUrls.forEach(url => {
+        const thumb = document.createElement('div');
+        thumb.className = 'gallery-thumbnail';
+        thumb.innerHTML = `<img src="${url}" alt="Recuerdo">`;
+        journalGalleryContainer.insertBefore(thumb, journalAddPhotoBtn);
+      });
+    }
+  }
+  
+  showPhoneApp('journalentry');
+}
+
+
+async function handleSaveJournalEntry() {
+  if (!selectedJournalDate || !currentCoupleId) return;
+
+  const text = journalEntryText.value.trim();
+  const imageFiles = journalImageInput.files; // Ahora es plural
+
+  // Obtener las URLs de las imágenes ya existentes
+  const existingImageUrls = Array.from(journalGalleryContainer.querySelectorAll('.gallery-thumbnail img')).map(img => img.src);
+
+  if (!text && imageFiles.length === 0 && existingImageUrls.length === 0) {
+    alert('Añade fotos o escribe algo para guardar el recuerdo.');
+    return;
+  }
+
+  saveJournalEntryBtn.disabled = true;
+  saveJournalEntryBtn.textContent = 'Guardando...';
+
+  try {
+    const imageUrls = [...existingImageUrls]; // Empezamos con las que ya estaban
+
+    // Si se han seleccionado nuevas imágenes, subirlas
+    if (imageFiles.length > 0) {
+      for (const file of imageFiles) {
+        const filePath = `couples/${currentCoupleId}/journal/${selectedJournalDate.getTime()}_${file.name}`;
+        const storageRef = ref(storage, filePath);
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadUrl = await getDownloadURL(snapshot.ref);
+        imageUrls.push(downloadUrl);
+      }
+    }
+
+    // Guardar/actualizar la entrada en Firestore
+    const entryId = `${selectedJournalDate.getFullYear()}-${selectedJournalDate.getMonth() + 1}-${selectedJournalDate.getDate()}`;
+    const entryRef = doc(db, 'couples', currentCoupleId, 'journal', entryId);
+    
+    await setDoc(entryRef, {
+      date: Timestamp.fromDate(selectedJournalDate),
+      text: text,
+      imageUrls: imageUrls, // Guardamos un array de URLs
+      lastUpdatedBy: currentUser.uid,
+    }, { merge: true });
+
+    await fetchJournalEntriesForMonth();
+    showPhoneApp('journal');
+
+  } catch (error) {
+    console.error("Error guardando la entrada:", error);
+    alert("No se pudo guardar el recuerdo.");
+  } finally {
+    saveJournalEntryBtn.disabled = false;
+    saveJournalEntryBtn.textContent = 'Guardar Recuerdo';
+  }
+}
+
+
+// Nueva función para el widget
+function updateJournalPreview() {
+  const sortedEntries = Array.from(journalEntriesCache.values()).sort((a, b) => b.date.toDate() - a.date.toDate());
+  
+  if (sortedEntries.length > 0) {
+    const latestEntry = sortedEntries[0];
+    const date = latestEntry.date.toDate();
+    
+    previewDate.textContent = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    previewSnippet.textContent = latestEntry.text || 'Un recuerdo guardado en imágenes.';
+    previewImage.src = latestEntry.imageUrls?.[0] || 'images/icon-192x192.png'; // Usa la primera imagen o un icono por defecto
+    
+    journalPreviewWidget.style.display = 'block';
+    journalPreviewWidget.onclick = () => openJournalReadView(latestEntry);
+  } else {
+    journalPreviewWidget.style.display = 'none';
+  }
+}
+
+
+// ============================================
+// FUNCIONES DE FIRESTORE - BANDA SONORA
+// ============================================
+
+async function createPlaylist(name) {
+  if (!currentCoupleId) return;
+  const playlistsRef = collection(db, 'couples', currentCoupleId, 'playlists');
+  await addDoc(playlistsRef, {
+    name,
+    createdAt: Timestamp.now(),
+    createdBy: currentUser.uid,
+  });
+}
+
+async function getPlaylists() {
+  if (!currentCoupleId) return [];
+  const playlistsRef = collection(db, 'couples', currentCoupleId, 'playlists');
+  const q = query(playlistsRef, orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function addSongToPlaylist(playlistId, songName, youtubeLink) {
+  if (!currentCoupleId || !playlistId) return;
+  const songsRef = collection(db, 'couples', currentCoupleId, 'playlists', playlistId, 'songs');
+  await addDoc(songsRef, {
+    name: songName,
+    url: youtubeLink,
+    addedBy: currentUser.displayName,
+    createdAt: Timestamp.now(),
+  });
+}
+
+async function getSongsFromPlaylist(playlistId) {
+  if (!currentCoupleId || !playlistId) return [];
+  const songsRef = collection(db, 'couples', currentCoupleId, 'playlists', playlistId, 'songs');
+  const q = query(songsRef, orderBy('createdAt', 'asc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+
+// ============================================
+// FUNCIONES DE UI - BANDA SONORA
+// ============================================
+
+
+
+async function renderPlaylists() {
+  const playlists = await getPlaylists();
+  playlistsList.innerHTML = '';
+  if (playlists.length > 0) {
+    playlists.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'playlist-item';
+      item.onclick = () => openPlaylistDetail(p.id, p.name);
+      item.innerHTML = `
+        <span class="playlist-item-icon">🎵</span>
+        <span class="playlist-item-name">${p.name}</span>
+      `;
+      playlistsList.appendChild(item);
+    });
+  }
+}
+
+async function openPlaylistDetail(playlistId, playlistName) {
+  currentPlaylistId = playlistId;
+  playlistDetailTitle.textContent = playlistName;
+  cassetteLabelTitle.textContent = playlistName;
+  
+  const songs = await getSongsFromPlaylist(playlistId);
+  songList.innerHTML = '';
+  if (songs.length > 0) {
+    songs.forEach(song => {
+      const item = document.createElement('div');
+      item.className = 'song-item';
+      item.innerHTML = `
+        <span class="song-icon">🎧</span>
+        <div class="song-info">
+          <p class="song-title">${song.name}</p>
+          <span class="song-added-by">Añadida por ${song.addedBy}</span>
+        </div>
+        <button class="play-song-btn" onclick="playSong('${song.url}', '${song.name}', '${song.addedBy}')">▶</button>
+      `;
+      songList.appendChild(item);
+    });
+  } else {
+    songList.innerHTML = '<p style="text-align: center; font-size: 0.8rem; color: #aaa;">Añade la primera canción a esta playlist.</p>';
+  }
+  
+  showPhoneApp('playlistdetail');
+}
+
+async function handleCreatePlaylist() {
+  const name = newPlaylistNameInput.value.trim();
+  if (!name) {
+    alert('Por favor, dale un nombre a tu playlist.');
+    return;
+  }
+  await createPlaylist(name);
+  newPlaylistNameInput.value = '';
+  await renderPlaylists();
+}
+
+function goToAddSongView() {
+  songNameInput.value = '';
+  youtubeLinkInput.value = '';
+  showPhoneApp('addsong');
+}
+
+async function handleSaveSong() {
+  const songName = songNameInput.value.trim();
+  const youtubeLink = youtubeLinkInput.value.trim();
+  if (!songName || !youtubeLink) {
+    alert('Por favor, completa el nombre y el enlace de la canción.');
+    return;
+  }
+  // Validación simple del enlace de YouTube
+  if (!youtubeLink.includes('youtu.be/') && !youtubeLink.includes('youtube.com/watch')) {
+    alert('El enlace no parece ser un vídeo de YouTube válido.');
+    return;
+  }
+  
+  await addSongToPlaylist(currentPlaylistId, songName, youtubeLink);
+  const currentPlaylistName = playlistDetailTitle.textContent;
+  await openPlaylistDetail(currentPlaylistId, currentPlaylistName); // Recargar la vista de la playlist
+}
+
+
+// ... dentro de FUNCIONES DE UI - BANDA SONORA ...
+
+// Función para extraer el ID de un vídeo de YouTube
+function getYouTubeVideoId(url) {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+}
+
+// Función global para reproducir la canción
+window.playSong = function(url, name, addedBy) {
+  const videoId = getYouTubeVideoId(url);
+  if (!videoId) {
+    alert("El enlace de YouTube no es válido y no se puede reproducir.");
+    return;
+  }
+
+  // Actualizar la información en pantalla
+  playerSongTitle.textContent = name;
+  playerAddedBy.textContent = `Añadida por ${addedBy}`;
+  
+  // Limpiar el contenedor y crear el iframe
+  youtubePlayerContainer.innerHTML = '';
+  const iframe = document.createElement('iframe');
+  // Usamos el modo "embed" con autoplay para una mejor experiencia
+  iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+  iframe.allowFullscreen = true;
+  youtubePlayerContainer.appendChild(iframe );
+
+  // Activar las animaciones
+  turntableContainer.classList.add('playing');
+  turntableDisc.classList.add('playing');
+
+  // Mostrar la pantalla del reproductor
+  showPhoneApp('player');
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
