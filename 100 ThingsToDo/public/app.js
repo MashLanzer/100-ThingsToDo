@@ -136,6 +136,8 @@ let currentSlideIndex = 0;
 let slides = [];
 let currentPlaylistId = null;
 
+let youtubePlayer = null; // Guardará la instancia del reproductor de YouTube
+let isPlaying = false;    // Controla si la música está sonando
 
 // ============================================
 // ELEMENTOS DEL DOM
@@ -338,6 +340,8 @@ const turntableDisc = document.querySelector('.turntable-disc');
 const playerSongTitle = document.getElementById('player-song-title');
 const playerAddedBy = document.getElementById('player-added-by');
 
+// ... justo después de los elementos del tocadiscos ...
+const cassettePlayer = document.querySelector('.cassette-player');
 
 
 
@@ -1316,7 +1320,8 @@ goToAddSongBtn.addEventListener('click', goToAddSongView);
 saveSongBtn.addEventListener('click', handleSaveSong);
 
 
-
+// Listener para el clic en el disco del tocadiscos
+turntableDisc.addEventListener('click', togglePlayPause);
 
 
 
@@ -1820,6 +1825,9 @@ function showPhoneApp(appName) {
     if (turntableContainer) turntableContainer.classList.remove('playing');
     if (turntableDisc) turntableDisc.classList.remove('playing');
     if (youtubePlayerContainer) youtubePlayerContainer.innerHTML = '';
+        if (cassettePlayer) { // Comprobación de seguridad
+        cassettePlayer.classList.remove('playing');
+    }
   }
 
   document.querySelectorAll('.phone-app-view').forEach(view => {
@@ -2565,6 +2573,14 @@ function getYouTubeVideoId(url) {
 }
 
 
+// REEMPLAZA la función playSong existente por esta:
+
+/**
+ * Carga y reproduce una canción de YouTube, creando un reproductor controlable.
+ * @param {string} url - La URL del video de YouTube.
+ * @param {string} name - El nombre de la canción.
+ * @param {string} addedBy - El nombre de quien añadió la canción.
+ */
 function playSong(url, name, addedBy) {
   const videoId = getYouTubeVideoId(url);
   if (!videoId) {
@@ -2572,28 +2588,109 @@ function playSong(url, name, addedBy) {
     return;
   }
 
-  // Actualizar la información en pantalla
+  // Actualizar la información en pantalla inmediatamente
   playerSongTitle.textContent = name;
   playerAddedBy.textContent = `Añadida por ${addedBy}`;
   
-  // Limpiar el contenedor y crear el iframe
+  // Limpiar el contenedor por si había un reproductor anterior
   youtubePlayerContainer.innerHTML = '';
-  const iframe = document.createElement('iframe');
-  iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-  iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
-  iframe.allowFullscreen = true;
-  youtubePlayerContainer.appendChild(iframe );
+  const playerDiv = document.createElement('div');
+  playerDiv.id = 'yt-player-instance'; // Damos un ID al div del reproductor
+  youtubePlayerContainer.appendChild(playerDiv);
 
-  // Activar las animaciones
-  turntableContainer.classList.add('playing');
-  turntableDisc.classList.add('playing');
+  // Función para crear el reproductor una vez que la API esté lista
+  function createPlayer() {
+    // Destruir el reproductor anterior si existe
+    if (youtubePlayer && typeof youtubePlayer.destroy === 'function') {
+      youtubePlayer.destroy();
+    }
+
+    youtubePlayer = new YT.Player('yt-player-instance', {
+      height: '100%',
+      width: '100%',
+      videoId: videoId,
+      playerVars: {
+        'autoplay': 1, // Inicia la reproducción automáticamente
+        'controls': 0, // Oculta los controles de YouTube
+        'showinfo': 0,
+        'rel': 0
+      },
+      events: {
+        'onReady': onPlayerReady,
+        'onStateChange': onPlayerStateChange
+      }
+    });
+  }
+
+  // Comprobar si la API de YouTube IFrame ya está cargada
+  if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+    // Si no está cargada, la cargamos
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName('script' )[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    
+    // YouTube llamará a esta función global cuando la API esté lista
+    window.onYouTubeIframeAPIReady = createPlayer;
+  } else {
+    // Si ya está cargada, simplemente creamos el reproductor
+    createPlayer();
+  }
 
   // Mostrar la pantalla del reproductor
   showPhoneApp('player');
 }
 
+// ===> AÑADE ESTAS NUEVAS FUNCIONES DE AYUDA <===
+
+/**
+ * Se ejecuta cuando el reproductor de YouTube está listo.
+ */
+function onPlayerReady(event) {
+  isPlaying = true;
+  turntableContainer.classList.add('playing');
+  event.target.playVideo();
+}
+
+/**
+ * Se ejecuta cuando el estado del reproductor cambia (play, pausa, etc.).
+ */
+function onPlayerStateChange(event) {
+  if (event.data === YT.PlayerState.PLAYING) {
+    isPlaying = true;
+    turntableContainer.classList.add('playing');
+  } else {
+    isPlaying = false;
+    turntableContainer.classList.remove('playing');
+  }
+}
 
 
+
+/**
+ * Alterna entre reproducir y pausar la canción actual.
+ * También controla las animaciones del tocadiscos.
+ */
+function togglePlayPause() {
+  // Si no hay un reproductor cargado, no hacemos nada.
+  if (!youtubePlayer || typeof youtubePlayer.getPlayerState !== 'function') {
+    return;
+  }
+
+  const playerState = youtubePlayer.getPlayerState();
+
+  if (playerState === YT.PlayerState.PLAYING) {
+    // Si está sonando, lo pausamos
+    youtubePlayer.pauseVideo();
+    isPlaying = false;
+    turntableContainer.classList.remove('playing'); // Detiene la animación
+  } else {
+    // Si está pausado, en buffer o finalizado, lo reproducimos
+    youtubePlayer.playVideo();
+    isPlaying = true;
+    turntableContainer.classList.add('playing'); // Inicia la animación
+  }
+}
 
 
 

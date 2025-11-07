@@ -2526,6 +2526,10 @@ button, a, input, textarea {
 }
 
 
+
+
+
+
 /* ============================================ */
 /* ESTILOS MEJORADOS PARA LA APP "BANDA SONORA" */
 /* ============================================ */
@@ -2581,47 +2585,59 @@ button, a, input, textarea {
   font-weight: 600;
 }
 
-/* --- Vista del Casete Mejorada --- */
+
+
+
+
+
+
+
+/* ================================================== */
+/* == ESTILOS DE CASETE MINIMALISTA Y ELEGANTE (v.14) == */
+/* ================================================== */
+
 .cassette-player-body {
   justify-content: flex-start;
   gap: 1.5rem;
+  padding-top: 1rem;
 }
 
+/* El contenedor principal del casete */
 .cassette-player {
   width: 100%;
   height: 150px;
-  background: linear-gradient(to bottom, #d1d1d1, #e0e0e0);
+  background: #F1ECE2; /* Un color base crema muy claro y limpio */
   border-radius: 8px;
-  border: 1px solid #bdbdbd;
+  border: 1px solid #E0D8CC;
   padding: 10px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1), inset 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   position: relative;
 }
 
+/* Tornillos sutiles y elegantes */
 .cassette-screw {
   position: absolute;
   width: 6px;
   height: 6px;
-  background-color: #555;
+  background-color: #C9C1B1;
   border-radius: 50%;
-  box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
 }
-.cassette-screw.top-left { top: 8px; left: 8px; }
-.cassette-screw.top-right { top: 8px; right: 8px; }
-.cassette-screw.bottom-left { bottom: 8px; left: 8px; }
-.cassette-screw.bottom-right { bottom: 8px; right: 8px; }
+.cassette-screw.top-left { top: 10px; left: 10px; }
+.cassette-screw.top-right { top: 10px; right: 10px; }
+.cassette-screw.bottom-left { bottom: 10px; left: 10px; }
+.cassette-screw.bottom-right { bottom: 10px; right: 10px; }
 
+/* La etiqueta superior */
 .cassette-label {
-  background: #fdfbf3;
+  background: #E5DDCB;
   height: 50px;
   border-radius: 4px;
-  border: 1px solid #ccc;
   margin-bottom: 10px;
-  padding: 5px 10px;
-  font-family: 'Courier New', Courier, monospace;
-  font-weight: bold;
+  padding: 5px 15px;
+  font-family: 'Quicksand', sans-serif; /* Usamos la fuente principal de la app */
+  font-weight: 700; /* Más grueso para que se lea bien */
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -2629,53 +2645,66 @@ button, a, input, textarea {
   overflow: hidden;
 }
 .cassette-label p {
-  margin: 0;
-  padding: 0;
-  line-height: 1.2;
+  color: #7A6B5F; /* Color de texto principal */
+  text-transform: uppercase;
+  font-size: 1rem;
+  letter-spacing: 1px; /* Un poco de espacio entre letras */
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
-  color: #444;
 }
+/* Eliminamos las líneas de la etiqueta para un look más limpio */
 .label-lines {
-  height: 1px;
-  background: repeating-linear-gradient(to right, #c4c4c4, #c4c4c4 4px, transparent 4px, transparent 8px);
-  margin: 4px 0;
+  display: none;
 }
 
+/* La ventana inferior */
 .cassette-windows {
   flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(0,0,0,0.1);
+  background: #E5DDCB; /* Mismo color que la etiqueta para unificar */
   border-radius: 4px;
   padding: 8px;
-  gap: 20px;
+  gap: 40px; /* Más espacio entre los carretes */
 }
 
+/* Las "ventanas" ahora son invisibles, solo sirven para contener los carretes */
 .cassette-window {
-  width: 60px;
-  height: 40px;
-  background: #333;
-  border-radius: 3px;
-  border: 3px solid #444;
+  width: auto;
+  height: auto;
+  background: transparent;
+  border: none;
   display: flex;
+  flex-direction: column; /* Apilamos carrete y línea */
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  gap: 4px; /* Espacio entre el carrete y la línea */
 }
 
+/* La línea de la cinta magnética */
+.cassette-window::before {
+  content: '';
+  width: 40px; /* Ancho de la línea */
+  height: 3px;
+  background: #3D352A;
+  border-radius: 2px;
+}
+
+/* Los carretes */
 .cassette-spool {
   width: 30px;
   height: 30px;
-  background: linear-gradient(#555, #333);
+  background: #3D352A; /* Color sólido oscuro */
   border-radius: 50%;
   position: relative;
-  animation: spin-spool 4s linear infinite paused; /* Pausado por defecto */
+  animation: spin-spool 2s linear infinite;
+  animation-play-state: paused;
 }
+
 .cassette-player.playing .cassette-spool {
-  animation-play-state: running; /* Se activa con la clase 'playing' */
+  animation-play-state: running;
 }
 
 @keyframes spin-spool {
@@ -2683,16 +2712,23 @@ button, a, input, textarea {
   to { transform: rotate(360deg); }
 }
 
+/* Los dientes del carrete, ahora una estrella simple */
 .spool-teeth {
-  width: 10px;
-  height: 10px;
-  background: #fdfbf3;
+  width: 14px;
+  height: 14px;
+  background: #F1ECE2; /* Color del fondo del casete */
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
 }
+
+
+
+/* ================================================== */
+/* == ESTILOS DE Interiro de Lista de musica  == */
+/* ================================================== */
 
 .song-list {
   width: 100%;
@@ -2754,69 +2790,67 @@ button, a, input, textarea {
 
 
 /* ================================================== */
-/* == ESTILOS SIMPLIFICADOS Y FUNCIONALES (v.10) == */
+/* == ESTILOS DE REPRODUCTOR DE ALTA FIDELIDAD (v.12) == */
 /* ================================================== */
 
 /* 1. El cuerpo de la app del reproductor */
 .player-body {
-  padding: 1.5rem;
-  background: #4a4a4a;
-  justify-content: flex-start; /* Alinea todo arriba */
-  gap: 1.5rem;
+  padding: 0;
+  background: #212121;
+  justify-content: flex-end;
+  position: relative;
+  overflow: hidden;
+  display: flex; /* Aseguramos que sea flex container */
+  flex-direction: column; /* Apila los hijos verticalmente */
 }
 
-/* 2. Contenedor del video */
+/* 2. Contenedor del video (fondo decorativo) */
 .youtube-player-container {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background-color: #000;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0.1;
+  filter: blur(20px) grayscale(1);
+  transform: scale(1.5);
+  z-index: 1;
 }
 
 .youtube-player-container iframe {
   width: 100%;
   height: 100%;
   border: none;
-  border-radius: 10px; /* Añadido para consistencia */
 }
 
 /* 3. Contenedor del tocadiscos */
 .turntable-container {
-  width: 200px;
-  height: 200px;
-  position: relative; /* Posicionamiento normal, sin absolute */
-  margin: 1rem auto 0 auto; /* Margen para separarlo del video */
+  width: 300px;
+  height: 300px;
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
 }
 
-/* --- Estilos del tocadiscos (sin cambios de lógica) --- */
-
 .turntable-base {
-  width: 100%;
-  height: 100%;
-  background: #333;
-  border-radius: 15px;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+  display: none;
 }
 
 .turntable-disc {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 160px;
-  height: 160px;
-  margin-top: -80px;
-  margin-left: -80px;
-  background: radial-gradient(circle, #1a1a1a 0%, #0a0a0a 100%);
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  position: static;
+  background: #0a0a0a;
+  border: none;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.5);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 25px rgba(0,0,0,0.6);
 }
 
 .turntable-container.playing .turntable-disc {
-  animation: spin-disc 2s linear infinite;
+  animation: spin-disc 3s linear infinite;
 }
 
 .disc-reflection {
@@ -2825,66 +2859,62 @@ button, a, input, textarea {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(165deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 40%);
   border-radius: 50%;
+  background: linear-gradient(170deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 30%);
 }
 
 .disc-label {
-  width: 50px;
-  height: 50px;
+  width: 90px;
+  height: 90px;
   background: var(--pink);
+  border: none;
   border-radius: 50%;
-  border: 2px solid #fff;
 }
 .disc-label::after {
   content: '';
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 6px;
-  height: 6px;
-  margin: -3px 0 0 -3px;
-  background: #333;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  background: #0a0a0a;
+  border: 1px solid rgba(0,0,0,0.2);
   border-radius: 50%;
 }
 
 .turntable-arm {
-  width: 90px;
-  height: 8px;
-  background: silver;
-  border-radius: 4px;
+  width: 130px;
+  height: 12px;
+  background: #e0e0e0;
+  border-radius: 6px;
   position: absolute;
   top: 20px;
-  right: 20px;
+  right: -20px;
   transform-origin: 95% 50%;
   transform: rotate(-45deg);
-  transition: transform 1s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  transition: transform 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55);
   z-index: 10;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
 .arm-pivot {
-  width: 16px;
-  height: 16px;
-  background: #555;
+  width: 24px;
+  height: 24px;
+  background: #757575;
   border-radius: 50%;
   position: absolute;
-  top: -4px;
-  right: -8px;
+  top: -6px;
+  right: -12px;
 }
 
 .arm-needle {
-  width: 8px;
-  height: 12px;
-  background: #444;
-  border-radius: 2px;
-  position: absolute;
-  top: -2px;
-  left: 4px;
+  display: none;
 }
 
 .turntable-container.playing .turntable-arm {
-  transform: rotate(-15deg);
-  animation: arm-wobble 8s ease-in-out infinite alternate;
+  transform: rotate(-10deg);
+  animation: arm-wobble 10s ease-in-out infinite alternate;
 }
 
 @keyframes spin-disc {
@@ -2893,24 +2923,31 @@ button, a, input, textarea {
 }
 
 @keyframes arm-wobble {
-  from { transform: rotate(-15deg); }
-  to { transform: rotate(-12deg); }
+  from { transform: rotate(-10deg); }
+  to { transform: rotate(-7deg); }
 }
 
 /* 4. La información de la canción */
 .now-playing-info {
   text-align: center;
   color: white;
-  background: rgba(0,0,0,0.3);
-  padding: 0.5rem 1rem;
-  border-radius: 10px;
+  position: relative;
+  z-index: 3;
   width: 100%;
+  padding: 2rem 1.5rem;
+  margin-top: auto;
+  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.4) 20%, rgba(0,0,0,0.8) 100%);
 }
 #player-song-title {
+  font-family: 'Fredoka', sans-serif;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 1.8rem;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 5px rgba(0,0,0,0.5);
 }
 #player-added-by {
-  font-size: 0.8rem;
-  color: #ccc;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.6);
 }
