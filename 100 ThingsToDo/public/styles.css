@@ -2262,10 +2262,461 @@ button, a, input, textarea {
   justify-content: flex-start;
   gap: 1.5rem;
   padding-top: 1rem;
-  overflow: hidden; /* <== CAMBIADO de 'auto' a 'hidden' para controlar el scroll nosotros */
 }
 
-/* REEMPLAZA la regla .journal-text-display existente por esta: */
+
+/* ============================================ */
+/* ======> ESTILOS PARA TARRO DE AGRADECIMIENTOS <======= */
+/* ============================================ */
+.gratitude-app-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+}
+
+.gratitude-jar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.gratitude-jar {
+  width: 120px;
+  height: 160px;
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.jar-lid {
+  width: 140px;
+  height: 20px;
+  background: #8B6F47;
+  border-radius: 10px 10px 0 0;
+  position: absolute;
+  top: -20px;
+  left: -10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.7rem;
+}
+
+.jar-body {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  border: 3px solid #8B6F47;
+  border-radius: 0 0 10px 10px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(5px);
+}
+
+.jar-bottom {
+  width: 130px;
+  height: 10px;
+  background: #8B6F47;
+  border-radius: 0 0 5px 5px;
+  position: absolute;
+  bottom: -10px;
+  left: -5px;
+}
+
+.gratitude-notes-container {
+  position: absolute;
+  top: 10px;
+  left: 5px;
+  right: 5px;
+  bottom: 10px;
+  overflow: hidden;
+}
+
+.gratitude-note {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  background: #FFB6D9;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.gratitude-note:hover {
+  transform: scale(1.1);
+  z-index: 10;
+}
+
+.gratitude-input-container {
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 1rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+}
+
+.gratitude-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.checkbox-container input {
+  margin-right: 0.5rem;
+}
+
+/* ============================================ */
+/* ======> ESTILOS PARA MAPA DE AVENTURAS <======= */
+/* ============================================ */
+.map-app-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+}
+
+.map-container {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+}
+
+.adventure-map {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: linear-gradient(135deg, #a2d2ff, #cdb4db);
+}
+
+.map-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.map-placeholder-content {
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.map-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.map-controls {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.map-markers-list {
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 1rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+}
+
+.markers-container {
+  max-height: 150px;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+}
+
+.marker-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.marker-item:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+}
+
+.marker-icon {
+  font-size: 1.2rem;
+  margin-right: 0.5rem;
+}
+
+.marker-info {
+  flex: 1;
+}
+
+.marker-title {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.marker-date {
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+}
+
+/* ============================================ */
+/* ======> ESTILOS PARA CUÁNTO NOS CONOCEMOS <======= */
+/* ============================================ */
+.quiz-app-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+}
+
+.quiz-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.quiz-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.quiz-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.quiz-progress {
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
+.quiz-progress-text {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: var(--muted-foreground);
+}
+
+.quiz-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(139, 111, 71, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.quiz-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.quiz-question {
+  flex: 1;
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
+.quiz-question h4 {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  color: var(--primary);
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.quiz-option {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border);
+}
+
+.quiz-option:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.quiz-option.selected {
+  background: var(--pink-light);
+  border-color: var(--pink);
+}
+
+.quiz-results-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.quiz-score {
+  margin: 1.5rem 0;
+}
+
+.quiz-score span {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.quiz-title-text {
+  font-size: 1.2rem;
+  color: var(--muted-foreground);
+}
+
+.quiz-stats {
+  display: flex;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+/* ============================================ */
+/* ======> ESTILOS PARA CALENDARIO DE CITAS <======= */
+/* ============================================ */
+.calendar-app-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.calendar-header h3 {
+  font-size: 1.2rem;
+  color: var(--primary);
+}
+
+.calendar-header button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--primary);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-header button:hover {
+  background: rgba(139, 111, 71, 0.1);
+}
+
+.calendar-grid-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.2rem;
+  flex: 1;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.calendar-day:hover {
+  background: rgba(139, 111, 71, 0.1);
+}
+
+.calendar-day.other-month {
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.calendar-day.today {
+  background: var(--pink-light);
+  font-weight: 600;
+}
+
+.calendar-day.has-date::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  width: 6px;
+  height: 6px;
+  background: var(--primary);
+  border-radius: 50%;
+}
+
+.date-detail-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+}
+
+.date-detail-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.date-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: auto;
+}
+
+.date-actions .btn {
+  flex: 1;
+}
+
 .journal-text-display {
   background-color: #fff;
   border-radius: 10px;
@@ -2279,7 +2730,6 @@ button, a, input, textarea {
   white-space: pre-wrap;
   color: var(--foreground);
 }
-
 
 /* REEMPLAZA las reglas antiguas de .day-entry-indicator y .calendar-day.has-entry */
 
@@ -2335,8 +2785,6 @@ button, a, input, textarea {
 }
 
 .journal-preview h4 {
-  font-size: 0.75rem;
-  font-weight: 600;
   color: var(--muted-foreground);
   margin-bottom: 12px;
   text-align: center;
@@ -2382,7 +2830,6 @@ button, a, input, textarea {
   text-overflow: ellipsis;
 }
 
-
 /* REEMPLAZA las reglas de .back-to-home-btn, .back-to-capsule-list-btn, etc. */
 /* POR ESTA ÚNICA REGLA GENÉRICA */
 
@@ -2397,6 +2844,7 @@ button, a, input, textarea {
   line-height: 1;
   transition: transform 0.2s ease;
 }
+
 .phone-back-btn:hover {
   transform: translateX(-3px);
 }
@@ -2951,3 +3399,336 @@ button, a, input, textarea {
   font-size: 0.9rem;
   color: rgba(255,255,255,0.6);
 }
+
+
+
+
+/* ================================================== */
+/* == ESTILOS PARA LA APP: RUEDA DE DECISIONES == */
+/* ================================================== */
+
+.wheel-app-body {
+  justify-content: space-between;
+  padding: 1rem 0.5rem;
+  gap: 1rem;
+}
+
+.wheel-container {
+  position: relative;
+  width: 280px;
+  height: 280px;
+}
+
+.wheel-marker {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 25px solid var(--pink);
+  z-index: 10;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
+}
+
+#decision-wheel-canvas {
+  width: 100%;
+  height: 100%;
+  transition: transform 5s cubic-bezier(0.25, 1, 0.5, 1); /* Animación suave de giro */
+}
+
+#spin-wheel-btn {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.2rem;
+  padding: 0.8rem 2rem;
+  box-shadow: 0 4px 0 #c78a00; /* Sombra 3D */
+  background: #ffc107;
+  border-color: #ffc107;
+  color: #333;
+}
+#spin-wheel-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #c78a00;
+}
+#spin-wheel-btn:disabled {
+  background: #aaa;
+  box-shadow: 0 4px 0 #888;
+  cursor: not-allowed;
+}
+
+.wheel-options-container {
+  width: 100%;
+  background: rgba(255,255,255,0.5);
+  border-radius: 1rem;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+.wheel-options-container h4 {
+  text-align: center;
+  color: var(--primary);
+  margin-bottom: 0.75rem;
+}
+
+#wheel-options-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1rem;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+#wheel-options-list li {
+  background: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.remove-option-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-weight: bold;
+}
+.remove-option-btn:hover {
+  color: var(--destructive);
+}
+
+.add-option-form {
+  display: flex;
+  gap: 0.5rem;
+}
+.add-option-form .input {
+  flex-grow: 1;
+  margin: 0;
+}
+.add-option-form button {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  font-size: 1.5rem;
+  border: none;
+  line-height: 1;
+}
+
+
+/* ================================================== */
+/* == ESTILOS PARA LA APP: RUEDA DE DECISIONES == */
+/* ================================================== */
+
+/* ===> AÑADE ESTA REGLA DE CORRECCIÓN <=== */
+.wheel-app-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around; /* Distribuye el espacio verticalmente */
+  align-items: center; /* Centra los elementos horizontalmente */
+  padding: 1rem 0.5rem;
+  gap: 1rem;
+}
+
+.wheel-container {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  flex-shrink: 0; /* Evita que el contenedor de la ruleta se encoja */
+}
+
+/* ... (el resto de tus estilos para la ruleta se mantienen igual) ... */
+
+
+
+
+/* En styles.css */
+
+/* ================================================== */
+/* == ESTILOS PARA LA APP: BANCO DE CUPONES      == */
+/* ================================================== */
+
+.coupons-app-body {
+  padding: 0;
+  justify-content: flex-start;
+}
+
+.coupons-list {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.coupon-ticket {
+  background: #fff;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+.coupon-ticket:hover {
+  transform: scale(1.03);
+}
+
+.coupon-ticket.redeemed {
+  opacity: 0.6;
+  background: #f1f1f1;
+}
+
+.coupon-ticket.redeemed::after {
+  content: 'CANJEADO';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  font-size: 2rem;
+  font-weight: 700;
+  color: rgba(231, 76, 60, 0.5);
+  border: 4px solid rgba(231, 76, 60, 0.5);
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  z-index: 2;
+}
+
+.coupon-stub {
+  background: var(--pink-light);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 2px dashed var(--pink);
+  font-size: 2rem;
+}
+
+.coupon-main {
+  flex: 1;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.coupon-main p {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.coupon-main span {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.coupon-redeem-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #ccc;
+  transition: color 0.2s ease;
+}
+.coupon-ticket:not(.redeemed):hover .coupon-redeem-btn {
+  color: var(--primary);
+}
+
+/* --- Estilos para la pantalla de creación --- */
+.create-coupon-body {
+  justify-content: space-around;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.coupon-preview-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  padding: 1rem;
+  width: 100%;
+  border: 1px solid var(--border);
+}
+.coupon-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px dashed var(--border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+.coupon-title-text {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 1rem;
+}
+.coupon-icon-preview {
+  font-size: 1.5rem;
+}
+.coupon-body p {
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+  min-height: 30px;
+  color: var(--foreground);
+}
+.coupon-footer {
+  margin-top: 1rem;
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+
+#coupon-icon-grid {
+  max-height: 100px; /* Limita la altura para que no ocupe toda la pantalla */
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

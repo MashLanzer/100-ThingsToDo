@@ -139,6 +139,15 @@ let currentPlaylistId = null;
 let youtubePlayer = null; // Guardará la instancia del reproductor de YouTube
 let isPlaying = false;    // Controla si la música está sonando
 
+let wheelOptions = ["Pizza 🍕", "Sushi 🍣", "Peli en casa 🎬", "Paseo ✨"];
+let wheelColors = ["#FFDDC1", "#FFABAB", "#FFC3A0", "#FF677D", "#D4A5A5", "#392F5A"];
+let startAngle = 0;
+let isSpinning = false;
+
+let selectedCouponIcon = 'gift'; // Añade esta línea con las otras variables de estado
+
+
+
 // ============================================
 // ELEMENTOS DEL DOM
 // ============================================
@@ -247,7 +256,7 @@ const rerollSurpriseTaskBtn = document.querySelector('#phone-view-surprise #rero
 // ... al final de la sección de elementos del DOM ...
 
 // Elementos de la Cápsula del Tiempo
-const capsulesList = document.getElementById('capsules-list');
+const capsulesList = document.getElementById('capsules-list'); // <--- ASEGÚRATE DE QUE SE LLAME "capsulesList"
 const capsulesEmptyState = document.getElementById('capsules-empty-state');
 const goToCreateCapsuleBtn = document.getElementById('go-to-create-capsule-btn');
 const backToCapsuleListBtn = document.querySelector('.back-to-capsule-list-btn');
@@ -343,10 +352,23 @@ const playerAddedBy = document.getElementById('player-added-by');
 // ... justo después de los elementos del tocadiscos ...
 const cassettePlayer = document.querySelector('.cassette-player');
 
+// ===> RESTAURA ESTAS LÍNEAS <===
+const wheelCanvas = document.getElementById('decision-wheel-canvas');
+const spinWheelBtn = document.getElementById('spin-wheel-btn');
+const newWheelOptionInput = document.getElementById('new-wheel-option-input');
+const addWheelOptionBtn = document.getElementById('add-wheel-option-btn');
+const wheelOptionsList = document.getElementById('wheel-options-list');
 
-
-
-
+// Elementos de la App de Cupones
+const couponsList = document.getElementById('coupons-list');
+const couponsEmptyState = document.getElementById('coupons-empty-state');
+const goToCreateCouponBtn = document.getElementById('go-to-create-coupon-btn');
+const couponLivePreview = document.getElementById('coupon-live-preview');
+const couponCreatorPreview = document.getElementById('coupon-creator-preview');
+const couponTextInput = document.getElementById('coupon-text-input');
+const couponIconGrid = document.getElementById('coupon-icon-grid');
+const couponIconPreview = document.querySelector('.coupon-icon-preview');
+const saveCouponBtn = document.getElementById('save-coupon-btn');
 
 
 
@@ -1324,7 +1346,12 @@ saveSongBtn.addEventListener('click', handleSaveSong);
 turntableDisc.addEventListener('click', togglePlayPause);
 
 
-
+// Añade estos nuevos listeners
+goToCreateCouponBtn.addEventListener('click', openCreateCouponView);
+couponTextInput.addEventListener('input', (e) => {
+    couponLivePreview.textContent = e.target.value || 'Un gesto de amor increíble';
+});
+saveCouponBtn.addEventListener('click', handleSaveCoupon);
 
 
 
@@ -1335,45 +1362,20 @@ turntableDisc.addEventListener('click', togglePlayPause);
 appIcons.forEach(icon => {
   icon.addEventListener('click', () => {
     const appName = icon.dataset.app;
-    if (!appName) return; // Si el icono no tiene data-app, no hacer nada
-
-    // Usamos una estructura switch para manejar cada app
-    switch (appName) {
-      case 'surprise':
-        updateSurpriseContent();
-        showPhoneApp('surprise');
-        setTimeout(() => {
-          if (surpriseCard) surpriseCard.classList.add('is-flipped');
-        }, 100);
-        break;
-      
-      case 'timecapsule':
-        loadAndRenderCapsules();
-        showPhoneApp('timecapsule');
-        break;
-        
-      case 'budget':
-        renderGoalsList();
-        showPhoneApp('budget');
-        break;
-        
-      case 'journal':
-        currentJournalDate = new Date();
-        fetchJournalEntriesForMonth();
-        showPhoneApp('journal');
-        break;
-        
-      case 'soundtrack':
-        renderPlaylists();
-        showPhoneApp('soundtrack');
-        break;
-        
-      // Puedes añadir más casos aquí para futuras apps
-      // default:
-      //   console.log(`App "${appName}" no reconocida.`);
+    if (appName) {
+      showPhoneApp(appName); // La única responsabilidad es esta.
     }
   });
 });
+
+
+
+
+
+
+
+
+
 
 // En la sección EVENT LISTENERS
 
@@ -1491,29 +1493,27 @@ goToEditEntryBtn.addEventListener('click', () => {
 
 
 
-
-
-
-
 // ... en la sección EVENT LISTENERS ...
 
 // Listener para el switch de Teléfono/Tablet
-deviceSwitchBtn.addEventListener('click', () => {
-  // toggle() añade la clase si no está, y la quita si ya está. ¡Es mágico!
-  phoneContainer.classList.toggle('is-tablet');
+if (deviceSwitchBtn) { // <--- AÑADE ESTA COMPROBACIÓN
+  deviceSwitchBtn.addEventListener('click', () => {
+    // toggle() añade la clase si no está, y la quita si ya está. ¡Es mágico!
+    phoneContainer.classList.toggle('is-tablet');
 
-  // Cambiar el icono y el título del botón para que el usuario sepa qué hace
-  const isTablet = phoneContainer.classList.contains('is-tablet');
-  if (isTablet) {
-    deviceSwitchBtn.title = "Cambiar a modo Teléfono";
-    // Icono de teléfono
-    deviceSwitchBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>`;
-  } else {
-    deviceSwitchBtn.title = "Cambiar a modo Tablet";
-    // Icono de tablet
-    deviceSwitchBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"></rect><line x1="2" y1="12" x2="22" y2="12"></line></svg>`;
-  }
-});
+    // Cambiar el icono y el título del botón para que el usuario sepa qué hace
+    const isTablet = phoneContainer.classList.contains('is-tablet');
+    if (isTablet) {
+      deviceSwitchBtn.title = "Cambiar a modo Teléfono";
+      // Icono de teléfono
+      deviceSwitchBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>`;
+    } else {
+      deviceSwitchBtn.title = "Cambiar a modo Tablet";
+      // Icono de tablet
+      deviceSwitchBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"></rect><line x1="2" y1="12" x2="22" y2="12"></line></svg>`;
+    }
+  });
+}
 
 
 
@@ -1818,26 +1818,72 @@ async function acceptSurpriseTask() {
 }
 
 
-// VERSIÓN NUEVA E INTELIGENTE (LA QUE QUEREMOS CONSERVAR)
+// REEMPLAZA tu función showPhoneApp con esta versión final y más inteligente
+
 function showPhoneApp(appName) {
-  // Detener animaciones si no estamos en la pantalla del reproductor
-  if (appName !== 'player') {
-    if (turntableContainer) turntableContainer.classList.remove('playing');
-    if (turntableDisc) turntableDisc.classList.remove('playing');
-    if (youtubePlayerContainer) youtubePlayerContainer.innerHTML = '';
-        if (cassettePlayer) { // Comprobación de seguridad
-        cassettePlayer.classList.remove('playing');
-    }
+  // Detener animaciones y video si salimos del reproductor
+  if (appName !== 'player' && youtubePlayer && typeof youtubePlayer.stopVideo === 'function') {
+    youtubePlayer.stopVideo();
+    turntableContainer.classList.remove('playing');
+    if (cassettePlayer) cassettePlayer.classList.remove('playing');
   }
 
+  // Ocultar todas las vistas
   document.querySelectorAll('.phone-app-view').forEach(view => {
     view.classList.remove('active');
   });
+
+  // Encontrar y mostrar la nueva vista
   const viewToShow = document.getElementById(`phone-view-${appName}`);
   if (viewToShow) {
-    viewToShow.classList.add('active');
+    viewToShow.classList.add('active'); // Muestra la vista INMEDIATAMENTE
+
+    // Ahora, ejecuta la lógica de inicialización específica para esa app
+    switch (appName) {
+      case 'surprise':
+        updateSurpriseContent();
+        setTimeout(() => { if (surpriseCard) surpriseCard.classList.add('is-flipped'); }, 100);
+        break;
+      case 'timecapsule':
+        loadAndRenderCapsules();
+        break;
+      case 'budget':
+        renderGoalsList();
+        break;
+      case 'journal':
+        currentJournalDate = new Date();
+        fetchJournalEntriesForMonth();
+        break;
+      case 'soundtrack':
+        renderPlaylists();
+        break;
+      case 'decision-wheel':
+        requestAnimationFrame(() => { initDecisionWheel(); });
+        break;
+      case 'coupons':
+        loadAndRenderCoupons();
+        break;
+      case 'gratitude':
+        loadAndRenderGratitudeNotes();
+        break;
+      case 'map':
+        loadAndRenderMapMarkers();
+        break;
+      case 'quiz':
+        // No necesita inicialización especial
+        break;
+      case 'calendar':
+        renderCalendar();
+        break;
+      // No se necesita lógica para 'homescreen' u otras vistas estáticas
+    }
+  } else {
+    console.error(`Error: No se encontró la vista de la app con el ID: phone-view-${appName}`);
   }
 }
+
+
+
 
 
 
@@ -1946,9 +1992,17 @@ async function loadAndRenderCapsules() {
 
 function openCapsule(capsule, isLocked) {
   if (isLocked) {
-    alert(`¡Paciencia! ⏳\n\nEsta cápsula del tiempo no se puede abrir hasta el ${capsule.unlockDate.toLocaleDateString()}.\n\nFue creada por ${capsule.creatorName}.`);
+    alert(`¡Paciencia! ⏳
+
+Esta cápsula del tiempo no se puede abrir hasta el ${capsule.unlockDate.toLocaleDateString()}.
+
+Fue creada por ${capsule.creatorName}.`);
   } else {
-    alert(`🎉 ¡Cápsula del Tiempo Abierta! 🎉\n\nMensaje de ${capsule.creatorName}:\n\n"${capsule.message}"`);
+    alert(`🎉 ¡Cápsula del Tiempo Abierta! 🎉
+
+Mensaje de ${capsule.creatorName}:
+
+"${capsule.message}"`);
   }
 }
 
@@ -2694,31 +2748,975 @@ function togglePlayPause() {
 
 
 
+// ============================================
+// FUNCIONES DE LA APP: RUEDA DE DECISIONES (VERSIÓN FINAL)
+// ============================================
+
+function initDecisionWheel() {
+  // Esta comprobación ya la tienes y es muy importante. ¡Mantenla!
+  if (!wheelCanvas || !spinWheelBtn || !newWheelOptionInput || !addWheelOptionBtn || !wheelOptionsList) {
+    console.error("Error crítico: Faltan elementos de la ruleta en el DOM...");
+    return;
+  }
+
+  // 2. FUNCIONES INTERNAS (se mantienen igual, pero ahora usan las constantes globales)
+  function drawWheel() {
+    const ctx = wheelCanvas.getContext('2d');
+    const numOptions = wheelOptions.length;
+    if (numOptions === 0) {
+        ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+        return;
+    };
+    const arc = Math.PI * 2 / numOptions;
+    
+    ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+    ctx.font = '14px Fredoka, sans-serif';
+
+    wheelOptions.forEach((option, i) => {
+      const angle = startAngle + i * arc;
+      ctx.fillStyle = wheelColors[i % wheelColors.length];
+
+      ctx.beginPath();
+      ctx.arc(140, 140, 140, angle, angle + arc, false);
+      ctx.lineTo(140, 140);
+      ctx.fill();
+
+      ctx.save();
+      ctx.fillStyle = "#333";
+      ctx.translate(140 + Math.cos(angle + arc / 2) * 90, 140 + Math.sin(angle + arc / 2) * 90);
+      ctx.rotate(angle + arc / 2 + Math.PI / 2);
+      const text = option.length > 15 ? option.substring(0, 13) + '...' : option;
+      ctx.fillText(text, -ctx.measureText(text).width / 2, 0);
+      ctx.restore();
+    });
+  }
+
+  function updateList() {
+    wheelOptionsList.innerHTML = '';
+    wheelOptions.forEach((option, index) => {
+      const li = document.createElement('li');
+      li.textContent = option;
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-option-btn';
+      removeBtn.textContent = '✖';
+      removeBtn.onclick = () => {
+        wheelOptions.splice(index, 1);
+        updateList();
+        drawWheel();
+      };
+      li.appendChild(removeBtn);
+      wheelOptionsList.appendChild(li);
+    });
+    spinWheelBtn.disabled = wheelOptions.length < 2;
+  }
+
+  function addOption() {
+    const newOption = newWheelOptionInput.value.trim();
+    if (newOption && !wheelOptions.includes(newOption)) {
+      wheelOptions.push(newOption);
+      newWheelOptionInput.value = '';
+      updateList();
+      drawWheel();
+    }
+  }
+
+  function spin() {
+    if (isSpinning || wheelOptions.length < 2) return;
+    isSpinning = true;
+    spinWheelBtn.disabled = true;
+    
+    const spinAngle = Math.random() * 20 + 15;
+    const finalAngle = startAngle + spinAngle;
+
+    wheelCanvas.style.transition = 'transform 6s cubic-bezier(0.1, 0.7, 0.3, 1)';
+    wheelCanvas.style.transform = `rotate(${finalAngle}rad)`;
+
+    setTimeout(() => {
+      const degrees = (finalAngle * 180 / Math.PI) % 360;
+      const arcSize = 360 / wheelOptions.length;
+      const winningIndex = Math.floor((360 - degrees + 270) % 360 / arcSize);
+      const winner = wheelOptions[winningIndex];
+      
+      alert(`🎉 ¡La decisión es: ${winner}! 🎉`);
+
+      isSpinning = false;
+      updateList();
+      
+      wheelCanvas.style.transition = 'none';
+      startAngle = finalAngle % (Math.PI * 2);
+      wheelCanvas.style.transform = `rotate(${startAngle}rad)`;
+    }, 6000);
+  }
+
+  // 3. ASIGNAR LISTENERS (solo una vez)
+  spinWheelBtn.onclick = spin;
+  addWheelOptionBtn.onclick = addOption;
+  newWheelOptionInput.onkeypress = (e) => {
+    if (e.key === 'Enter') addOption();
+  };
+
+  // 4. DIBUJAR LA RUEDA INICIAL
+  updateList();
+  drawWheel();
+}
 
 
 
+// ============================================
+// FUNCIONES DE FIRESTORE - CUPONES DE AMOR
+// ============================================
 
+async function createCoupon(text, icon) {
+  if (!currentCoupleId || !currentUser) return;
+  
+  try {
+    const couponsRef = collection(db, 'couples', currentCoupleId, 'coupons');
+    await addDoc(couponsRef, {
+      text,
+      icon,
+      redeemed: false,
+      createdBy: currentUser.uid,
+      creatorName: currentUser.displayName,
+      createdAt: Timestamp.now(),
+      redeemedAt: null,
+      redeemedBy: null
+    });
+  } catch (error) {
+    console.error('Error al crear cupón:', error);
+    throw error;
+  }
+}
 
+async function getCoupons() {
+  if (!currentCoupleId) return [];
+  
+  try {
+    const couponsRef = collection(db, 'couples', currentCoupleId, 'coupons');
+    const q = query(couponsRef, orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error al obtener cupones:', error);
+    return [];
+  }
+}
 
+async function redeemCoupon(couponId) {
+    if (!currentCoupleId || !currentUser) return;
+    try {
+        const couponRef = doc(db, 'couples', currentCoupleId, 'coupons', couponId);
+        await updateDoc(couponRef, {
+            redeemed: true,
+            redeemedAt: Timestamp.now(),
+            redeemedBy: currentUser.displayName
+        });
+    } catch (error) {
+        console.error('Error al canjear cupón:', error);
+        throw error;
+    }
+}
 
+// ============================================
+// FUNCIONES DE UI - CUPONES DE AMOR
+// ============================================
 
+async function loadAndRenderCoupons() {
+  const allCoupons = await getCoupons();
+  couponsList.innerHTML = '';
+  
+  if (allCoupons.length === 0) {
+    couponsEmptyState.style.display = 'block';
+  } else {
+    couponsEmptyState.style.display = 'none';
+    allCoupons.forEach(coupon => {
+      const couponEl = document.createElement('div');
+      couponEl.className = `coupon-ticket ${coupon.redeemed ? 'redeemed' : ''}`;
+      couponEl.dataset.couponId = coupon.id;
 
+      let redeemButtonHTML = '';
+      if (!coupon.redeemed) {
+          redeemButtonHTML = `<button class="coupon-redeem-btn" title="Canjear Cupón">🎟️</button>`;
+      }
 
+      couponEl.innerHTML = `
+        <div class="coupon-stub">${KAWAII_ICONS[coupon.icon] || '🎟️'}</div>
+        <div class="coupon-main">
+            <p>${coupon.text}</p>
+            <span>De: <strong>${coupon.creatorName}</strong></span>
+            ${coupon.redeemed ? `<span>Canjeado por: <strong>${coupon.redeemedBy}</strong></span>` : ''}
+        </div>
+        ${redeemButtonHTML}
+      `;
+      
+      couponsList.appendChild(couponEl);
 
+      if (!coupon.redeemed) {
+        couponEl.querySelector('.coupon-redeem-btn').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (confirm(`¿Seguro que quieres canjear el cupón: "${coupon.text}"?`)) {
+                await handleRedeemCoupon(coupon.id);
+            }
+        });
+      }
+    });
+  }
+}
 
+function openCreateCouponView() {
+    couponTextInput.value = '';
+    couponLivePreview.textContent = 'Un gesto de amor increíble';
+    couponCreatorPreview.textContent = currentUser.displayName || 'Tú';
+    selectedCouponIcon = 'gift';
+    renderCouponIconGrid();
+    showPhoneApp('createcoupon');
+}
 
+function renderCouponIconGrid() {
+  couponIconGrid.innerHTML = '';
+  const couponIcons = ['gift', 'pizza', 'movie', 'bath', 'music', 'travel', 'cup', 'star', 'heart'];
 
+  couponIcons.forEach(key => {
+    const btn = document.createElement('button');
+    btn.className = `icon-btn ${key === selectedCouponIcon ? 'selected' : ''}`;
+    btn.textContent = KAWAII_ICONS[key];
+    btn.type = 'button';
+    btn.onclick = () => {
+      selectedCouponIcon = key;
+      couponIconPreview.textContent = KAWAII_ICONS[key];
+      renderCouponIconGrid();
+    };
+    couponIconGrid.appendChild(btn);
+  });
+  couponIconPreview.textContent = KAWAII_ICONS[selectedCouponIcon];
+}
 
+async function handleSaveCoupon() {
+  const text = couponTextInput.value.trim();
+  if (!text) {
+    alert('Por favor, escribe el contenido de tu vale.');
+    return;
+  }
 
+  try {
+    saveCouponBtn.disabled = true;
+    saveCouponBtn.textContent = 'Regalando...';
+    await createCoupon(text, selectedCouponIcon);
+    await loadAndRenderCoupons();
+    showPhoneApp('coupons');
+  } catch (error) {
+    alert('No se pudo crear el cupón. Inténtalo de nuevo.');
+  } finally {
+    saveCouponBtn.disabled = false;
+    saveCouponBtn.textContent = 'Crear y Regalar Cupón';
+  }
+}
 
+async function handleRedeemCoupon(couponId) {
+    try {
+        await redeemCoupon(couponId);
+        // Animación de canjeo
+        const couponEl = document.querySelector(`.coupon-ticket[data-coupon-id="${couponId}"]`);
+        if (couponEl) {
+            couponEl.classList.add('redeemed');
+            couponEl.querySelector('.coupon-redeem-btn')?.remove();
+            // Recargamos toda la lista para actualizar el texto "Canjeado por"
+            setTimeout(loadAndRenderCoupons, 800); 
+        }
+    } catch (error) {
+        alert('Error al canjear el cupón.');
+    }
+}
 
+// ============================================
+// FUNCIONES DE FIRESTORE - TARRO DE AGRADECIMIENTOS
+// ============================================
 
+async function addGratitudeNote(text, isAnonymous) {
+  if (!currentCoupleId || !currentUser) return;
+  
+  try {
+    const notesRef = collection(db, 'couples', currentCoupleId, 'gratitudeNotes');
+    await addDoc(notesRef, {
+      text,
+      isAnonymous: isAnonymous || false,
+      createdBy: currentUser.uid,
+      creatorName: currentUser.displayName,
+      createdAt: Timestamp.now(),
+    });
+  } catch (error) {
+    console.error('Error al añadir nota de agradecimiento:', error);
+    throw error;
+  }
+}
 
+async function getGratitudeNotes() {
+  if (!currentCoupleId) return [];
+  
+  try {
+    const notesRef = collection(db, 'couples', currentCoupleId, 'gratitudeNotes');
+    const q = query(notesRef, orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  } catch (error) {
+    console.error('Error al obtener notas de agradecimiento:', error);
+    return [];
+  }
+}
 
+// ============================================
+// FUNCIONES DE FIRESTORE - MAPA DE AVENTURAS
+// ============================================
 
+async function addMapMarker(title, description, latitude, longitude) {
+  if (!currentCoupleId || !currentUser) return;
+  
+  try {
+    const markersRef = collection(db, 'couples', currentCoupleId, 'mapMarkers');
+    await addDoc(markersRef, {
+      title,
+      description,
+      latitude,
+      longitude,
+      createdBy: currentUser.uid,
+      creatorName: currentUser.displayName,
+      createdAt: Timestamp.now(),
+    });
+  } catch (error) {
+    console.error('Error al añadir marcador:', error);
+    throw error;
+  }
+}
 
+async function getMapMarkers() {
+  if (!currentCoupleId) return [];
+  
+  try {
+    const markersRef = collection(db, 'couples', currentCoupleId, 'mapMarkers');
+    const q = query(markersRef, orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  } catch (error) {
+    console.error('Error al obtener marcadores:', error);
+    return [];
+  }
+}
 
+// ============================================
+// FUNCIONES DE FIRESTORE - CALENDARIO DE CITAS
+// ============================================
 
+async function addDate(title, date, time, location, description) {
+  if (!currentCoupleId || !currentUser) return;
+  
+  try {
+    const datesRef = collection(db, 'couples', currentCoupleId, 'dates');
+    await addDoc(datesRef, {
+      title,
+      date: Timestamp.fromDate(new Date(`${date}T${time}`)),
+      location,
+      description,
+      createdBy: currentUser.uid,
+      creatorName: currentUser.displayName,
+      createdAt: Timestamp.now(),
+    });
+  } catch (error) {
+    console.error('Error al añadir cita:', error);
+    throw error;
+  }
+}
+
+async function getDates() {
+  if (!currentCoupleId) return [];
+  
+  try {
+    const datesRef = collection(db, 'couples', currentCoupleId, 'dates');
+    const q = query(datesRef, orderBy('date', 'asc'));
+    const snapshot = await getDocs(q);
+    
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      date: doc.data().date.toDate(),
+    }));
+  } catch (error) {
+    console.error('Error al obtener citas:', error);
+    return [];
+  }
+}
+
+async function deleteDate(dateId) {
+  if (!currentCoupleId || !dateId) return;
+  
+  try {
+    const dateRef = doc(db, 'couples', currentCoupleId, 'dates', dateId);
+    await deleteDoc(dateRef);
+  } catch (error) {
+    console.error('Error al eliminar cita:', error);
+    throw error;
+  }
+}
+
+// ============================================
+// FUNCIONES DE UI - TARRO DE AGRADECIMIENTOS
+// ============================================
+
+async function loadAndRenderGratitudeNotes() {
+  const notes = await getGratitudeNotes();
+  const container = document.getElementById('gratitude-notes-container');
+  
+  if (container) {
+    container.innerHTML = '';
+    
+    notes.forEach((note, index) => {
+      const noteEl = document.createElement('div');
+      noteEl.className = 'gratitude-note';
+      noteEl.style.left = `${Math.random() * 70 + 15}%`;
+      noteEl.style.top = `${Math.random() * 70 + 15}%`;
+      noteEl.style.backgroundColor = getRandomPastelColor();
+      noteEl.style.transform = `rotate(${Math.random() * 20 - 10}deg)`;
+      noteEl.title = note.text;
+      
+      // Mostrar solo las primeras letras del texto
+      const shortText = note.text.length > 10 ? note.text.substring(0, 10) + '...' : note.text;
+      noteEl.textContent = shortText;
+      
+      noteEl.addEventListener('click', () => {
+        const creator = note.isAnonymous ? 'Anónimo' : note.creatorName;
+        alert(`Nota de agradecimiento de ${creator}:\n\n"${note.text}"`);
+      });
+      
+      container.appendChild(noteEl);
+    });
+  }
+}
+
+function getRandomPastelColor() {
+  const colors = [
+    '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', 
+    '#E0BBE4', '#FEC8D8', '#FF9AA2', '#FFB7B2', '#FFDAC1'
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+async function handleAddGratitudeNote() {
+  const noteInput = document.getElementById('gratitude-note-input');
+  const anonymousCheckbox = document.getElementById('anonymous-checkbox');
+  
+  const text = noteInput.value.trim();
+  if (!text) {
+    alert('Por favor, escribe algo por lo que estés agradecido.');
+    return;
+  }
+  
+  try {
+    const addButton = document.getElementById('add-gratitude-note-btn');
+    addButton.disabled = true;
+    addButton.textContent = 'Añadiendo...';
+    
+    await addGratitudeNote(text, anonymousCheckbox.checked);
+    noteInput.value = '';
+    anonymousCheckbox.checked = false;
+    
+    await loadAndRenderGratitudeNotes();
+  } catch (error) {
+    alert('No se pudo añadir la nota. Inténtalo de nuevo.');
+  } finally {
+    const addButton = document.getElementById('add-gratitude-note-btn');
+    addButton.disabled = false;
+    addButton.textContent = 'Añadir Nota';
+  }
+}
+
+function handleShakeJar() {
+  const notes = document.querySelectorAll('.gratitude-note');
+  if (notes.length === 0) {
+    alert('¡El tarro está vacío! Añade algunas notas de agradecimiento primero.');
+    return;
+  }
+  
+  // Animar todas las notas
+  notes.forEach(note => {
+    note.style.transition = 'all 1s ease';
+    note.style.transform = `translate(${Math.random() * 100 - 50}px, ${Math.random() * 100 - 50}px) rotate(${Math.random() * 360}deg)`;
+  });
+  
+  // Seleccionar una nota al azar después de la animación
+  setTimeout(() => {
+    const randomNote = notes[Math.floor(Math.random() * notes.length)];
+    const rect = randomNote.getBoundingClientRect();
+    const containerRect = document.getElementById('gratitude-notes-container').getBoundingClientRect();
+    
+    // Centrar la nota seleccionada
+    randomNote.style.transition = 'all 0.5s ease';
+    randomNote.style.left = '50%';
+    randomNote.style.top = '50%';
+    randomNote.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+    randomNote.style.zIndex = '100';
+    randomNote.style.fontSize = '1rem';
+    randomNote.style.width = 'auto';
+    randomNote.style.height = 'auto';
+    randomNote.style.padding = '10px';
+    
+    // Mostrar el contenido completo de la nota
+    setTimeout(() => {
+      const creator = randomNote.title.includes('Anónimo') ? 'Anónimo' : randomNote.title.split(':')[0];
+      alert(`Nota seleccionada al azar:
+
+"${randomNote.title.split(':')[1].trim()}"
+
+De: ${creator}`);
+    }, 600);
+  }, 1000);
+}
+
+// ============================================
+// FUNCIONES DE UI - MAPA DE AVENTURAS
+// ============================================
+
+async function loadAndRenderMapMarkers() {
+  const markers = await getMapMarkers();
+  const container = document.getElementById('markers-container');
+  const emptyState = document.getElementById('markers-empty-state');
+  
+  if (container && emptyState) {
+    container.innerHTML = '';
+    
+    if (markers.length === 0) {
+      emptyState.style.display = 'block';
+    } else {
+      emptyState.style.display = 'none';
+      
+      markers.forEach(marker => {
+        const markerEl = document.createElement('div');
+        markerEl.className = 'marker-item';
+        markerEl.innerHTML = `
+          <div class="marker-icon">📍</div>
+          <div class="marker-info">
+            <div class="marker-title">${marker.title}</div>
+            <div class="marker-date">${marker.createdAt.toDate().toLocaleDateString()}</div>
+          </div>
+        `;
+        
+        markerEl.addEventListener('click', () => {
+          alert(`Marcador: ${marker.title}
+
+${marker.description || 'Sin descripción'}
+
+Añadido por: ${marker.creatorName}`);
+        });
+        
+        container.appendChild(markerEl);
+      });
+    }
+  }
+}
+
+function openAddMapMarkerView() {
+  const title = prompt('Nombre del lugar:');
+  if (!title) return;
+  
+  const description = prompt('Descripción (opcional):') || '';
+  
+  // En una implementación real, aquí obtendríamos las coordenadas reales
+  // Por ahora usamos coordenadas de ejemplo
+  const latitude = 40.4168 + (Math.random() - 0.5) * 0.1;
+  const longitude = -3.7038 + (Math.random() - 0.5) * 0.1;
+  
+  handleAddMapMarker(title, description, latitude, longitude);
+}
+
+async function handleAddMapMarker(title, description, latitude, longitude) {
+  try {
+    const addButton = document.getElementById('add-map-marker-btn');
+    if (addButton) {
+      addButton.disabled = true;
+      addButton.textContent = 'Añadiendo...';
+    }
+    
+    await addMapMarker(title, description, latitude, longitude);
+    await loadAndRenderMapMarkers();
+    
+    // Mostrar mensaje de éxito
+    alert(`¡Marcador añadido!\n\n"${title}" ha sido añadido a tu mapa de aventuras.`);
+  } catch (error) {
+    alert('No se pudo añadir el marcador. Inténtalo de nuevo.');
+  } finally {
+    const addButton = document.getElementById('add-map-marker-btn');
+    if (addButton) {
+      addButton.disabled = false;
+      addButton.textContent = '+ Añadir Marcador';
+    }
+  }
+}
+
+// ============================================
+// FUNCIONES DE UI - CUÁNTO NOS CONOCEMOS
+// ============================================
+
+// Preguntas predefinidas para el quiz
+const QUIZ_QUESTIONS = [
+  {
+    question: "¿Cuál es mi comida favorita?",
+    options: ["Pizza", "Sushi", "Ensalada César", "Paella"],
+    correct: 1
+  },
+  {
+    question: "¿Cuál es mi película favorita?",
+    options: ["Titanic", "El Padrino", "Harry Potter", "Star Wars"],
+    correct: 0
+  },
+  {
+    question: "¿Cuál es mi color favorito?",
+    options: ["Rojo", "Azul", "Verde", "Morado"],
+    correct: 2
+  },
+  {
+    question: "¿Cuál es mi hobby favorito?",
+    options: ["Leer", "Cocinar", "Bailar", "Dormir"],
+    correct: 1
+  },
+  {
+    question: "¿Cuál es mi estación del año favorita?",
+    options: ["Primavera", "Verano", "Otoño", "Invierno"],
+    correct: 2
+  }
+];
+
+let currentQuizQuestion = 0;
+let quizScore = 0;
+let selectedQuizOption = null;
+
+function startQuiz() {
+  currentQuizQuestion = 0;
+  quizScore = 0;
+  selectedQuizOption = null;
+  
+  document.getElementById('quiz-start-screen').style.display = 'none';
+  document.getElementById('quiz-question-screen').style.display = 'flex';
+  document.getElementById('quiz-results-screen').style.display = 'none';
+  
+  showQuizQuestion();
+}
+
+function showQuizQuestion() {
+  if (currentQuizQuestion >= QUIZ_QUESTIONS.length) {
+    showQuizResults();
+    return;
+  }
+  
+  const question = QUIZ_QUESTIONS[currentQuizQuestion];
+  const questionText = document.getElementById('quiz-question-text');
+  const optionsContainer = document.getElementById('quiz-options-container');
+  const progressText = document.getElementById('quiz-progress-text');
+  const progressFill = document.getElementById('quiz-progress-fill');
+  const nextBtn = document.getElementById('quiz-next-btn');
+  
+  if (questionText && optionsContainer && progressText && progressFill && nextBtn) {
+    questionText.textContent = question.question;
+    
+    optionsContainer.innerHTML = '';
+    question.options.forEach((option, index) => {
+      const optionEl = document.createElement('div');
+      optionEl.className = 'quiz-option';
+      optionEl.textContent = option;
+      optionEl.addEventListener('click', () => selectQuizOption(optionEl, index));
+      optionsContainer.appendChild(optionEl);
+    });
+    
+    progressText.textContent = `Pregunta ${currentQuizQuestion + 1} de ${QUIZ_QUESTIONS.length}`;
+    progressFill.style.width = `${((currentQuizQuestion) / QUIZ_QUESTIONS.length) * 100}%`;
+    
+    nextBtn.disabled = true;
+    selectedQuizOption = null;
+  }
+}
+
+function selectQuizOption(optionElement, optionIndex) {
+  // Deseleccionar opciones anteriores
+  document.querySelectorAll('.quiz-option').forEach(el => {
+    el.classList.remove('selected');
+  });
+  
+  // Seleccionar la nueva opción
+  optionElement.classList.add('selected');
+  selectedQuizOption = optionIndex;
+  
+  // Habilitar el botón siguiente
+  const nextBtn = document.getElementById('quiz-next-btn');
+  if (nextBtn) {
+    nextBtn.disabled = false;
+  }
+}
+
+function nextQuizQuestion() {
+  if (selectedQuizOption === null) return;
+  
+  // Verificar si la respuesta es correcta
+  const question = QUIZ_QUESTIONS[currentQuizQuestion];
+  if (selectedQuizOption === question.correct) {
+    quizScore++;
+  }
+  
+  currentQuizQuestion++;
+  showQuizQuestion();
+}
+
+function showQuizResults() {
+  document.getElementById('quiz-question-screen').style.display = 'none';
+  document.getElementById('quiz-results-screen').style.display = 'flex';
+  
+  const scorePercentage = Math.round((quizScore / QUIZ_QUESTIONS.length) * 100);
+  const scoreText = document.getElementById('quiz-score-text');
+  const titleText = document.getElementById('quiz-title-text');
+  const correctAnswers = document.getElementById('correct-answers');
+  const totalQuestions = document.getElementById('total-questions');
+  
+  if (scoreText && titleText && correctAnswers && totalQuestions) {
+    scoreText.textContent = `${scorePercentage}%`;
+    correctAnswers.textContent = quizScore;
+    totalQuestions.textContent = QUIZ_QUESTIONS.length;
+    
+    // Determinar título basado en el puntaje
+    let title = "";
+    if (scorePercentage >= 90) {
+      title = "Pareja Perfecta 💖";
+    } else if (scorePercentage >= 70) {
+      title = "Almas Gemelas 🌟";
+    } else if (scorePercentage >= 50) {
+      title = "Dúo Dinámico ⚡";
+    } else {
+      title = "Aprendices de Amor 🌱";
+    }
+    
+    titleText.textContent = title;
+  }
+}
+
+function restartQuiz() {
+  startQuiz();
+}
+
+// ============================================
+// FUNCIONES DE UI - CALENDARIO DE CITAS
+// ============================================
+
+let currentDate = new Date();
+
+function renderCalendar() {
+  const calendarGrid = document.getElementById('calendar-grid');
+  const monthYear = document.getElementById('calendar-month-year');
+  
+  if (!calendarGrid || !monthYear) return;
+  
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  
+  monthYear.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  
+  // Primer día del mes
+  const firstDay = new Date(year, month, 1);
+  // Último día del mes
+  const lastDay = new Date(year, month + 1, 0);
+  // Día de la semana del primer día (0 = domingo, 1 = lunes, etc.)
+  const firstDayOfWeek = firstDay.getDay();
+  // Número de días en el mes
+  const daysInMonth = lastDay.getDate();
+  
+  calendarGrid.innerHTML = '';
+  
+  // Rellenar días vacíos al principio
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    const dayEl = document.createElement('div');
+    dayEl.className = 'calendar-day other-month';
+    calendarGrid.appendChild(dayEl);
+  }
+  
+  // Rellenar días del mes
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayEl = document.createElement('div');
+    dayEl.className = 'calendar-day';
+    dayEl.textContent = day;
+    
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    
+    // Marcar día actual
+    const today = new Date();
+    if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+      dayEl.classList.add('today');
+    }
+    
+    // Añadir evento de clic
+    dayEl.addEventListener('click', () => openDateDetailView(new Date(year, month, day)));
+    
+    calendarGrid.appendChild(dayEl);
+  }
+}
+
+function navigateCalendar(direction) {
+  currentDate.setMonth(currentDate.getMonth() + direction);
+  renderCalendar();
+}
+
+function openDateDetailView(date) {
+  // Mostrar la vista de detalle de cita
+  showPhoneApp('date-detail');
+  
+  // Prellenar la fecha
+  const dateInput = document.getElementById('date-date-input');
+  if (dateInput) {
+    dateInput.value = date.toISOString().split('T')[0];
+  }
+  
+  // Limpiar otros campos
+  const titleInput = document.getElementById('date-title-input');
+  const timeInput = document.getElementById('date-time-input');
+  const locationInput = document.getElementById('date-location-input');
+  const descriptionInput = document.getElementById('date-description-input');
+  const deleteBtn = document.getElementById('delete-date-btn');
+  
+  if (titleInput) titleInput.value = '';
+  if (timeInput) timeInput.value = '19:00';
+  if (locationInput) locationInput.value = '';
+  if (descriptionInput) descriptionInput.value = '';
+  if (deleteBtn) deleteBtn.style.display = 'none';
+  
+  // Guardar la fecha actual para referencia
+  window.currentEditingDate = null;
+}
+
+async function handleSaveDate() {
+  const titleInput = document.getElementById('date-title-input');
+  const dateInput = document.getElementById('date-date-input');
+  const timeInput = document.getElementById('date-time-input');
+  const locationInput = document.getElementById('date-location-input');
+  const descriptionInput = document.getElementById('date-description-input');
+  
+  if (!titleInput || !dateInput || !timeInput) return;
+  
+  const title = titleInput.value.trim();
+  const date = dateInput.value;
+  const time = timeInput.value;
+  const location = locationInput ? locationInput.value.trim() : '';
+  const description = descriptionInput ? descriptionInput.value.trim() : '';
+  
+  if (!title || !date || !time) {
+    alert('Por favor, completa todos los campos obligatorios.');
+    return;
+  }
+  
+  try {
+    const saveBtn = document.getElementById('save-date-btn');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Guardando...';
+    }
+    
+    await addDate(title, date, time, location, description);
+    
+    // Volver al calendario
+    showPhoneApp('calendar');
+    renderCalendar();
+    
+    alert('¡Cita guardada con éxito!');
+  } catch (error) {
+    alert('No se pudo guardar la cita. Inténtalo de nuevo.');
+  } finally {
+    const saveBtn = document.getElementById('save-date-btn');
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Guardar';
+    }
+  }
+}
+
+// Inicializar event listeners para nuevas funcionalidades
+function initializeNewFeatureEventListeners() {
+  // Event Listeners para el Tarro de Agradecimientos
+  const addGratitudeBtn = document.getElementById('add-gratitude-note-btn');
+  const shakeJarBtn = document.getElementById('shake-jar-btn');
+  
+  if (addGratitudeBtn) {
+    addGratitudeBtn.addEventListener('click', handleAddGratitudeNote);
+  }
+  
+  if (shakeJarBtn) {
+    shakeJarBtn.addEventListener('click', handleShakeJar);
+  }
+
+  // Event Listeners para el Mapa de Aventuras
+  const addMapMarkerBtn = document.getElementById('add-map-marker-btn');
+  
+  if (addMapMarkerBtn) {
+    addMapMarkerBtn.addEventListener('click', openAddMapMarkerView);
+  }
+
+  // Event Listeners para el Quiz de Pareja
+  const startQuizBtn = document.getElementById('start-quiz-btn');
+  const quizNextBtn = document.getElementById('quiz-next-btn');
+  const restartQuizBtn = document.getElementById('restart-quiz-btn');
+  
+  if (startQuizBtn) {
+    startQuizBtn.addEventListener('click', startQuiz);
+  }
+  
+  if (quizNextBtn) {
+    quizNextBtn.addEventListener('click', nextQuizQuestion);
+  }
+  
+  if (restartQuizBtn) {
+    restartQuizBtn.addEventListener('click', restartQuiz);
+  }
+
+  // Event Listeners para el Calendario de Citas
+  const prevMonthBtn = document.getElementById('prev-month-btn');
+  const nextMonthBtn = document.getElementById('next-month-btn');
+  const addDateBtn = document.getElementById('add-date-btn');
+  const saveDateBtn = document.getElementById('save-date-btn');
+  
+  if (prevMonthBtn) {
+    prevMonthBtn.addEventListener('click', () => navigateCalendar(-1));
+  }
+  
+  if (nextMonthBtn) {
+    nextMonthBtn.addEventListener('click', () => navigateCalendar(1));
+  }
+  
+  if (addDateBtn) {
+    addDateBtn.addEventListener('click', () => openDateDetailView(new Date()));
+  }
+  
+  if (saveDateBtn) {
+    saveDateBtn.addEventListener('click', handleSaveDate);
+  }
+  
+  // Event Listeners para los iconos de las nuevas apps
+  const appIcons = document.querySelectorAll('.app-icon[data-app]');
+  appIcons.forEach(icon => {
+    const app = icon.getAttribute('data-app');
+    if (['gratitude', 'map', 'quiz', 'calendar'].includes(app)) {
+      icon.addEventListener('click', () => showPhoneApp(app));
+    }
+  });
+}
+
+// Llamar a la función de inicialización cuando el DOM esté cargado
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeNewFeatureEventListeners);
+} else {
+  initializeNewFeatureEventListeners();
+}
 
 // ============================================
 // REGISTRO DEL SERVICE WORKER (PWA)

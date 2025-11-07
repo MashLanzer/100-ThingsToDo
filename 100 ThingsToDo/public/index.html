@@ -582,7 +582,7 @@
     <div class="phone-container">
 
             <!-- ============================================ -->
-    <!-- ======> NUEVO BOTÓN DE SWITCH <======= -->
+    <!-- ======> NUEVO BOTÓN DE SWITCH MODO TABLET <======= -->
     <!-- ============================================ 
     <button id="device-switch-btn" class="device-switch-btn" title="Cambiar a modo Tablet">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -614,7 +614,7 @@
         <!-- App : Musica -->
         <div class="app-icon" data-app="soundtrack">
         <div class="app-icon-bg" style="background: #a2d2ff;">🎧</div>
-        <span class="app-name">Sonidos</span>
+        <span class="app-name">Musica</span>
     </div>
 
                 <!-- App 1: Tarea Sorpresa -->
@@ -633,40 +633,81 @@
         <span class="app-name">Metas Futuras</span>
     </div>
 
+     <!-- App : Ruleta -->
+    <div class="app-icon" data-app="decision-wheel">
+    <div class="app-icon-bg" style="background: #ffc9a2;">🎡</div>
+    <span class="app-name">¿Qué Hacemos?</span>
+</div>
+
+ <!-- App : Cupones -->
+<div class="app-icon" data-app="coupons">
+    <div class="app-icon-bg" style="background: #fecaca;">🎟️</div>
+    <span class="app-name">Vale por...</span>
+</div>
+
+
+
+
+<!-- Nuevas apps -->
+<!-- App : Tarro de Agradecimientos -->
+<div class="app-icon" data-app="gratitude">
+    <div class="app-icon-bg" style="background: #d1c4e9;">🏺</div>
+    <span class="app-name">Gracias Por...</span>
+</div>
+
+<!-- App : Mapa de Aventuras -->
+<div class="app-icon" data-app="map">
+    <div class="app-icon-bg" style="background: #b2fab4;">🗺️</div>
+    <span class="app-name">Mapa de Aventuras</span>
+</div>
+
+<!-- App : Cuánto nos conocemos -->
+<div class="app-icon" data-app="quiz">
+    <div class="app-icon-bg" style="background: #ffe0b2;">❓</div>
+    <span class="app-name">¿Cuánto nos conocemos?</span>
+</div>
+
+<!-- App : Calendario de Citas -->
+<div class="app-icon" data-app="calendar">
+    <div class="app-icon-bg" style="background: #bbdefb;">📅</div>
+    <span class="app-name">Próxima Cita</span>
+</div>
+
                 <!-- App : Próximamente... -->
                 <div class="app-icon disabled"> 
                     <div class="app-icon-bg">✨</div>
                     <span class="app-name">Próximamente</span>
                 </div>
+                
+</div>
+</div>
+
+<!-- Pantalla de la App "Tarea Sorpresa" -->
+<div id="phone-view-surprise" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-home-btn">‹</button>
+        <span>Reto Diario</span>
+    </div>
+    <div class="app-content-body surprise-app-body">
+        <div class="surprise-card">
+            <div class="surprise-card-inner">
+                <div class="surprise-card-front">
+                    <div class="question-mark">?</div>
+                    <p>¿Listos para un nuevo reto?</p>
+                </div>
+                <div class="surprise-card-back">
+                    <div class="surprise-emoji"></div>
+                    <p class="surprise-text"></p>
+                </div>
             </div>
         </div>
-
-        <!-- Pantalla de la App "Tarea Sorpresa" -->
-        <div id="phone-view-surprise" class="phone-app-view">
-            <div class="app-content-header">
-                <button class="back-to-home-btn">‹</button>
-                <span>Reto Diario</span>
-            </div>
-            <div class="app-content-body surprise-app-body">
-                <div class="surprise-card">
-                    <div class="surprise-card-inner">
-                        <div class="surprise-card-front">
-                            <div class="question-mark">?</div>
-                            <p>¿Listos para un nuevo reto?</p>
-                        </div>
-                        <div class="surprise-card-back">
-                            <div class="surprise-emoji"></div>
-                            <p class="surprise-text"></p>
-                        </div>
-                    </div>
-                </div>
-                <div class="surprise-actions">
-                    <button id="reroll-surprise-task-btn" class="btn btn-outline">Buscar otra idea</button>
-                    <button id="accept-surprise-task-btn" class="btn btn-primary">¡Aceptamos!</button>
-                </div>
-            </div>
+        <div class="surprise-actions">
+            <button id="reroll-surprise-task-btn" class="btn btn-outline">Buscar otra idea</button>
+            <button id="accept-surprise-task-btn" class="btn btn-primary">¡Aceptamos!</button>
         </div>
     </div>
+</div>
+    
     <!-- ============================================ -->
 
 <!-- Vista Principal de la Cápsula del Tiempo (Lista de cápsulas) -->
@@ -946,24 +987,295 @@
     </div>
 
 
-
-
-
-
-
 <!-- ============================================ -->
 
 
 
+<!-- ============================================ -->
+<!-- ======> NUEVA APP: RUEDA DE DECISIONES <======= -->
+<!-- ============================================ -->
+        <!-- 14. VISTA DE LA RULETA (AHORA DENTRO DEL CONTENEDOR) -->
+        <div id="phone-view-decision-wheel" class="phone-app-view">
+            <div class="app-content-header">
+                <button class="phone-back-btn" data-target="homescreen">‹</button>
+                <span>Rueda de Decisiones</span>
+            </div>
+            <div class="app-content-body wheel-app-body">
+                <div class="wheel-container">
+                    <div class="wheel-marker"></div>
+                    <canvas id="decision-wheel-canvas" width="280" height="280"></canvas>
+                </div>
+                <button id="spin-wheel-btn" class="btn btn-primary">¡GIRAR!</button>
+                <div class="wheel-options-container">
+                    <h4>Opciones en la Ruleta</h4>
+                    <ul id="wheel-options-list"></ul>
+                    <div class="add-option-form">
+                        <input type="text" id="new-wheel-option-input" class="input" placeholder="Añadir nueva opción...">
+                        <button id="add-wheel-option-btn">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+   
+<!-- ============================================ -->
 
+ 
+<!-- En index.html, dentro de .phone-app-container -->
 
+<!-- ============================================ -->
+<!-- ======> NUEVA APP: BANCO DE CUPONES <======= -->
+<!-- ============================================ -->
+<!-- Vista Principal (Lista de Cupones) -->
+<div id="phone-view-coupons" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="homescreen">‹</button>
+        <span>Banco de Cupones</span>
+    </div>
+    <div class="app-content-body coupons-app-body">
+        <div id="coupons-list" class="coupons-list">
+            <!-- Los cupones se cargarán aquí -->
+            <div id="coupons-empty-state" class="empty-state" style="display: none;">
+                <div class="empty-icon">💌</div>
+                <h2>No hay cupones</h2>
+                <p>¡Crea el primer vale de amor para tu pareja!</p>
+            </div>
+        </div>
+        <button id="go-to-create-coupon-btn" class="btn btn-primary" style="margin-top: auto;">
+            + Crear Nuevo Cupón
+        </button>
+    </div>
+</div>
 
+<!-- Vista para Crear un Nuevo Cupón -->
+<div id="phone-view-createcoupon" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="coupons">‹</button>
+        <span>Nuevo Cupón de Amor</span>
+    </div>
+    <div class="app-content-body create-coupon-body">
+        <div class="coupon-preview-card">
+            <div class="coupon-header">
+                <span class="coupon-title-text">VALE POR...</span>
+                <span class="coupon-icon-preview">🎁</span>
+            </div>
+            <div class="coupon-body">
+                <p id="coupon-live-preview">Un gesto de amor increíble</p>
+            </div>
+            <div class="coupon-footer">
+                <span>De: <strong id="coupon-creator-preview">Tu Nombre</strong></span>
+            </div>
+        </div>
 
+        <input type="text" id="coupon-text-input" class="input" placeholder="Un masaje, una cena, etc." maxlength="50">
+        
+        <label class="icon-selector-label">Elige un icono para tu vale:</label>
+        <div id="coupon-icon-grid" class="icon-grid">
+            <!-- Los iconos se cargarán aquí -->
+        </div>
 
+        <button id="save-coupon-btn" class="btn btn-primary">Crear y Regalar Cupón</button>
+    </div>
+</div>
 
+<!-- ============================================ -->
+<!-- ======> NUEVA APP: TARRO DE AGRADECIMIENTOS <======= -->
+<!-- ============================================ -->
+<!-- Vista Principal (Tarro de Agradecimientos) -->
+<div id="phone-view-gratitude" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="homescreen">‹</button>
+        <span>Tarro de Agradecimientos</span>
+    </div>
+    <div class="app-content-body gratitude-app-body">
+        <div class="gratitude-jar-container">
+            <div id="gratitude-jar" class="gratitude-jar">
+                <div class="jar-lid">крышечка</div>
+                <div class="jar-body">
+                    <div id="gratitude-notes-container" class="gratitude-notes-container">
+                        <!-- Las notas de agradecimiento se cargarán aquí -->
+                    </div>
+                </div>
+                <div class="jar-bottom"></div>
+            </div>
+            <button id="shake-jar-btn" class="btn btn-primary">Agitar Tarro 🎲</button>
+        </div>
+        
+        <div class="gratitude-input-container">
+            <textarea id="gratitude-note-input" class="textarea" placeholder="Escribe algo por lo que estás agradecido..." rows="3"></textarea>
+            <div class="gratitude-options">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="anonymous-checkbox">
+                    <span class="checkmark"></span>
+                    Anónimo
+                </label>
+                <button id="add-gratitude-note-btn" class="btn btn-primary">Añadir Nota</button>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- ============================================ -->
+<!-- ======> NUEVA APP: MAPA DE AVENTURAS <======= -->
+<!-- ============================================ -->
+<!-- Vista Principal (Mapa de Aventuras) -->
+<div id="phone-view-map" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="homescreen">‹</button>
+        <span>Mapa de Aventuras</span>
+    </div>
+    <div class="app-content-body map-app-body">
+        <div id="adventure-map-container" class="map-container">
+            <div id="adventure-map" class="adventure-map">
+                <!-- El mapa interactivo se generará aquí -->
+                <div class="map-placeholder">
+                    <div class="map-placeholder-content">
+                        <div class="map-icon">🗺️</div>
+                        <p>Mapa de nuestras aventuras</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="map-controls">
+            <button id="add-map-marker-btn" class="btn btn-primary">
+                + Añadir Marcador
+            </button>
+        </div>
+        
+        <div id="map-markers-list" class="map-markers-list">
+            <h4>Lugares Marcados</h4>
+            <div id="markers-container" class="markers-container">
+                <!-- Los marcadores se cargarán aquí -->
+                <div id="markers-empty-state" class="empty-state">
+                    <div class="empty-icon">📍</div>
+                    <p>Aún no hay marcadores. ¡Añade el primer lugar!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- ============================================ -->
+<!-- ======> NUEVA APP: CUÁNTO NOS CONOCEMOS <======= -->
+<!-- ============================================ -->
+<!-- Vista Principal (Quiz de Pareja) -->
+<div id="phone-view-quiz" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="homescreen">‹</button>
+        <span>¿Cuánto nos conocemos?</span>
+    </div>
+    <div class="app-content-body quiz-app-body">
+        <div class="quiz-container">
+            <div id="quiz-start-screen" class="quiz-screen">
+                <div class="quiz-icon">❓</div>
+                <h3>El Test de Pareja</h3>
+                <p>Pon a prueba cuánto sabes de tu pareja con este divertido cuestionario</p>
+                <button id="start-quiz-btn" class="btn btn-primary">Empezar Test</button>
+            </div>
+            
+            <div id="quiz-question-screen" class="quiz-screen" style="display: none;">
+                <div class="quiz-progress">
+                    <span id="quiz-progress-text">Pregunta 1 de 5</span>
+                    <div class="quiz-progress-bar">
+                        <div id="quiz-progress-fill" class="quiz-progress-fill"></div>
+                    </div>
+                </div>
+                
+                <div class="quiz-question">
+                    <h4 id="quiz-question-text">¿Cuál es tu comida favorita?</h4>
+                    <div id="quiz-options-container" class="quiz-options">
+                        <!-- Las opciones se cargarán aquí -->
+                    </div>
+                </div>
+                
+                <button id="quiz-next-btn" class="btn btn-primary" disabled>Siguiente</button>
+            </div>
+            
+            <div id="quiz-results-screen" class="quiz-screen" style="display: none;">
+                <div class="quiz-results-icon">🏆</div>
+                <h3>¡Test Completado!</h3>
+                <div class="quiz-score">
+                    <span id="quiz-score-text">80%</span>
+                    <p id="quiz-title-text">Pareja Perfecta</p>
+                </div>
+                <div class="quiz-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="correct-answers">4</div>
+                        <div class="stat-label">Aciertos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-questions">5</div>
+                        <div class="stat-label">Preguntas</div>
+                    </div>
+                </div>
+                <button id="restart-quiz-btn" class="btn btn-primary">Volver a Jugar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- ======> NUEVA APP: CALENDARIO DE CITAS <======= -->
+<!-- ============================================ -->
+<!-- Vista Principal (Calendario de Citas) -->
+<div id="phone-view-calendar" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="homescreen">‹</button>
+        <span>Calendario de Citas</span>
+    </div>
+    <div class="app-content-body calendar-app-body">
+        <div class="calendar-header">
+            <button id="prev-month-btn">‹</button>
+            <h3 id="calendar-month-year">Noviembre 2025</h3>
+            <button id="next-month-btn">›</button>
+        </div>
+        
+        <div class="calendar-grid-header">
+            <div class="calendar-day-header">Dom</div>
+            <div class="calendar-day-header">Lun</div>
+            <div class="calendar-day-header">Mar</div>
+            <div class="calendar-day-header">Mié</div>
+            <div class="calendar-day-header">Jue</div>
+            <div class="calendar-day-header">Vie</div>
+            <div class="calendar-day-header">Sáb</div>
+        </div>
+        
+        <div id="calendar-grid" class="calendar-grid">
+            <!-- Los días del calendario se generarán aquí -->
+        </div>
+        
+        <button id="add-date-btn" class="btn btn-primary" style="margin-top: auto;">
+            + Añadir Cita
+        </button>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- ======> VISTA DE DETALLE DE CITA <======= -->
+<!-- ============================================ -->
+<div id="phone-view-date-detail" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="calendar">‹</button>
+        <span>Detalle de Cita</span>
+    </div>
+    <div class="app-content-body date-detail-body">
+        <div class="date-detail-form">
+            <input type="text" id="date-title-input" class="input" placeholder="Título de la cita">
+            <input type="date" id="date-date-input" class="input">
+            <input type="time" id="date-time-input" class="input">
+            <input type="text" id="date-location-input" class="input" placeholder="Lugar">
+            <textarea id="date-description-input" class="textarea" placeholder="Descripción (opcional)" rows="3"></textarea>
+            
+            <div class="date-actions">
+                <button id="save-date-btn" class="btn btn-primary">Guardar</button>
+                <button id="delete-date-btn" class="btn btn-outline btn-danger">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div> <!-- <=========== PEGA AQUÍ EL </div> QUE CORRESPONDE A .phone-app-container =========== -->
 
  
         </div>
