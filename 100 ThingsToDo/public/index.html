@@ -874,12 +874,29 @@
         <span id="playlist-detail-title"></span>
     </div>
     <div class="app-content-body cassette-player-body">
-        <div class="cassette-player">
-            <div class="cassette-label" id="cassette-label-title"></div>
-            <div class="cassette-windows">
-                <div class="cassette-spool left"></div>
-                <div class="cassette-spool right"></div>
+<div class="cassette-player">
+    <div class="cassette-screw top-left"></div>
+    <div class="cassette-screw top-right"></div>
+    <div class="cassette-label">
+        <div class="label-lines"></div>
+        <p id="cassette-label-title"></p>
+        <div class="label-lines"></div>
+    </div>
+    <div class="cassette-windows">
+        <div class="cassette-window">
+            <div class="cassette-spool left">
+                <div class="spool-teeth"></div>
             </div>
+        </div>
+        <div class="cassette-window">
+            <div class="cassette-spool right">
+                <div class="spool-teeth"></div>
+            </div>
+        </div>
+    </div>
+    <div class="cassette-screw bottom-left"></div>
+    <div class="cassette-screw bottom-right"></div>
+</div>
         </div>
         <div id="song-list" class="song-list">
             <!-- Las canciones se cargarán aquí -->
@@ -901,21 +918,24 @@
     </div>
 </div>
 
-<!-- Vista para Tocar la Canción -->
+<!-- Vista para Tocar la Canción (ESTRUCTURA CORRECTA) -->
 <div id="phone-view-player" class="phone-app-view">
     <div class="app-content-header">
-        <!-- Este botón nos llevará de vuelta a la lista de canciones -->
         <button class="phone-back-btn" data-target="playlistdetail">‹</button>
         <span>Reproduciendo...</span>
     </div>
     <div class="app-content-body player-body">
-        <!-- El reproductor de YouTube se insertará aquí -->
-        <div id="youtube-player-container" class="youtube-player-container"></div>
-
-        <!-- El Tocadiscos Animado -->
+        <div id="youtube-player-container" class="youtube-player-container">
+            <!-- El iframe se insertará aquí -->
+        </div>
         <div class="turntable-container">
-            <div class="turntable-arm"></div>
+            <div class="turntable-base"></div>
+            <div class="turntable-arm">
+                <div class="arm-pivot"></div>
+                <div class="arm-needle"></div>
+            </div>
             <div class="turntable-disc">
+                <div class="disc-reflection"></div>
                 <div class="disc-label"></div>
             </div>
         </div>
@@ -925,6 +945,11 @@
         </div>
     </div>
 </div>
+
+
+
+
+
 
 <!-- ============================================ -->
 

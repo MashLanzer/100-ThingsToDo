@@ -2527,7 +2527,7 @@ button, a, input, textarea {
 
 
 /* ============================================ */
-/* ESTILOS PARA LA APP "BANDA SONORA"           */
+/* ESTILOS MEJORADOS PARA LA APP "BANDA SONORA" */
 /* ============================================ */
 
 .playlists-list {
@@ -2535,6 +2535,29 @@ button, a, input, textarea {
   flex: 1;
   overflow-y: auto;
 }
+
+/* --- Estilos para el formulario de nueva playlist --- */
+#phone-view-soundtrack .form-actions {
+  display: flex; /* Mantiene el input y el botón en la misma línea */
+  gap: 0.5rem; /* Espacio entre el input y el botón */
+  width: 100%;
+  margin-top: auto; /* Empuja el formulario hacia abajo */
+  align-items: center; /* Alinea verticalmente el input y el botón */
+}
+
+#phone-view-soundtrack .form-actions .input {
+  flex-grow: 1; /* Hace que el input ocupe el espacio disponible */
+  margin-bottom: 0; /* Quita el margen inferior que tiene por defecto */
+}
+
+#phone-view-soundtrack .form-actions .btn {
+  flex-shrink: 0; /* Evita que el botón se encoja */
+  width: auto; /* El ancho se ajustará al contenido */
+  padding: 0.6rem 1rem; /* Relleno más pequeño y delicado */
+  font-size: 0.8rem; /* Texto más pequeño */
+  font-weight: 700; /* Un poco más de grosor para que se lea bien */
+}
+
 
 .playlist-item {
   display: flex;
@@ -2546,6 +2569,10 @@ button, a, input, textarea {
   margin-bottom: 1rem;
   box-shadow: 0 4px 8px rgba(0,0,0,0.05);
   cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.playlist-item:hover {
+  transform: scale(1.02);
 }
 .playlist-item-icon {
   font-size: 1.5rem;
@@ -2554,7 +2581,7 @@ button, a, input, textarea {
   font-weight: 600;
 }
 
-/* Vista del Casete */
+/* --- Vista del Casete Mejorada --- */
 .cassette-player-body {
   justify-content: flex-start;
   gap: 1.5rem;
@@ -2563,42 +2590,108 @@ button, a, input, textarea {
 .cassette-player {
   width: 100%;
   height: 150px;
-  background: #e0e0e0;
-  border-radius: 10px;
+  background: linear-gradient(to bottom, #d1d1d1, #e0e0e0);
+  border-radius: 8px;
   border: 1px solid #bdbdbd;
   padding: 10px;
   display: flex;
   flex-direction: column;
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1), inset 0 2px 4px rgba(0,0,0,0.1);
+  position: relative;
 }
 
+.cassette-screw {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background-color: #555;
+  border-radius: 50%;
+  box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
+}
+.cassette-screw.top-left { top: 8px; left: 8px; }
+.cassette-screw.top-right { top: 8px; right: 8px; }
+.cassette-screw.bottom-left { bottom: 8px; left: 8px; }
+.cassette-screw.bottom-right { bottom: 8px; right: 8px; }
+
 .cassette-label {
-  background: #f5f5f5;
-  height: 40px;
-  border-radius: 5px;
+  background: #fdfbf3;
+  height: 50px;
+  border-radius: 4px;
   border: 1px solid #ccc;
   margin-bottom: 10px;
-  padding: 5px;
+  padding: 5px 10px;
   font-family: 'Courier New', Courier, monospace;
   font-weight: bold;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   overflow: hidden;
+}
+.cassette-label p {
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
   white-space: nowrap;
   text-overflow: ellipsis;
+  overflow: hidden;
+  color: #444;
+}
+.label-lines {
+  height: 1px;
+  background: repeating-linear-gradient(to right, #c4c4c4, #c4c4c4 4px, transparent 4px, transparent 8px);
+  margin: 4px 0;
 }
 
 .cassette-windows {
   flex: 1;
   display: flex;
-  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,0.1);
+  border-radius: 4px;
+  padding: 8px;
+  gap: 20px;
+}
+
+.cassette-window {
+  width: 60px;
+  height: 40px;
+  background: #333;
+  border-radius: 3px;
+  border: 3px solid #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .cassette-spool {
-  flex: 1;
-  background: #333;
-  border-radius: 5px;
-  border: 5px solid #f5f5f5;
-  box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(#555, #333);
+  border-radius: 50%;
+  position: relative;
+  animation: spin-spool 4s linear infinite paused; /* Pausado por defecto */
+}
+.cassette-player.playing .cassette-spool {
+  animation-play-state: running; /* Se activa con la clase 'playing' */
+}
+
+@keyframes spin-spool {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spool-teeth {
+  width: 10px;
+  height: 10px;
+  background: #fdfbf3;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
 }
 
 .song-list {
@@ -2625,10 +2718,14 @@ button, a, input, textarea {
 
 .song-info {
   flex: 1;
+  min-width: 0;
 }
 .song-title {
   font-weight: 600;
   font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .song-added-by {
   font-size: 0.75rem;
@@ -2641,6 +2738,10 @@ button, a, input, textarea {
   cursor: pointer;
   font-size: 1.5rem;
   color: var(--pink);
+  transition: transform 0.2s ease;
+}
+.play-song-btn:hover {
+  transform: scale(1.2);
 }
 
 /* Vista de Añadir Canción */
@@ -2652,23 +2753,24 @@ button, a, input, textarea {
 }
 
 
-/* ============================================ */
-/* ESTILOS PARA EL REPRODUCTOR (TOCADISCOS)     */
-/* ============================================ */
+/* ================================================== */
+/* == ESTILOS SIMPLIFICADOS Y FUNCIONALES (v.10) == */
+/* ================================================== */
 
+/* 1. El cuerpo de la app del reproductor */
 .player-body {
-  justify-content: center;
-  gap: 1.5rem;
   padding: 1.5rem;
-  background: #333; /* Fondo oscuro para que resalte el reproductor */
+  background: #4a4a4a;
+  justify-content: flex-start; /* Alinea todo arriba */
+  gap: 1.5rem;
 }
 
+/* 2. Contenedor del video */
 .youtube-player-container {
   width: 100%;
   aspect-ratio: 16 / 9;
   background-color: #000;
   border-radius: 10px;
-  overflow: hidden;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
@@ -2676,76 +2778,133 @@ button, a, input, textarea {
   width: 100%;
   height: 100%;
   border: none;
+  border-radius: 10px; /* Añadido para consistencia */
 }
 
+/* 3. Contenedor del tocadiscos */
 .turntable-container {
-  position: relative;
   width: 200px;
   height: 200px;
-  margin-top: 1rem;
+  position: relative; /* Posicionamiento normal, sin absolute */
+  margin: 1rem auto 0 auto; /* Margen para separarlo del video */
+}
+
+/* --- Estilos del tocadiscos (sin cambios de lógica) --- */
+
+.turntable-base {
+  width: 100%;
+  height: 100%;
+  background: #333;
+  border-radius: 15px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.4);
 }
 
 .turntable-disc {
-  width: 100%;
-  height: 100%;
-  background: #222;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 160px;
+  height: 160px;
+  margin-top: -80px;
+  margin-left: -80px;
+  background: radial-gradient(circle, #1a1a1a 0%, #0a0a0a 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 5px solid #555;
-  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  box-shadow: 0 0 25px rgba(0,0,0,0.6);
 }
 
-/* Animación del disco girando */
+.turntable-container.playing .turntable-disc {
+  animation: spin-disc 2s linear infinite;
+}
+
+.disc-reflection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(165deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 40%);
+  border-radius: 50%;
+}
+
+.disc-label {
+  width: 50px;
+  height: 50px;
+  background: var(--pink);
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+.disc-label::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  background: #333;
+  border-radius: 50%;
+}
+
+.turntable-arm {
+  width: 90px;
+  height: 8px;
+  background: silver;
+  border-radius: 4px;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  transform-origin: 95% 50%;
+  transform: rotate(-45deg);
+  transition: transform 1s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  z-index: 10;
+}
+
+.arm-pivot {
+  width: 16px;
+  height: 16px;
+  background: #555;
+  border-radius: 50%;
+  position: absolute;
+  top: -4px;
+  right: -8px;
+}
+
+.arm-needle {
+  width: 8px;
+  height: 12px;
+  background: #444;
+  border-radius: 2px;
+  position: absolute;
+  top: -2px;
+  left: 4px;
+}
+
+.turntable-container.playing .turntable-arm {
+  transform: rotate(-15deg);
+  animation: arm-wobble 8s ease-in-out infinite alternate;
+}
+
 @keyframes spin-disc {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-.turntable-disc.playing {
-  animation: spin-disc 2s linear infinite;
+@keyframes arm-wobble {
+  from { transform: rotate(-15deg); }
+  to { transform: rotate(-12deg); }
 }
 
-.disc-label {
-  width: 70px;
-  height: 70px;
-  background: var(--pink);
-  border-radius: 50%;
-  border: 3px solid #fff;
-}
-
-.turntable-arm {
-  width: 100px;
-  height: 15px;
-  background: #ccc;
-  border-radius: 10px;
-  position: absolute;
-  top: -10px;
-  right: -20px;
-  transform-origin: bottom right;
-  transform: rotate(-30deg);
-  transition: transform 0.5s ease-in-out;
-  z-index: 10;
-}
-.turntable-arm::after {
-  content: '';
-  width: 20px;
-  height: 20px;
-  background: #888;
-  border-radius: 50%;
-  position: absolute;
-  bottom: -5px;
-  right: -5px;
-}
-
-.turntable-container.playing .turntable-arm {
-  transform: rotate(0deg);
-}
-
+/* 4. La información de la canción */
 .now-playing-info {
   text-align: center;
   color: white;
+  background: rgba(0,0,0,0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  width: 100%;
 }
 #player-song-title {
   font-weight: 600;
