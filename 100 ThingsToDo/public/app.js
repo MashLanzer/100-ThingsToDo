@@ -46,6 +46,27 @@ import {
 import { calculateCoupleStats } from './scr/stats.js';
 // import { initializeNotifications, requestNotificationPermission } from './scr/notifications.js';
 import { getRandomTask } from './scr/surpriseTasks.js';
+// Canvas confetti para celebraciones avanzadas
+// Dynamic loader for canvas-confetti (UMD bundle). We load the browser UMD and use window.confetti.
+let confettiLib = null;
+function loadConfettiLib() {
+  if (confettiLib) return Promise.resolve(confettiLib);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js';
+    s.async = true;
+    s.onload = () => {
+      confettiLib = window.confetti || null;
+      if (confettiLib) resolve(confettiLib);
+      else reject(new Error('canvas-confetti loaded but window.confetti not found'));
+    };
+    s.onerror = () => reject(new Error('Failed to load canvas-confetti'));
+    document.head.appendChild(s);
+  });
+}
+
+// Try to load in background (non-blocking)
+loadConfettiLib().catch(() => {});
 
 
 // Configuración de Firebase
@@ -145,6 +166,8 @@ let startAngle = 0;
 let isSpinning = false;
 
 let selectedCouponIcon = 'gift'; // Añade esta línea con las otras variables de estado
+// Track which plans we've already celebrated to avoid duplicate celebrations
+const celebratedPlans = new Set();
 
 
 
@@ -531,6 +554,36 @@ function updateNewPlanButtonState(isLinked) {
   }
 }
 
+// Inputs/textareas typing micro-interactions
+function _initInputTypingAnimations() {
+  // delegated: on input add temporary typing class
+  document.addEventListener('input', (e) => {
+    const t = e.target;
+    if (!t) return;
+    if (t.matches && (t.matches('.input') || t.matches('.textarea') || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) {
+      t.classList.add('typing');
+      clearTimeout(t._typingTimeout);
+      t._typingTimeout = setTimeout(() => t.classList.remove('typing'), 800);
+
+      // if this is an edit modal, highlight save button
+      if (t.closest && t.closest('#edit-plan-modal')) {
+        if (updatePlanBtn) {
+          updatePlanBtn.classList.add('btn-save-indicator');
+          // remove after a short while so it's a micro-feedback
+          setTimeout(() => updatePlanBtn.classList.remove('btn-save-indicator'), 900);
+        }
+      }
+    }
+  });
+}
+
+// Initialize input typing animations once DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _initInputTypingAnimations);
+} else {
+  _initInputTypingAnimations();
+}
+
 
 // ... cerca de las otras funciones de UI del dashboard ...
 function updateStatsButtonVisibility(isLinked) {
@@ -575,6 +628,11 @@ async function handleUpdatePlan() {
 
   try {
     await updatePlan(planId, title, description);
+    // animate save button to give feedback
+    if (updatePlanBtn) {
+      updatePlanBtn.classList.add('animate-save');
+      setTimeout(() => updatePlanBtn.classList.remove('animate-save'), 900);
+    }
     closeEditPlanModal();
     await loadPlans(); // Recargar la lista de planes
   } catch (error) {
@@ -649,6 +707,104 @@ function showConfettiHearts(containerEl, amount = 10) {
     // fail silently
     console.error('Error showing confetti hearts', e);
   }
+}
+
+// Celebrate whole plan completion with overlay, toast and extra hearts
+function celebratePlanCompletion(planId) {
+  if (!planId) return;
+  if (celebratedPlans.has(planId)) return; // already celebrated
+  celebratedPlans.add(planId);
+
+  // Glow the plan card if visible
+  const planCard = plansContainer.querySelector(`[data-plan-id="${planId}"]`);
+  if (planCard) {
+    planCard.classList.add('plan-complete-glow');
+    setTimeout(() => planCard.classList.remove('plan-complete-glow'), 1200);
+  }
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'celebration-overlay';
+
+  const bg = document.createElement('div');
+  bg.className = 'bg-blur';
+  overlay.appendChild(bg);
+
+  const amount = 28; // more hearts for big celebration
+  for (let i = 0; i < amount; i++) {
+    const h = document.createElement('div');
+    h.className = 'celebration-heart';
+    h.textContent = ['💖','💕','✨','🎉'][i % 4];
+    // random position
+    h.style.left = `${Math.random() * 90 + 3}%`;
+    h.style.top = `${Math.random() * 60 + 20}%`;
+    const variant = (i % 3) + 1;
+    h.classList.add(`animate-${variant}`);
+    h.style.fontSize = `${Math.random() * 18 + 18}px`;
+    h.style.animationDelay = `${Math.random() * 300}ms`;
+    overlay.appendChild(h);
+  }
+
+  document.body.appendChild(overlay);
+
+  // show toast
+  const toast = document.createElement('div');
+  toast.className = 'celebration-toast show';
+  toast.innerHTML = `<div class="toast-msg">¡Plan completado! 🎉</div><div class="toast-sub">Buen trabajo, celebren juntos 💕</div>`;
+  document.body.appendChild(toast);
+
+  // play canvas-confetti bursts for a nicer effect (dynamic loader)
+  loadConfettiLib().then((lib) => {
+    try {
+      lib({
+        particleCount: 60,
+        spread: 120,
+        origin: { y: 0.6 },
+        colors: ['#FFB6D9', '#FFD9E8', '#FF9AA2', '#FFD166']
+      });
+      setTimeout(() => lib({ particleCount: 40, spread: 100, origin: { y: 0.6 } }), 250);
+      setTimeout(() => lib({ particleCount: 30, spread: 160, origin: { x: 0.5, y: 0.55 } }), 450);
+    } catch (e) {
+      try { showConfettiHearts(document.body, 18); } catch (err) {}
+    }
+  }).catch(() => {
+    // fallback if couldn't load lib
+    try { showConfettiHearts(document.body, 18); } catch (err) {}
+  });
+
+  // Auto dismiss after short time
+  setTimeout(() => {
+    overlay.remove();
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 420);
+  }, 2200);
+}
+
+// ----------------------
+// CountUp helper (animates number increase)
+// ----------------------
+function countUp(el, endValue, duration = 800, suffix = '') {
+  if (!el) return;
+  const start = 0;
+  const range = Number(endValue) - start;
+  const startTime = performance.now();
+
+  const step = (now) => {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    // easeOutCubic
+    const eased = 1 - Math.pow(1 - t, 3);
+    const value = Math.floor(start + range * eased);
+    el.textContent = `${value}${suffix}`;
+    if (t < 1) requestAnimationFrame(step);
+    else {
+      el.textContent = `${endValue}${suffix}`;
+      el.classList.add('animate-count');
+      setTimeout(() => el.classList.remove('animate-count'), 800);
+    }
+  };
+
+  requestAnimationFrame(step);
 }
 
 
@@ -1232,6 +1388,11 @@ function renderIconGrid() {
   Object.entries(KAWAII_ICONS).forEach(([key, icon]) => {
     const btn = document.createElement('button');
     btn.className = `icon-btn ${key === selectedIcon ? 'selected' : ''}`;
+    // small kawaii micro-interaction classes
+    btn.classList.add('kawaii');
+    // tiny pop on render
+    btn.style.transform = 'scale(.96)';
+    btn.style.opacity = '0';
     btn.textContent = icon;
     btn.type = 'button';
     btn.onclick = () => {
@@ -1240,6 +1401,15 @@ function renderIconGrid() {
     };
     
     iconGrid.appendChild(btn);
+
+    // animate in (stagger)
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        btn.style.transition = 'transform 280ms cubic-bezier(.2,.9,.2,1), opacity 280ms ease';
+        btn.style.transform = 'scale(1)';
+        btn.style.opacity = '1';
+      }, Math.random() * 220);
+    });
   });
 }
 
@@ -1252,7 +1422,7 @@ async function handleCreateTask() {
   }
   
   try {
-    const newTaskId = await createTask(currentPlanId, title, selectedIcon);
+  const newTaskId = await createTask(currentPlanId, title, selectedIcon);
     toggleNewTaskForm();
     await loadPlanDetail(currentPlanId);
 
@@ -1264,6 +1434,8 @@ async function handleCreateTask() {
         setTimeout(() => newEl.classList.remove('task-added'), 900);
       }
     }
+    // If a new task is created for this plan, allow future celebrations again
+    celebratedPlans.delete(currentPlanId);
   } catch (error) {
     alert('Error al crear la tarea. Por favor, intenta de nuevo.');
   }
@@ -1280,8 +1452,8 @@ async function handleToggleTask(taskId, currentCompleted) {
     if (allItems.length > 0 && allItems.length === completedItems.length) {
       // pequeña animación en los items
       completedItems.forEach(el => el.classList.add('animate-complete'));
-      // confetti hearts
-      showConfettiHearts(planDetailPage, 12);
+      // celebration: overlay, toast, hearts and plan glow
+      celebratePlanCompletion(currentPlanId);
       // limpiar clase luego
       setTimeout(() => completedItems.forEach(el => el.classList.remove('animate-complete')), 900);
     }
@@ -1370,6 +1542,15 @@ function showLinkedView() {
     linkedDateDisplay.textContent = `Vinculados desde ${coupleData.linkedAt.toLocaleDateString('es-ES')}`;
   } else {
     linkedDateDisplay.textContent = '';
+  }
+  // small entrance animation for the linked card
+  const linkedCard = coupleLinkedView.querySelector('.couple-linked-card');
+  if (linkedCard) {
+    linkedCard.classList.remove('animate-in');
+    // force reflow
+    void linkedCard.offsetWidth;
+    linkedCard.classList.add('animate-in');
+    setTimeout(() => linkedCard.classList.remove('animate-in'), 900);
   }
 }
 
@@ -1928,21 +2109,33 @@ async function loadCoupleStats() {
     const stats = await calculateCoupleStats(db, collection, getDocs, currentCoupleId, currentUser.uid, partnerId);
 
     if (stats) {
-      // Rellenar los campos del modal con los datos calculados
-      document.getElementById('stat-total-plans').textContent = stats.totalPlans;
-      document.getElementById('stat-completed-plans').textContent = stats.completedPlans;
-      document.getElementById('stat-total-tasks').textContent = stats.totalTasks;
-      document.getElementById('stat-completion-percentage').textContent = `${stats.completionPercentage}%`;
-      
-      document.getElementById('stat-user-name').textContent = currentUser.displayName || 'Tú';
-      document.getElementById('stat-user-tasks').textContent = stats.userCompletedTasks;
-      
-      document.getElementById('stat-partner-name').textContent = coupleData.partnerName || 'Pareja';
-      document.getElementById('stat-partner-tasks').textContent = stats.partnerCompletedTasks;
+      // Rellenar los campos del modal con los datos calculados (animando los números)
+      const totalPlansEl = document.getElementById('stat-total-plans');
+      const completedPlansEl = document.getElementById('stat-completed-plans');
+      const totalTasksEl = document.getElementById('stat-total-tasks');
+      const completionPercEl = document.getElementById('stat-completion-percentage');
+      const userNameEl = document.getElementById('stat-user-name');
+      const userTasksEl = document.getElementById('stat-user-tasks');
+      const partnerNameEl = document.getElementById('stat-partner-name');
+      const partnerTasksEl = document.getElementById('stat-partner-tasks');
 
-      // Mostrar contenido y ocultar carga
+      // set names immediately
+      userNameEl.textContent = currentUser.displayName || 'Tú';
+      partnerNameEl.textContent = coupleData.partnerName || 'Pareja';
+
+      // animate numbers
+      countUp(totalPlansEl, stats.totalPlans, 700);
+      countUp(completedPlansEl, stats.completedPlans, 700);
+      countUp(totalTasksEl, stats.totalTasks, 700);
+      countUp(userTasksEl, stats.userCompletedTasks, 700);
+      countUp(partnerTasksEl, stats.partnerCompletedTasks, 700);
+      countUp(completionPercEl, stats.completionPercentage, 700, '%');
+
+      // Mostrar contenido y ocultar carga con animación
       statsLoadingView.style.display = 'none';
       statsContentView.style.display = 'block';
+      statsContentView.classList.add('animate-in');
+      setTimeout(() => statsContentView.classList.remove('animate-in'), 900);
     } else {
       throw new Error("No se pudieron calcular las estadísticas.");
     }

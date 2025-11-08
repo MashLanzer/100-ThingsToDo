@@ -4215,6 +4215,151 @@ body {
 /* end additional animations */
 
 /* =====================
+   Stats & small pops
+   ===================== */
+@keyframes statPop {
+  0% { transform: scale(.92); opacity: .6; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.stats-content.animate-in {
+  animation: statPop 420ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+.stat-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: inline-block;
+  transform-origin: center;
+}
+.stat-value.animate-count {
+  animation: statPop 600ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+/* couple linked card entrance */
+@keyframes cardFloatIn {
+  0% { transform: translateY(12px) scale(.98); opacity: 0; }
+  60% { transform: translateY(-6px) scale(1.03); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.couple-linked-card.animate-in {
+  animation: cardFloatIn 420ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+/* Icon grid micro pops */
+.icon-btn {
+  border-radius: 10px;
+  padding: 0.5rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+.icon-btn:hover {
+  transform: translateY(-6px) scale(1.08);
+  box-shadow: 0 10px 24px rgba(139,111,71,0.12);
+}
+.icon-btn.selected {
+  transform: translateY(-4px) scale(1.06);
+  box-shadow: 0 8px 20px rgba(255,182,217,0.12);
+}
+
+/* Buttons: stronger kawaii shimmer for primary CTAs */
+@keyframes btnShimmer {
+  0% { box-shadow: 0 8px 20px rgba(139,111,71,0.06); }
+  50% { box-shadow: 0 18px 34px rgba(255,182,217,0.12); transform: translateY(-2px); }
+  100% { box-shadow: 0 8px 20px rgba(139,111,71,0.06); transform: translateY(0); }
+}
+.btn-primary.kawaii.shimmer {
+  animation: btnShimmer 900ms ease-in-out 1;
+}
+
+/* destructive pulse for delete plan */
+@keyframes destructivePulse {
+  0% { box-shadow: 0 0 0 0 rgba(231,76,60,0.0); }
+  50% { box-shadow: 0 8px 28px rgba(231,76,60,0.12); }
+  100% { box-shadow: 0 0 0 0 rgba(231,76,60,0.0); }
+}
+.btn-danger.animate-destructive {
+  animation: destructivePulse 700ms ease-out both;
+}
+
+/* =====================
+   Plan completion celebration
+   ===================== */
+.celebration-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.celebration-overlay .bg-blur {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(rgba(255, 230, 240, 0.12), rgba(255, 250, 245, 0.02));
+  backdrop-filter: blur(6px);
+}
+.celebration-heart {
+  position: absolute;
+  font-size: 20px;
+  will-change: transform, opacity;
+  opacity: 0;
+  transform: translateY(0) scale(.6) rotate(0deg);
+}
+
+@keyframes heartBurst {
+  0% { opacity: 0; transform: translateY(0) scale(.6) rotate(0deg); }
+  20% { opacity: 1; transform: translateY(-18px) scale(1.2) rotate(-5deg); }
+  60% { transform: translateY(-120px) scale(1) rotate(12deg); opacity: 1; }
+  100% { transform: translateY(-220px) scale(.8) rotate(18deg); opacity: 0; }
+}
+
+.celebration-heart.animate-1 { animation: heartBurst 1600ms cubic-bezier(.2,.9,.2,1) both; }
+.celebration-heart.animate-2 { animation: heartBurst 1400ms cubic-bezier(.25,.9,.25,1) both; }
+.celebration-heart.animate-3 { animation: heartBurst 1800ms cubic-bezier(.2,.85,.2,1) both; }
+
+.celebration-toast {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  background: linear-gradient(180deg,#fff,#fff8f7);
+  border: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  box-shadow: 0 12px 30px rgba(45,45,45,0.12);
+  z-index: 2100;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  pointer-events: auto;
+  opacity: 0;
+}
+.celebration-toast.show {
+  animation: modal-zoom-in 360ms cubic-bezier(.2,.9,.2,1) both;
+  opacity: 1;
+}
+.celebration-toast .toast-msg {
+  font-weight: 700;
+  color: var(--primary);
+}
+.celebration-toast .toast-sub {
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+}
+
+.plan-complete-glow {
+  transform-origin: center;
+  animation: bounceComplete 700ms ease-in-out both;
+  box-shadow: 0 22px 48px rgba(255,182,217,0.18);
+}
+
+
+
+/* =====================
    Tilt on delete, input focus, empty-state
    ===================== */
 @keyframes tiltShake {
@@ -4259,6 +4404,32 @@ body {
   background-repeat: no-repeat;
   -webkit-background-clip: text;
   animation: placeholderShimmer 900ms linear infinite;
+}
+
+/* typing / edit animations for inputs */
+@keyframes inputTypePulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 rgba(255,182,217,0); }
+  50% { transform: scale(1.01); box-shadow: 0 8px 20px rgba(255,182,217,0.08); }
+  100% { transform: scale(1); box-shadow: 0 0 0 rgba(255,182,217,0); }
+}
+
+.input.typing, .textarea.typing {
+  animation: inputTypePulse 700ms ease-in-out 1;
+}
+
+/* Save indicator on update buttons */
+.btn-save-indicator.animate-save {
+  animation: pulseConfirm 0.6s 2; /* reuse pulseConfirm */
+}
+
+/* subtle caret blink enhancement for focused inputs */
+@keyframes caretBlink {
+  0% { box-shadow: inset 0 -2px 0 rgba(0,0,0,0); }
+  50% { box-shadow: inset 0 -2px 0 rgba(139,111,71,0.06); }
+  100% { box-shadow: inset 0 -2px 0 rgba(0,0,0,0); }
+}
+.input:focus, .textarea:focus {
+  animation: caretBlink 1200ms linear infinite;
 }
 
 /* Empty state animation */
