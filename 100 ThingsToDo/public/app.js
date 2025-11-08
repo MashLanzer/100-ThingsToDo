@@ -158,6 +158,8 @@ const homePage = document.getElementById('home-page');
 const dashboardPage = document.getElementById('dashboard-page');
 const planDetailPage = document.getElementById('plan-detail-page');
 
+const mainPanel = document.getElementById('main-panel'); // <--- AÑADE ESTA LÍNEA
+
 // Home
 const loginBtn = document.getElementById('login-btn');
 
@@ -370,13 +372,140 @@ const couponIconGrid = document.getElementById('coupon-icon-grid');
 const couponIconPreview = document.querySelector('.coupon-icon-preview');
 const saveCouponBtn = document.getElementById('save-coupon-btn');
 
+const wheelResultModal = document.getElementById('wheel-result-modal');
+const closeWheelResultModalBtn = document.getElementById('close-wheel-result-modal-btn');
+const okWheelResultBtn = document.getElementById('ok-wheel-result-btn');
+const wheelResultText = document.getElementById('wheel-result-text');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 
 // ============================================
 // FUNCIONES DE UI - DASHBOARD
+
+// --- Microanimaciones kawaii para botones y modales ---
+function _initKawaiiMicroInteractions() {
+  // Añade micro interacción de "press" a todos los botones
+  function attachButtonPress(btn) {
+    if (!btn) return;
+    // Marcar como kawaii por defecto para aprovechar estilos
+    btn.classList.add('kawaii');
+
+    btn.addEventListener('click', (e) => {
+      // Force reflow to restart animation
+      btn.classList.remove('btn-press');
+      // eslint-disable-next-line no-unused-expressions
+      void btn.offsetWidth;
+      btn.classList.add('btn-press');
+      // limpiar por si queda
+      setTimeout(() => btn.classList.remove('btn-press'), 350);
+    });
+
+    // Small icon bounce for svg inside icon buttons
+    const svg = btn.querySelector('svg');
+    if (svg) {
+      btn.addEventListener('mouseenter', () => svg.style.transform = 'translateY(-4px) scale(1.06)');
+      btn.addEventListener('mouseleave', () => svg.style.transform = '');
+    }
+  }
+
+  document.querySelectorAll('button').forEach(attachButtonPress);
+
+  // Delegated handler para botones creados dinámicamente: aplica la micro-animación de "press"
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest && e.target.closest('button');
+    if (!btn) return;
+    btn.classList.remove('btn-press');
+    // Force reflow
+    // eslint-disable-next-line no-unused-expressions
+    void btn.offsetWidth;
+    btn.classList.add('btn-press');
+    setTimeout(() => btn.classList.remove('btn-press'), 350);
+  });
+
+  // Observador global para reproducir animaciones al abrir/cerrar modales
+  function attachModalObserver(modal) {
+    if (!modal) return;
+    const content = modal.querySelector('.modal-content');
+    const overlay = modal.querySelector('.modal-overlay');
+    if (!content) return;
+
+    let wasOpen = false;
+
+    const check = () => {
+      const style = window.getComputedStyle(modal);
+      const isOpen = style.display !== 'none' && style.visibility !== 'hidden' && modal.classList.contains('modal');
+      if (isOpen && !wasOpen) {
+        // abrir
+        modal.classList.add('is-open');
+        overlay && overlay.classList.add('is-open');
+        content.classList.remove('animate-modal-out');
+        // small delay to ensure class removal applied
+        requestAnimationFrame(() => content.classList.add('animate-modal-in'));
+        wasOpen = true;
+      } else if (!isOpen && wasOpen) {
+        // cerrar: animación out
+        content.classList.remove('animate-modal-in');
+        content.classList.add('animate-modal-out');
+        content.addEventListener('animationend', function handler() {
+          modal.classList.remove('is-open');
+          overlay && overlay.classList.remove('is-open');
+          content.removeEventListener('animationend', handler);
+        });
+        wasOpen = false;
+      }
+    };
+
+    // Observa cambios de estilo/class para detectar apertura
+    const mo = new MutationObserver(check);
+    mo.observe(modal, { attributes: true, attributeFilter: ['style', 'class'] });
+
+    // También check inicial por si ya está abierto
+    check();
+  }
+
+  document.querySelectorAll('.modal').forEach(attachModalObserver);
+}
+
+// Iniciar microanimaciones cuando DOM esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _initKawaiiMicroInteractions);
+} else {
+  _initKawaiiMicroInteractions();
+}
 // ============================================
+
+// Apply input focus animations via delegation (handles dynamic inputs too)
+document.addEventListener('focusin', (e) => {
+  const target = e.target;
+  if (target && (target.matches('.input') || target.matches('.textarea') || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+    target.classList.add('kawaii-focus');
+    // ensure placeholder shimmer only when focused
+  }
+});
+
+document.addEventListener('focusout', (e) => {
+  const target = e.target;
+  if (target && (target.matches('.input') || target.matches('.textarea') || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+    target.classList.remove('kawaii-focus');
+  }
+});
 
 /**
  * Actualiza el estado del botón "Crear Nuevo Plan" basado en si el usuario tiene pareja.
@@ -462,11 +591,63 @@ async function handleDeletePlan() {
   }
 
   try {
+    // Animar la tarjeta del plan antes de eliminarla (si está visible)
+    const planCard = plansContainer.querySelector(`[data-plan-id="${planId}"]`);
+    if (planCard) {
+      planCard.classList.add('animate-delete');
+      await new Promise(res => planCard.addEventListener('animationend', res, { once: true }));
+    }
+
     await deletePlan(planId);
     closeEditPlanModal();
     await loadPlans();
   } catch (error) {
     alert('Error al eliminar el plan.');
+  }
+}
+
+
+// ----------------------
+// Confetti Hearts helper
+// ----------------------
+function showConfettiHearts(containerEl, amount = 10) {
+  try {
+    const container = document.createElement('div');
+    container.className = 'confetti-container';
+    // position relative to containerEl
+    container.style.position = 'absolute';
+    container.style.left = '0';
+    container.style.top = '0';
+    container.style.width = '100%';
+    container.style.height = '100%';
+
+    for (let i = 0; i < amount; i++) {
+      const heart = document.createElement('div');
+      heart.className = 'confetti-heart';
+      heart.textContent = '💖';
+      const left = Math.random() * 80 + 10; // 10% - 90%
+      heart.style.left = `${left}%`;
+      heart.style.bottom = `8%`;
+      heart.style.fontSize = `${Math.random() * 10 + 14}px`;
+      heart.style.opacity = '0';
+      // stagger and variant
+      const variant = (i % 3) + 1;
+      heart.classList.add(`animate-${variant}`);
+      heart.style.animationDelay = `${Math.random() * 300}ms`;
+      container.appendChild(heart);
+    }
+
+    // Append to provided container or to body
+    const parent = containerEl || document.body;
+    parent.appendChild(container);
+
+    // remove after animation
+    setTimeout(() => {
+      container.remove();
+    }, 1800);
+  } catch (e) {
+    // fail silently
+    console.error('Error showing confetti hearts', e);
   }
 }
 
@@ -693,13 +874,15 @@ async function createTask(planId, title, icon) {
     const tasksSnap = await getDocs(tasksRef);
     const order = tasksSnap.size;
     
-    await addDoc(tasksRef, {
+    const newDoc = await addDoc(tasksRef, {
       title,
       icon,
       completed: false,
       order,
       createdAt: Timestamp.now(),
     });
+
+    return newDoc.id;
   } catch (error) {
     console.error('Error al crear tarea:', error);
     throw error;
@@ -759,9 +942,14 @@ async function loadPlans() {
 function renderPlans(plans) {
   plansContainer.innerHTML = '';
   
-  plans.forEach(plan => {
+  plans.forEach((plan, idx) => {
     const planCard = document.createElement('div');
     planCard.className = 'plan-card';
+    // dataset to allow targeting after creación/eliminación
+    planCard.dataset.planId = plan.id;
+    // entrance animation stagger
+    planCard.classList.add('plan-card-enter');
+    planCard.style.animationDelay = `${idx * 60}ms`;
     // El clic principal sigue navegando al detalle
     planCard.onclick = (e) => {
       // Evita que el clic en los botones de acción navegue
@@ -884,14 +1072,19 @@ function renderTasks(tasks) {
   if (tasks.length === 0) {
     tasksContainer.style.display = 'none';
     tasksEmptyState.style.display = 'block';
+    tasksEmptyState.classList.add('empty-animate');
   } else {
     tasksContainer.style.display = 'flex';
     tasksEmptyState.style.display = 'none';
+    tasksEmptyState.classList.remove('empty-animate');
     tasksContainer.innerHTML = '';
     
-    tasks.forEach(task => {
+    tasks.forEach((task, idx) => {
       const taskItem = document.createElement('div');
       taskItem.className = `task-item ${task.completed ? 'completed' : ''}`;
+      // entrance animation (staggered)
+      taskItem.classList.add('task-enter');
+      taskItem.style.animationDelay = `${idx * 45}ms`;
       taskItem.dataset.taskId = task.id;
       
       // Checkbox
@@ -925,7 +1118,7 @@ function renderTasks(tasks) {
       content.appendChild(completedBy);
     }
       
-      // Delete button
+  // Delete button
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'task-delete';
       deleteBtn.innerHTML = `
@@ -935,6 +1128,31 @@ function renderTasks(tasks) {
         </svg>
       `;
       deleteBtn.onclick = () => handleDeleteTask(task.id);
+
+      // tilt visual feedback when pressing delete (mouse/touch)
+      const applyTilt = () => {
+        taskItem.classList.add('tilt-animate');
+        // also keep slight static tilt while pressing
+        taskItem.classList.add('task-tilt');
+      };
+      const removeTilt = () => {
+        taskItem.classList.remove('task-tilt');
+        // leave the tilt-animate to complete its animation
+        setTimeout(() => taskItem.classList.remove('tilt-animate'), 420);
+      };
+
+      deleteBtn.addEventListener('mousedown', applyTilt);
+      deleteBtn.addEventListener('touchstart', applyTilt, { passive: true });
+      document.addEventListener('mouseup', removeTilt);
+      document.addEventListener('touchend', removeTilt);
+
+      // Keyboard a11y: add a small tilt on keydown (Enter / Space)
+      deleteBtn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') applyTilt();
+      });
+      deleteBtn.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') removeTilt();
+      });
       
       taskItem.appendChild(checkbox);
       taskItem.appendChild(icon);
@@ -1034,9 +1252,18 @@ async function handleCreateTask() {
   }
   
   try {
-    await createTask(currentPlanId, title, selectedIcon);
+    const newTaskId = await createTask(currentPlanId, title, selectedIcon);
     toggleNewTaskForm();
     await loadPlanDetail(currentPlanId);
+
+    // Añadir clase de "nuevo" al elemento recién creado
+    if (newTaskId) {
+      const newEl = document.querySelector(`[data-task-id="${newTaskId}"]`);
+      if (newEl) {
+        newEl.classList.add('task-added');
+        setTimeout(() => newEl.classList.remove('task-added'), 900);
+      }
+    }
   } catch (error) {
     alert('Error al crear la tarea. Por favor, intenta de nuevo.');
   }
@@ -1046,6 +1273,18 @@ async function handleToggleTask(taskId, currentCompleted) {
   try {
     await toggleTask(currentPlanId, taskId, !currentCompleted);
     await loadPlanDetail(currentPlanId);
+
+    // Si ahora todas las tareas están completadas, mostrar celebración
+    const allItems = tasksContainer.querySelectorAll('.task-item');
+    const completedItems = tasksContainer.querySelectorAll('.task-item.completed');
+    if (allItems.length > 0 && allItems.length === completedItems.length) {
+      // pequeña animación en los items
+      completedItems.forEach(el => el.classList.add('animate-complete'));
+      // confetti hearts
+      showConfettiHearts(planDetailPage, 12);
+      // limpiar clase luego
+      setTimeout(() => completedItems.forEach(el => el.classList.remove('animate-complete')), 900);
+    }
   } catch (error) {
     alert('Error al actualizar la tarea. Por favor, intenta de nuevo.');
   }
@@ -1055,8 +1294,14 @@ async function handleDeleteTask(taskId) {
   if (!confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
     return;
   }
-  
   try {
+    // animar elemento en la UI antes de borrarlo
+    const el = tasksContainer.querySelector(`[data-task-id="${taskId}"]`);
+    if (el) {
+      el.classList.add('task-exit');
+      await new Promise(res => el.addEventListener('animationend', res, { once: true }));
+    }
+
     await deleteTask(currentPlanId, taskId);
     await loadPlanDetail(currentPlanId);
   } catch (error) {
@@ -1517,7 +1762,18 @@ if (deviceSwitchBtn) { // <--- AÑADE ESTA COMPROBACIÓN
 
 
 
+function closeWheelResult() {
+    wheelResultModal.style.display = 'none';
+    spinWheelBtn.disabled = wheelOptions.length < 2; // Rehabilita el botón de girar
+}
 
+closeWheelResultModalBtn.addEventListener('click', closeWheelResult);
+okWheelResultBtn.addEventListener('click', closeWheelResult);
+wheelResultModal.addEventListener('click', (e) => {
+    if (e.target === wheelResultModal) {
+        closeWheelResult();
+    }
+});
 
 
 
@@ -1818,30 +2074,35 @@ async function acceptSurpriseTask() {
 }
 
 
-// REEMPLAZA tu función showPhoneApp con esta versión final y más inteligente
+// app.js - REEMPLAZA LA FUNCIÓN showPhoneApp CON ESTA VERSIÓN
+
+// app.js - REEMPLAZA LA FUNCIÓN showPhoneApp CON ESTA VERSIÓN MEJORADA
 
 function showPhoneApp(appName) {
-  // Detener animaciones y video si salimos del reproductor
+  // Detener la música si salimos del reproductor. Esto es correcto.
   if (appName !== 'player' && youtubePlayer && typeof youtubePlayer.stopVideo === 'function') {
     youtubePlayer.stopVideo();
-    turntableContainer.classList.remove('playing');
+    if (turntableContainer) turntableContainer.classList.remove('playing');
     if (cassettePlayer) cassettePlayer.classList.remove('playing');
   }
 
-  // Ocultar todas las vistas
+  // 1. Ocultar TODAS las vistas del teléfono
   document.querySelectorAll('.phone-app-view').forEach(view => {
     view.classList.remove('active');
   });
 
-  // Encontrar y mostrar la nueva vista
+  // 2. Encontrar y mostrar SOLO la vista que queremos
   const viewToShow = document.getElementById(`phone-view-${appName}`);
   if (viewToShow) {
-    viewToShow.classList.add('active'); // Muestra la vista INMEDIATAMENTE
+    viewToShow.classList.add('active'); // ¡Esto hace que la vista sea visible!
 
-    // Ahora, ejecuta la lógica de inicialización específica para esa app
+    // 3. Ejecutar el código de inicialización para la app específica
+    //    Esto asegura que el contenido se cargue CADA VEZ que entras a la app.
     switch (appName) {
+      // --- Apps que ya tenías ---
       case 'surprise':
         updateSurpriseContent();
+        // Añadimos un pequeño retardo para que la animación de volteo se vea bien
         setTimeout(() => { if (surpriseCard) surpriseCard.classList.add('is-flipped'); }, 100);
         break;
       case 'timecapsule':
@@ -1851,36 +2112,46 @@ function showPhoneApp(appName) {
         renderGoalsList();
         break;
       case 'journal':
-        currentJournalDate = new Date();
         fetchJournalEntriesForMonth();
         break;
       case 'soundtrack':
         renderPlaylists();
         break;
+      
+      // --- APPS NUEVAS QUE NO MOSTRABAN CONTENIDO ---
       case 'decision-wheel':
+        // Usamos requestAnimationFrame para asegurar que el canvas es visible antes de dibujar
         requestAnimationFrame(() => { initDecisionWheel(); });
         break;
       case 'coupons':
         loadAndRenderCoupons();
         break;
       case 'gratitude':
+        // No necesitas una función separada, puedes llamar a la que ya tienes
         loadAndRenderGratitudeNotes();
         break;
       case 'map':
         loadAndRenderMapMarkers();
         break;
       case 'quiz':
-        // No necesita inicialización especial
+        // Reinicia el quiz cada vez que entras a la app
+        startQuiz();
         break;
       case 'calendar':
+        // Renderiza el calendario con la fecha actual
         renderCalendar();
         break;
-      // No se necesita lógica para 'homescreen' u otras vistas estáticas
+      
+      // No se necesita lógica extra para 'homescreen' u otras vistas estáticas.
     }
+
   } else {
+    // Un mensaje de error útil si alguna vez escribes mal el nombre de una app
     console.error(`Error: No se encontró la vista de la app con el ID: phone-view-${appName}`);
   }
 }
+
+
 
 
 
@@ -2820,7 +3091,9 @@ function initDecisionWheel() {
     }
   }
 
-  function spin() {
+// app.js - REEMPLAZA la función spin() existente
+
+function spin() {
     if (isSpinning || wheelOptions.length < 2) return;
     isSpinning = true;
     spinWheelBtn.disabled = true;
@@ -2837,16 +3110,25 @@ function initDecisionWheel() {
       const winningIndex = Math.floor((360 - degrees + 270) % 360 / arcSize);
       const winner = wheelOptions[winningIndex];
       
-      alert(`🎉 ¡La decisión es: ${winner}! 🎉`);
+      // ===> CAMBIO CLAVE: Mostrar el modal en lugar del alert <===
+      wheelResultText.textContent = winner;
+      wheelResultModal.style.display = 'flex';
+      // ==========================================================
 
       isSpinning = false;
-      updateList();
+      updateList(); // Actualizamos la lista de opciones visualmente
       
+      // Reseteamos la ruleta para el próximo giro
       wheelCanvas.style.transition = 'none';
       startAngle = finalAngle % (Math.PI * 2);
       wheelCanvas.style.transform = `rotate(${startAngle}rad)`;
-    }, 6000);
-  }
+
+      // Habilitamos el botón de girar DESPUÉS de que el modal se cierre
+      // Esto se maneja en los event listeners de abajo.
+
+    }, 6000); // El tiempo de la animación
+}
+
 
   // 3. ASIGNAR LISTENERS (solo una vez)
   spinWheelBtn.onclick = spin;
@@ -3711,12 +3993,182 @@ function initializeNewFeatureEventListeners() {
   });
 }
 
-// Llamar a la función de inicialización cuando el DOM esté cargado
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeNewFeatureEventListeners);
-} else {
-  initializeNewFeatureEventListeners();
+// ============================================
+// INICIALIZACIÓN FINAL
+// ============================================
+
+// Inicializar grid de iconos
+renderIconGrid();
+
+// Mostrar pantalla de carga inicialmente
+showLoading();
+
+// Llama a la función una vez para que la hora no aparezca vacía al principio
+updatePhoneClock(); 
+// Configura un intervalo para que la función se ejecute cada segundo
+setInterval(updatePhoneClock, 1000);
+
+// ===> ¡CORRECCIÓN CLAVE! <===
+// Llamamos a la función que activa los listeners para las nuevas apps.
+initializeNewFeatureEventListeners(); 
+
+
+
+
+// app.js - Añade este bloque al final del archivo
+
+// ============================================
+// LÓGICA DE INSTALACIÓN DE LA PWA
+// ============================================
+
+// Variable para guardar el evento de instalación capturado
+let deferredPrompt;
+
+// --- Lógica para Chrome, Edge, etc. (Navegadores basados en Chromium) ---
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  // 1. Prevenir que el navegador muestre su propio mini-banner de instalación
+  e.preventDefault();
+  
+  // 2. Guardar el evento para que podamos usarlo más tarde
+  deferredPrompt = e;
+  
+  // 3. Mostrar nuestro botón de instalación personalizado
+  const installBtn = document.getElementById('install-pwa-btn');
+  if (installBtn) {
+    installBtn.style.display = 'block';
+
+    // 4. Añadir un listener al botón para que, al hacer clic, muestre el prompt de instalación
+    installBtn.addEventListener('click', () => {
+      // Ocultar nuestro botón, ya que el prompt se va a mostrar
+      installBtn.style.display = 'none';
+      // Mostrar el prompt de instalación del navegador
+      deferredPrompt.prompt();
+      
+      // Esperar a que el usuario responda al prompt
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('¡Genial! El usuario ha aceptado instalar la PWA.');
+        } else {
+          console.log('El usuario ha cancelado la instalación.');
+        }
+        // Limpiar la variable, ya que el prompt solo se puede usar una vez
+        deferredPrompt = null;
+      });
+    });
+  }
+});
+
+// --- Lógica para iOS (Safari) ---
+
+// Función para detectar si el dispositivo es iOS
+function isIOS() {
+  return [
+    'iPad Simulator',
+    'iPhone Simulator',
+    'iPod Simulator',
+    'iPad',
+    'iPhone',
+    'iPod'
+  ].includes(navigator.platform)
+  // iPad en iOS 13+ se identifica como Mac, así que añadimos una comprobación extra
+  || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
 }
+
+// Comprobar si la app NO está en modo standalone (es decir, se está viendo en el navegador)
+const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+
+// Si es iOS y no está en modo standalone, mostramos el banner de instrucciones
+if (isIOS() && !isInStandaloneMode) {
+  const iosInstallBanner = document.getElementById('ios-install-banner');
+  const closeBannerBtn = document.getElementById('close-ios-banner-btn');
+
+  if (iosInstallBanner && closeBannerBtn) {
+    iosInstallBanner.style.display = 'flex';
+    
+    closeBannerBtn.addEventListener('click', () => {
+      iosInstallBanner.style.display = 'none';
+    });
+  }
+}
+
+// --- Evento para saber cuándo la app se ha instalado correctamente ---
+
+window.addEventListener('appinstalled', () => {
+  console.log('¡PWA instalada con éxito!');
+  // Opcional: Ocultar el botón de instalación si todavía fuera visible por alguna razón
+  const installBtn = document.getElementById('install-pwa-btn');
+  if (installBtn) {
+    installBtn.style.display = 'none';
+  }
+  deferredPrompt = null;
+});
+
+
+
+
+// ============================================
+// LÓGICA DEL PANEL LATERAL DESLIZABLE (SWIPE)
+// ============================================
+
+/**
+ * Muestra u oculta el panel lateral.
+ * @param {boolean} [force] - Si es true, abre el panel. Si es false, lo cierra. Si se omite, lo alterna.
+ */
+function toggleSidePanel(force) {
+  if (dashboardPage) {
+    const isOpen = dashboardPage.classList.contains('panel-open');
+    if (force === true) {
+      dashboardPage.classList.add('panel-open');
+    } else if (force === false) {
+      dashboardPage.classList.remove('panel-open');
+    } else {
+      dashboardPage.classList.toggle('panel-open');
+    }
+  }
+}
+
+// Variables para la detección de deslizamiento
+let touchstartX = 0;
+let touchendX = 0;
+
+function checkDirection() {
+  const swipeThreshold = 50; // Mínimo de píxeles para considerar un deslizamiento
+  const diffX = touchendX - touchstartX;
+  const isOpen = dashboardPage.classList.contains('panel-open');
+
+  // Deslizamiento hacia la derecha para abrir
+  if (diffX > swipeThreshold && !isOpen) {
+    toggleSidePanel(true);
+  }
+
+  // Deslizamiento hacia la izquierda para cerrar
+  if (diffX < -swipeThreshold && isOpen) {
+    toggleSidePanel(false);
+  }
+}
+
+// Añadir listeners de eventos de toque/ratón al panel principal
+if (mainPanel) {
+  // Eventos de toque para móviles
+  mainPanel.addEventListener('touchstart', e => {
+    touchstartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+
+  mainPanel.addEventListener('touchend', e => {
+    touchendX = e.changedTouches[0].screenX;
+    checkDirection();
+  });
+
+  // Cerrar el panel si se hace clic en el contenido principal cuando está abierto
+  mainPanel.addEventListener('click', (e) => {
+    if (dashboardPage.classList.contains('panel-open')) {
+      toggleSidePanel(false);
+    }
+  });
+}
+
+
 
 // ============================================
 // REGISTRO DEL SERVICE WORKER (PWA)

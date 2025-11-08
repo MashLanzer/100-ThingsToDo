@@ -114,6 +114,137 @@ body {
   animation: spin 1s linear infinite;
 }
 
+/* === KAWAII MICRO-ANIMATIONS FOR BUTTONS & MODALS === */
+@keyframes kawaii-pop {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes kawaii-press {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+@keyframes modal-zoom-in {
+  0% { transform: translateY(10px) scale(0.96); opacity: 0; }
+  60% { transform: translateY(-6px) scale(1.02); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes modal-zoom-out {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(10px) scale(0.96); opacity: 0; }
+}
+
+@keyframes sparkle {
+  0% { opacity: 0; transform: translateY(4px) scale(.6) rotate(-15deg); }
+  50% { opacity: 1; transform: translateY(-2px) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(-8px) scale(.8) rotate(10deg); }
+}
+
+/* Button micro interaction */
+.btn.kawaii {
+  position: relative;
+  overflow: visible;
+}
+.btn.kawaii::after {
+  content: "✨";
+  position: absolute;
+  right: 10px;
+  top: -6px;
+  font-size: 0.9rem;
+  opacity: 0;
+  transform-origin: center;
+  pointer-events: none;
+}
+.btn.kawaii:hover::after {
+  animation: sparkle 700ms ease-in-out 0s 1;
+}
+
+.btn-press {
+  animation: kawaii-press 220ms ease-in-out both;
+}
+
+/* Slight pop for primary calls-to-action */
+.btn-primary.kawaii:hover {
+  animation: kawaii-pop 420ms cubic-bezier(.2,.9,.2,1);
+}
+
+/* Icon buttons micro-bounce */
+.btn-icon.kawaii svg {
+  transition: transform 160ms ease;
+}
+.btn-icon.kawaii:hover svg {
+  transform: translateY(-4px) scale(1.06);
+}
+
+/* Small square icon buttons */
+.btn-icon-small.kawaii {
+  border-radius: 12px;
+  padding: 0.4rem;
+}
+
+/* Modal base styles & animations */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.modal.is-open {
+  display: flex;
+}
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(16,12,8,0.45);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 280ms ease;
+}
+.modal.is-open .modal-overlay {
+  opacity: 1;
+}
+.modal-content {
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(180deg, #fff, #fff8f7);
+  border-radius: 16px;
+  padding: 1rem;
+  max-width: 520px;
+  width: calc(100% - 2rem);
+  box-shadow: 0 12px 30px rgba(45, 45, 45, 0.12);
+  transform-origin: center;
+}
+.modal-content.animate-modal-in {
+  animation: modal-zoom-in 340ms cubic-bezier(.2,.9,.2,1) both;
+}
+.modal-content.animate-modal-out {
+  animation: modal-zoom-out 200ms ease both;
+}
+
+/* Small helper to auto-apply kawaii style */
+.kawaii-apply .btn, .kawaii-apply .btn-icon, .kawaii-apply .btn-icon-small {
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+/* Accessible focus ring with soft kawaii color */
+.btn:focus, .btn-icon:focus {
+  outline: none;
+  box-shadow: 0 0 0 6px rgba(255, 182, 217, 0.12);
+}
+
+/* micro hover for small controls */
+.btn-small-hover:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+/* end kawaii micro-animations */
+
 /* Tipografía */
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Fredoka', sans-serif;
@@ -145,7 +276,12 @@ p {
 
 /* Páginas */
 .page {
+  width: 100%;
   min-height: 100vh;
+  position: absolute; /* Para que las páginas se superpongan y se muestren/oculten */
+  top: 0;
+  left: 0;
+  transition: transform 0.3s ease-out;
 }
 
 /* Home Page */
@@ -1903,6 +2039,7 @@ button, a, input, textarea {
   gap: 5px;
   width: 100%;
   padding: 0 10px 10px 10px;
+  flex: none; /* <--- AÑADE ESTA LÍNEA */
 }
 
 .calendar-day {
@@ -2652,8 +2789,10 @@ button, a, input, textarea {
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 0.2rem;
-  flex: 1;
+  gap: 5px;
+  width: 100%;
+  padding: 0 10px 10px 10px;
+  flex: none; /* <--- AÑADE ESTA LÍNEA */
 }
 
 .calendar-day {
@@ -3695,12 +3834,464 @@ button, a, input, textarea {
   max-height: 100px; /* Limita la altura para que no ocupe toda la pantalla */
 }
 
+/* styles.css */
+
+/* Botón de Instalación para Chrome/Edge */
+.btn-install {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    animation: fadeInUp 0.5s ease-out;
+}
+
+/* Banner de Instrucciones para iOS */
+.ios-install-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #f0f0f0;
+    color: #333;
+    padding: 15px 20px;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.9rem;
+    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.ios-install-banner p {
+    margin: 0;
+    flex-grow: 1;
+}
+
+.ios-install-banner img {
+    vertical-align: middle; /* Alinea el icono de compartir con el texto */
+    margin: 0 4px;
+}
+
+.close-banner-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #888;
+    cursor: pointer;
+    padding: 0 0 0 15px;
+}
+
+/* Animación para la aparición */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+/* Ajuste para el banner de iOS que es de ancho completo */
+.ios-install-banner {
+    animation-name: fadeInUpBanner;
+}
+@keyframes fadeInUpBanner {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 
 
 
+/* ============================================ */
+/* ======> CORRECCIÓN CRÍTICA DE VISIBILIDAD <======= */
+/* ============================================ */
+
+/*
+  EXPLICACIÓN:
+  Por defecto, todas las vistas de las mini-apps deben estar ocultas.
+  La clase `.active` es la que debe hacerlas visibles.
+  El problema es que esta regla fundamental no estaba definida correctamente o faltaba.
+  Esta regla asegura que cuando JavaScript añade la clase `.active` a una vista, 
+  el navegador la muestre utilizando `display: flex;`.
+*/
+
+.phone-app-view {
+  display: none; /* Oculta todas las vistas por defecto */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--background);
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.phone-app-view.active {
+  display: flex !important; 
+  }
 
 
+/* ============================================ */
+/* FONDO KAWAII GLOBAL                          */
+/* ============================================ */
+body {
+  background: linear-gradient(135deg, #ffe4f1 0%, #fff8e7 100%), 
+              url("https://i.imgur.com/L2Uhb5b.png"); /* Fondo kawaii pastel */
+  background-size: cover;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-position: center;
+  animation: bgFloat 10s ease-in-out infinite alternate;
+}
+
+/* Animación de movimiento del fondo */
+@keyframes bgFloat {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
+/* ============================================ */
+/* ANIMACIONES SUAVES GLOBALES                  */
+/* ============================================ */
+
+/* Aparición suave de elementos */
+.fade-in {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeIn 0.8s ease forwards;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Brillo sutil en hover */
+.glow-hover:hover {
+  filter: drop-shadow(0 0 10px rgba(255, 182, 217, 0.6));
+  transform: scale(1.05);
+  transition: all 0.3s ease;
+}
+
+/* Efecto flotante general */
+.kawaii-float {
+  animation: floaty 4s ease-in-out infinite;
+}
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
+}
+
+/* Brillo en botones */
+.btn, .feature-card, .plan-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after, .feature-card::after, .plan-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.5), transparent);
+  transform: skewX(-25deg);
+}
+
+.btn:hover::after, .feature-card:hover::after, .plan-card:hover::after {
+  animation: shimmerMove 1s ease;
+}
+
+@keyframes shimmerMove {
+  from { left: -75%; }
+  to { left: 125%; }
+}
+
+/* ============================================ */
+/* ELEMENTOS DECORATIVOS OPCIONALES             */
+/* ============================================ */
+.kawaii-stars {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.kawaii-stars span {
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+  opacity: 0.6;
+  animation: twinkle 3s infinite ease-in-out alternate;
+}
+
+@keyframes twinkle {
+  0% { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(1.2); opacity: 0.8; }
+}
+
+/* ============================================ */
+/* MICRO-ANIMACIONES PARA EVENTOS DE INTERACCIÓN  */
+/* ============================================ */
+
+/* 1. Animación de Adición (Entrada Suave) */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-add {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* 2. Animación de Borrado (Salida Rápida) */
+@keyframes fadeOutShrink {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    height: auto;
+    padding: 1rem 1.5rem; /* Mantener el padding original */
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8);
+    height: 0;
+    padding: 0;
+    margin-bottom: 0;
+  }
+}
+
+.animate-delete {
+  animation: fadeOutShrink 0.4s ease-in forwards;
+}
+
+/* 3. Animación de Completado (Rebote y Brillo) */
+@keyframes bounceComplete {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); box-shadow: 0 0 15px var(--pink); }
+}
+
+.animate-complete {
+  animation: bounceComplete 0.5s ease-in-out;
+}
+
+/* 4. Animación de Carga/Guardado (Pulso de Confirmación) */
+@keyframes pulseConfirm {
+  0% { background-color: var(--primary); }
+  50% { background-color: var(--pink); }
+  100% { background-color: var(--primary); }
+}
+
+.btn-primary.animate-save {
+  animation: pulseConfirm 0.6s 2; /* Pulsa dos veces al guardar */
+}
+
+/* =====================
+   Entradas / Salidas / Completados
+   ===================== */
+@keyframes taskEnter {
+  0% { opacity: 0; transform: translateY(8px) scale(.98); }
+  60% { opacity: 1; transform: translateY(-6px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes taskAddPop {
+  0% { transform: scale(.92); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes taskExit {
+  0% { opacity: 1; transform: translateX(0) scale(1); height: auto; }
+  100% { opacity: 0; transform: translateX(-18px) scale(.96); height: 0; margin: 0; padding: 0; }
+}
+
+@keyframes planEnter {
+  0% { opacity: 0; transform: translateY(10px) scale(.98); }
+  60% { opacity: 1; transform: translateY(-8px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Task item initial entrance */
+.task-item.task-enter {
+  animation: taskEnter 360ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+/* Pop for newly added item (stronger) */
+.task-item.task-added {
+  animation: taskAddPop 420ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+/* Exit animation for delete */
+.task-item.task-exit, .task-item.animate-delete {
+  animation: taskExit 360ms ease-in forwards;
+}
+
+/* Plan card entrance */
+.plan-card.plan-card-enter {
+  animation: planEnter 420ms cubic-bezier(.2,.9,.2,1) both;
+}
+.plan-card.plan-added {
+  box-shadow: 0 14px 36px rgba(139,111,71,0.12);
+  transform-origin: center;
+  animation: taskAddPop 420ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+/* Completar tarea - pequeño rebote y brillo */
+.task-item.completed {
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+.task-item.completed.animate-complete {
+  animation: bounceComplete 520ms ease-in-out both;
+}
+
+/* Confetti Hearts (simple) */
+.confetti-container {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 1200;
+}
+.confetti-heart {
+  position: absolute;
+  font-size: 1.25rem;
+  will-change: transform, opacity;
+  animation: float 1400ms cubic-bezier(.2,.9,.2,1) forwards;
+  opacity: 0;
+}
+
+/* variant movement for hearts */
+@keyframes heartPopUp {
+  0% { transform: translateY(0) scale(.8); opacity: 0; }
+  20% { opacity: 1; transform: translateY(-6px) scale(1.1); }
+  100% { transform: translateY(-120px) scale(.9); opacity: 0; }
+}
+.confetti-heart.animate-1 { animation: heartPopUp 1400ms cubic-bezier(.2,.9,.2,1) forwards; }
+.confetti-heart.animate-2 { animation: heartPopUp 1200ms cubic-bezier(.3,.85,.25,1) forwards; }
+.confetti-heart.animate-3 { animation: heartPopUp 1600ms cubic-bezier(.25,.9,.25,1) forwards; }
+
+/* small helper to keep everything kawaii */
+.task-delete {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: transform 160ms ease, color 160ms ease;
+}
+.task-delete:hover { transform: translateY(-3px); color: var(--destructive); }
+
+/* end additional animations */
+
+/* =====================
+   Tilt on delete, input focus, empty-state
+   ===================== */
+@keyframes tiltShake {
+  0% { transform: rotate(0deg) translateX(0); }
+  30% { transform: rotate(-6deg) translateX(6px); }
+  60% { transform: rotate(3deg) translateX(-3px); }
+  100% { transform: rotate(0deg) translateX(0); }
+}
+
+.task-tilt {
+  transform-origin: left center;
+  transition: transform 220ms cubic-bezier(.2,.9,.2,1);
+  transform: rotate(-6deg) translateX(6px);
+}
+
+/* gentle tilt animation when pressing delete for a tiny feedback */
+.task-item.tilt-animate {
+  animation: tiltShake 420ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+/* Input focus micro-animations (text edits) */
+@keyframes inputFocusGlow {
+  0% { box-shadow: 0 0 0 0 rgba(255,182,217,0); }
+  50% { box-shadow: 0 8px 20px rgba(255,182,217,0.12); }
+  100% { box-shadow: 0 0 0 6px rgba(255,182,217,0.06); }
+}
+
+@keyframes placeholderShimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}
+
+.input.kawaii-focus, .textarea.kawaii-focus {
+  animation: inputFocusGlow 520ms cubic-bezier(.2,.9,.2,1) both;
+  border-color: var(--primary);
+}
+
+.input.kawaii-focus::placeholder, .textarea.kawaii-focus::placeholder {
+  color: rgba(122,107,95,0.7);
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.06), rgba(255,255,255,0));
+  background-size: 200px 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  animation: placeholderShimmer 900ms linear infinite;
+}
+
+/* Empty state animation */
+@keyframes emptyFloatSparkle {
+  0% { transform: translateY(0); opacity: 0.9; }
+  50% { transform: translateY(-8px) rotate(-1deg); opacity: 1; }
+  100% { transform: translateY(0); opacity: 0.95; }
+}
+
+.empty-state.empty-animate {
+  animation: emptyFloatSparkle 2400ms ease-in-out infinite;
+}
+
+.empty-state.empty-animate .empty-icon {
+  display: inline-block;
+  transform-origin: center;
+  animation: float 2400ms ease-in-out infinite;
+}
+
+/* small sparkle near empty state text */
+.empty-state.empty-animate::after {
+  content: ' ✨';
+  margin-left: 6px;
+  opacity: 0.9;
+  animation: sparkle 1400ms ease-in-out infinite;
+}
+
+/* ensure inputs have subtle transition for micro interactions */
+.input, .textarea {
+  transition: box-shadow 220ms ease, border-color 220ms ease, transform 160ms ease;
+}
+
+/* end tilt + input + empty animations */
 
 
 

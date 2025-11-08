@@ -1,73 +1,97 @@
-// sw.js - Versión Mejorada
+// sw.js - Service Worker para ThingsToDo Kawaii
 
-const CACHE_NAME = 'lista-amor-v5'; // <-- Versión actualizada
+// ============================================
+// CONFIGURACIÓN DEL CACHÉ
+// ============================================
+
+// 1. Nombre y Versión del Caché
+// Es crucial cambiar este nombre (ej. a 'v1.1') cada vez que actualices
+// tus archivos CSS, JS o HTML para que los usuarios reciban la nueva versión.
+const CACHE_NAME = 'thingstodo-kawaii-v1.0';
+
+// 2. Lista de Archivos a Cachear (El "esqueleto" de tu app)
+// Estos son los archivos mínimos que la app necesita para arrancar sin conexión.
 const URLS_TO_CACHE = [
-  '/',
+  '/', // La página principal
   '/index.html',
   '/styles.css',
   '/app.js',
+  '/manifest.json',
+  
+  // Módulos JS importantes
   '/scr/couple.js',
   '/scr/stats.js',
-  //'/scr/notifications.js', // No olvides añadir los nuevos archivos JS
+  '/scr/surpriseTasks.js',
+
+  // Iconos principales de la PWA
   '/images/icon-192x192.png',
   '/images/icon-512x512.png',
-  'https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&family=Fredoka:wght@300;400;500;600;700&display=swap'
+
+  // Recursos externos que también quieres que funcionen offline
+  'https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&family=Fredoka:wght@300;400;500;600;700&display=swap',
+  'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js'
 ];
 
-// Evento de instalación: se abre el caché y se añaden los archivos base
+// ============================================
+// CICLO DE VIDA DEL SERVICE WORKER
+// ============================================
+
+// 3. Evento 'install': Se ejecuta cuando el SW se instala.
 self.addEventListener('install', event => {
+  console.log('[Service Worker] Instalando...' );
   event.waitUntil(
-    caches.open(CACHE_NAME )
+    caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Cache abierto y archivos añadidos');
+        console.log('[Service Worker] Cache abierto. Cacheando archivos base...');
         return cache.addAll(URLS_TO_CACHE);
+      })
+      .then(() => {
+        console.log('[Service Worker] ¡Instalación completa!');
+        // Forzamos al nuevo SW a activarse inmediatamente.
+        return self.skipWaiting();
       })
   );
 });
 
-// Evento activate: se activa el nuevo SW y se eliminan los cachés antiguos
+// 4. Evento 'activate': Se ejecuta cuando el SW se activa.
+// Es el momento perfecto para limpiar cachés viejos.
 self.addEventListener('activate', event => {
+  console.log('[Service Worker] Activando...');
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Eliminando caché antiguo:', cacheName);
+            console.log('[Service Worker] Eliminando caché antiguo:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
+    }).then(() => {
+      console.log('[Service Worker] Activado y listo para tomar el control.');
+      // Toma el control de todas las páginas abiertas.
+      return self.clients.claim();
     })
   );
-  return self.clients.claim();
 });
 
-// Evento fetch: responde con los archivos del caché si están disponibles
+// 5. Evento 'fetch': Se ejecuta con cada petición de red.
+// Aquí es donde interceptamos y decidimos si servir desde el caché o la red.
 self.addEventListener('fetch', event => {
+  // Ignoramos las peticiones que no son GET (como las de Firebase para escribir datos).
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
-      .then(response => {
-        return response || fetch(event.request);
+      .then(cachedResponse => {
+        // Si encontramos el recurso en el caché, lo devolvemos. ¡Rápido!
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        // Si no, lo buscamos en la red.
+        return fetch(event.request);
       })
   );
 });
-
-// ... (tus otros listeners como 'push') ...
-
-
-/**
-// Evento push: se activa cuando se recibe una notificación push
-self.addEventListener('push', event => {
-  const data = event.data.json(); // Asumimos que el servidor envía un JSON
-  console.log('Notificación push recibida:', data);
-
-  const title = data.title || 'Lista de Amor Kawaii';
-  const options = {
-    body: data.body,
-    icon: '/images/icon-192x192.png', // Icono que se muestra en la notificación
-    badge: '/images/icon-192x192.png' // Icono para la barra de estado en Android
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-*/

@@ -11,6 +11,20 @@
     <!-- ============================================ -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#8B6F47">
+
+        <!-- 3. Permite que la app se ejecute en pantalla completa -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <!-- 4. Estilo de la barra de estado en iOS (negro translúcido) -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- 5. Título de la app para la pantalla de inicio de iOS -->
+    <meta name="apple-mobile-web-app-title" content="ThingsToDo">
+
+    <!-- 6. Icono para la pantalla de inicio de iOS (Apple Touch Icon) -->
+    <!--    Asegúrate de que la ruta a tu icono de 192x192 sea correcta. -->
+    <link rel="apple-touch-icon" href="/images/icon-192x192.png">
+
     <!-- ============================================ -->
     
     <!-- Google Fonts - Fuentes Kawaii -->
@@ -384,7 +398,32 @@
 
 
 
-    
+    <!-- index.html -->
+
+<!-- ============================================ -->
+<!-- ======> MODAL RESULTADO DE LA RULETA <======= -->
+<!-- ============================================ -->
+<div id="wheel-result-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 class="modal-title">¡Decisión Tomada!</h2>
+            <button id="close-wheel-result-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+            <div class="confirm-icon" id="wheel-result-icon">🎉</div>
+            <p class="confirm-text">La opción elegida es:</p>
+            <h3 id="wheel-result-text" style="color: var(--primary); font-size: 1.5rem; margin-bottom: 1.5rem;"></h3>
+            <button id="ok-wheel-result-btn" class="btn btn-primary">¡Entendido!</button>
+        </div>
+    </div>
+</div>
+
 
 
 
@@ -1284,6 +1323,28 @@
 </div>
 
 
+    <!-- ============================================ -->
+    <!-- =====> ELEMENTOS PARA INSTALACIÓN PWA <======= -->
+    <!-- ============================================ -->
+
+    <!-- 7. Botón de Instalación (para Chrome/Edge) -->
+    <!--    Lo colocamos fuera del div#app para que no se vea afectado por la navegación -->
+    <!--    y lo controlaremos con JavaScript. Inicialmente estará oculto. -->
+    <button id="install-pwa-btn" class="btn btn-primary btn-install" style="display: none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Instalar App
+    </button>
+
+    <!-- 8. Banner de Instrucciones para iOS -->
+    <!--    También estará oculto por defecto y se mostrará solo en dispositivos iOS. -->
+    <div id="ios-install-banner" class="ios-install-banner" style="display: none;">
+        <p>Para instalar la app, pulsa el botón "Compartir" <img src="https://img.icons8.com/ios/20/000000/share-rounded.png" alt="Icono Compartir"> y luego "Añadir a pantalla de inicio".</p>
+        <button id="close-ios-banner-btn" class="close-banner-btn">&times;</button>
+    </div>
 
 
     <!-- Firebase SDK -->
