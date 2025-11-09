@@ -431,15 +431,24 @@ class AnimationManager {
       });
     }
 
-    // Cupones de Amor - animar cupones
+    // Favores & Desafíos - animar favores y tabs
     if (appId === 'phone-view-coupons') {
-      const coupons = appView.querySelectorAll('.coupon-card');
-      coupons.forEach((coupon, index) => {
-        coupon.style.animation = 'none';
+      const favors = appView.querySelectorAll('.favor-card');
+      favors.forEach((favor, index) => {
+        favor.style.animation = 'none';
         setTimeout(() => {
-          coupon.style.animation = '';
-        }, 10 + (index * 100));
+          favor.style.animation = '';
+        }, 10 + (index * 50));
       });
+      
+      // Animar balance de puntos
+      const balance = appView.querySelector('.points-balance');
+      if (balance) {
+        balance.style.animation = 'none';
+        setTimeout(() => {
+          balance.style.animation = '';
+        }, 10);
+      }
     }
   }
 

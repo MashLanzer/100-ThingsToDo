@@ -47,12 +47,6 @@ import {
 import { calculateCoupleStats } from './scr/modules/stats.js';
 // import { initializeNotifications, requestNotificationPermission } from './scr/modules/notifications.js';
 import { getRandomTask } from './scr/modules/surpriseTasks.js';
-import { 
-  createCoupon, 
-  getCoupons, 
-  redeemCoupon, 
-  deleteCoupon 
-} from './scr/modules/coupons.js';
 // Canvas confetti para celebraciones avanzadas
 // Dynamic loader for canvas-confetti (UMD bundle). We load the browser UMD and use window.confetti.
 let confettiLib = null;
@@ -483,16 +477,6 @@ const playerAddedBy = document.getElementById('player-added-by');
 
 // ... justo después de los elementos del tocadiscos ...
 const cassettePlayer = document.querySelector('.cassette-player');
-
-// Elementos de Cupones de Amor
-const couponsList = document.getElementById('coupons-list');
-const couponsEmptyState = document.getElementById('coupons-empty-state');
-const addCouponBtn = document.getElementById('add-coupon-btn');
-const backToCouponsBtn = document.getElementById('back-to-coupons-btn');
-const couponTitleInput = document.getElementById('coupon-title-input');
-const couponDescriptionInput = document.getElementById('coupon-description-input');
-const couponColorPicker = document.querySelector('.color-picker');
-const saveCouponBtn = document.getElementById('save-coupon-btn');
 
 
 
@@ -1900,25 +1884,6 @@ backToBudgetListBtn.addEventListener('click', () => showPhoneApp('budget'));
 saveGoalBtn.addEventListener('click', handleSaveGoal);
 addContributionBtn.addEventListener('click', handleAddContribution);
 
-// Listeners para la app de Cupones de Amor
-addCouponBtn.addEventListener('click', () => showPhoneApp('create-coupon'));
-backToCouponsBtn.addEventListener('click', () => showPhoneApp('coupons'));
-saveCouponBtn.addEventListener('click', handleSaveCoupon);
-
-// Event delegation para color picker
-if (couponColorPicker) {
-  couponColorPicker.addEventListener('click', (e) => {
-    if (e.target.classList.contains('color-option')) {
-      // Quitar selección de todos
-      couponColorPicker.querySelectorAll('.color-option').forEach(opt => {
-        opt.classList.remove('selected');
-      });
-      // Marcar el clickeado
-      e.target.classList.add('selected');
-    }
-  });
-}
-
 
 
 
@@ -2324,9 +2289,6 @@ function showPhoneApp(appName) {
       case 'budget':
         renderGoalsList();
         break;
-      case 'coupons':
-        renderCouponsList();
-        break;
       case 'journal':
         fetchJournalEntriesForMonth();
         break;
@@ -2701,216 +2663,6 @@ async function handleAddContribution() {
     icon: '🐖',
     type: 'save'
   });
-}
-
-// ============================================
-// FUNCIONES DE UI - CUPONES DE AMOR
-// ============================================
-
-async function renderCouponsList() {
-  if (!currentCoupleId || !currentUser) {
-    couponsList.innerHTML = '';
-    couponsList.appendChild(couponsEmptyState);
-    couponsEmptyState.style.display = 'flex';
-    return;
-  }
-  
-  const coupons = await getCoupons(db, currentCoupleId);
-  couponsList.innerHTML = '';
-  
-  if (coupons.length === 0) {
-    couponsList.appendChild(couponsEmptyState);
-    couponsEmptyState.style.display = 'flex';
-  } else {
-    couponsEmptyState.style.display = 'none';
-    coupons.forEach((coupon, index) => {
-      const card = document.createElement('div');
-      card.className = `coupon-card ${coupon.redeemed ? 'redeemed' : ''}`;
-      card.style.background = `linear-gradient(135deg, ${coupon.color}, ${adjustColorBrightness(coupon.color, -15)})`;
-      card.style.animationDelay = `${index * 0.1}s`;
-      
-      const isMyGift = coupon.createdBy === currentUser.uid;
-      const canRedeem = !coupon.redeemed && !isMyGift;
-      
-      card.innerHTML = `
-        <div class="coupon-icon">🎟️</div>
-        <h3 class="coupon-title">${coupon.title}</h3>
-        <p class="coupon-description">${coupon.description}</p>
-        <div class="coupon-footer">
-          <span class="coupon-from">De: ${coupon.creatorName}</span>
-          ${canRedeem ? `<button class="coupon-redeem-btn" data-id="${coupon.id}">Canjear ✓</button>` : ''}
-          ${isMyGift && !coupon.redeemed ? `<button class="coupon-delete-btn" data-id="${coupon.id}">🗑️</button>` : ''}
-        </div>
-      `;
-      
-      couponsList.appendChild(card);
-    });
-    
-    // Event listeners para botones de canjear y eliminar
-    document.querySelectorAll('.coupon-redeem-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        handleRedeemCoupon(btn.dataset.id);
-      });
-    });
-    
-    document.querySelectorAll('.coupon-delete-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        handleDeleteCoupon(btn.dataset.id);
-      });
-    });
-  }
-}
-
-async function handleSaveCoupon() {
-  const title = couponTitleInput.value.trim();
-  const description = couponDescriptionInput.value.trim();
-  const selectedColor = couponColorPicker.querySelector('.color-option.selected');
-  
-  if (!title) {
-    showNotification({
-      title: 'Título Requerido',
-      message: 'Por favor, escribe un título para el cupón.',
-      icon: '⚠️',
-      type: 'warning'
-    });
-    return;
-  }
-  
-  if (!description) {
-    showNotification({
-      title: 'Descripción Requerida',
-      message: 'Por favor, escribe una descripción para el cupón.',
-      icon: '⚠️',
-      type: 'warning'
-    });
-    return;
-  }
-  
-  const color = selectedColor ? selectedColor.dataset.color : '#e8d5f2';
-  
-  try {
-    await createCoupon(
-      db,
-      currentCoupleId,
-      currentUser.uid,
-      currentUser.displayName,
-      title,
-      description,
-      color
-    );
-    
-    // Limpiar formulario
-    couponTitleInput.value = '';
-    couponDescriptionInput.value = '';
-    couponColorPicker.querySelectorAll('.color-option').forEach(opt => {
-      opt.classList.remove('selected');
-    });
-    couponColorPicker.querySelector('.color-option:last-child').classList.add('selected');
-    
-    showNotification({
-      title: '¡Cupón Creado!',
-      message: `"${title}" ha sido añadido al banco de cupones.`,
-      icon: '🎟️',
-      type: 'success'
-    });
-    
-    await renderCouponsList();
-    showPhoneApp('coupons');
-  } catch (error) {
-    console.error('Error creando cupón:', error);
-    showNotification({
-      title: 'Error',
-      message: 'No se pudo crear el cupón. Intenta de nuevo.',
-      icon: '❌',
-      type: 'error'
-    });
-  }
-}
-
-async function handleRedeemCoupon(couponId) {
-  showNotification({
-    title: '¿Canjear Cupón?',
-    message: '¿Estás seguro de que quieres canjear este cupón? Esta acción no se puede deshacer.',
-    icon: '🎟️',
-    type: 'info',
-    confirm: true,
-    onConfirm: async () => {
-      try {
-        // Añadir clase de animación antes de canjear
-        const card = document.querySelector(`.coupon-redeem-btn[data-id="${couponId}"]`)?.closest('.coupon-card');
-        if (card) {
-          card.classList.add('coupon-redeeming');
-        }
-        
-        await redeemCoupon(db, currentCoupleId, couponId, currentUser.uid);
-        
-        // Esperar a que termine la animación
-        setTimeout(async () => {
-          showNotification({
-            title: '¡Cupón Canjeado!',
-            message: 'Disfruta de tu regalo especial 💕',
-            icon: '✓',
-            type: 'success'
-          });
-          
-          await renderCouponsList();
-        }, 800);
-      } catch (error) {
-        console.error('Error canjeando cupón:', error);
-        showNotification({
-          title: 'Error',
-          message: 'No se pudo canjear el cupón. Intenta de nuevo.',
-          icon: '❌',
-          type: 'error'
-        });
-      }
-    }
-  });
-}
-
-async function handleDeleteCoupon(couponId) {
-  showNotification({
-    title: '¿Eliminar Cupón?',
-    message: '¿Estás seguro de que quieres eliminar este cupón?',
-    icon: '🗑️',
-    type: 'warning',
-    confirm: true,
-    onConfirm: async () => {
-      try {
-        await deleteCoupon(db, currentCoupleId, couponId);
-        showNotification({
-          title: 'Cupón Eliminado',
-          message: 'El cupón ha sido eliminado del banco.',
-          icon: '✓',
-          type: 'success'
-        });
-        await renderCouponsList();
-      } catch (error) {
-        console.error('Error eliminando cupón:', error);
-        showNotification({
-          title: 'Error',
-          message: 'No se pudo eliminar el cupón. Intenta de nuevo.',
-          icon: '❌',
-          type: 'error'
-        });
-      }
-    }
-  });
-}
-
-// Función helper para ajustar brillo de color
-function adjustColorBrightness(hex, percent) {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = (num >> 16) + amt;
-  const G = (num >> 8 & 0x00FF) + amt;
-  const B = (num & 0x0000FF) + amt;
-  return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
-    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
-    (B < 255 ? B < 1 ? 0 : B : 255))
-    .toString(16).slice(1);
 }
 
 // ============================================

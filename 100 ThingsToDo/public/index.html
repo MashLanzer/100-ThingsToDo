@@ -668,11 +668,6 @@
         <div class="app-icon-bg app-icon-money" style="background: #d4edda;">💰</div>
         <span class="app-name">Metas Futuras</span>
     </div>
-          <!-- App 3: Cupones de Amor -->
-        <div class="app-icon phone-app-icon" data-app="coupons">
-        <div class="app-icon-bg app-icon-coupon" style="background: #ffe4f1;">🎟️</div>
-        <span class="app-name">Cupones</span>
-    </div>
             </div>
         </div>
 
@@ -793,68 +788,6 @@
             <div id="goal-contributions-list" class="contributions-list">
                 <!-- Las aportaciones se listarán aquí -->
             </div>
-        </div>
-    </div>
-</div>
-<!-- ============================================ -->
-
-<!-- Vista de la app "Cupones de Amor" -->
-<div id="phone-view-coupons" class="phone-app-view">
-    <div class="app-content-header">
-        <button class="back-to-home-btn">‹</button>
-        <span>Cupones de Amor 🎟️</span>
-    </div>
-    <div class="app-content-body coupons-app-body">
-        <!-- Lista de cupones -->
-        <div id="coupons-list" class="coupons-list">
-            <!-- Los cupones se renderizan aquí -->
-        </div>
-        
-        <!-- Estado vacío -->
-        <div id="coupons-empty-state" class="coupons-empty-state" style="display: none;">
-            <div class="empty-icon">🎟️</div>
-            <p>No hay cupones todavía</p>
-            <p class="empty-subtitle">Crea tu primer cupón de amor</p>
-        </div>
-        
-        <!-- Botón para crear cupón -->
-        <button id="add-coupon-btn" class="btn btn-primary floating-btn">
-            <span>+ Crear Cupón</span>
-        </button>
-    </div>
-</div>
-
-<!-- Vista de creación de cupón -->
-<div id="phone-view-create-coupon" class="phone-app-view">
-    <div class="app-content-header">
-        <button id="back-to-coupons-btn" class="back-to-home-btn">‹</button>
-        <span>Nuevo Cupón</span>
-    </div>
-    <div class="app-content-body create-coupon-body">
-        <div class="coupon-form">
-            <div class="form-group">
-                <label>Vale por...</label>
-                <input type="text" id="coupon-title-input" class="input" placeholder="Ej: Un masaje de 20 minutos" maxlength="60">
-            </div>
-            
-            <div class="form-group">
-                <label>Descripción (opcional)</label>
-                <textarea id="coupon-description-input" class="input" placeholder="Detalles adicionales..." rows="3" maxlength="150"></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label>Color del cupón</label>
-                <div class="color-picker">
-                    <div class="color-option" data-color="#ffcce1" style="background: #ffcce1;"></div>
-                    <div class="color-option" data-color="#ffe4cc" style="background: #ffe4cc;"></div>
-                    <div class="color-option" data-color="#fff4cc" style="background: #fff4cc;"></div>
-                    <div class="color-option" data-color="#d4f4dd" style="background: #d4f4dd;"></div>
-                    <div class="color-option" data-color="#cce7ff" style="background: #cce7ff;"></div>
-                    <div class="color-option selected" data-color="#e8d5f2" style="background: #e8d5f2;"></div>
-                </div>
-            </div>
-            
-            <button id="save-coupon-btn" class="btn btn-primary btn-block">Crear Cupón 🎟️</button>
         </div>
     </div>
 </div>
