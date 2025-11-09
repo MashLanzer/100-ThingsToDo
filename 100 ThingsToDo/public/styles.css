@@ -368,6 +368,8 @@ p {
   justify-content: center;
   gap: 0.5rem;
   font-size: 1rem;
+  position: relative;
+  overflow: hidden;
 }
 
 .btn:hover {
@@ -595,6 +597,8 @@ p {
   text-decoration: none;
   color: inherit;
   display: block;
+  position: relative;
+  overflow: hidden;
 }
 
 .plan-card:hover {
@@ -2957,6 +2961,7 @@ button, a, input, textarea {
   height: 200%;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
   transform: skewX(-25deg);
+  pointer-events: none; /* Evita que bloquee clics */
 }
 
 .btn:hover::after, .feature-card:hover::after, .plan-card:hover::after {

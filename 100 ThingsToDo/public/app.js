@@ -1742,23 +1742,18 @@ saveSongBtn.addEventListener('click', handleSaveSong);
 // Listener para el clic en el disco del tocadiscos
 turntableDisc.addEventListener('click', togglePlayPause);
 
-// Event listeners para iconos de apps en el phone homescreen
-// En la sección EVENT LISTENERS
-
-// Event listeners para iconos de apps en el phone homescreen
-document.addEventListener('click', (e) => {
-  const appIcon = e.target.closest('.app-icon[data-app]');
-  if (appIcon) {
-    const appName = appIcon.dataset.app;
-    if (appName) {
-      // Abrir el modal del teléfono si no está abierto
-      if (phoneModal && phoneModal.style.display !== 'flex') {
-        openPhoneModal();
+// Event listeners para iconos de apps en el phone homescreen (solo dentro del modal del teléfono)
+if (phoneModal) {
+  phoneModal.addEventListener('click', (e) => {
+    const appIcon = e.target.closest('.app-icon[data-app]');
+    if (appIcon) {
+      const appName = appIcon.dataset.app;
+      if (appName) {
+        showPhoneApp(appName);
       }
-      showPhoneApp(appName);
     }
-  }
-});
+  });
+}
 
 
 
