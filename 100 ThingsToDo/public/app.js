@@ -394,168 +394,24 @@ const cassettePlayer = document.querySelector('.cassette-player');
 // ============================================
 // FUNCIONES DE UI - DASHBOARD
 
-// --- Microanimaciones kawaii para botones y modales ---
-function _initKawaiiMicroInteractions() {
-  // Añade micro interacción de "press" a todos los botones
-  function attachButtonPress(btn) {
-    if (!btn) return;
-    // Marcar como kawaii por defecto para aprovechar estilos
-    btn.classList.add('kawaii');
-
-    btn.addEventListener('click', (e) => {
-      // Force reflow to restart animation
-      btn.classList.remove('btn-press');
-      // eslint-disable-next-line no-unused-expressions
-      void btn.offsetWidth;
-      btn.classList.add('btn-press');
-      // limpiar por si queda
-      setTimeout(() => btn.classList.remove('btn-press'), 350);
-    });
-
-    // Small icon bounce for svg inside icon buttons
-    const svg = btn.querySelector('svg');
-    if (svg) {
-      btn.addEventListener('mouseenter', () => svg.style.transform = 'translateY(-4px) scale(1.06)');
-      btn.addEventListener('mouseleave', () => svg.style.transform = '');
-    }
-  }
-
-  document.querySelectorAll('button').forEach(attachButtonPress);
-
-  // Delegated handler para botones creados dinámicamente: aplica la micro-animación de "press"
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest && e.target.closest('button');
-    if (!btn) return;
-    btn.classList.remove('btn-press');
-    // Force reflow
-    // eslint-disable-next-line no-unused-expressions
-    void btn.offsetWidth;
-    btn.classList.add('btn-press');
-    setTimeout(() => btn.classList.remove('btn-press'), 350);
-  });
-
-  // Observador global para reproducir animaciones al abrir/cerrar modales
-  function attachModalObserver(modal) {
-    if (!modal) return;
-    const content = modal.querySelector('.modal-content');
-    const overlay = modal.querySelector('.modal-overlay');
-    if (!content) return;
-
-    let wasOpen = false;
-
-    const check = () => {
-      const style = window.getComputedStyle(modal);
-      const isOpen = style.display !== 'none' && style.visibility !== 'hidden' && modal.classList.contains('modal');
-      if (isOpen && !wasOpen) {
-        // abrir
-        modal.classList.add('is-open');
-        overlay && overlay.classList.add('is-open');
-        content.classList.remove('animate-modal-out');
-        // small delay to ensure class removal applied
-        requestAnimationFrame(() => content.classList.add('animate-modal-in'));
-        wasOpen = true;
-      } else if (!isOpen && wasOpen) {
-        // cerrar: animación out
-        content.classList.remove('animate-modal-in');
-        content.classList.add('animate-modal-out');
-        content.addEventListener('animationend', function handler() {
-          modal.classList.remove('is-open');
-          overlay && overlay.classList.remove('is-open');
-          content.removeEventListener('animationend', handler);
-        });
-        wasOpen = false;
-      }
-    };
-
-    // Observa cambios de estilo/class para detectar apertura
-    const mo = new MutationObserver(check);
-    mo.observe(modal, { attributes: true, attributeFilter: ['style', 'class'] });
-
-    // También check inicial por si ya está abierto
-    check();
-  }
-
-  document.querySelectorAll('.modal').forEach(attachModalObserver);
-}
-
-// Iniciar microanimaciones cuando DOM esté listo
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _initKawaiiMicroInteractions);
-} else {
-  _initKawaiiMicroInteractions();
-}
 // ============================================
-
-// Apply input focus animations via delegation (handles dynamic inputs too)
-document.addEventListener('focusin', (e) => {
-  const target = e.target;
-  if (target && (target.matches('.input') || target.matches('.textarea') || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-    target.classList.add('kawaii-focus');
-    // ensure placeholder shimmer only when focused
-  }
-});
-
-document.addEventListener('focusout', (e) => {
-  const target = e.target;
-  if (target && (target.matches('.input') || target.matches('.textarea') || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-    target.classList.remove('kawaii-focus');
-  }
-});
+// MICROANIMACIONES - SECCIÓN ELIMINADA
+// Las animaciones se agregarán desde cero
+// ============================================
 
 /**
  * Actualiza el estado del botón "Crear Nuevo Plan" basado en si el usuario tiene pareja.
  * @param {boolean} isLinked - True si el usuario está vinculado con una pareja.
  */
 function updateNewPlanButtonState(isLinked) {
-  const wasDisabled = newPlanBtn.disabled;
-
   if (isLinked) {
     newPlanBtn.disabled = false;
     newPlanBtn.title = 'Crear un nuevo plan compartido';
-    // Si el botón ESTABA desactivado y ahora se activa, añade la animación
-    if (wasDisabled) {
-      newPlanBtn.classList.add('btn-activated-animation');
-      // Elimina la clase después de que termine la animación para que no se repita
-      setTimeout(() => {
-        newPlanBtn.classList.remove('btn-activated-animation');
-      }, 800); // 800ms es la duración de la animación
-    }
   } else {
     newPlanBtn.disabled = true;
     newPlanBtn.title = 'Vincula una pareja para crear planes compartidos';
   }
 }
-
-// Inputs/textareas typing micro-interactions
-function _initInputTypingAnimations() {
-  // delegated: on input add temporary typing class
-  document.addEventListener('input', (e) => {
-    const t = e.target;
-    if (!t) return;
-    if (t.matches && (t.matches('.input') || t.matches('.textarea') || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) {
-      t.classList.add('typing');
-      clearTimeout(t._typingTimeout);
-      t._typingTimeout = setTimeout(() => t.classList.remove('typing'), 800);
-
-      // if this is an edit modal, highlight save button
-      if (t.closest && t.closest('#edit-plan-modal')) {
-        if (updatePlanBtn) {
-          updatePlanBtn.classList.add('btn-save-indicator');
-          // remove after a short while so it's a micro-feedback
-          setTimeout(() => updatePlanBtn.classList.remove('btn-save-indicator'), 900);
-        }
-      }
-    }
-  });
-}
-
-// Initialize input typing animations once DOM ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _initInputTypingAnimations);
-} else {
-  _initInputTypingAnimations();
-}
-
 
 // ... cerca de las otras funciones de UI del dashboard ...
 function updateStatsButtonVisibility(isLinked) {
@@ -1256,31 +1112,6 @@ function renderTasks(tasks) {
         </svg>
       `;
       deleteBtn.onclick = () => handleDeleteTask(task.id);
-
-      // tilt visual feedback when pressing delete (mouse/touch)
-      const applyTilt = () => {
-        taskItem.classList.add('tilt-animate');
-        // also keep slight static tilt while pressing
-        taskItem.classList.add('task-tilt');
-      };
-      const removeTilt = () => {
-        taskItem.classList.remove('task-tilt');
-        // leave the tilt-animate to complete its animation
-        setTimeout(() => taskItem.classList.remove('tilt-animate'), 420);
-      };
-
-      deleteBtn.addEventListener('mousedown', applyTilt);
-      deleteBtn.addEventListener('touchstart', applyTilt, { passive: true });
-      document.addEventListener('mouseup', removeTilt);
-      document.addEventListener('touchend', removeTilt);
-
-      // Keyboard a11y: add a small tilt on keydown (Enter / Space)
-      deleteBtn.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') applyTilt();
-      });
-      deleteBtn.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') removeTilt();
-      });
       
       taskItem.appendChild(checkbox);
       taskItem.appendChild(icon);
