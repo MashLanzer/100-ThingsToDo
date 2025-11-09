@@ -264,6 +264,10 @@ const openPhoneModalBtn = document.getElementById('open-phone-modal-btn');
 const phoneModal = document.getElementById('phone-modal');
 const closePhoneModalBtn = document.getElementById('close-phone-modal-btn');
 const phoneHomescreen = document.getElementById('phone-homescreen');
+// Nuevo botón y modal de Actividades
+const openActivitiesBtn = document.getElementById('open-activities-btn');
+const activitiesModal = document.getElementById('activities-modal');
+const closeActivitiesModalBtn = document.getElementById('close-activities-modal-btn');
 const appIcons = document.querySelectorAll('.app-icon');
 const backToHomeBtns = document.querySelectorAll('.back-to-home-btn');
 const phoneTimeDisplay = document.getElementById('phone-time-display');
@@ -1844,6 +1848,24 @@ phoneModal.addEventListener('click', (e) => {
     closePhoneModal();
   }
 });
+
+// Listeners para el nuevo modal de Actividades
+if (openActivitiesBtn && activitiesModal) {
+  openActivitiesBtn.addEventListener('click', () => {
+    activitiesModal.style.display = 'flex';
+  });
+}
+if (closeActivitiesModalBtn) {
+  closeActivitiesModalBtn.addEventListener('click', () => {
+    activitiesModal.style.display = 'none';
+  });
+}
+// Cerrar activities modal al hacer clic en overlay
+if (activitiesModal) {
+  activitiesModal.addEventListener('click', (e) => {
+    if (e.target === activitiesModal) activitiesModal.style.display = 'none';
+  });
+}
 
 
 // Listeners para los botones de "volver"

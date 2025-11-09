@@ -1,0 +1,52 @@
+<!-- Modal ligero para Actividades (abre desde el botón Actividades en el header) -->
+<div id="activities-modal" class="modal" style="display:none;">
+  <div class="modal-overlay"></div>
+  <div class="modal-content" style="max-width:520px;">
+    <div class="modal-header">
+      <h2 class="modal-title">Actividades</h2>
+      <button id="close-activities-modal-btn" class="btn-icon" title="Cerrar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="app-grid activities-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+        <!-- Movido: Ruleta -->
+        <div class="app-icon" data-app="decision-wheel">
+          <div class="app-icon-bg" style="background: #ffc9a2;">🎡</div>
+          <span class="app-name">¿Qué Hacemos?</span>
+        </div>
+
+        <!-- Movido: Cupones -->
+        <div class="app-icon" data-app="coupons">
+          <div class="app-icon-bg" style="background: #fecaca;">🎟️</div>
+          <span class="app-name">Vale por...</span>
+        </div>
+
+        <!-- Movido: Tarro de Agradecimientos -->
+        <div class="app-icon" data-app="gratitude">
+          <div class="app-icon-bg" style="background: #d1c4e9;">🏺</div>
+          <span class="app-name">Gracias Por...</span>
+        </div>
+
+        <!-- Movido: Mapa de Aventuras -->
+        <div class="app-icon" data-app="map">
+          <div class="app-icon-bg" style="background: #b2fab4;">🗺️</div>
+          <span class="app-name">Mapa de Aventuras</span>
+        </div>
+
+        <!-- Movido: Quiz -->
+        <div class="app-icon" data-app="quiz">
+          <div class="app-icon-bg" style="background: #ffe0b2;">❓</div>
+          <span class="app-name">¿Cuánto nos conocemos?</span>
+        </div>
+
+        <!-- Movido: Calendario -->
+        <div class="app-icon" data-app="calendar">
+          <div class="app-icon-bg" style="background: #bbdefb;">📅</div>
+          <span class="app-name">Próxima Cita</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

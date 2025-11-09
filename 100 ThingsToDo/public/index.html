@@ -142,6 +142,13 @@
         </svg>
     </button>
 
+    <!-- Nuevo botón al lado de Centro de Actividades -->
+    <button id="open-activities-btn" class="btn-icon" title="Actividades">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2l2.09 6.26L20 9.27l-5 3.64L16.18 20 12 16.9 7.82 20 9 12.91l-5-3.64 5.91-.99L12 2z"></path>
+        </svg>
+    </button>
+
 
                         <button id="logout-btn" class="btn-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -672,56 +679,11 @@
         <span class="app-name">Metas Futuras</span>
     </div>
 
-     <!-- App : Ruleta -->
-    <div class="app-icon" data-app="decision-wheel">
-    <div class="app-icon-bg" style="background: #ffc9a2;">🎡</div>
-    <span class="app-name">¿Qué Hacemos?</span>
-</div>
+    <!-- (Ruleta y Cupones movidos al modal 'Actividades') -->
+            </div>
+        </div>
 
- <!-- App : Cupones -->
-<div class="app-icon" data-app="coupons">
-    <div class="app-icon-bg" style="background: #fecaca;">🎟️</div>
-    <span class="app-name">Vale por...</span>
-</div>
-
-
-
-
-<!-- Nuevas apps -->
-<!-- App : Tarro de Agradecimientos -->
-<div class="app-icon" data-app="gratitude">
-    <div class="app-icon-bg" style="background: #d1c4e9;">🏺</div>
-    <span class="app-name">Gracias Por...</span>
-</div>
-
-<!-- App : Mapa de Aventuras -->
-<div class="app-icon" data-app="map">
-    <div class="app-icon-bg" style="background: #b2fab4;">🗺️</div>
-    <span class="app-name">Mapa de Aventuras</span>
-</div>
-
-<!-- App : Cuánto nos conocemos -->
-<div class="app-icon" data-app="quiz">
-    <div class="app-icon-bg" style="background: #ffe0b2;">❓</div>
-    <span class="app-name">¿Cuánto nos conocemos?</span>
-</div>
-
-<!-- App : Calendario de Citas -->
-<div class="app-icon" data-app="calendar">
-    <div class="app-icon-bg" style="background: #bbdefb;">📅</div>
-    <span class="app-name">Próxima Cita</span>
-</div>
-
-                <!-- App : Próximamente... -->
-                <div class="app-icon disabled"> 
-                    <div class="app-icon-bg">✨</div>
-                    <span class="app-name">Próximamente</span>
-                </div>
-                
-</div>
-</div>
-
-<!-- Pantalla de la App "Tarea Sorpresa" -->
+<!-- Vista de la app "Reto Diario" -->
 <div id="phone-view-surprise" class="phone-app-view">
     <div class="app-content-header">
         <button class="back-to-home-btn">‹</button>
@@ -1345,6 +1307,61 @@
         <p>Para instalar la app, pulsa el botón "Compartir" <img src="https://img.icons8.com/ios/20/000000/share-rounded.png" alt="Icono Compartir"> y luego "Añadir a pantalla de inicio".</p>
         <button id="close-ios-banner-btn" class="close-banner-btn">&times;</button>
     </div>
+
+<!-- ============================================ -->
+<!-- ======> MODAL DE ACTIVIDADES (botón "Actividades") <======= -->
+<!-- ============================================ -->
+<div id="activities-modal" class="modal" style="display:none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-width:520px;">
+        <div class="modal-header">
+            <h2 class="modal-title">Actividades</h2>
+            <button id="close-activities-modal-btn" class="btn-icon" title="Cerrar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="app-grid activities-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+                <!-- Movido: Ruleta -->
+                <div class="app-icon" data-app="decision-wheel">
+                    <div class="app-icon-bg" style="background: #ffc9a2;">🎡</div>
+                    <span class="app-name">¿Qué Hacemos?</span>
+                </div>
+
+                <!-- Movido: Cupones -->
+                <div class="app-icon" data-app="coupons">
+                    <div class="app-icon-bg" style="background: #fecaca;">🎟️</div>
+                    <span class="app-name">Vale por...</span>
+                </div>
+
+                <!-- Movido: Tarro de Agradecimientos -->
+                <div class="app-icon" data-app="gratitude">
+                    <div class="app-icon-bg" style="background: #d1c4e9;">🏺</div>
+                    <span class="app-name">Gracias Por...</span>
+                </div>
+
+                <!-- Movido: Mapa de Aventuras -->
+                <div class="app-icon" data-app="map">
+                    <div class="app-icon-bg" style="background: #b2fab4;">🗺️</div>
+                    <span class="app-name">Mapa de Aventuras</span>
+                </div>
+
+                <!-- Movido: Quiz -->
+                <div class="app-icon" data-app="quiz">
+                    <div class="app-icon-bg" style="background: #ffe0b2;">❓</div>
+                    <span class="app-name">¿Cuánto nos conocemos?</span>
+                </div>
+
+                <!-- Movido: Calendario -->
+                <div class="app-icon" data-app="calendar">
+                    <div class="app-icon-bg" style="background: #bbdefb;">📅</div>
+                    <span class="app-name">Próxima Cita</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 
     <!-- Firebase SDK -->

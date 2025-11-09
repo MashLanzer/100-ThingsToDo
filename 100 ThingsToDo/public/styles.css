@@ -924,6 +924,60 @@ button, a, input, textarea {
   padding: 1.5rem;
 }
 
+/* Specific styling for the Activities modal to ensure a tidy grid and proper sizing */
+#activities-modal .modal-content {
+  max-width: 520px; /* keep consistent with other modals */
+  width: calc(100% - 2rem);
+  padding: 0.75rem;
+}
+
+#activities-modal .modal-body {
+  padding: 1rem 0.9rem 1.2rem 0.9rem;
+}
+
+#activities-modal .activities-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  justify-items: center;
+  align-items: center;
+}
+
+#activities-modal .activities-grid .app-icon {
+  width: 100%;
+  max-width: 120px;
+  padding: 8px 4px;
+}
+
+#activities-modal .activities-grid .app-icon .app-icon-bg {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  font-size: 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#activities-modal .activities-grid .app-name {
+  font-size: 0.82rem;
+  margin-top: 6px;
+  display: block;
+  text-align: center;
+}
+
+/* Ensure modal centers correctly on small screens */
+@media (max-width: 520px) {
+  #activities-modal .modal-content {
+    width: 96%;
+    margin: 0 8px;
+  }
+  #activities-modal .activities-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+}
+
 /* Secciones del modal */
 .couple-section {
   margin-bottom: 1.5rem;
