@@ -57,3 +57,5 @@ TODO.txt
 Untitled-*.yaml
 Untitled-*.txt
 Nuevo*.txt
+deploy.bat
+firebase.json
