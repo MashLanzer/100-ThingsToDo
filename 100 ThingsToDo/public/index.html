@@ -9,7 +9,7 @@
         <!-- ============================================ -->
     <!-- ======> AÑADE ESTAS LÍNEAS DE CÓDIGO <======= -->
     <!-- ============================================ -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/scr/config/manifest.json">
     <meta name="theme-color" content="#8B6F47">
 
         <!-- 3. Permite que la app se ejecute en pantalla completa -->
@@ -23,7 +23,7 @@
 
     <!-- 6. Icono para la pantalla de inicio de iOS (Apple Touch Icon) -->
     <!--    Asegúrate de que la ruta a tu icono de 192x192 sea correcta. -->
-    <link rel="apple-touch-icon" href="/images/icon-192x192.png">
+    <link rel="apple-touch-icon" href="/scr/images/icon-192x192.png">
 
     <!-- ============================================ -->
     
@@ -34,6 +34,7 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="scr/animations/animations.css">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
 </head>
@@ -360,7 +361,7 @@
         <!-- ============================================ -->
         <div id="couple-about-view" style="display: none;">
             <div class="about-section">
-                <div class="about-icon">💖</div>
+                <div class="about-icon heart-icon">💖</div>
                 <h3 class="about-title">ThingsToDo Kawaii</h3>
                 <p class="about-version">Versión 1.0</p>
                 <p class="about-description">
@@ -459,7 +460,7 @@
     <div class="modal-overlay"></div>
     <div class="modal-content">
         <div class="modal-header">
-            <h2 class="modal-title">📊 Estadísticas de Pareja</h2>
+            <h2 class="modal-title"><span class="stats-icon">📊</span> Estadísticas de Pareja <span class="stats-heart">💕</span></h2>
             <button id="close-stats-modal-btn" class="btn-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -483,19 +484,19 @@
                 <div class="stats-section">
                     <h3 class="stats-section-title">Resumen General</h3>
                     <div class="stats-grid">
-                        <div class="stat-card">
+                        <div class="stat-card stat-card-animated">
                             <div class="stat-value" id="stat-total-plans">0</div>
                             <div class="stat-label">Planes Creados</div>
                         </div>
-                        <div class="stat-card">
+                        <div class="stat-card stat-card-animated">
                             <div class="stat-value" id="stat-completed-plans">0</div>
                             <div class="stat-label">Planes Completados</div>
                         </div>
-                        <div class="stat-card">
+                        <div class="stat-card stat-card-animated">
                             <div class="stat-value" id="stat-total-tasks">0</div>
                             <div class="stat-label">Tareas Totales</div>
                         </div>
-                        <div class="stat-card">
+                        <div class="stat-card stat-card-animated">
                             <div class="stat-value" id="stat-completion-percentage">0%</div>
                             <div class="stat-label">Completado</div>
                         </div>
@@ -505,13 +506,13 @@
                 <div class="stats-section">
                     <h3 class="stats-section-title">Aportación Individual</h3>
                     <div class="stats-comparison">
-                        <div class="stat-person">
+                        <div class="stat-person stat-person-animated">
                             <div class="stat-person-name" id="stat-user-name">Tú</div>
                             <div class="stat-person-value" id="stat-user-tasks">0</div>
                             <div class="stat-person-label">Tareas completadas</div>
                         </div>
-                        <div class="stat-divider">💕</div>
-                        <div class="stat-person">
+                        <div class="stat-divider heart-icon">💕</div>
+                        <div class="stat-person stat-person-animated">
                             <div class="stat-person-name" id="stat-partner-name">Pareja</div>
                             <div class="stat-person-value" id="stat-partner-tasks">0</div>
                             <div class="stat-person-label">Tareas completadas</div>
@@ -541,7 +542,7 @@
             </button>
         </div>
         <div class="modal-body" style="text-align: center;">
-            <div class="confirm-icon">👋</div>
+            <div class="confirm-icon wave-icon">👋</div>
             <p class="confirm-text">
                 ¿Estás seguro de que quieres cerrar sesión?
             </p>
@@ -641,30 +642,30 @@
             </div>
             <div class="app-grid">
                      <!-- App 0: Diario -->
-                    <div class="app-icon" data-app="journal">
-        <div class="app-icon-bg" style="background: #c3e6cb;">🗓️</div>
+                    <div class="app-icon phone-app-icon" data-app="journal">
+        <div class="app-icon-bg app-icon-journal" style="background: #c3e6cb;">🗓️</div>
         <span class="app-name">Diario</span>
     </div>
 
         <!-- App : Musica -->
-        <div class="app-icon" data-app="soundtrack">
-        <div class="app-icon-bg" style="background: #a2d2ff;">🎧</div>
+        <div class="app-icon phone-app-icon" data-app="soundtrack">
+        <div class="app-icon-bg app-icon-music" style="background: #a2d2ff;">🎧</div>
         <span class="app-name">Musica</span>
     </div>
 
                 <!-- App 1: Tarea Sorpresa -->
-                <div class="app-icon" data-app="surprise">
-                    <div class="app-icon-bg" style="background: #ffdeeb;">🎁</div>
+                <div class="app-icon phone-app-icon" data-app="surprise">
+                    <div class="app-icon-bg app-icon-gift" style="background: #ffdeeb;">🎁</div>
                     <span class="app-name">Reto Diario</span>
                 </div>
                 <!-- App 2: Capsula del tiempo -->
-                    <div class="app-icon" data-app="timecapsule">
-        <div class="app-icon-bg" style="background: #f6eac2;">⏳</div>
+                    <div class="app-icon phone-app-icon" data-app="timecapsule">
+        <div class="app-icon-bg app-icon-time" style="background: #f6eac2;">⏳</div>
         <span class="app-name">Cápsula Temporal</span>
     </div>
           <!-- App 2: Metas -->
-        <div class="app-icon" data-app="budget">
-        <div class="app-icon-bg" style="background: #d4edda;">💰</div>
+        <div class="app-icon phone-app-icon" data-app="budget">
+        <div class="app-icon-bg app-icon-money" style="background: #d4edda;">💰</div>
         <span class="app-name">Metas Futuras</span>
     </div>
             </div>
@@ -1011,6 +1012,22 @@
         <button id="close-ios-banner-btn" class="close-banner-btn">&times;</button>
     </div>
 
+    <!-- Modal de Notificación Universal -->
+    <div id="notification-modal" class="notification-modal">
+        <div class="notification-content">
+            <div class="notification-icon" id="notification-icon">💬</div>
+            <h3 id="notification-title">Notificación</h3>
+            <p id="notification-message">Mensaje de la notificación</p>
+            <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                <button class="btn btn-primary" id="notification-btn">Aceptar</button>
+                <button class="btn btn-outline" id="notification-cancel-btn" style="display: none;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sistema de Animaciones -->
+    <script src="scr/animations/animations.js"></script>
+    
     <!-- Firebase SDK -->
     <script type="module" src="app.js"></script>
 </body>

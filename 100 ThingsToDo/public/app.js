@@ -42,11 +42,11 @@ import {
   linkWithPartner, 
   unlinkPartner,
   initializeUserProfile 
-} from './scr/couple.js';
+} from './scr/modules/couple.js';
 // ===> AÑADE ESTA LÍNEA <===
-import { calculateCoupleStats } from './scr/stats.js';
-// import { initializeNotifications, requestNotificationPermission } from './scr/notifications.js';
-import { getRandomTask } from './scr/surpriseTasks.js';
+import { calculateCoupleStats } from './scr/modules/stats.js';
+// import { initializeNotifications, requestNotificationPermission } from './scr/modules/notifications.js';
+import { getRandomTask } from './scr/modules/surpriseTasks.js';
 // Canvas confetti para celebraciones avanzadas
 // Dynamic loader for canvas-confetti (UMD bundle). We load the browser UMD and use window.confetti.
 let confettiLib = null;
@@ -148,6 +148,112 @@ let selectedIcon = 'clipboard';
 let coupleData = null;
 let sortableInstance = null;
 let currentSurpriseTask = null;
+
+// ============================================
+// SISTEMA DE NOTIFICACIONES UNIVERSAL
+// ============================================
+
+/**
+ * Muestra una notificación modal con animación
+ * @param {Object} options - Configuración de la notificación
+ * @param {string} options.title - Título de la notificación
+ * @param {string} options.message - Mensaje de la notificación
+ * @param {string} options.icon - Emoji del icono (por defecto: 💬)
+ * @param {string} options.type - Tipo: 'success', 'error', 'info', 'warning' (afecta color del icono)
+ * @param {boolean} options.confirm - Si es true, muestra botón Cancelar
+ * @param {Function} options.onConfirm - Callback cuando se confirma
+ * @param {Function} options.onCancel - Callback cuando se cancela
+ */
+function showNotification({ 
+  title = 'Notificación', 
+  message = '', 
+  icon = '💬', 
+  type = 'info',
+  confirm = false,
+  onConfirm = null,
+  onCancel = null
+}) {
+  const modal = document.getElementById('notification-modal');
+  const iconEl = document.getElementById('notification-icon');
+  const titleEl = document.getElementById('notification-title');
+  const messageEl = document.getElementById('notification-message');
+  const btn = document.getElementById('notification-btn');
+  
+  // Iconos predeterminados por tipo
+  const typeIcons = {
+    success: '✅',
+    error: '❌',
+    info: '💬',
+    warning: '⚠️',
+    time: '⏳',
+    heart: '💕',
+    gift: '🎁',
+    money: '💰',
+    save: '🐖',
+    party: '🎉',
+    task: '📝'
+  };
+  
+  // Configurar contenido
+  iconEl.textContent = icon || typeIcons[type] || typeIcons.info;
+  titleEl.textContent = title;
+  messageEl.textContent = message;
+  
+  // Si es confirmación, agregar botón Cancelar
+  if (confirm) {
+    btn.textContent = 'Aceptar';
+    btn.style.marginRight = '0.5rem';
+    
+    // Crear botón Cancelar si no existe
+    let cancelBtn = document.getElementById('notification-cancel-btn');
+    if (!cancelBtn) {
+      cancelBtn = document.createElement('button');
+      cancelBtn.id = 'notification-cancel-btn';
+      cancelBtn.className = 'btn btn-outline';
+      cancelBtn.textContent = 'Cancelar';
+      btn.parentNode.appendChild(cancelBtn);
+    }
+    cancelBtn.style.display = 'inline-block';
+    
+    // Handler para cancelar
+    const cancelHandler = () => {
+      modal.classList.remove('is-open');
+      if (onCancel) onCancel();
+      cancelBtn.removeEventListener('click', cancelHandler);
+    };
+    cancelBtn.addEventListener('click', cancelHandler);
+  } else {
+    btn.textContent = 'Aceptar';
+    btn.style.marginRight = '0';
+    const cancelBtn = document.getElementById('notification-cancel-btn');
+    if (cancelBtn) cancelBtn.style.display = 'none';
+  }
+  
+  // Mostrar modal
+  modal.classList.add('is-open');
+  
+  // Animar icono (reiniciar animación)
+  iconEl.style.animation = 'none';
+  setTimeout(() => {
+    iconEl.style.animation = 'notification-icon-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+  }, 10);
+  
+  // Cerrar al hacer click en el botón
+  const closeHandler = () => {
+    modal.classList.remove('is-open');
+    if (onConfirm) onConfirm();
+    btn.removeEventListener('click', closeHandler);
+  };
+  btn.addEventListener('click', closeHandler);
+  
+  // Cerrar al hacer click fuera del contenido
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('is-open');
+      if (onCancel) onCancel();
+    }
+  });
+}
 let currentGoalId = null;
 // ===> AÑADE ESTAS LÍNEAS AQUÍ <===
 let currentJournalDate = new Date();
@@ -450,7 +556,12 @@ async function handleUpdatePlan() {
   const description = editPlanDescInput.value.trim();
 
   if (!title) {
-    alert('El título no puede estar vacío.');
+    showNotification({
+      title: 'Campo Requerido',
+      message: 'El título no puede estar vacío.',
+      icon: '📝',
+      type: 'warning'
+    });
     return;
   }
 
@@ -464,7 +575,12 @@ async function handleUpdatePlan() {
     closeEditPlanModal();
     await loadPlans(); // Recargar la lista de planes
   } catch (error) {
-    alert('Error al guardar los cambios.');
+    showNotification({
+      title: 'Error',
+      message: 'Error al guardar los cambios.',
+      icon: '❌',
+      type: 'error'
+    });
   }
 }
 
@@ -682,7 +798,12 @@ async function handleLogin() {
     await signInWithPopup(auth, provider);
   } catch (error) {
     console.error('Error al iniciar sesión:', error);
-    alert('Error al iniciar sesión. Por favor, intenta de nuevo.');
+    showNotification({
+      title: 'Error de Inicio de Sesión',
+      message: 'Error al iniciar sesión. Por favor, intenta de nuevo.',
+      icon: '❌',
+      type: 'error'
+    });
   }
 }
 
@@ -691,7 +812,12 @@ async function handleLogout() {
     await signOut(auth);
   } catch (error) {
     console.error('Error al cerrar sesión:', error);
-    alert('Error al cerrar sesión. Por favor, intenta de nuevo.');
+    showNotification({
+      title: 'Error',
+      message: 'Error al cerrar sesión. Por favor, intenta de nuevo.',
+      icon: '❌',
+      type: 'error'
+    });
   }
 }
 
@@ -997,7 +1123,12 @@ async function handleCreatePlan() {
   const description = planDescInput.value.trim();
   
   if (!title) {
-    alert('Por favor, ingresa un título para el plan');
+    showNotification({
+      title: 'Campo Requerido',
+      message: 'Por favor, ingresa un título para el plan',
+      icon: '📝',
+      type: 'warning'
+    });
     return;
   }
   
@@ -1006,7 +1137,12 @@ async function handleCreatePlan() {
     toggleNewPlanForm();
     await loadPlans();
   } catch (error) {
-    alert('Error al crear el plan. Por favor, intenta de nuevo.');
+    showNotification({
+      title: 'Error',
+      message: 'Error al crear el plan. Por favor, intenta de nuevo.',
+      icon: '❌',
+      type: 'error'
+    });
   }
 }
 
@@ -1220,7 +1356,12 @@ async function handleCreateTask() {
   const title = taskTitleInput.value.trim();
   
   if (!title) {
-    alert('Por favor, ingresa un título para la tarea');
+    showNotification({
+      title: 'Campo Requerido',
+      message: 'Por favor, ingresa un título para la tarea',
+      icon: '📝',
+      type: 'warning'
+    });
     return;
   }
   
@@ -1240,7 +1381,12 @@ async function handleCreateTask() {
     // If a new task is created for this plan, allow future celebrations again
     celebratedPlans.delete(currentPlanId);
   } catch (error) {
-    alert('Error al crear la tarea. Por favor, intenta de nuevo.');
+    showNotification({
+      title: 'Error',
+      message: 'Error al crear la tarea. Por favor, intenta de nuevo.',
+      icon: '❌',
+      type: 'error'
+    });
   }
 }
 
@@ -1266,24 +1412,38 @@ async function handleToggleTask(taskId, currentCompleted) {
 }
 
 async function handleDeleteTask(taskId) {
-  if (!confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
-    return;
-  }
-  try {
-    // animar elemento en la UI antes de borrarlo
-    const el = tasksContainer.querySelector(`[data-task-id="${taskId}"]`);
-    if (el) {
-      el.classList.add('task-exit');
-      await new Promise(res => el.addEventListener('animationend', res, { once: true }));
+  showNotification({
+    title: 'Eliminar Tarea',
+    message: '¿Estás seguro de que quieres eliminar esta tarea?',
+    icon: '🗑️',
+    type: 'warning',
+    confirm: true,
+    onConfirm: async () => {
+      try {
+        // Animar elemento en la UI antes de borrarlo (si está disponible el animationManager)
+        const el = tasksContainer.querySelector(`[data-task-id="${taskId}"]`);
+        if (el && window.animationManager) {
+          // Usar la animación del sistema
+          window.animationManager.animateItemExit(el, async () => {
+            await deleteTask(currentPlanId, taskId);
+            await loadPlanDetail(currentPlanId);
+          });
+        } else {
+          // Si no hay animación, eliminar directamente
+          await deleteTask(currentPlanId, taskId);
+          await loadPlanDetail(currentPlanId);
+        }
+      } catch (error) {
+        showNotification({
+          title: 'Error',
+          message: 'Error al eliminar la tarea. Por favor, intenta de nuevo.',
+          icon: '❌',
+          type: 'error'
+        });
+      }
     }
-
-    await deleteTask(currentPlanId, taskId);
-    await loadPlanDetail(currentPlanId);
-  } catch (error) {
-    alert('Error al eliminar la tarea. Por favor, intenta de nuevo.');
-  }
+  });
 }
-
 
 
 // ============================================
@@ -1378,7 +1538,12 @@ async function handleCopyCode() {
     }, 2000);
   } catch (error) {
     console.error('Error al copiar código:', error);
-    alert('No se pudo copiar el código');
+    showNotification({
+      title: 'Error',
+      message: 'No se pudo copiar el código',
+      icon: '❌',
+      type: 'error'
+    });
   }
 }
 
@@ -1386,17 +1551,32 @@ async function handleLinkPartner() {
   const partnerCode = partnerCodeInput.value.trim().toUpperCase();
   
   if (!partnerCode) {
-    alert('Por favor, ingresa un código');
+    showNotification({
+      title: 'Campo Requerido',
+      message: 'Por favor, ingresa un código',
+      icon: '⚠️',
+      type: 'warning'
+    });
     return;
   }
   
   if (partnerCode.length !== 6) {
-    alert('El código debe tener 6 caracteres');
+    showNotification({
+      title: 'Código Inválido',
+      message: 'El código debe tener 6 caracteres',
+      icon: '⚠️',
+      type: 'warning'
+    });
     return;
   }
   
   if (partnerCode === coupleData.code) {
-    alert('No puedes vincularte contigo mismo');
+    showNotification({
+      title: 'Error',
+      message: 'No puedes vincularte contigo mismo',
+      icon: '❌',
+      type: 'error'
+    });
     return;
   }
   
@@ -1426,18 +1606,43 @@ async function handleLinkPartner() {
     updateStatsButtonVisibility(true);
 
     
-    alert(`¡Vinculado exitosamente con ${result.partnerName}! 💕`);
+    showNotification({
+      title: '¡Vinculación Exitosa!',
+      message: `Ahora estás vinculado con ${result.partnerName}. ¡Pueden crear planes juntos!`,
+      icon: '💕',
+      type: 'heart'
+    });
   } catch (error) {
     console.error('Error al vincular:', error);
     
     if (error.message === 'Código no encontrado') {
-      alert('Código no encontrado. Verifica que sea correcto.');
+      showNotification({
+        title: 'Error',
+        message: 'Código no encontrado. Verifica que sea correcto.',
+        icon: '❌',
+        type: 'error'
+      });
     } else if (error.message === 'No puedes vincularte contigo mismo') {
-      alert('No puedes usar tu propio código.');
+      showNotification({
+        title: 'Error',
+        message: 'No puedes usar tu propio código.',
+        icon: '❌',
+        type: 'error'
+      });
     } else if (error.message.includes('ya está vinculado')) {
-      alert('Este código ya está vinculado con otra persona.');
+      showNotification({
+        title: 'Error',
+        message: 'Este código ya está vinculado con otra persona.',
+        icon: '❌',
+        type: 'error'
+      });
     } else {
-      alert('Error al vincular. Por favor, intenta de nuevo.');
+      showNotification({
+        title: 'Error',
+        message: 'Error al vincular. Por favor, intenta de nuevo.',
+        icon: '❌',
+        type: 'error'
+      });
     }
   } finally {
     linkPartnerBtn.disabled = false;
@@ -1446,41 +1651,55 @@ async function handleLinkPartner() {
 }
 
 async function handleUnlinkPartner() {
-  if (!confirm('¿Estás seguro de que quieres desvincular tu pareja? Los planes creados juntos ya no serán compartidos.')) {
-    return;
-  }
-  
-  try {
-    unlinkPartnerBtn.disabled = true;
-    unlinkPartnerBtn.textContent = 'Desvinculando...';
-    
-    await unlinkPartner(db, currentUser.uid);
-    
-    // Actualizar coupleId global
-    currentCoupleId = `couple-${currentUser.uid}`;
-    
-    // Recargar datos
-    await loadCoupleData();
-    
-    // Recargar planes
-    await loadPlans();
+  showNotification({
+    title: 'Desvincular Pareja',
+    message: '¿Estás seguro de que quieres desvincular tu pareja? Los planes creados juntos ya no serán compartidos.',
+    icon: '💔',
+    type: 'warning',
+    confirm: true,
+    onConfirm: async () => {
+      try {
+        unlinkPartnerBtn.disabled = true;
+        unlinkPartnerBtn.textContent = 'Desvinculando...';
+        
+        await unlinkPartner(db, currentUser.uid);
+        
+        // Actualizar coupleId global
+        currentCoupleId = `couple-${currentUser.uid}`;
+        
+        // Recargar datos
+        await loadCoupleData();
+        
+        // Recargar planes
+        await loadPlans();
 
-        // ===> AÑADIR ESTA LÍNEA <===
-    updateNewPlanButtonState(false);
-    updateLinkPartnerBanner(false); // <== AÑADIR
-    updateStatsButtonVisibility(false);
+            // ===> AÑADIR ESTA LÍNEA <===
+        updateNewPlanButtonState(false);
+        updateLinkPartnerBanner(false); // <== AÑADIR
+        updateStatsButtonVisibility(false);
 
-    
-    alert('Pareja desvinculada correctamente');
-  } catch (error) {
-    console.error('Error al desvincular:', error);
-    alert('Error al desvincular. Por favor, intenta de nuevo.');
-  } finally {
-    unlinkPartnerBtn.disabled = false;
-    unlinkPartnerBtn.textContent = 'Desvincular Pareja';
-  }
+        
+        showNotification({
+          title: 'Desvinculación Exitosa',
+          message: 'Pareja desvinculada correctamente',
+          icon: '✅',
+          type: 'success'
+        });
+      } catch (error) {
+        console.error('Error al desvincular:', error);
+        showNotification({
+          title: 'Error',
+          message: 'Error al desvincular. Por favor, intenta de nuevo.',
+          icon: '❌',
+          type: 'error'
+        });
+      } finally {
+        unlinkPartnerBtn.disabled = false;
+        unlinkPartnerBtn.textContent = 'Desvincular Pareja';
+      }
+    }
+  });
 }
-
 
 
 // ============================================
@@ -1690,6 +1909,12 @@ journalImageInput.addEventListener('change', (e) => {
 
 saveJournalEntryBtn.addEventListener('click', handleSaveJournalEntry);
 
+// Event Listeners para botones "Atrás" del diario
+document.querySelectorAll('.back-to-journal-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    showPhoneApp('journal');
+  });
+});
 
 // Event Listeners para los botones del carrusel
 carouselPrevBtn.addEventListener('click', () => {
@@ -1991,10 +2216,20 @@ async function acceptSurpriseTask() {
     
     await loadPlans();
     closePhoneModal();
-    alert('¡Nuevo reto con sus pasos añadido a vuestra lista! 🎉');
+    showNotification({
+      title: '¡Reto Aceptado!',
+      message: '¡Nuevo reto con sus pasos añadido a vuestra lista!',
+      icon: '🎉',
+      type: 'party'
+    });
 
   } catch (error) {
-    alert('Hubo un error al crear el plan sorpresa.');
+    showNotification({
+      title: 'Error',
+      message: 'Hubo un error al crear el plan sorpresa.',
+      icon: '❌',
+      type: 'error'
+    });
     console.error("Error aceptando tarea sorpresa:", error);
   } finally {
     acceptSurpriseTaskBtn.disabled = false;
@@ -2182,17 +2417,19 @@ async function loadAndRenderCapsules() {
 
 function openCapsule(capsule, isLocked) {
   if (isLocked) {
-    alert(`¡Paciencia! ⏳
-
-Esta cápsula del tiempo no se puede abrir hasta el ${capsule.unlockDate.toLocaleDateString()}.
-
-Fue creada por ${capsule.creatorName}.`);
+    showNotification({
+      title: '¡Paciencia!',
+      message: `Esta cápsula del tiempo no se puede abrir hasta el ${capsule.unlockDate.toLocaleDateString()}.\n\nFue creada por ${capsule.creatorName}.`,
+      icon: '⏳',
+      type: 'time'
+    });
   } else {
-    alert(`🎉 ¡Cápsula del Tiempo Abierta! 🎉
-
-Mensaje de ${capsule.creatorName}:
-
-"${capsule.message}"`);
+    showNotification({
+      title: '¡Cápsula del Tiempo Abierta!',
+      message: `Mensaje de ${capsule.creatorName}:\n\n"${capsule.message}"`,
+      icon: '🎉',
+      type: 'success'
+    });
   }
 }
 
@@ -2201,7 +2438,12 @@ async function handleSaveCapsule() {
   const unlockDate = capsuleUnlockDateInput.value;
 
   if (!message || !unlockDate) {
-    alert('Por favor, escribe un mensaje y elige una fecha de apertura.');
+    showNotification({
+      title: 'Campos Requeridos',
+      message: 'Por favor, escribe un mensaje y elige una fecha de apertura.',
+      icon: '⚠️',
+      type: 'warning'
+    });
     return;
   }
 
@@ -2210,7 +2452,12 @@ async function handleSaveCapsule() {
   const selectedDate = new Date(unlockDate);
   today.setHours(0, 0, 0, 0); // Poner la hora a cero para comparar solo fechas
   if (selectedDate <= today) {
-    alert('La fecha de apertura debe ser en el futuro.');
+    showNotification({
+      title: 'Fecha Inválida',
+      message: 'La fecha de apertura debe ser en el futuro.',
+      icon: '⚠️',
+      type: 'warning'
+    });
     return;
   }
 
@@ -2225,9 +2472,21 @@ async function handleSaveCapsule() {
     capsuleUnlockDateInput.value = '';
     showPhoneApp('timecapsule');
     await loadAndRenderCapsules();
+    
+    showNotification({
+      title: '¡Cápsula Sellada!',
+      message: 'Tu cápsula del tiempo ha sido creada exitosamente.',
+      icon: '⏳',
+      type: 'success'
+    });
 
   } catch (error) {
-    alert('No se pudo sellar la cápsula. Inténtalo de nuevo.');
+    showNotification({
+      title: 'Error',
+      message: 'No se pudo sellar la cápsula. Inténtalo de nuevo.',
+      icon: '❌',
+      type: 'error'
+    });
   } finally {
     saveCapsuleBtn.disabled = false;
     saveCapsuleBtn.textContent = 'Sellar Cápsula';
@@ -2380,12 +2639,30 @@ async function handleSaveGoal() {
 async function handleAddContribution() {
   const amount = contributionAmountInput.value;
   if (!amount || Number(amount) <= 0) {
-    alert('Introduce una cantidad válida para aportar.');
+    showNotification({
+      title: 'Cantidad Inválida',
+      message: 'Introduce una cantidad válida para aportar.',
+      icon: '⚠️',
+      type: 'warning'
+    });
     return;
   }
+  
+  // Obtener datos de la meta actual
+  const goalDoc = await getDoc(doc(db, 'couples', currentCoupleId, 'goals', currentGoalId));
+  const goalData = goalDoc.data();
+  
   await addContribution(currentGoalId, amount);
   await openGoalDetail(currentGoalId); // Recargar la vista
   contributionAmountInput.value = '';
+  
+  // Mostrar notificación de éxito
+  showNotification({
+    title: '¡Aportación Exitosa!',
+    message: `${currentUser.displayName} aportó ${Number(amount).toFixed(2)}€ a "${goalData.name}"`,
+    icon: '🐖',
+    type: 'save'
+  });
 }
 
 // ============================================
@@ -2484,22 +2761,26 @@ function renderJournalCalendar() {
     dayCell.textContent = i;
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
 
-        // ===> MODIFICACIÓN: Comprobar si es el día de hoy <===
+    // Comprobar si es el día de hoy
     const currentDayStr = `${year}-${month}-${i}`;
     if (currentDayStr === todayStr) {
       dayCell.classList.add('today');
     }
     
+    // Marcar días que tienen entradas en el diario
     if (journalEntriesCache.has(dateStr)) {
-            // ===> MODIFICACIÓN: Añadir un span en lugar de una clase <===
+      dayCell.classList.add('has-entry');
       const indicator = document.createElement('span');
       indicator.className = 'day-entry-indicator';
-      indicator.textContent = '❤️';
-      dayCell.classList.add('has-entry');
-    
+      indicator.textContent = '💕';
+      dayCell.appendChild(indicator);
     }
     
     dayCell.onclick = () => handleDayClick(new Date(year, month, i));
+
+    // Animación de entrada escalonada
+    dayCell.style.animationDelay = `${i * 20}ms`;
+    dayCell.classList.add('calendar-day-enter');
 
     journalCalendarGrid.appendChild(dayCell);
   }
@@ -2652,9 +2933,12 @@ function updateJournalPreview() {
     
     previewDate.textContent = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
     previewSnippet.textContent = latestEntry.text || 'Un recuerdo guardado en imágenes.';
-    previewImage.src = latestEntry.imageUrls?.[0] || 'images/icon-192x192.png'; // Usa la primera imagen o un icono por defecto
+    previewImage.src = latestEntry.imageUrls?.[0] || 'scr/images/icon-192x192.png'; // Usa la primera imagen o un icono por defecto
     
     journalPreviewWidget.style.display = 'block';
+    // Trigger animation
+    journalPreviewWidget.classList.remove('journal-preview-show');
+    setTimeout(() => journalPreviewWidget.classList.add('journal-preview-show'), 10);
     journalPreviewWidget.onclick = () => openJournalReadView(latestEntry);
   } else {
     journalPreviewWidget.style.display = 'none';

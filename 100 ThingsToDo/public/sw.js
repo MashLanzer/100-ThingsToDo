@@ -16,16 +16,17 @@ const URLS_TO_CACHE = [
   '/index.html',
   '/styles.css',
   '/app.js',
-  '/manifest.json',
+  '/scr/config/manifest.json',
   
   // Módulos JS importantes
-  '/scr/couple.js',
-  '/scr/stats.js',
-  '/scr/surpriseTasks.js',
+  '/scr/modules/couple.js',
+  '/scr/modules/stats.js',
+  '/scr/modules/surpriseTasks.js',
+  '/scr/animations/animations.js',
 
   // Iconos principales de la PWA
-  '/images/icon-192x192.png',
-  '/images/icon-512x512.png',
+  '/scr/images/icon-192x192.png',
+  '/scr/images/icon-512x512.png',
 
   // Recursos externos que también quieres que funcionen offline
   'https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&family=Fredoka:wght@300;400;500;600;700&display=swap',

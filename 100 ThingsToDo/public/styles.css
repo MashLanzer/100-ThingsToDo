@@ -82,6 +82,74 @@ body {
   box-shadow: 0 0 0 6px rgba(255, 182, 217, 0.12);
 }
 
+/* ============================================ */
+/* MODAL DE NOTIFICACIÓN UNIVERSAL             */
+/* ============================================ */
+.notification-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 12, 8, 0.6);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.notification-modal.is-open {
+  display: flex;
+  opacity: 1;
+}
+
+.notification-content {
+  position: relative;
+  background: linear-gradient(135deg, #fff 0%, #fffbf7 100%);
+  border-radius: 24px;
+  padding: 2.5rem 2rem;
+  max-width: 420px;
+  width: calc(100% - 2rem);
+  box-shadow: 0 20px 60px rgba(139, 111, 71, 0.25);
+  text-align: center;
+  transform: scale(0.8) translateY(-30px);
+  opacity: 0;
+  transition: all 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.notification-modal.is-open .notification-content {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+.notification-icon {
+  font-size: 72px;
+  margin-bottom: 1rem;
+  display: inline-block;
+  animation: notification-icon-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.notification-content h3 {
+  font-size: 1.5rem;
+  color: var(--primary);
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.notification-content p {
+  font-size: 1rem;
+  color: var(--foreground);
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.notification-content .btn {
+  min-width: 120px;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
 /* micro hover for small controls */
 .btn-small-hover:hover {
   transform: translateY(-2px) scale(1.02);
