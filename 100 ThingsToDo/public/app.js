@@ -4511,6 +4511,431 @@ function togglePlayPause() {
 }
 
 // ============================================
+// RUEDA DE DECISIONES - WHEEL OF DECISIONS
+// ============================================
+
+let currentWheel = {
+  name: 'Mi Ruleta',
+  options: ['Opción 1', 'Opción 2', 'Opción 3']
+};
+let wheelSpinning = false;
+let wheelRotation = 0;
+
+const wheelCanvas = document.getElementById('wheel-canvas');
+const wheelCtx = wheelCanvas ? wheelCanvas.getContext('2d') : null;
+const wheelColors = ['#ffb3ba', '#bae1ff', '#ffffba', '#baffc9', '#ffdfba', '#e0bbe4', '#ffd6e8', '#c1f0c1'];
+
+function renderWheel() {
+  if (!wheelCtx) return;
+  
+  const centerX = wheelCanvas.width / 2;
+  const centerY = wheelCanvas.height / 2;
+  const radius = 130;
+  const options = currentWheel.options;
+  const sliceAngle = (2 * Math.PI) / options.length;
+  
+  wheelCtx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+  
+  // Dibujar cada segmento
+  options.forEach((option, i) => {
+    const startAngle = i * sliceAngle + (wheelRotation * Math.PI / 180);
+    const endAngle = (i + 1) * sliceAngle + (wheelRotation * Math.PI / 180);
+    
+    // Segmento de color
+    wheelCtx.beginPath();
+    wheelCtx.arc(centerX, centerY, radius, startAngle, endAngle);
+    wheelCtx.lineTo(centerX, centerY);
+    wheelCtx.fillStyle = wheelColors[i % wheelColors.length];
+    wheelCtx.fill();
+    wheelCtx.strokeStyle = '#fff';
+    wheelCtx.lineWidth = 3;
+    wheelCtx.stroke();
+    
+    // Texto
+    wheelCtx.save();
+    wheelCtx.translate(centerX, centerY);
+    wheelCtx.rotate(startAngle + sliceAngle / 2);
+    wheelCtx.textAlign = 'right';
+    wheelCtx.fillStyle = '#333';
+    wheelCtx.font = 'bold 14px Arial';
+    const text = option.length > 12 ? option.substring(0, 12) + '...' : option;
+    wheelCtx.fillText(text, radius - 15, 5);
+    wheelCtx.restore();
+  });
+  
+  // Círculo central
+  wheelCtx.beginPath();
+  wheelCtx.arc(centerX, centerY, 25, 0, 2 * Math.PI);
+  wheelCtx.fillStyle = '#fff';
+  wheelCtx.fill();
+  wheelCtx.strokeStyle = '#ddd';
+  wheelCtx.lineWidth = 3;
+  wheelCtx.stroke();
+  
+  wheelCtx.fillStyle = '#333';
+  wheelCtx.font = 'bold 20px Arial';
+  wheelCtx.textAlign = 'center';
+  wheelCtx.textBaseline = 'middle';
+  wheelCtx.fillText('🎡', centerX, centerY);
+}
+
+function spinWheel() {
+  if (wheelSpinning || currentWheel.options.length === 0) return;
+  
+  wheelSpinning = true;
+  const spinBtn = document.getElementById('spin-wheel-btn');
+  if (spinBtn) spinBtn.disabled = true;
+  
+  const spins = 5 + Math.random() * 5; // 5-10 vueltas
+  const extraDegrees = Math.random() * 360;
+  const totalRotation = spins * 360 + extraDegrees;
+  const duration = 4000; // 4 segundos
+  const startTime = Date.now();
+  const startRotation = wheelRotation;
+  
+  function animate() {
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    
+    // Easing out cubic para desaceleración
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    wheelRotation = (startRotation + totalRotation * easeOut) % 360;
+    
+    renderWheel();
+    
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      wheelSpinning = false;
+      if (spinBtn) spinBtn.disabled = false;
+      
+      // Calcular opción ganadora
+      const sliceAngle = 360 / currentWheel.options.length;
+      const pointerAngle = (90 - wheelRotation + 360) % 360;
+      const winningIndex = Math.floor(pointerAngle / sliceAngle);
+      const winner = currentWheel.options[winningIndex];
+      
+      // Mostrar resultado con confeti
+      setTimeout(() => {
+        showWheelResult(winner);
+        createConfetti();
+      }, 300);
+    }
+  }
+  
+  animate();
+}
+
+function showWheelResult(winner) {
+  showNotification({
+    title: '¡Decisión tomada! 🎉',
+    message: `La ruleta ha elegido: ${winner}`,
+    icon: '🎡',
+    type: 'success'
+  });
+}
+
+function createConfetti() {
+  const colors = ['#ffb3ba', '#bae1ff', '#ffffba', '#baffc9', '#ffdfba', '#e0bbe4'];
+  const confettiCount = 50;
+  const phoneModal = document.getElementById('phone-modal');
+  
+  for (let i = 0; i < confettiCount; i++) {
+    const confetti = document.createElement('div');
+    confetti.style.position = 'fixed';
+    confetti.style.width = '10px';
+    confetti.style.height = '10px';
+    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    confetti.style.left = Math.random() * window.innerWidth + 'px';
+    confetti.style.top = '-10px';
+    confetti.style.opacity = '1';
+    confetti.style.transform = 'rotate(' + Math.random() * 360 + 'deg)';
+    confetti.style.zIndex = '10000';
+    confetti.style.pointerEvents = 'none';
+    confetti.style.borderRadius = '50%';
+    
+    document.body.appendChild(confetti);
+    
+    const fallDuration = 2000 + Math.random() * 1000;
+    const xMovement = (Math.random() - 0.5) * 200;
+    
+    confetti.animate([
+      { transform: `translateY(0px) translateX(0px) rotate(0deg)`, opacity: 1 },
+      { transform: `translateY(${window.innerHeight}px) translateX(${xMovement}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+    ], {
+      duration: fallDuration,
+      easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+    });
+    
+    setTimeout(() => confetti.remove(), fallDuration);
+  }
+}
+
+function addWheelOption() {
+  const input = document.getElementById('wheel-option-input');
+  const option = input.value.trim();
+  
+  if (!option) {
+    showNotification({
+      title: 'Opción vacía',
+      message: 'Por favor escribe una opción antes de añadir',
+      icon: '⚠️',
+      type: 'warning'
+    });
+    return;
+  }
+  
+  if (currentWheel.options.length >= 12) {
+    showNotification({
+      title: 'Límite alcanzado',
+      message: 'Máximo 12 opciones por ruleta',
+      icon: '⚠️',
+      type: 'warning'
+    });
+    return;
+  }
+  
+  currentWheel.options.push(option);
+  input.value = '';
+  renderWheelOptions();
+  renderWheel();
+}
+
+function removeWheelOption(index) {
+  if (currentWheel.options.length <= 2) {
+    showNotification({
+      title: 'Mínimo requerido',
+      message: 'La ruleta necesita al menos 2 opciones',
+      icon: '⚠️',
+      type: 'warning'
+    });
+    return;
+  }
+  
+  currentWheel.options.splice(index, 1);
+  renderWheelOptions();
+  renderWheel();
+}
+
+function renderWheelOptions() {
+  const list = document.getElementById('wheel-options-list');
+  if (!list) return;
+  
+  if (currentWheel.options.length === 0) {
+    list.innerHTML = '<p style="text-align: center; color: #999; padding: 1rem;">No hay opciones. ¡Añade algunas!</p>';
+    return;
+  }
+  
+  list.innerHTML = currentWheel.options.map((option, i) => `
+    <div class="wheel-option-item">
+      <span class="option-color" style="background: ${wheelColors[i % wheelColors.length]}"></span>
+      <span class="option-text">${option}</span>
+      <button class="btn-remove-option" onclick="removeWheelOption(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+async function saveCurrentWheel() {
+  if (!currentCoupleId) {
+    showNotification({
+      title: 'Error',
+      message: 'Debes estar autenticado para guardar ruletas',
+      icon: '❌',
+      type: 'error'
+    });
+    return;
+  }
+  
+  const nameInput = document.getElementById('wheel-name-input');
+  const wheelName = nameInput.value.trim() || 'Mi Ruleta';
+  
+  if (currentWheel.options.length < 2) {
+    showNotification({
+      title: 'Opciones insuficientes',
+      message: 'Añade al menos 2 opciones antes de guardar',
+      icon: '⚠️',
+      type: 'warning'
+    });
+    return;
+  }
+  
+  try {
+    const wheelsRef = collection(db, 'couples', currentCoupleId, 'wheels');
+    await addDoc(wheelsRef, {
+      name: wheelName,
+      options: currentWheel.options,
+      createdAt: serverTimestamp(),
+      createdBy: currentUser.uid
+    });
+    
+    showNotification({
+      title: '¡Ruleta guardada! 💾',
+      message: `"${wheelName}" se guardó correctamente`,
+      icon: '✅',
+      type: 'success'
+    });
+    
+    loadSavedWheels();
+  } catch (error) {
+    console.error('Error saving wheel:', error);
+    showNotification({
+      title: 'Error',
+      message: 'No se pudo guardar la ruleta',
+      icon: '❌',
+      type: 'error'
+    });
+  }
+}
+
+async function loadSavedWheels() {
+  if (!currentCoupleId) return;
+  
+  const list = document.getElementById('saved-wheels-list');
+  if (!list) return;
+  
+  try {
+    const wheelsRef = collection(db, 'couples', currentCoupleId, 'wheels');
+    const q = query(wheelsRef, orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      list.innerHTML = `
+        <div class="wheels-empty-state">
+          <div class="empty-icon">🎡</div>
+          <p>No hay ruletas guardadas. ¡Crea y guarda tu primera ruleta!</p>
+        </div>
+      `;
+      return;
+    }
+    
+    list.innerHTML = snapshot.docs.map(doc => {
+      const wheel = doc.data();
+      return `
+        <div class="saved-wheel-card">
+          <div class="saved-wheel-info">
+            <strong>${wheel.name}</strong>
+            <span>${wheel.options.length} opciones</span>
+          </div>
+          <div class="saved-wheel-actions">
+            <button class="btn btn-sm btn-primary" onclick="loadWheel('${doc.id}')">Cargar</button>
+            <button class="btn btn-sm btn-outline" onclick="deleteWheel('${doc.id}')">🗑️</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('Error loading wheels:', error);
+  }
+}
+
+async function loadWheel(wheelId) {
+  if (!currentCoupleId) return;
+  
+  try {
+    const wheelDoc = await getDoc(doc(db, 'couples', currentCoupleId, 'wheels', wheelId));
+    if (wheelDoc.exists()) {
+      const wheelData = wheelDoc.data();
+      currentWheel = {
+        name: wheelData.name,
+        options: wheelData.options
+      };
+      
+      const nameInput = document.getElementById('wheel-name-input');
+      if (nameInput) nameInput.value = currentWheel.name;
+      
+      renderWheelOptions();
+      renderWheel();
+      
+      showNotification({
+        title: 'Ruleta cargada',
+        message: `"${currentWheel.name}" lista para girar`,
+        icon: '🎡',
+        type: 'success'
+      });
+    }
+  } catch (error) {
+    console.error('Error loading wheel:', error);
+    showNotification({
+      title: 'Error',
+      message: 'No se pudo cargar la ruleta',
+      icon: '❌',
+      type: 'error'
+    });
+  }
+}
+
+async function deleteWheel(wheelId) {
+  if (!currentCoupleId) return;
+  
+  const confirmed = await showNotification({
+    title: '¿Eliminar ruleta?',
+    message: '¿Estás seguro de que quieres eliminar esta ruleta?',
+    icon: '⚠️',
+    type: 'confirm',
+    confirmText: 'Eliminar',
+    cancelText: 'Cancelar'
+  });
+  
+  if (!confirmed) return;
+  
+  try {
+    await deleteDoc(doc(db, 'couples', currentCoupleId, 'wheels', wheelId));
+    showNotification({
+      title: 'Ruleta eliminada',
+      message: 'La ruleta se eliminó correctamente',
+      icon: '✓',
+      type: 'success'
+    });
+    loadSavedWheels();
+  } catch (error) {
+    console.error('Error deleting wheel:', error);
+    showNotification({
+      title: 'Error',
+      message: 'No se pudo eliminar la ruleta',
+      icon: '❌',
+      type: 'error'
+    });
+  }
+}
+
+function newWheel() {
+  currentWheel = {
+    name: 'Mi Ruleta',
+    options: ['Opción 1', 'Opción 2', 'Opción 3']
+  };
+  
+  const nameInput = document.getElementById('wheel-name-input');
+  if (nameInput) nameInput.value = currentWheel.name;
+  
+  renderWheelOptions();
+  renderWheel();
+  wheelRotation = 0;
+}
+
+function initWheel() {
+  const spinBtn = document.getElementById('spin-wheel-btn');
+  const addOptionBtn = document.getElementById('add-wheel-option-btn');
+  const saveWheelBtn = document.getElementById('save-wheel-btn');
+  const newWheelBtn = document.getElementById('new-wheel-btn');
+  const optionInput = document.getElementById('wheel-option-input');
+  
+  if (spinBtn) spinBtn.onclick = spinWheel;
+  if (addOptionBtn) addOptionBtn.onclick = addWheelOption;
+  if (saveWheelBtn) saveWheelBtn.onclick = saveCurrentWheel;
+  if (newWheelBtn) newWheelBtn.onclick = newWheel;
+  
+  if (optionInput) {
+    optionInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') addWheelOption();
+    });
+  }
+  
+  renderWheelOptions();
+  renderWheel();
+  loadSavedWheels();
+}
+
+// ============================================
 // REGISTRO DEL SERVICE WORKER (PWA)
 // ============================================
 
