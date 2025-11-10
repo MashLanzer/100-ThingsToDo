@@ -47,6 +47,7 @@ import {
 import { calculateCoupleStats } from './scr/modules/stats.js';
 // import { initializeNotifications, requestNotificationPermission } from './scr/modules/notifications.js';
 import { getRandomTask } from './scr/modules/surpriseTasks.js';
+import { RANDOM_CHALLENGES } from './scr/modules/randomTasks.js';
 // Canvas confetti para celebraciones avanzadas
 // Dynamic loader for canvas-confetti (UMD bundle). We load the browser UMD and use window.confetti.
 let confettiLib = null;
@@ -363,11 +364,16 @@ const backToCoupleViewBtn = document.getElementById('back-to-couple-view-btn');
 
 // ... al final de la sección de elementos del DOM ...
 const openPhoneModalBtn = document.getElementById('open-phone-modal-btn');
+const openFavorsModalBtn = document.getElementById('open-favors-modal-btn');
 const phoneModal = document.getElementById('phone-modal');
 const closePhoneModalBtn = document.getElementById('close-phone-modal-btn');
 const phoneHomescreen = document.getElementById('phone-homescreen');
 const backToHomeBtns = document.querySelectorAll('.back-to-home-btn');
 const phoneTimeDisplay = document.getElementById('phone-time-display');
+
+// Referencias del modal fullscreen de favores
+const favorsFullscreenModal = document.getElementById('favors-fullscreen-modal');
+const closeFavorsModalBtn = document.getElementById('close-favors-modal-btn');
 
 
 const surpriseCard = document.querySelector('.surprise-card'); // Obtenemos la tarjeta una sola vez
@@ -1849,6 +1855,12 @@ allPhoneBackBtns.forEach(btn => {
 
 // Listeners para el Teléfono Kawaii (VERSIÓN CORREGIDA)
 openPhoneModalBtn.addEventListener('click', openPhoneModal);
+if (openFavorsModalBtn) {
+  openFavorsModalBtn.addEventListener('click', openFavorsFullscreenModal);
+}
+if (closeFavorsModalBtn) {
+  closeFavorsModalBtn.addEventListener('click', closeFavorsFullscreenModal);
+}
 closePhoneModalBtn.addEventListener('click', closePhoneModal);
 phoneModal.addEventListener('click', (e) => {
   if (e.target === phoneModal) {
@@ -2168,6 +2180,742 @@ function closePhoneModal() {
 
 }
 
+// Funciones para el modal fullscreen de Favores
+function openFavorsFullscreenModal() {
+  let modal = document.getElementById('favors-fullscreen-modal');
+  
+  // Si el modal no existe, lo creamos dinámicamente
+  if (!modal) {
+    console.log('Modal not found in DOM, creating it dynamically...');
+    
+    // Crear el modal completo
+    const modalHTML = `
+      <div id="favors-fullscreen-modal" class="favors-fullscreen-modal">
+        <div class="favors-modal-overlay"></div>
+        <div class="favors-modal-container">
+          <div class="favors-modal-header">
+            <h2>🎯 Desafíos</h2>
+            <button id="close-favors-modal-btn" class="favors-close-btn">✕</button>
+          </div>
+          
+          <div class="favors-modal-content">
+            <!-- Balance de puntos -->
+            <div class="points-balance-large">
+              <div class="user-points-large">
+                <div class="points-label">Tus puntos</div>
+                <div id="my-points-large" class="points-value-large">0</div>
+              </div>
+              <div class="points-divider-large">⚡</div>
+              <div class="user-points-large">
+                <div class="points-label">Tu pareja</div>
+                <div id="partner-points-large" class="points-value-large">0</div>
+              </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="favors-tabs-large">
+              <button id="tab-active-large" class="favor-tab-large active">Activos</button>
+              <button id="tab-completed-large" class="favor-tab-large">Completados</button>
+              <button id="tab-random-large" class="favor-tab-large">🎲 Random</button>
+            </div>
+
+            <!-- Lista de favores activos -->
+            <div id="active-favors-list-large" class="favors-list-large">
+              <div id="favors-empty-state-large" class="favors-empty-state-large">
+                <div class="empty-icon-large">🎁</div>
+                <p>No hay favores activos. ¡Crea el primero o prueba uno random!</p>
+              </div>
+            </div>
+
+            <!-- Lista de completados -->
+            <div id="completed-favors-list-large" class="favors-list-large hidden">
+            </div>
+
+            <!-- Vista de desafío random -->
+            <div id="random-challenge-view-large" class="random-challenge-view-large hidden">
+              <div class="challenge-card-large">
+                <div class="challenge-icon-large">🎲</div>
+                <h3 id="challenge-title-large" class="challenge-title-large">Cargando desafío...</h3>
+                <p id="challenge-description-large" class="challenge-description-large"></p>
+                <div class="challenge-difficulty-large">
+                  <span id="challenge-difficulty-badge-large" class="difficulty-badge-large">⭐ Fácil</span>
+                  <span id="challenge-points-large" class="challenge-points-large">+10 puntos</span>
+                </div>
+                <div class="challenge-actions-large">
+                  <button id="accept-challenge-btn-large" class="btn btn-primary btn-large">¡Aceptar!</button>
+                  <button id="reroll-challenge-btn-large" class="btn btn-secondary btn-large">Otro desafío</button>
+                </div>
+              </div>
+            </div>
+
+            <button id="add-favor-btn-large" class="btn btn-primary btn-large" style="margin-top: 2rem;">
+              ✨ Crear Desafío
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Insertar el modal en el body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    modal = document.getElementById('favors-fullscreen-modal');
+    
+    // Configurar todos los event listeners del modal
+    setupFavorsModalListeners();
+    
+    console.log('Modal created successfully');
+  }
+  
+  // Mostrar el modal
+  modal.classList.remove('hidden');
+  
+  // Cargar datos si el usuario está autenticado
+  if (currentUser && currentCoupleId) {
+    loadFavorsData();
+  }
+}
+
+function closeFavorsFullscreenModal() {
+  const modal = document.getElementById('favors-fullscreen-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+// Configurar todos los listeners del modal de favores
+function setupFavorsModalListeners() {
+  const closeBtn = document.getElementById('close-favors-modal-btn');
+  const tabActive = document.getElementById('tab-active-large');
+  const tabCompleted = document.getElementById('tab-completed-large');
+  const tabRandom = document.getElementById('tab-random-large');
+  const addFavorBtn = document.getElementById('add-favor-btn-large');
+  const rerollBtn = document.getElementById('reroll-challenge-btn-large');
+  const acceptBtn = document.getElementById('accept-challenge-btn-large');
+  
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeFavorsFullscreenModal);
+  }
+  
+  if (tabActive) {
+    tabActive.addEventListener('click', () => switchFavorsTab('active'));
+  }
+  
+  if (tabCompleted) {
+    tabCompleted.addEventListener('click', () => switchFavorsTab('completed'));
+  }
+  
+  if (tabRandom) {
+    tabRandom.addEventListener('click', () => switchFavorsTab('random'));
+  }
+  
+  if (addFavorBtn) {
+    addFavorBtn.addEventListener('click', openCreateFavorModal);
+  }
+  
+  if (rerollBtn) {
+    rerollBtn.addEventListener('click', loadRandomChallenge);
+  }
+  
+  if (acceptBtn) {
+    acceptBtn.addEventListener('click', acceptRandomChallenge);
+  }
+}
+
+// Cambiar entre tabs
+function switchFavorsTab(tab) {
+  const tabs = ['active', 'completed', 'random'];
+  const tabButtons = {
+    active: document.getElementById('tab-active-large'),
+    completed: document.getElementById('tab-completed-large'),
+    random: document.getElementById('tab-random-large')
+  };
+  const views = {
+    active: document.getElementById('active-favors-list-large'),
+    completed: document.getElementById('completed-favors-list-large'),
+    random: document.getElementById('random-challenge-view-large')
+  };
+  
+  // Actualizar botones
+  tabs.forEach(t => {
+    if (tabButtons[t]) {
+      if (t === tab) {
+        tabButtons[t].classList.add('active');
+      } else {
+        tabButtons[t].classList.remove('active');
+      }
+    }
+  });
+  
+  // Actualizar vistas
+  tabs.forEach(t => {
+    if (views[t]) {
+      if (t === tab) {
+        views[t].classList.remove('hidden');
+      } else {
+        views[t].classList.add('hidden');
+      }
+    }
+  });
+  
+  // Si cambió a random, cargar un desafío
+  if (tab === 'random') {
+    loadRandomChallenge();
+  }
+}
+
+// Cargar datos de favores desde Firestore
+async function loadFavorsData() {
+  if (!currentCoupleId || !currentUser) return;
+  
+  try {
+    // Cargar puntos
+    const pointsRef = collection(db, 'couples', currentCoupleId, 'favorPoints');
+    const pointsSnapshot = await getDocs(pointsRef);
+    
+    let myPoints = 0;
+    let partnerPoints = 0;
+    
+    pointsSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (doc.id === currentUser.uid) {
+        myPoints = data.points || 0;
+      } else {
+        partnerPoints = data.points || 0;
+      }
+    });
+    
+    // Actualizar UI
+    const myPointsEl = document.getElementById('my-points-large');
+    const partnerPointsEl = document.getElementById('partner-points-large');
+    
+    if (myPointsEl) myPointsEl.textContent = myPoints;
+    if (partnerPointsEl) partnerPointsEl.textContent = partnerPoints;
+    
+    // Cargar favores activos
+    const favorsRef = collection(db, 'couples', currentCoupleId, 'favors');
+    const q = query(favorsRef, where('completed', '==', false), orderBy('createdAt', 'desc'));
+    const favorsSnapshot = await getDocs(q);
+    
+    const activeList = document.getElementById('active-favors-list-large');
+    const emptyState = document.getElementById('favors-empty-state-large');
+    
+    if (favorsSnapshot.empty) {
+      if (emptyState) emptyState.style.display = 'block';
+      if (activeList) {
+        // Limpiar lista pero mantener empty state
+        const items = activeList.querySelectorAll('.favor-card-large');
+        items.forEach(item => item.remove());
+      }
+    } else {
+      if (emptyState) emptyState.style.display = 'none';
+      if (activeList) {
+        // Limpiar lista
+        const items = activeList.querySelectorAll('.favor-card-large');
+        items.forEach(item => item.remove());
+        
+        // Renderizar favores
+        favorsSnapshot.forEach(docSnap => {
+          const favor = docSnap.data();
+          const favorCard = createFavorCard(docSnap.id, favor, false);
+          activeList.appendChild(favorCard);
+        });
+      }
+    }
+    
+    // Cargar favores completados
+    const qCompleted = query(favorsRef, where('completed', '==', true), orderBy('createdAt', 'desc'));
+    const completedSnapshot = await getDocs(qCompleted);
+    
+    const completedList = document.getElementById('completed-favors-list-large');
+    if (completedList) {
+      // Limpiar lista
+      completedList.innerHTML = '';
+      
+      if (completedSnapshot.empty) {
+        completedList.innerHTML = '<div class="favors-empty-state-large"><div class="empty-icon-large">✅</div><p>Aún no hay favores completados</p></div>';
+      } else {
+        completedSnapshot.forEach(docSnap => {
+          const favor = docSnap.data();
+          const favorCard = createFavorCard(docSnap.id, favor, true);
+          completedList.appendChild(favorCard);
+        });
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error loading favors:', error);
+  }
+}
+
+// Crear tarjeta de favor
+function createFavorCard(favorId, favor, isCompleted) {
+  const card = document.createElement('div');
+  card.className = 'favor-card-large';
+  card.dataset.favorId = favorId;
+  
+  const difficultyEmoji = {
+    easy: '⭐',
+    medium: '⭐⭐',
+    hard: '⭐⭐⭐'
+  };
+  
+  const categoryEmoji = {
+    fun: '🎉',
+    romantic: '💕',
+    help: '🤝',
+    surprise: '🎁'
+  };
+  
+  // Verificar quién creó el favor
+  const isCreator = favor.createdBy === currentUser.uid;
+  
+  card.innerHTML = `
+    <div class="favor-card-header-large">
+      <div class="favor-card-title-large">
+        <span class="favor-category-icon-large">${categoryEmoji[favor.category] || '🎯'}</span>
+        <h3>${favor.title}</h3>
+      </div>
+      <div class="favor-card-meta-large">
+        <span class="favor-difficulty-large">${difficultyEmoji[favor.difficulty] || '⭐'}</span>
+        <span class="favor-points-large">${favor.points}pts</span>
+      </div>
+    </div>
+    <p class="favor-description-large">${favor.description}</p>
+    ${!isCompleted ? `
+      ${isCreator ? `
+        <div class="favor-created-by-badge">✨ Creado por ti</div>
+        <div class="favor-card-actions-large">
+          <button class="btn btn-outline btn-small delete-favor-btn" data-favor-id="${favorId}">
+            🗑️ Eliminar
+          </button>
+        </div>
+      ` : `
+        <div class="favor-card-actions-large">
+          <button class="btn btn-success btn-small complete-favor-btn" data-favor-id="${favorId}">
+            ✓ Completar
+          </button>
+          <button class="btn btn-outline btn-small delete-favor-btn" data-favor-id="${favorId}">
+            ✕ Rechazar
+          </button>
+        </div>
+      `}
+    ` : `
+      <div class="favor-completed-badge-large">✓ Completado</div>
+    `}
+  `;
+  
+  // Event listeners para botones
+  if (!isCompleted) {
+    const completeBtn = card.querySelector('.complete-favor-btn');
+    const deleteBtn = card.querySelector('.delete-favor-btn');
+    
+    if (completeBtn) {
+      completeBtn.addEventListener('click', () => completeFavor(favorId, favor.points));
+    }
+    
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => deleteFavor(favorId));
+    }
+  }
+  
+  return card;
+}
+
+// Completar favor
+async function completeFavor(favorId, points) {
+  if (!currentCoupleId || !currentUser) return;
+  
+  try {
+    // Actualizar favor como completado
+    const favorRef = doc(db, 'couples', currentCoupleId, 'favors', favorId);
+    await updateDoc(favorRef, {
+      completed: true,
+      completedAt: Timestamp.now(),
+      completedBy: currentUser.uid
+    });
+    
+    // Actualizar puntos del usuario
+    const userPointsRef = doc(db, 'couples', currentCoupleId, 'favorPoints', currentUser.uid);
+    const userPointsDoc = await getDoc(userPointsRef);
+    
+    if (userPointsDoc.exists()) {
+      const currentPoints = userPointsDoc.data().points || 0;
+      await updateDoc(userPointsRef, {
+        points: currentPoints + points
+      });
+    } else {
+      await setDoc(userPointsRef, {
+        points: points,
+        userId: currentUser.uid
+      });
+    }
+    
+    showNotification({
+      title: '¡Desafío completado!',
+      message: `Has ganado ${points} puntos. ¡Buen trabajo!`,
+      icon: '🎉',
+      type: 'success'
+    });
+    
+    // Recargar datos
+    await loadFavorsData();
+    
+  } catch (error) {
+    console.error('Error completing favor:', error);
+    showNotification({
+      title: 'Error',
+      message: 'No se pudo completar el desafío. Intenta de nuevo.',
+      icon: '❌',
+      type: 'error'
+    });
+  }
+}
+
+// Eliminar favor
+async function deleteFavor(favorId) {
+  if (!currentCoupleId) return;
+  
+  showNotification({
+    title: 'Eliminar desafío',
+    message: '¿Estás seguro de que quieres eliminar este desafío? Esta acción no se puede deshacer.',
+    icon: '🗑️',
+    type: 'warning',
+    confirm: true,
+    onConfirm: async () => {
+      try {
+        const favorRef = doc(db, 'couples', currentCoupleId, 'favors', favorId);
+        await deleteDoc(favorRef);
+        
+        showNotification({
+          title: 'Desafío eliminado',
+          message: 'El desafío ha sido eliminado correctamente',
+          icon: '✓',
+          type: 'success'
+        });
+        
+        // Recargar datos
+        await loadFavorsData();
+        
+      } catch (error) {
+        console.error('Error deleting favor:', error);
+        showNotification({
+          title: 'Error',
+          message: 'No se pudo eliminar el desafío. Intenta de nuevo.',
+          icon: '❌',
+          type: 'error'
+        });
+      }
+    }
+  });
+}
+
+// Variable para el desafío actual
+let currentRandomChallenge = null;
+
+// Cargar desafío random desde el módulo importado
+function loadRandomChallenge() {
+  if (!RANDOM_CHALLENGES || RANDOM_CHALLENGES.length === 0) {
+    console.error('No hay desafíos disponibles');
+    return;
+  }
+  
+  const randomIndex = Math.floor(Math.random() * RANDOM_CHALLENGES.length);
+  currentRandomChallenge = RANDOM_CHALLENGES[randomIndex];
+  
+  const titleEl = document.getElementById('challenge-title-large');
+  const descEl = document.getElementById('challenge-description-large');
+  const badgeEl = document.getElementById('challenge-difficulty-badge-large');
+  const pointsEl = document.getElementById('challenge-points-large');
+  
+  if (titleEl) titleEl.textContent = currentRandomChallenge.title;
+  if (descEl) descEl.textContent = currentRandomChallenge.description;
+  if (pointsEl) pointsEl.textContent = `+${currentRandomChallenge.points} puntos`;
+  
+  if (badgeEl) {
+    const difficultyText = {
+      easy: '⭐ Fácil',
+      medium: '⭐⭐ Medio',
+      hard: '⭐⭐⭐ Difícil'
+    };
+    badgeEl.textContent = difficultyText[currentRandomChallenge.difficulty] || '⭐ Fácil';
+    badgeEl.className = `difficulty-badge-large difficulty-${currentRandomChallenge.difficulty}`;
+  }
+}
+
+// Aceptar desafío random
+async function acceptRandomChallenge() {
+  if (!currentRandomChallenge || !currentCoupleId || !currentUser) {
+    showNotification({
+      title: 'Error',
+      message: 'No hay desafío seleccionado o no estás conectado',
+      icon: '❌',
+      type: 'error'
+    });
+    return;
+  }
+  
+  try {
+    // Crear el favor en Firestore
+    const favorsRef = collection(db, 'couples', currentCoupleId, 'favors');
+    await addDoc(favorsRef, {
+      title: currentRandomChallenge.title,
+      description: currentRandomChallenge.description,
+      difficulty: currentRandomChallenge.difficulty,
+      points: currentRandomChallenge.points,
+      category: currentRandomChallenge.category,
+      completed: false,
+      createdBy: currentUser.uid,
+      createdAt: Timestamp.now()
+    });
+    
+    showNotification({
+      title: '¡Desafío aceptado!',
+      message: `${currentRandomChallenge.title} ha sido añadido a tus desafíos activos`,
+      icon: '✓',
+      type: 'success'
+    });
+    
+    // Cambiar a pestaña activos
+    switchFavorsTab('active');
+    loadFavorsData();
+    
+  } catch (error) {
+    console.error('Error accepting challenge:', error);
+    showNotification({
+      title: 'Error',
+      message: 'No se pudo aceptar el desafío. Intenta de nuevo.',
+      icon: '❌',
+      type: 'error'
+    });
+  }
+}
+
+// ============================================
+// FUNCIONES PARA CREAR DESAFÍO PERSONALIZADO
+// ============================================
+
+// Abrir modal de crear desafío
+function openCreateFavorModal() {
+  console.log('openCreateFavorModal called');
+  
+  let modal = document.getElementById('create-favor-modal');
+  
+  // Si no existe, crearlo dinámicamente
+  if (!modal) {
+    console.log('Creating create-favor-modal dynamically...');
+    
+    const modalHTML = `
+      <div id="create-favor-modal" class="favors-fullscreen-modal hidden">
+        <div class="favors-modal-overlay"></div>
+        <div class="favors-modal-container favors-modal-small">
+          <div class="favors-modal-header">
+            <h2>✨ Crear Desafío</h2>
+            <button id="close-create-favor-modal-btn" class="favors-close-btn">✕</button>
+          </div>
+          
+          <div class="favors-modal-content">
+            <input type="text" id="coupon-title-input-large" class="input-large" placeholder="Título del desafío (ej: Masaje de 30 min)" maxlength="60">
+            <textarea id="coupon-description-input-large" class="textarea-large" placeholder="Descripción detallada..." rows="4" maxlength="200"></textarea>
+            
+            <label class="label-large">Dificultad & Puntos:</label>
+            <div class="difficulty-picker-large">
+              <button class="difficulty-option-large" data-difficulty="easy" data-points="10">
+                <span class="diff-emoji-large">⭐</span>
+                <span class="diff-label-large">Fácil</span>
+                <span class="diff-points-large">10 pts</span>
+              </button>
+              <button class="difficulty-option-large selected" data-difficulty="medium" data-points="25">
+                <span class="diff-emoji-large">⭐⭐</span>
+                <span class="diff-label-large">Medio</span>
+                <span class="diff-points-large">25 pts</span>
+              </button>
+              <button class="difficulty-option-large" data-difficulty="hard" data-points="50">
+                <span class="diff-emoji-large">⭐⭐⭐</span>
+                <span class="diff-label-large">Difícil</span>
+                <span class="diff-points-large">50 pts</span>
+              </button>
+            </div>
+
+            <label class="label-large">Categoría:</label>
+            <div class="category-picker-large">
+              <button class="category-option-large selected" data-category="romantic">💕 Romántico</button>
+              <button class="category-option-large" data-category="fun">🎉 Divertido</button>
+              <button class="category-option-large" data-category="help">🤝 Ayuda</button>
+              <button class="category-option-large" data-category="surprise">🎁 Sorpresa</button>
+            </div>
+
+            <button id="save-coupon-btn-large" class="btn btn-primary btn-block btn-large">✨ Crear Desafío</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    modal = document.getElementById('create-favor-modal');
+    console.log('Modal created, setting up listeners...');
+  }
+  
+  console.log('Opening create favor modal...');
+  modal.classList.remove('hidden');
+  
+  // Configurar listeners cada vez que se abre (para asegurar que funcione)
+  setupCreateFavorModalListeners();
+}
+
+// Cerrar modal de crear desafío
+function closeCreateFavorModal() {
+  const modal = document.getElementById('create-favor-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    
+    // Limpiar formulario
+    document.getElementById('coupon-title-input-large').value = '';
+    document.getElementById('coupon-description-input-large').value = '';
+  }
+}
+
+// Variables para el modal de crear desafío
+let selectedDifficulty = 'medium';
+let selectedPoints = 25;
+let selectedCategory = 'romantic';
+let createFavorListenersSetup = false;
+
+// Configurar listeners del modal de crear desafío
+function setupCreateFavorModalListeners() {
+  console.log('Setting up create favor modal listeners...');
+  
+  const closeBtn = document.getElementById('close-create-favor-modal-btn');
+  const saveBtn = document.getElementById('save-coupon-btn-large');
+  const difficultyBtns = document.querySelectorAll('.difficulty-option-large');
+  const categoryBtns = document.querySelectorAll('.category-option-large');
+  
+  console.log('Elements found:', {
+    closeBtn,
+    saveBtn,
+    difficultyBtns: difficultyBtns.length,
+    categoryBtns: categoryBtns.length
+  });
+  
+  if (createFavorListenersSetup) {
+    console.log('Listeners already set up, skipping...');
+    return;
+  }
+  
+  createFavorListenersSetup = true;
+  
+  // Cerrar modal
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeCreateFavorModal);
+    console.log('Close button listener added');
+  }
+  
+  // Seleccionar dificultad
+  difficultyBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      difficultyBtns.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedDifficulty = btn.dataset.difficulty;
+      selectedPoints = parseInt(btn.dataset.points);
+      console.log('Difficulty selected:', selectedDifficulty, selectedPoints);
+    });
+  });
+  
+  // Seleccionar categoría
+  categoryBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      categoryBtns.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedCategory = btn.dataset.category;
+      console.log('Category selected:', selectedCategory);
+    });
+  });
+  
+  // Guardar desafío
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      console.log('Save button clicked!');
+      saveCustomFavor();
+    });
+    console.log('Save button listener added');
+  }
+}
+
+// Guardar desafío personalizado
+async function saveCustomFavor() {
+  const titleInput = document.getElementById('coupon-title-input-large');
+  const descInput = document.getElementById('coupon-description-input-large');
+  
+  const title = titleInput.value.trim();
+  const description = descInput.value.trim();
+  
+  if (!title) {
+    showNotification({
+      title: 'Título requerido',
+      message: 'Por favor ingresa un título para el desafío',
+      icon: '⚠️',
+      type: 'warning'
+    });
+    return;
+  }
+  
+  if (!description) {
+    showNotification({
+      title: 'Descripción requerida',
+      message: 'Por favor ingresa una descripción para el desafío',
+      icon: '⚠️',
+      type: 'warning'
+    });
+    return;
+  }
+  
+  if (!currentCoupleId || !currentUser) {
+    showNotification({
+      title: 'Error',
+      message: 'Debes estar conectado para crear desafíos',
+      icon: '❌',
+      type: 'error'
+    });
+    return;
+  }
+  
+  try {
+    // Guardar en Firestore
+    const favorsRef = collection(db, 'couples', currentCoupleId, 'favors');
+    await addDoc(favorsRef, {
+      title: title,
+      description: description,
+      difficulty: selectedDifficulty,
+      points: selectedPoints,
+      category: selectedCategory,
+      completed: false,
+      createdBy: currentUser.uid,
+      createdAt: Timestamp.now()
+    });
+    
+    showNotification({
+      title: '¡Desafío creado!',
+      message: `${title} ha sido creado exitosamente`,
+      icon: '✨',
+      type: 'success'
+    });
+    
+    // Cerrar modal
+    closeCreateFavorModal();
+    
+    // Cambiar a pestaña activos y recargar
+    switchFavorsTab('active');
+    await loadFavorsData();
+    
+  } catch (error) {
+    console.error('Error saving custom favor:', error);
+    showNotification({
+      title: 'Error',
+      message: 'No se pudo crear el desafío. Intenta de nuevo.',
+      icon: '❌',
+      type: 'error'
+    });
+  }
+}
 
 
 
