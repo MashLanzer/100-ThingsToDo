@@ -2293,8 +2293,16 @@ button, a, input, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(16, 12, 8, 0);
+  backdrop-filter: blur(0px);
+  transition: all 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.favors-fullscreen-modal:not(.hidden) {
   background: rgba(16, 12, 8, 0.6);
   backdrop-filter: blur(8px);
+  pointer-events: all;
 }
 
 .favors-modal-overlay {
@@ -2303,6 +2311,7 @@ button, a, input, textarea {
   left: 0;
   width: 100%;
   height: 100%;
+  cursor: pointer;
 }
 
 .favors-modal-container {
@@ -2314,18 +2323,23 @@ button, a, input, textarea {
   max-height: 90vh;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(139, 111, 71, 0.25);
-  transform: scale(0.95);
+  transform: scale(0.9) translateY(30px);
   opacity: 0;
-  transition: all 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 450ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .favors-fullscreen-modal:not(.hidden) .favors-modal-container {
-  transform: scale(1);
+  transform: scale(1) translateY(0);
   opacity: 1;
 }
 
 .favors-modal-container.favors-modal-small {
   max-width: 600px;
+  transform: scale(0.85) translateY(40px);
+}
+
+.favors-fullscreen-modal:not(.hidden) .favors-modal-container.favors-modal-small {
+  transform: scale(1) translateY(0);
 }
 
 .favors-modal-header {
@@ -2377,12 +2391,29 @@ button, a, input, textarea {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
+  background: linear-gradient(135deg, #ffffff 0%, #fdfcfb 100%);
+  padding: 2.25rem;
+  border-radius: 20px;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 8px rgba(139, 111, 71, 0.08);
-  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(139, 111, 71, 0.08),
+              0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(139, 111, 71, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.points-balance-large::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, 
+    var(--primary) 0%, 
+    rgba(139, 111, 71, 0.6) 50%, 
+    var(--primary) 100%);
+  opacity: 0.5;
 }
 
 .user-points-large {
@@ -2400,15 +2431,24 @@ button, a, input, textarea {
 }
 
 .points-value-large {
-  font-size: 3rem;
+  font-size: 3.5rem;
   font-weight: 700;
-  color: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, #a0826b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   font-family: 'Fredoka', sans-serif;
+  filter: drop-shadow(0 2px 4px rgba(139, 111, 71, 0.1));
+  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.user-points-large:hover .points-value-large {
+  transform: scale(1.05);
 }
 
 .points-divider-large {
-  font-size: 2rem;
-  color: var(--border);
+  font-size: 2.5rem;
+  color: rgba(139, 111, 71, 0.2);
   font-weight: 300;
 }
 
@@ -2428,31 +2468,53 @@ button, a, input, textarea {
 
 .favor-tab-large {
   flex: 1;
-  padding: 1rem 1.5rem;
+  padding: 1.125rem 1.75rem;
   border: none;
   background: white;
-  border-radius: 12px;
+  border-radius: 14px;
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
-  transition: all 300ms ease;
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
   color: #6B7280;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(139, 111, 71, 0.1);
   font-family: 'Quicksand', sans-serif;
+  box-shadow: 0 2px 6px rgba(139, 111, 71, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.favor-tab-large::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), rgba(139, 111, 71, 0.6));
+  transform: scaleX(0);
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .favor-tab-large:hover {
-  background: var(--background);
+  background: #fdfcfb;
   color: var(--primary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(139, 111, 71, 0.08);
+  border-color: rgba(139, 111, 71, 0.2);
+  box-shadow: 0 4px 14px rgba(139, 111, 71, 0.12);
 }
 
 .favor-tab-large.active {
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, #a0826b 100%);
   color: white;
   border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(139, 111, 71, 0.15);
+  box-shadow: 0 4px 16px rgba(139, 111, 71, 0.28),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+}
+
+.favor-tab-large.active::before {
+  transform: scaleX(1);
 }
 
 /* Lista de favores grande */
@@ -2462,6 +2524,14 @@ button, a, input, textarea {
   gap: 1.25rem;
   margin-bottom: 2rem;
   min-height: 300px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1), 
+              transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.favors-list-large.hidden {
+  display: none;
 }
 
 .favors-empty-state-large {
@@ -2483,21 +2553,41 @@ button, a, input, textarea {
 
 /* Tarjetas de favores individuales */
 .favor-card-large {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  background: linear-gradient(to bottom, #ffffff 0%, #fdfcfb 100%);
+  border: 1px solid rgba(139, 111, 71, 0.12);
+  border-radius: 20px;
   padding: 1.75rem;
-  transition: all 300ms ease;
-  box-shadow: 0 2px 8px rgba(139, 111, 71, 0.06);
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(139, 111, 71, 0.04),
+              0 1px 3px rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.favor-card-large::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), rgba(139, 111, 71, 0.5));
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.favor-card-large:hover::before {
+  opacity: 1;
 }
 
 .favor-card-large:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(139, 111, 71, 0.15);
-  border-color: var(--primary);
+  transform: translateY(-6px);
+  box-shadow: 0 12px 32px rgba(139, 111, 71, 0.12),
+              0 4px 12px rgba(0, 0, 0, 0.04);
+  border-color: rgba(139, 111, 71, 0.2);
 }
 
 .favor-card-header-large {
@@ -2515,18 +2605,26 @@ button, a, input, textarea {
 }
 
 .favor-category-icon-large {
-  font-size: 2rem;
+  font-size: 2.25rem;
   flex-shrink: 0;
   margin-top: 0.125rem;
+  filter: drop-shadow(0 2px 4px rgba(139, 111, 71, 0.1));
+  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.favor-card-large:hover .favor-category-icon-large {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .favor-card-title-large h3 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--primary);
   font-family: 'Fredoka', sans-serif;
   line-height: 1.3;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 2px rgba(139, 111, 71, 0.05);
 }
 
 .favor-card-meta-large {
@@ -2543,24 +2641,48 @@ button, a, input, textarea {
 }
 
 .favor-points-large {
-  background: linear-gradient(135deg, var(--primary) 0%, rgba(139, 111, 71, 0.8) 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #a0826b 100%);
   color: white;
-  padding: 0.375rem 0.875rem;
-  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
   font-weight: 700;
   font-size: 0.875rem;
   font-family: 'Fredoka', sans-serif;
-  box-shadow: 0 2px 8px rgba(139, 111, 71, 0.2);
+  box-shadow: 0 3px 10px rgba(139, 111, 71, 0.25),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
   white-space: nowrap;
+  letter-spacing: 0.03em;
+  position: relative;
+}
+
+.favor-points-large::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(139, 111, 71, 0.3);
+  opacity: 0;
+  transition: opacity 300ms ease;
+  pointer-events: none;
+}
+
+.favor-card-large:hover .favor-points-large::after {
+  opacity: 1;
 }
 
 .favor-description-large {
-  color: #374151;
+  color: #4B5563;
   font-size: 1rem;
-  line-height: 1.6;
+  line-height: 1.7;
   margin: 0;
   font-family: 'Quicksand', sans-serif;
   flex-grow: 1;
+  padding-left: 0.25rem;
+  font-weight: 500;
 }
 
 .favor-card-actions-large {
@@ -2571,29 +2693,51 @@ button, a, input, textarea {
 
 .favor-card-actions-large .btn {
   flex: 1;
-  padding: 0.75rem 1.25rem;
+  padding: 0.875rem 1.5rem;
   font-size: 0.9375rem;
   font-weight: 600;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 250ms ease;
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
   font-family: 'Quicksand', sans-serif;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.favor-card-actions-large .btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 400ms ease, height 400ms ease;
+}
+
+.favor-card-actions-large .btn:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
 .favor-card-actions-large .btn-success {
   background: linear-gradient(135deg, #10B981 0%, #059669 100%);
   color: white;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .favor-card-actions-large .btn-success:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .favor-card-actions-large .btn-success:active {
@@ -2602,14 +2746,17 @@ button, a, input, textarea {
 
 .favor-card-actions-large .btn-outline {
   background: white;
-  color: #EF4444;
-  border: 2px solid #FEE2E2;
+  color: #DC2626;
+  border: 2px solid rgba(239, 68, 68, 0.2);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.08);
 }
 
 .favor-card-actions-large .btn-outline:hover {
-  background: #FEE2E2;
+  background: #FEF2F2;
   border-color: #EF4444;
+  color: #B91C1C;
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
 }
 
 .favor-card-actions-large .btn-outline:active {
@@ -2617,28 +2764,34 @@ button, a, input, textarea {
 }
 
 .favor-completed-badge-large {
-  background: linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%);
-  color: #166534;
-  padding: 0.75rem 1.25rem;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  color: #065F46;
+  padding: 0.875rem 1.5rem;
+  border-radius: 12px;
   text-align: center;
   font-weight: 700;
   font-size: 0.9375rem;
   font-family: 'Fredoka', sans-serif;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 3px 12px rgba(16, 185, 129, 0.15),
+              inset 0 1px 0 rgba(255, 255, 255, 0.5);
   margin-top: 0.5rem;
+  border: 1px solid rgba(5, 150, 105, 0.1);
+  letter-spacing: 0.02em;
 }
 
 .favor-created-by-badge {
-  background: #FEF3C7;
-  color: #92400E;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+  color: #78350F;
+  padding: 0.625rem 1.125rem;
+  border-radius: 10px;
   font-size: 0.8125rem;
   font-weight: 600;
   font-family: 'Quicksand', sans-serif;
   display: inline-block;
   margin-top: 0.5rem;
+  border: 1px solid rgba(146, 64, 14, 0.1);
+  box-shadow: 0 2px 6px rgba(120, 53, 15, 0.08);
+  letter-spacing: 0.01em;
 }
 
 .points-label {
@@ -2660,52 +2813,90 @@ button, a, input, textarea {
   padding: 2rem;
 }
 
-.challenge-card-large {
-  background: white;
-  border-radius: 16px;
-  padding: 3rem;
+.challenge-card-large,
+.random-challenge-card-large {
+  background: linear-gradient(to bottom, #ffffff 0%, #fdfcfb 100%);
+  border-radius: 24px;
+  padding: 3.5rem;
   text-align: center;
-  box-shadow: 0 4px 12px rgba(139, 111, 71, 0.12);
-  max-width: 600px;
+  box-shadow: 0 8px 24px rgba(139, 111, 71, 0.12),
+              0 2px 8px rgba(0, 0, 0, 0.04);
+  max-width: 650px;
   width: 100%;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(139, 111, 71, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.challenge-card-large::before,
+.random-challenge-card-large::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, 
+    var(--primary) 0%, 
+    rgba(139, 111, 71, 0.6) 50%, 
+    var(--primary) 100%);
+  opacity: 0.6;
 }
 
 .challenge-icon-large {
-  font-size: 5rem;
-  margin-bottom: 1.5rem;
+  font-size: 5.5rem;
+  margin-bottom: 1.75rem;
+  filter: drop-shadow(0 4px 8px rgba(139, 111, 71, 0.15));
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 .challenge-title-large {
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 700;
-  color: var(--primary);
-  margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--primary) 0%, #a0826b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1.25rem;
   font-family: 'Fredoka', sans-serif;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .challenge-description-large {
-  font-size: 1.05rem;
-  color: #6B7280;
-  margin-bottom: 2rem;
-  line-height: 1.6;
+  font-size: 1.125rem;
+  color: #4B5563;
+  margin-bottom: 2.5rem;
+  line-height: 1.75;
   font-family: 'Quicksand', sans-serif;
+  font-weight: 500;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .challenge-difficulty-large {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  gap: 1.75rem;
+  margin-bottom: 2.5rem;
 }
 
 .difficulty-badge-large {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  padding: 0.625rem 1.25rem;
+  border-radius: 12px;
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   text-transform: capitalize;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  letter-spacing: 0.02em;
 }
 
 .difficulty-badge-large:contains("Fácil") {
@@ -2725,55 +2916,87 @@ button, a, input, textarea {
 
 .challenge-points-large {
   font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--primary);
+  font-size: 1.25rem;
+  background: linear-gradient(135deg, var(--primary) 0%, #a0826b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-family: 'Fredoka', sans-serif;
+  letter-spacing: 0.02em;
 }
 
 .challenge-points-large::before {
   content: '⭐';
-  margin-right: 0.3rem;
+  margin-right: 0.5rem;
+  filter: drop-shadow(0 2px 4px rgba(139, 111, 71, 0.2));
 }
 
 .challenge-actions-large {
   display: flex;
-  gap: 1rem;
+  gap: 1.25rem;
   justify-content: center;
+  margin-top: 2rem;
 }
 
 .challenge-actions-large .btn-primary,
 .challenge-actions-large .btn-secondary {
-  padding: 0.875rem 1.75rem;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 10px;
+  padding: 1rem 2.25rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  border-radius: 14px;
   border: none;
   cursor: pointer;
-  transition: all 300ms ease;
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
   font-family: 'Quicksand', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.challenge-actions-large .btn-primary::before,
+.challenge-actions-large .btn-secondary::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transform: translate(-50%, -50%);
+  transition: width 400ms ease, height 400ms ease;
+}
+
+.challenge-actions-large .btn-primary:hover::before,
+.challenge-actions-large .btn-secondary:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
 .challenge-actions-large .btn-primary {
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, #a0826b 100%);
   color: white;
-  box-shadow: 0 4px 12px rgba(139, 111, 71, 0.15);
+  box-shadow: 0 4px 16px rgba(139, 111, 71, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .challenge-actions-large .btn-primary:hover {
-  background: rgba(139, 111, 71, 0.9);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(139, 111, 71, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 24px rgba(139, 111, 71, 0.4),
+              inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .challenge-actions-large .btn-secondary {
   background: white;
   color: var(--primary);
-  border: 1px solid var(--border);
+  border: 2px solid rgba(139, 111, 71, 0.2);
+  box-shadow: 0 3px 12px rgba(139, 111, 71, 0.1);
 }
 
 .challenge-actions-large .btn-secondary:hover {
-  background: var(--background);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(139, 111, 71, 0.08);
+  background: #fdfcfb;
+  border-color: var(--primary);
+  transform: translateY(-3px);
+  box-shadow: 0 5px 20px rgba(139, 111, 71, 0.2);
 }
 
 /* Inputs grandes - Estilo limpio */
@@ -4093,6 +4316,269 @@ button, a, input, textarea {
 }
 
 /* end tilt + input + empty animations */
+
+/* ============================================ */
+/* ANIMACIONES PARA MODAL DE FAVORES           */
+/* ============================================ */
+
+/* Animación de entrada escalonada para elementos */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+@keyframes successPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* Animaciones de entrada escalonada */
+.favors-fullscreen-modal:not(.hidden) .points-balance-large {
+  animation: fadeInUp 400ms cubic-bezier(0.34, 1.56, 0.64, 1) 100ms backwards;
+}
+
+.favors-fullscreen-modal:not(.hidden) .favors-tabs-large {
+  animation: fadeInUp 400ms cubic-bezier(0.34, 1.56, 0.64, 1) 200ms backwards;
+}
+
+.favors-fullscreen-modal:not(.hidden) .favors-list-large,
+.favors-fullscreen-modal:not(.hidden) .random-challenge-view-large {
+  animation: fadeInUp 400ms cubic-bezier(0.34, 1.56, 0.64, 1) 300ms backwards;
+}
+
+.favors-fullscreen-modal:not(.hidden) #add-favor-btn-large {
+  animation: fadeInScale 400ms cubic-bezier(0.34, 1.56, 0.64, 1) 400ms backwards;
+}
+
+/* Animación de tarjetas al cargar */
+.favor-card-large {
+  animation: fadeInScale 350ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+.favor-card-large:nth-child(1) { animation-delay: 50ms; }
+.favor-card-large:nth-child(2) { animation-delay: 100ms; }
+.favor-card-large:nth-child(3) { animation-delay: 150ms; }
+.favor-card-large:nth-child(4) { animation-delay: 200ms; }
+.favor-card-large:nth-child(5) { animation-delay: 250ms; }
+.favor-card-large:nth-child(6) { animation-delay: 300ms; }
+
+/* Animación de puntos al actualizar */
+.points-value-large {
+  transition: all 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.points-value-large.updated {
+  animation: pulse 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Micro-animación al completar desafío */
+.favor-card-large.completing {
+  animation: successPulse 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Animación de tabs */
+.favor-tab-large {
+  position: relative;
+  overflow: hidden;
+}
+
+.favor-tab-large::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  background: var(--primary);
+  transform: translateX(-50%);
+  transition: width 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.favor-tab-large.active::before {
+  width: 80%;
+}
+
+/* Animación del botón de crear desafío */
+#add-favor-btn-large {
+  position: relative;
+  overflow: hidden;
+}
+
+#add-favor-btn-large::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 600ms ease, height 600ms ease;
+}
+
+#add-favor-btn-large:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Animación de inputs en modal de crear */
+.input-large:focus,
+.textarea-large:focus {
+  transform: scale(1.01);
+}
+
+/* Animación de selección de dificultad */
+.difficulty-option-large,
+.category-option-large {
+  transition: all 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.difficulty-option-large:active,
+.category-option-large:active {
+  transform: scale(0.95);
+}
+
+.difficulty-option-large.selected,
+.category-option-large.selected {
+  animation: fadeInScale 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ============================================ */
+/* ANIMACIONES MODAL CREAR DESAFÍO */
+/* ============================================ */
+
+#create-favor-modal {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#create-favor-modal.hidden {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* Animación de entrada para inputs del formulario */
+#create-favor-modal .input-large {
+  animation: fadeInUp 350ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+#create-favor-modal #coupon-title-input-large {
+  animation-delay: 100ms;
+}
+
+#create-favor-modal #coupon-description-input-large {
+  animation-delay: 150ms;
+}
+
+/* Animación de entrada para selectores de dificultad */
+#create-favor-modal .difficulty-selector-large {
+  animation: fadeInScale 350ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: 200ms;
+}
+
+#create-favor-modal .difficulty-btn-large:nth-child(1) {
+  animation: fadeInScale 350ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: 250ms;
+}
+
+#create-favor-modal .difficulty-btn-large:nth-child(2) {
+  animation: fadeInScale 350ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: 300ms;
+}
+
+#create-favor-modal .difficulty-btn-large:nth-child(3) {
+  animation: fadeInScale 350ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: 350ms;
+}
+
+/* Animación de entrada para selectores de categoría */
+#create-favor-modal .category-selector-large {
+  animation: fadeInScale 350ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: 400ms;
+}
+
+#create-favor-modal .category-btn-large:nth-child(1) {
+  animation: fadeInScale 350ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: 450ms;
+}
+
+#create-favor-modal .category-btn-large:nth-child(2) {
+  animation: fadeInScale 350ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: 500ms;
+}
+
+#create-favor-modal .category-btn-large:nth-child(3) {
+  animation: fadeInScale 350ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: 550ms;
+}
+
+#create-favor-modal .category-btn-large:nth-child(4) {
+  animation: fadeInScale 350ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: 600ms;
+}
+
+/* Animación de entrada para botón guardar */
+#create-favor-modal #save-custom-favor-btn-large {
+  animation: fadeInUp 350ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: 650ms;
+}
+
 
 
 

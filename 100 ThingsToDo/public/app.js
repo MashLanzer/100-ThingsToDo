@@ -2313,7 +2313,14 @@ function setupFavorsModalListeners() {
   }
   
   if (rerollBtn) {
-    rerollBtn.addEventListener('click', loadRandomChallenge);
+    rerollBtn.addEventListener('click', () => {
+      const challengeCard = document.querySelector('.random-challenge-card-large');
+      if (challengeCard) {
+        challengeCard.classList.add('shake');
+        setTimeout(() => challengeCard.classList.remove('shake'), 500);
+      }
+      loadRandomChallenge();
+    });
   }
   
   if (acceptBtn) {
@@ -2335,32 +2342,50 @@ function switchFavorsTab(tab) {
     random: document.getElementById('random-challenge-view-large')
   };
   
-  // Actualizar botones
+  // Animar salida de vista actual
   tabs.forEach(t => {
-    if (tabButtons[t]) {
-      if (t === tab) {
-        tabButtons[t].classList.add('active');
-      } else {
-        tabButtons[t].classList.remove('active');
-      }
+    if (views[t] && !views[t].classList.contains('hidden')) {
+      views[t].style.opacity = '0';
+      views[t].style.transform = 'translateY(10px)';
     }
   });
   
-  // Actualizar vistas
-  tabs.forEach(t => {
-    if (views[t]) {
-      if (t === tab) {
-        views[t].classList.remove('hidden');
-      } else {
-        views[t].classList.add('hidden');
+  // Después de la animación de salida, cambiar vistas
+  setTimeout(() => {
+    // Actualizar botones
+    tabs.forEach(t => {
+      if (tabButtons[t]) {
+        if (t === tab) {
+          tabButtons[t].classList.add('active');
+        } else {
+          tabButtons[t].classList.remove('active');
+        }
       }
+    });
+    
+    // Actualizar vistas
+    tabs.forEach(t => {
+      if (views[t]) {
+        if (t === tab) {
+          views[t].classList.remove('hidden');
+          // Animar entrada
+          setTimeout(() => {
+            views[t].style.opacity = '1';
+            views[t].style.transform = 'translateY(0)';
+          }, 50);
+        } else {
+          views[t].classList.add('hidden');
+          views[t].style.opacity = '0';
+          views[t].style.transform = 'translateY(10px)';
+        }
+      }
+    });
+    
+    // Si cambió a random, cargar un desafío
+    if (tab === 'random') {
+      loadRandomChallenge();
     }
-  });
-  
-  // Si cambió a random, cargar un desafío
-  if (tab === 'random') {
-    loadRandomChallenge();
-  }
+  }, 200);
 }
 
 // Cargar datos de favores desde Firestore
@@ -2525,6 +2550,12 @@ function createFavorCard(favorId, favor, isCompleted) {
 async function completeFavor(favorId, points) {
   if (!currentCoupleId || !currentUser) return;
   
+  // Animación de completar
+  const card = document.querySelector(`[data-favor-id="${favorId}"]`);
+  if (card) {
+    card.classList.add('completing');
+  }
+  
   try {
     // Actualizar favor como completado
     const favorRef = doc(db, 'couples', currentCoupleId, 'favors', favorId);
@@ -2550,6 +2581,13 @@ async function completeFavor(favorId, points) {
       });
     }
     
+    // Animar actualización de puntos
+    const myPointsEl = document.getElementById('my-points-large');
+    if (myPointsEl) {
+      myPointsEl.classList.add('updated');
+      setTimeout(() => myPointsEl.classList.remove('updated'), 600);
+    }
+    
     showNotification({
       title: '¡Desafío completado!',
       message: `Has ganado ${points} puntos. ¡Buen trabajo!`,
@@ -2557,11 +2595,16 @@ async function completeFavor(favorId, points) {
       type: 'success'
     });
     
-    // Recargar datos
-    await loadFavorsData();
+    // Esperar un poco antes de recargar para que se vea la animación
+    setTimeout(async () => {
+      await loadFavorsData();
+    }, 600);
     
   } catch (error) {
     console.error('Error completing favor:', error);
+    if (card) {
+      card.classList.remove('completing');
+    }
     showNotification({
       title: 'Error',
       message: 'No se pudo completar el desafío. Intenta de nuevo.',
@@ -2899,12 +2942,23 @@ async function saveCustomFavor() {
       type: 'success'
     });
     
-    // Cerrar modal
-    closeCreateFavorModal();
+    // Cerrar modal con animación
+    const modal = document.getElementById('create-favor-modal');
+    if (modal) {
+      modal.style.opacity = '0';
+      modal.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        closeCreateFavorModal();
+      }, 200);
+    }
     
     // Cambiar a pestaña activos y recargar
     switchFavorsTab('active');
-    await loadFavorsData();
+    
+    // Delay para mostrar la nueva tarjeta con animación
+    setTimeout(async () => {
+      await loadFavorsData();
+    }, 300);
     
   } catch (error) {
     console.error('Error saving custom favor:', error);
