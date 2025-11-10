@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -53,41 +53,71 @@
         <!-- Página de inicio (Login) -->
         <div id="home-page" class="page" style="display: none;">
             <div class="home-container">
+                <div class="login-background-decoration">
+                    <div class="floating-shape shape-1"></div>
+                    <div class="floating-shape shape-2"></div>
+                    <div class="floating-shape shape-3"></div>
+                    
+                    <!-- Círculos decorativos esquina inferior izquierda -->
+                    <div class="bottom-circle circle-1"></div>
+                    <div class="bottom-circle circle-2"></div>
+                </div>
+                
                 <div class="home-content">
-                    <div class="home-icon animate-bounce-gentle">
-                        <svg class="heart-icon-large" width="64" height="64" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                        </svg>
-                    </div>
-
-                    <h1 class="home-title">ThingsToDo</h1>
-                    <p class="home-subtitle">Kawaii</p>
-                    <p class="home-description">
-                        Crea y gestiona listas de tareas románticas con tu pareja
-                    </p>
-
-                    <button id="login-btn" class="btn btn-primary btn-login">
-                        <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
-                            <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                            <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                            <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                            <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                        </svg>
-                        Iniciar Sesión con Google
-                    </button>
-
-                    <div class="home-features">
-                        <div class="feature-card glass">
-                            <div class="feature-icon">💕</div>
-                            <p class="feature-text">Planes</p>
+                    <div class="login-card">
+                        <!-- Logo y Branding -->
+                        <div class="login-brand">
+                            <div class="brand-icon-heart">
+                                <svg class="heart-icon" width="56" height="56" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                            </div>
+                            <h1 class="brand-title">ThingsToDo</h1>
+                            <div class="brand-badge">Kawaii Edition 💕</div>
                         </div>
-                        <div class="feature-card glass">
-                            <div class="feature-icon">✨</div>
-                            <p class="feature-text">Kawaii</p>
+
+                        <!-- Descripción -->
+                        <div class="login-description">
+                            <h2 class="description-title">Tu espacio romántico ✨</h2>
+                            <p class="description-text">
+                                Crea listas de tareas adorables, comparte planes especiales y vive momentos únicos con tu pareja
+                            </p>
                         </div>
-                        <div class="feature-card glass">
-                            <div class="feature-icon">🚀</div>
-                            <p class="feature-text">Parejas</p>
+
+                        <!-- Botón de Login -->
+                        <button id="login-btn" class="btn-google-signin">
+                            <svg class="google-icon" viewBox="0 0 24 24" width="22" height="22">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            <span>Continuar con Google</span>
+                        </button>
+
+                        <!-- Features -->
+                        <div class="login-features">
+                            <div class="feature-item">
+                                <div class="feature-icon-circle">💕</div>
+                                <div class="feature-content">
+                                    <h4>Planes en pareja</h4>
+                                    <p>Organiza citas románticas</p>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon-circle">✨</div>
+                                <div class="feature-content">
+                                    <h4>Diseño Kawaii</h4>
+                                    <p>Interfaz adorable y única</p>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon-circle">🎯</div>
+                                <div class="feature-content">
+                                    <h4>Desafíos divertidos</h4>
+                                    <p>Completa retos juntos</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -125,26 +155,26 @@
     </svg>
 </button> -->
                         <button id="couple-btn" class="btn-icon" title="Gestionar Pareja">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-        <circle cx="9" cy="7" r="4"></circle>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-    </svg>
-</button>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                        </button>
 
                         <button id="open-favors-modal-btn" class="btn-icon" title="Favores & Desafíos">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-    </svg>
-</button>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                            </svg>
+                        </button>
 
-                            <button id="open-phone-modal-btn" class="btn-icon" title="Centro de Actividades">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-            <line x1="12" y1="18" x2="12.01" y2="18"></line>
-        </svg>
-    </button>
+                        <button id="open-phone-modal-btn" class="btn-icon" title="Centro de Actividades">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                            </svg>
+                        </button>
 
                         <button id="logout-btn" class="btn-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -674,6 +704,11 @@
         <div class="app-icon-bg app-icon-money" style="background: #d4edda;">💰</div>
         <span class="app-name">Metas Futuras</span>
     </div>
+          <!-- App 3: Favores & Desafíos -->
+        <div class="app-icon phone-app-icon" data-app="coupons">
+        <div class="app-icon-bg app-icon-coupon" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);">�</div>
+        <span class="app-name">Favores</span>
+    </div>
             </div>
         </div>
 
@@ -795,6 +830,110 @@
                 <!-- Las aportaciones se listarán aquí -->
             </div>
         </div>
+    </div>
+</div>
+<!-- ============================================ -->
+
+<!-- Vista de la app "Favores & Desafíos" -->
+<div id="phone-view-coupons" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-home-btn">‹</button>
+        <span>Desafíos �</span>
+    </div>
+    <div class="app-content-body">
+        <!-- Balance de puntos -->
+        <div class="points-balance">
+            <div class="user-points">
+                <div class="points-label">Tus puntos</div>
+                <div id="my-points" class="points-value">0</div>
+            </div>
+            <div class="points-divider">⚡</div>
+            <div class="user-points">
+                <div class="points-label">Su pareja</div>
+                <div id="partner-points" class="points-value">0</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="favors-tabs">
+            <button id="tab-active" class="favor-tab active">Activos</button>
+            <button id="tab-completed" class="favor-tab">Completados</button>
+            <button id="tab-random" class="favor-tab">🎲 Random</button>
+        </div>
+
+        <!-- Lista de favores activos -->
+        <div id="active-favors-list" class="favors-list">
+            <div id="favors-empty-state" class="capsules-empty-state">
+                <div class="empty-icon">�</div>
+                <p>No hay favores activos. ¡Crea el primero o prueba uno random!</p>
+            </div>
+        </div>
+
+        <!-- Lista de completados (oculta por defecto) -->
+        <div id="completed-favors-list" class="favors-list" style="display: none;">
+        </div>
+
+        <!-- Vista de desafío random (oculta por defecto) -->
+        <div id="random-challenge-view" class="random-challenge-view" style="display: none;">
+            <div class="challenge-card">
+                <div class="challenge-icon">🎲</div>
+                <h3 id="challenge-title" class="challenge-title">Cargando desafío...</h3>
+                <p id="challenge-description" class="challenge-description"></p>
+                <div class="challenge-difficulty">
+                    <span id="challenge-difficulty-badge" class="difficulty-badge">⭐ Fácil</span>
+                    <span id="challenge-points" class="challenge-points">+10 puntos</span>
+                </div>
+                <div class="challenge-actions">
+                    <button id="accept-challenge-btn" class="btn btn-primary">¡Aceptar!</button>
+                    <button id="reroll-challenge-btn" class="btn btn-secondary">Otro desafío</button>
+                </div>
+            </div>
+        </div>
+
+        <button id="add-favor-btn" class="btn btn-primary" style="margin-top: auto;">
+            + Crear Favor
+        </button>
+    </div>
+</div>
+
+<!-- Vista de creación de favor -->
+<div id="phone-view-create-coupon" class="phone-app-view">
+    <div class="app-content-header">
+        <button id="back-to-coupons-btn" class="back-to-home-btn">‹</button>
+        <span>Nuevo Favor</span>
+    </div>
+    <div class="app-content-body">
+        <input type="text" id="coupon-title-input" class="input" placeholder="Título del favor (ej: Masaje de 30 min)" maxlength="60">
+        <textarea id="coupon-description-input" class="textarea" placeholder="Descripción detallada..." rows="4" maxlength="200"></textarea>
+        
+        <label>Dificultad & Puntos:</label>
+        <div class="difficulty-picker">
+            <button class="difficulty-option" data-difficulty="easy" data-points="10">
+                <span class="diff-emoji">⭐</span>
+                <span class="diff-label">Fácil</span>
+                <span class="diff-points">10 pts</span>
+            </button>
+            <button class="difficulty-option selected" data-difficulty="medium" data-points="25">
+                <span class="diff-emoji">⭐⭐</span>
+                <span class="diff-label">Medio</span>
+                <span class="diff-points">25 pts</span>
+            </button>
+            <button class="difficulty-option" data-difficulty="hard" data-points="50">
+                <span class="diff-emoji">⭐⭐⭐</span>
+                <span class="diff-label">Difícil</span>
+                <span class="diff-points">50 pts</span>
+            </button>
+        </div>
+
+        <label>Categoría:</label>
+        <div class="category-picker">
+            <button class="category-option selected" data-category="romantic">💕 Romántico</button>
+            <button class="category-option" data-category="fun">🎉 Divertido</button>
+            <button class="category-option" data-category="help">🤝 Ayuda</button>
+            <button class="category-option" data-category="surprise">🎁 Sorpresa</button>
+        </div>
+
+        <button id="save-coupon-btn" class="btn btn-primary">Crear Favor �</button>
     </div>
 </div>
 <!-- ============================================ -->
@@ -991,6 +1130,119 @@
  
         </div>
         <button id="close-phone-modal-btn" class="phone-home-button"></button>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- MODAL FULLSCREEN PARA FAVORES & DESAFÍOS    -->
+<!-- ============================================ -->
+<div id="favors-fullscreen-modal" class="favors-fullscreen-modal hidden">
+    <div class="favors-modal-overlay"></div>
+    <div class="favors-modal-container">
+        <div class="favors-modal-header">
+            <h2>🎯 Desafíos</h2>
+            <button id="close-favors-modal-btn" class="favors-close-btn">✕</button>
+        </div>
+        
+        <div class="favors-modal-content">
+            <!-- Balance de puntos -->
+            <div class="points-balance-large">
+                <div class="user-points-large">
+                    <div class="points-label">Tus puntos</div>
+                    <div id="my-points-large" class="points-value-large">0</div>
+                </div>
+                <div class="points-divider-large">⚡</div>
+                <div class="user-points-large">
+                    <div class="points-label">Tu pareja</div>
+                    <div id="partner-points-large" class="points-value-large">0</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="favors-tabs-large">
+                <button id="tab-active-large" class="favor-tab-large active">Activos</button>
+                <button id="tab-completed-large" class="favor-tab-large">Completados</button>
+                <button id="tab-random-large" class="favor-tab-large">🎲 Random</button>
+            </div>
+
+            <!-- Lista de favores activos -->
+            <div id="active-favors-list-large" class="favors-list-large">
+                <div id="favors-empty-state-large" class="favors-empty-state-large">
+                    <div class="empty-icon-large">🎁</div>
+                    <p>No hay favores activos. ¡Crea el primero o prueba uno random!</p>
+                </div>
+            </div>
+
+            <!-- Lista de completados -->
+            <div id="completed-favors-list-large" class="favors-list-large hidden">
+            </div>
+
+            <!-- Vista de desafío random -->
+            <div id="random-challenge-view-large" class="random-challenge-view-large hidden">
+                <div class="challenge-card-large">
+                    <div class="challenge-icon-large">🎲</div>
+                    <h3 id="challenge-title-large" class="challenge-title-large">Cargando desafío...</h3>
+                    <p id="challenge-description-large" class="challenge-description-large"></p>
+                    <div class="challenge-difficulty-large">
+                        <span id="challenge-difficulty-badge-large" class="difficulty-badge-large">⭐ Fácil</span>
+                        <span id="challenge-points-large" class="challenge-points-large">+10 puntos</span>
+                    </div>
+                    <div class="challenge-actions-large">
+                        <button id="accept-challenge-btn-large" class="btn btn-primary btn-large">¡Aceptar!</button>
+                        <button id="reroll-challenge-btn-large" class="btn btn-secondary btn-large">Otro desafío</button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="add-favor-btn-large" class="btn btn-primary btn-large" style="margin-top: 2rem;">
+                + Crear Favor
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de creación de favor -->
+<div id="create-favor-modal" class="favors-fullscreen-modal hidden">
+    <div class="favors-modal-overlay"></div>
+    <div class="favors-modal-container favors-modal-small">
+        <div class="favors-modal-header">
+            <h2>✨ Crear Desafío</h2>
+            <button id="close-create-favor-modal-btn" class="favors-close-btn">✕</button>
+        </div>
+        
+        <div class="favors-modal-content">
+            <input type="text" id="coupon-title-input-large" class="input-large" placeholder="Título del desafío (ej: Masaje de 30 min)" maxlength="60">
+            <textarea id="coupon-description-input-large" class="textarea-large" placeholder="Descripción detallada..." rows="4" maxlength="200"></textarea>
+            
+            <label class="label-large">Dificultad & Puntos:</label>
+            <div class="difficulty-picker-large">
+                <button class="difficulty-option-large" data-difficulty="easy" data-points="10">
+                    <span class="diff-emoji-large">⭐</span>
+                    <span class="diff-label-large">Fácil</span>
+                    <span class="diff-points-large">10 pts</span>
+                </button>
+                <button class="difficulty-option-large selected" data-difficulty="medium" data-points="25">
+                    <span class="diff-emoji-large">⭐⭐</span>
+                    <span class="diff-label-large">Medio</span>
+                    <span class="diff-points-large">25 pts</span>
+                </button>
+                <button class="difficulty-option-large" data-difficulty="hard" data-points="50">
+                    <span class="diff-emoji-large">⭐⭐⭐</span>
+                    <span class="diff-label-large">Difícil</span>
+                    <span class="diff-points-large">50 pts</span>
+                </button>
+            </div>
+
+            <label class="label-large">Categoría:</label>
+            <div class="category-picker-large">
+                <button class="category-option-large selected" data-category="romantic">💕 Romántico</button>
+                <button class="category-option-large" data-category="fun">🎉 Divertido</button>
+                <button class="category-option-large" data-category="help">🤝 Ayuda</button>
+                <button class="category-option-large" data-category="surprise">🎁 Sorpresa</button>
+            </div>
+
+            <button id="save-coupon-btn-large" class="btn btn-primary btn-block btn-large">✨ Crear Desafío</button>
+        </div>
     </div>
 </div>
 
