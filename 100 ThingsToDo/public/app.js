@@ -1119,7 +1119,16 @@ async function loadPlans() {
     } else {
       plansContainer.style.display = 'grid';
       emptyState.style.display = 'none';
-      renderPlans(plans);
+      
+      // Cargar tareas para cada plan
+      const plansWithTasks = await Promise.all(
+        plans.map(async (plan) => {
+          const planWithTasks = await getPlanWithTasks(plan.id);
+          return planWithTasks || plan;
+        })
+      );
+      
+      renderPlans(plansWithTasks);
     }
   } catch (error) {
     console.error('Error al cargar planes:', error);
@@ -1137,6 +1146,16 @@ function renderPlans(plans) {
     // entrance animation stagger
     planCard.classList.add('plan-card-enter');
     planCard.style.animationDelay = `${idx * 60}ms`;
+    
+    // Verificar si el plan está completado
+    const totalTasks = plan.tasks ? plan.tasks.length : 0;
+    const completedTasks = plan.tasks ? plan.tasks.filter(t => t.completed).length : 0;
+    const isCompleted = totalTasks > 0 && completedTasks === totalTasks;
+    
+    if (isCompleted) {
+      planCard.classList.add('plan-card-completed');
+    }
+    
     // El clic principal sigue navegando al detalle
     planCard.onclick = (e) => {
       // Evita que el clic en los botones de acción navegue
