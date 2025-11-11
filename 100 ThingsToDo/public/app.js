@@ -5026,15 +5026,11 @@ const placeInfoBody = document.getElementById('place-info-body');
 const closePlaceInfoBtn = document.getElementById('close-place-info-btn');
 
 function showPlaceInfo(place) {
-  console.log('showPlaceInfo llamada con:', place);
-  console.log('Fotos del lugar:', place.photos);
-  
   const icon = place.status === 'visited' ? '📍' : '✈️';
   placeInfoTitle.textContent = `${icon} ${place.name}`;
   
   let photosHtml = '';
   if (place.photos && place.photos.length > 0) {
-    console.log('Generando HTML para', place.photos.length, 'fotos');
     photosHtml = `
       <div class="place-info-photos">
         ${place.photos.map(photo => `
@@ -5042,8 +5038,6 @@ function showPlaceInfo(place) {
         `).join('')}
       </div>
     `;
-  } else {
-    console.log('No hay fotos para mostrar');
   }
   
   placeInfoBody.innerHTML = `
@@ -5069,6 +5063,14 @@ function showPlaceInfo(place) {
   `;
   
   placeInfoModal.style.display = 'flex';
+  
+  // Agregar event listeners a las fotos para el lightbox
+  if (place.photos && place.photos.length > 0) {
+    const photoElements = placeInfoBody.querySelectorAll('.place-info-photo');
+    photoElements.forEach((img, index) => {
+      img.onclick = () => openLightbox(place.photos, index);
+    });
+  }
 }
 
 if (closePlaceInfoBtn) {
@@ -5082,6 +5084,90 @@ if (placeInfoModal) {
     placeInfoModal.style.display = 'none';
   });
 }
+
+// Lightbox para ver fotos en grande
+const lightbox = document.getElementById('photo-lightbox');
+const lightboxImage = document.getElementById('lightbox-image');
+const lightboxClose = document.getElementById('lightbox-close');
+const lightboxPrev = document.getElementById('lightbox-prev');
+const lightboxNext = document.getElementById('lightbox-next');
+const lightboxCounter = document.getElementById('lightbox-counter');
+
+let currentPhotos = [];
+let currentPhotoIndex = 0;
+
+function openLightbox(photos, index) {
+  currentPhotos = photos;
+  currentPhotoIndex = index;
+  showCurrentPhoto();
+  lightbox.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  lightbox.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function showCurrentPhoto() {
+  if (currentPhotos.length === 0) return;
+  
+  lightboxImage.src = currentPhotos[currentPhotoIndex];
+  lightboxCounter.textContent = `${currentPhotoIndex + 1} / ${currentPhotos.length}`;
+  
+  // Mostrar/ocultar botones de navegación
+  if (currentPhotos.length <= 1) {
+    lightboxPrev.style.display = 'none';
+    lightboxNext.style.display = 'none';
+  } else {
+    lightboxPrev.style.display = 'flex';
+    lightboxNext.style.display = 'flex';
+  }
+}
+
+function nextPhoto() {
+  currentPhotoIndex = (currentPhotoIndex + 1) % currentPhotos.length;
+  showCurrentPhoto();
+}
+
+function prevPhoto() {
+  currentPhotoIndex = (currentPhotoIndex - 1 + currentPhotos.length) % currentPhotos.length;
+  showCurrentPhoto();
+}
+
+if (lightboxClose) {
+  lightboxClose.onclick = closeLightbox;
+}
+
+if (lightboxNext) {
+  lightboxNext.onclick = nextPhoto;
+}
+
+if (lightboxPrev) {
+  lightboxPrev.onclick = prevPhoto;
+}
+
+// Cerrar lightbox al hacer clic en el fondo
+if (lightbox) {
+  lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) {
+      closeLightbox();
+    }
+  });
+}
+
+// Navegación con teclado
+document.addEventListener('keydown', (e) => {
+  if (!lightbox.classList.contains('active')) return;
+  
+  if (e.key === 'Escape') {
+    closeLightbox();
+  } else if (e.key === 'ArrowRight') {
+    nextPhoto();
+  } else if (e.key === 'ArrowLeft') {
+    prevPhoto();
+  }
+});
 
 // Abrir modal del mapa
 if (openMapModalBtn) {
@@ -5672,7 +5758,6 @@ function updateGlobeMarkers() {
     size: 1
   }));
   
-  console.log('Marcadores actualizados:', markers);
   globe.pointsData(markers);
 }
 
