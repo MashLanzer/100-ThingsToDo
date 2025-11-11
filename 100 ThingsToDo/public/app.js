@@ -4971,25 +4971,126 @@ const placeTabs = document.querySelectorAll('.places-tab');
 const visitedCount = document.getElementById('visited-count');
 const wishlistCount = document.getElementById('wishlist-count');
 
-// Canvas para el globo
-const globeCanvas = document.getElementById('globe-canvas');
-let globeCtx = null;
-let globeAnimationId = null;
-let globeRotation = 0;
-let isRotating = false;
+// Globo 3D
+let globe = null;
 let currentTab = 'visited';
 let editingPlaceId = null;
+let allPlacesData = [];
+let isAutoRotate = false;
+let selectedPhotos = [];
 
-if (globeCanvas) {
-  globeCtx = globeCanvas.getContext('2d');
+// Modal de confirmación
+const confirmModal = document.getElementById('confirm-modal');
+const confirmModalTitle = document.getElementById('confirm-modal-title');
+const confirmModalMessage = document.getElementById('confirm-modal-message');
+const confirmModalCancel = document.getElementById('confirm-modal-cancel');
+const confirmModalConfirm = document.getElementById('confirm-modal-confirm');
+let confirmCallback = null;
+
+function showConfirmDialog(title, message, onConfirm) {
+  confirmModalTitle.textContent = title;
+  confirmModalMessage.textContent = message;
+  confirmCallback = onConfirm;
+  confirmModal.style.display = 'flex';
+}
+
+if (confirmModalCancel) {
+  confirmModalCancel.onclick = () => {
+    confirmModal.style.display = 'none';
+    confirmCallback = null;
+  };
+}
+
+if (confirmModalConfirm) {
+  confirmModalConfirm.onclick = () => {
+    if (confirmCallback) {
+      confirmCallback();
+    }
+    confirmModal.style.display = 'none';
+    confirmCallback = null;
+  };
+}
+
+// Cerrar modal de confirmación al hacer click en overlay
+if (confirmModal) {
+  confirmModal.querySelector('.modal-overlay')?.addEventListener('click', () => {
+    confirmModal.style.display = 'none';
+    confirmCallback = null;
+  });
+}
+
+// Modal de información de lugar
+const placeInfoModal = document.getElementById('place-info-modal');
+const placeInfoTitle = document.getElementById('place-info-title');
+const placeInfoBody = document.getElementById('place-info-body');
+const closePlaceInfoBtn = document.getElementById('close-place-info-btn');
+
+function showPlaceInfo(place) {
+  console.log('showPlaceInfo llamada con:', place);
+  console.log('Fotos del lugar:', place.photos);
+  
+  const icon = place.status === 'visited' ? '📍' : '✈️';
+  placeInfoTitle.textContent = `${icon} ${place.name}`;
+  
+  let photosHtml = '';
+  if (place.photos && place.photos.length > 0) {
+    console.log('Generando HTML para', place.photos.length, 'fotos');
+    photosHtml = `
+      <div class="place-info-photos">
+        ${place.photos.map(photo => `
+          <img src="${photo}" alt="Foto de ${place.name}" class="place-info-photo">
+        `).join('')}
+      </div>
+    `;
+  } else {
+    console.log('No hay fotos para mostrar');
+  }
+  
+  placeInfoBody.innerHTML = `
+    <div class="place-info-content">
+      <div class="place-info-row">
+        <strong>🌍 País:</strong>
+        <span>${place.country}</span>
+      </div>
+      ${place.date ? `
+        <div class="place-info-row">
+          <strong>📅 Fecha:</strong>
+          <span>${place.date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        </div>
+      ` : ''}
+      ${place.note ? `
+        <div class="place-info-note">
+          <strong>💭 Recuerdo:</strong>
+          <p>${place.note}</p>
+        </div>
+      ` : ''}
+      ${photosHtml}
+    </div>
+  `;
+  
+  placeInfoModal.style.display = 'flex';
+}
+
+if (closePlaceInfoBtn) {
+  closePlaceInfoBtn.onclick = () => {
+    placeInfoModal.style.display = 'none';
+  };
+}
+
+if (placeInfoModal) {
+  placeInfoModal.querySelector('.modal-overlay')?.addEventListener('click', () => {
+    placeInfoModal.style.display = 'none';
+  });
 }
 
 // Abrir modal del mapa
 if (openMapModalBtn) {
   openMapModalBtn.onclick = () => {
     mapModal.style.display = 'flex';
-    initGlobe();
-    loadPlaces();
+    setTimeout(() => {
+      initGlobe();
+      loadPlaces();
+    }, 100);
   };
 }
 
@@ -4997,7 +5098,6 @@ if (openMapModalBtn) {
 if (closeMapModalBtn) {
   closeMapModalBtn.onclick = () => {
     mapModal.style.display = 'none';
-    stopGlobeAnimation();
   };
 }
 
@@ -5015,16 +5115,182 @@ placeTabs.forEach(tab => {
 if (addPlaceBtn) {
   addPlaceBtn.onclick = () => {
     editingPlaceId = null;
+    selectedPhotos = [];
     document.getElementById('place-form-title').textContent = '✨ Agregar Lugar';
+    document.getElementById('place-search-input').value = '';
     document.getElementById('place-name-input').value = '';
     document.getElementById('place-country-input').value = '';
     document.getElementById('place-lat-input').value = '';
     document.getElementById('place-lng-input').value = '';
     document.getElementById('place-note-input').value = '';
     document.getElementById('place-date-input').value = '';
+    document.getElementById('search-results').style.display = 'none';
+    document.getElementById('photos-preview').innerHTML = '';
     document.querySelector('input[name="place-status"][value="visited"]').checked = true;
+    updatePhotosFieldVisibility();
     placeFormModal.style.display = 'flex';
   };
+}
+
+// Controlar visibilidad del campo de fotos según el estado
+const statusRadios = document.querySelectorAll('input[name="place-status"]');
+statusRadios.forEach(radio => {
+  radio.addEventListener('change', updatePhotosFieldVisibility);
+});
+
+function updatePhotosFieldVisibility() {
+  const status = document.querySelector('input[name="place-status"]:checked')?.value;
+  const photosGroup = document.getElementById('photos-group');
+  if (photosGroup) {
+    photosGroup.style.display = status === 'visited' ? 'block' : 'none';
+  }
+}
+
+// Manejo de fotos
+const photosInput = document.getElementById('place-photos-input');
+const photosPreview = document.getElementById('photos-preview');
+const addPhotoBtn = document.getElementById('add-photo-btn');
+
+// Botón para abrir selector de archivos
+if (addPhotoBtn && photosInput) {
+  addPhotoBtn.onclick = () => {
+    photosInput.click();
+  };
+}
+
+if (photosInput) {
+  photosInput.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          selectedPhotos.push({
+            file: file,
+            dataUrl: event.target.result
+          });
+          renderPhotosPreview();
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    photosInput.value = ''; // Reset input
+  });
+}
+
+function renderPhotosPreview() {
+  if (!photosPreview) return;
+  
+  photosPreview.innerHTML = selectedPhotos.map((photo, index) => `
+    <div class="photo-preview-item">
+      <img src="${photo.dataUrl}" alt="Foto ${index + 1}">
+      <button type="button" class="photo-preview-remove" data-index="${index}">×</button>
+    </div>
+  `).join('');
+  
+  // Event listeners para eliminar fotos
+  photosPreview.querySelectorAll('.photo-preview-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const index = parseInt(btn.dataset.index);
+      selectedPhotos.splice(index, 1);
+      renderPhotosPreview();
+    });
+  });
+}
+
+// Búsqueda de ubicaciones
+const searchLocationBtn = document.getElementById('search-location-btn');
+const searchInput = document.getElementById('place-search-input');
+const searchResults = document.getElementById('search-results');
+
+if (searchLocationBtn) {
+  searchLocationBtn.onclick = async () => {
+    const query = searchInput.value.trim();
+    if (!query) {
+      showNotification({
+        title: 'Búsqueda vacía',
+        message: 'Por favor escribe una ubicación para buscar',
+        icon: '🔍',
+        type: 'warning'
+      });
+      return;
+    }
+    
+    searchLocationBtn.disabled = true;
+    searchLocationBtn.textContent = 'Buscando...';
+    
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
+      const results = await response.json();
+      
+      if (results.length === 0) {
+        searchResults.innerHTML = '<div style="padding: 1rem; text-align: center; color: rgba(139, 111, 71, 0.6);">No se encontraron resultados</div>';
+        searchResults.style.display = 'block';
+      } else {
+        displaySearchResults(results);
+      }
+    } catch (error) {
+      console.error('Error al buscar ubicación:', error);
+      showNotification({
+        title: 'Error de búsqueda',
+        message: 'Error al buscar la ubicación. Por favor intenta de nuevo.',
+        icon: '❌',
+        type: 'error'
+      });
+    } finally {
+      searchLocationBtn.disabled = false;
+      searchLocationBtn.textContent = 'Buscar Coordenadas';
+    }
+  };
+}
+
+// Enter para buscar
+if (searchInput) {
+  searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      searchLocationBtn.click();
+    }
+  });
+}
+
+function displaySearchResults(results) {
+  searchResults.innerHTML = results.map(result => `
+    <div class="search-result-item" data-lat="${result.lat}" data-lng="${result.lon}" data-name="${result.display_name}">
+      <span class="search-result-icon">📍</span>
+      <div class="search-result-info">
+        <div class="search-result-name">${result.name || result.display_name.split(',')[0]}</div>
+        <div class="search-result-address">${result.display_name}</div>
+      </div>
+    </div>
+  `).join('');
+  searchResults.style.display = 'block';
+  
+  // Event listeners para seleccionar resultado
+  searchResults.querySelectorAll('.search-result-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const lat = parseFloat(item.dataset.lat);
+      const lng = parseFloat(item.dataset.lng);
+      const fullAddress = item.dataset.name;
+      const addressParts = fullAddress.split(',').map(s => s.trim());
+      
+      // Extraer nombre y país del resultado
+      const name = addressParts[0];
+      const country = addressParts[addressParts.length - 1];
+      
+      document.getElementById('place-name-input').value = name;
+      document.getElementById('place-country-input').value = country;
+      document.getElementById('place-lat-input').value = lat.toFixed(6);
+      document.getElementById('place-lng-input').value = lng.toFixed(6);
+      
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+      
+      // Mostrar en el globo
+      if (globe) {
+        globe.pointOfView({ lat, lng, altitude: 1.5 }, 1000);
+      }
+    });
+  });
 }
 
 // Cerrar formulario
@@ -5052,34 +5318,99 @@ if (savePlaceBtn) {
     const status = document.querySelector('input[name="place-status"]:checked').value;
     
     if (!name || !country) {
-      alert('Por favor completa el nombre y país');
+      showNotification({
+        title: 'Campos incompletos',
+        message: 'Por favor completa el nombre y país',
+        icon: '⚠️',
+        type: 'warning'
+      });
       return;
     }
     
-    const placeData = {
-      name,
-      country,
-      lat: lat || 0,
-      lng: lng || 0,
-      note,
-      status,
-      date: dateStr ? new Date(dateStr) : null,
-      createdAt: new Date(),
-    };
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+      showNotification({
+        title: 'Coordenadas requeridas',
+        message: 'Por favor usa el buscador para obtener las coordenadas del lugar',
+        icon: '🔍',
+        type: 'warning'
+      });
+      return;
+    }
+    
+    savePlaceBtn.disabled = true;
+    savePlaceBtn.textContent = 'Guardando...';
     
     try {
+      const placeData = {
+        name,
+        country,
+        lat,
+        lng,
+        note,
+        status,
+        date: dateStr ? new Date(dateStr) : null,
+        createdAt: new Date(),
+      };
+      
+      // Manejar fotos
+      if (status === 'visited') {
+        // Si estamos editando, obtener las fotos existentes
+        let existingPhotos = [];
+        if (editingPlaceId) {
+          const existingPlace = allPlacesData.find(p => p.id === editingPlaceId);
+          existingPhotos = existingPlace?.photos || [];
+        }
+        
+        // Subir nuevas fotos si las hay
+        if (selectedPhotos.length > 0) {
+          const newPhotoUrls = await uploadPlacePhotos(selectedPhotos);
+          placeData.photos = [...existingPhotos, ...newPhotoUrls];
+        } else {
+          placeData.photos = existingPhotos;
+        }
+      }
+      
       if (editingPlaceId) {
         await updatePlace(editingPlaceId, placeData);
       } else {
         await createPlace(placeData);
       }
+      
       placeFormModal.style.display = 'none';
-      loadPlaces();
+      selectedPhotos = [];
+      await loadPlaces();
+      updateGlobeMarkers();
     } catch (error) {
       console.error('Error al guardar lugar:', error);
-      alert('Error al guardar el lugar');
+      showNotification({
+        title: 'Error al guardar',
+        message: 'No se pudo guardar el lugar. Intenta de nuevo.',
+        icon: '❌',
+        type: 'error'
+      });
+    } finally {
+      savePlaceBtn.disabled = false;
+      savePlaceBtn.textContent = 'Guardar Lugar';
     }
   };
+}
+
+// Subir fotos a Firebase Storage
+async function uploadPlacePhotos(photos) {
+  const photoUrls = [];
+  
+  for (const photo of photos) {
+    try {
+      const storageRef = ref(storage, `couples/${currentCoupleId}/places/${Date.now()}_${photo.file.name}`);
+      await uploadBytes(storageRef, photo.file);
+      const url = await getDownloadURL(storageRef);
+      photoUrls.push(url);
+    } catch (error) {
+      console.error('Error al subir foto:', error);
+    }
+  }
+  
+  return photoUrls;
 }
 
 // Funciones de Firestore
@@ -5112,20 +5443,21 @@ async function loadPlaces() {
     const q = query(placesRef, orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
     
-    const allPlaces = snapshot.docs.map(doc => ({
+    allPlacesData = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
       date: doc.data().date?.toDate(),
       createdAt: doc.data().createdAt?.toDate(),
     }));
     
-    const places = allPlaces.filter(p => p.status === currentTab);
+    const places = allPlacesData.filter(p => p.status === currentTab);
     
     // Actualizar contadores
-    visitedCount.textContent = allPlaces.filter(p => p.status === 'visited').length;
-    wishlistCount.textContent = allPlaces.filter(p => p.status === 'wishlist').length;
+    visitedCount.textContent = allPlacesData.filter(p => p.status === 'visited').length;
+    wishlistCount.textContent = allPlacesData.filter(p => p.status === 'wishlist').length;
     
     renderPlaces(places);
+    updateGlobeMarkers();
   } catch (error) {
     console.error('Error al cargar lugares:', error);
   }
@@ -5181,6 +5513,7 @@ function renderPlaces(places) {
       const place = places.find(p => p.id === placeId);
       if (place) {
         editingPlaceId = placeId;
+        selectedPhotos = [];
         document.getElementById('place-form-title').textContent = '✏️ Editar Lugar';
         document.getElementById('place-name-input').value = place.name;
         document.getElementById('place-country-input').value = place.country;
@@ -5188,7 +5521,22 @@ function renderPlaces(places) {
         document.getElementById('place-lng-input').value = place.lng || '';
         document.getElementById('place-note-input').value = place.note || '';
         document.getElementById('place-date-input').value = place.date ? place.date.toISOString().split('T')[0] : '';
+        
+        // Mostrar fotos existentes como preview (sin permitir eliminarlas por ahora)
+        const photosPreview = document.getElementById('photos-preview');
+        if (place.photos && place.photos.length > 0) {
+          photosPreview.innerHTML = place.photos.map((photoUrl) => `
+            <div class="photo-preview-item">
+              <img src="${photoUrl}" alt="Foto existente">
+              <span class="photo-existing-badge">✓</span>
+            </div>
+          `).join('');
+        } else {
+          photosPreview.innerHTML = '';
+        }
+        
         document.querySelector(`input[name="place-status"][value="${place.status}"]`).checked = true;
+        updatePhotosFieldVisibility();
         placeFormModal.style.display = 'flex';
       }
     };
@@ -5197,160 +5545,135 @@ function renderPlaces(places) {
   document.querySelectorAll('.delete-place-btn').forEach(btn => {
     btn.onclick = async (e) => {
       e.stopPropagation();
-      if (confirm('¿Seguro que quieres eliminar este lugar?')) {
-        await deletePlace(btn.dataset.id);
-        loadPlaces();
-      }
+      const placeId = btn.dataset.id;
+      const place = places.find(p => p.id === placeId);
+      showConfirmDialog(
+        '🗑️ Eliminar Lugar',
+        `¿Estás seguro de eliminar "${place?.name || 'este lugar'}"?`,
+        async () => {
+          await deletePlace(placeId);
+          await loadPlaces();
+        }
+      );
     };
+  });
+  
+  // Click en tarjeta para volar al lugar en el globo
+  document.querySelectorAll('.place-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.place-action-btn')) return;
+      const placeId = card.dataset.id;
+      const place = allPlacesData.find(p => p.id === placeId);
+      if (place && globe) {
+        globe.pointOfView({
+          lat: place.lat,
+          lng: place.lng,
+          altitude: 1.5
+        }, 1000);
+      }
+    });
   });
 }
 
-// Globo 3D
+// Globo 3D con Globe.GL
 function initGlobe() {
-  if (!globeCanvas || !globeCtx) return;
+  if (globe) return; // Ya está inicializado
   
-  // Ajustar tamaño del canvas
-  const container = globeCanvas.parentElement;
-  globeCanvas.width = container.clientWidth;
-  globeCanvas.height = container.clientHeight;
+  const container = document.getElementById('globe-viz');
+  if (!container) return;
   
-  startGlobeAnimation();
+  globe = Globe()
+    (container)
+    .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+    .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
+    .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+    .showAtmosphere(true)
+    .atmosphereColor('#FFB6D9')
+    .atmosphereAltitude(0.15)
+    .pointAltitude(0.01)
+    .pointRadius(0.6)
+    .pointColor(d => d.status === 'visited' ? '#FF6B9D' : '#FFA500')
+    .pointLabel(d => `
+      <div style="
+        background: linear-gradient(135deg, #FFB6D9 0%, #FF8DC7 100%);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-family: 'Fredoka', sans-serif;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      ">
+        <strong>${d.status === 'visited' ? '📍' : '✈️'} ${d.name}</strong><br/>
+        ${d.country}<br/>
+        ${d.note ? `<em style="font-size: 12px;">"${d.note}"</em>` : ''}
+      </div>
+    `)
+    .onPointClick(d => {
+      showPlaceInfo(d);
+    });
   
-  // Controles
+  // Configurar controles
+  const controls = globe.controls();
+  controls.autoRotate = false;
+  controls.autoRotateSpeed = 0.5;
+  controls.enableZoom = true;
+  controls.minDistance = 150;
+  controls.maxDistance = 500;
+  
+  // Animación inicial - centrado mejor
+  globe.pointOfView({ lat: 15, lng: 10, altitude: 2 }, 0);
+  
+  // Ajustar altura de la cámara para mejor centrado
+  setTimeout(() => {
+    const scene = globe.scene();
+    if (scene && scene.camera) {
+      scene.camera.position.y = 0;
+    }
+  }, 100);
+  
+  // Controles personalizados
   document.getElementById('rotate-globe-btn')?.addEventListener('click', () => {
-    isRotating = !isRotating;
+    isAutoRotate = !isAutoRotate;
+    controls.autoRotate = isAutoRotate;
+    const btn = document.getElementById('rotate-globe-btn');
+    btn.style.background = isAutoRotate ? '#FFB6D9' : '';
   });
   
   document.getElementById('reset-globe-btn')?.addEventListener('click', () => {
-    globeRotation = 0;
-    isRotating = false;
+    globe.pointOfView({ lat: 15, lng: 10, altitude: 2 }, 1000);
+    isAutoRotate = false;
+    controls.autoRotate = false;
+    document.getElementById('rotate-globe-btn').style.background = '';
+  });
+  
+  document.getElementById('zoom-in-btn')?.addEventListener('click', () => {
+    const pov = globe.pointOfView();
+    globe.pointOfView({ ...pov, altitude: Math.max(pov.altitude - 0.3, 0.5) }, 300);
+  });
+  
+  document.getElementById('zoom-out-btn')?.addEventListener('click', () => {
+    const pov = globe.pointOfView();
+    globe.pointOfView({ ...pov, altitude: Math.min(pov.altitude + 0.3, 3) }, 300);
   });
 }
 
-function drawGlobe() {
-  if (!globeCtx || !globeCanvas) return;
+function updateGlobeMarkers() {
+  if (!globe) return;
   
-  const centerX = globeCanvas.width / 2;
-  const centerY = globeCanvas.height / 2;
-  const radius = Math.min(centerX, centerY) * 0.7;
+  const markers = allPlacesData.map(place => ({
+    lat: place.lat,
+    lng: place.lng,
+    name: place.name,
+    country: place.country,
+    note: place.note,
+    status: place.status,
+    date: place.date,
+    photos: place.photos || [],
+    size: 1
+  }));
   
-  // Limpiar canvas
-  globeCtx.clearRect(0, 0, globeCanvas.width, globeCanvas.height);
-  
-  // Dibujar sombra del globo
-  globeCtx.beginPath();
-  globeCtx.arc(centerX, centerY + 10, radius, 0, Math.PI * 2);
-  globeCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-  globeCtx.fill();
-  
-  // Dibujar globo base
-  const gradient = globeCtx.createRadialGradient(
-    centerX - radius * 0.3, centerY - radius * 0.3, 0,
-    centerX, centerY, radius
-  );
-  gradient.addColorStop(0, '#E0F7FA');
-  gradient.addColorStop(0.5, '#81D4FA');
-  gradient.addColorStop(1, '#0288D1');
-  
-  globeCtx.beginPath();
-  globeCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  globeCtx.fillStyle = gradient;
-  globeCtx.fill();
-  
-  // Borde kawaii
-  globeCtx.strokeStyle = '#FFB6D9';
-  globeCtx.lineWidth = 4;
-  globeCtx.stroke();
-  
-  // Dibujar líneas de latitud/longitud
-  globeCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-  globeCtx.lineWidth = 1;
-  
-  // Latitudes
-  for (let i = 1; i < 6; i++) {
-    const y = centerY - radius + (radius * 2 * i / 6);
-    const width = Math.sqrt(radius * radius - Math.pow(y - centerY, 2)) * 2;
-    globeCtx.beginPath();
-    globeCtx.ellipse(centerX, y, width / 2, width * 0.1, 0, 0, Math.PI * 2);
-    globeCtx.stroke();
-  }
-  
-  // Longitudes
-  for (let i = 0; i < 12; i++) {
-    const angle = (i * Math.PI / 6) + globeRotation;
-    globeCtx.save();
-    globeCtx.translate(centerX, centerY);
-    globeCtx.rotate(angle);
-    globeCtx.beginPath();
-    globeCtx.ellipse(0, 0, radius * 0.3, radius, 0, 0, Math.PI * 2);
-    globeCtx.restore();
-    globeCtx.stroke();
-  }
-  
-  // Dibujar continentes simplificados (decorativo)
-  drawContinents(centerX, centerY, radius);
-  
-  // Brillo
-  const highlightGradient = globeCtx.createRadialGradient(
-    centerX - radius * 0.4, centerY - radius * 0.4, 0,
-    centerX - radius * 0.4, centerY - radius * 0.4, radius * 0.6
-  );
-  highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
-  highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-  
-  globeCtx.beginPath();
-  globeCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  globeCtx.fillStyle = highlightGradient;
-  globeCtx.fill();
-}
-
-function drawContinents(cx, cy, r) {
-  globeCtx.fillStyle = '#4CAF50';
-  globeCtx.globalAlpha = 0.6;
-  
-  // Formas aleatorias simulando continentes
-  const shapes = [
-    { x: 0.3, y: -0.2, size: 0.3 },
-    { x: -0.4, y: 0.1, size: 0.25 },
-    { x: 0.2, y: 0.4, size: 0.2 },
-    { x: -0.1, y: -0.5, size: 0.15 },
-  ];
-  
-  shapes.forEach(shape => {
-    globeCtx.beginPath();
-    const x = cx + r * shape.x;
-    const y = cy + r * shape.y;
-    const size = r * shape.size;
-    
-    globeCtx.ellipse(x, y, size, size * 0.7, Math.random() * Math.PI, 0, Math.PI * 2);
-    globeCtx.fill();
-  });
-  
-  globeCtx.globalAlpha = 1;
-}
-
-function animateGlobe() {
-  drawGlobe();
-  
-  if (isRotating) {
-    globeRotation += 0.005;
-  }
-  
-  globeAnimationId = requestAnimationFrame(animateGlobe);
-}
-
-function startGlobeAnimation() {
-  if (!globeAnimationId) {
-    isRotating = true;
-    animateGlobe();
-  }
-}
-
-function stopGlobeAnimation() {
-  if (globeAnimationId) {
-    cancelAnimationFrame(globeAnimationId);
-    globeAnimationId = null;
-  }
+  console.log('Marcadores actualizados:', markers);
+  globe.pointsData(markers);
 }
 
 // ============================================
