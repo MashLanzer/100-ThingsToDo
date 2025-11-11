@@ -163,6 +163,14 @@
                             </svg>
                         </button>
 
+                        <button id="open-map-modal-btn" class="btn-icon" title="Mapa de Aventuras">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+                                <line x1="8" y1="2" x2="8" y2="18"></line>
+                                <line x1="16" y1="6" x2="16" y2="22"></line>
+                            </svg>
+                        </button>
+
                         <button id="open-favors-modal-btn" class="btn-icon" title="Favores & Desafíos">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
@@ -432,6 +440,161 @@
 
 
     <!-- index.html -->
+
+<!-- ============================================ -->
+<!-- ======> MODAL MAPA DE AVENTURAS <======= -->
+<!-- ============================================ -->
+<div id="map-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h2 class="modal-title">🗺️ Mapa de Aventuras</h2>
+            <button id="close-map-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="modal-body map-modal-body">
+            <!-- Globo terráqueo 3D -->
+            <div class="globe-container">
+                <canvas id="globe-canvas"></canvas>
+                
+                <!-- Controles del globo -->
+                <div class="globe-controls">
+                    <button id="rotate-globe-btn" class="btn-icon-small globe-control-btn" title="Rotar automático">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                        </svg>
+                    </button>
+                    <button id="reset-globe-btn" class="btn-icon-small globe-control-btn" title="Resetear vista">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Kawaii decorations -->
+                <div class="globe-decoration globe-star globe-star-1">✨</div>
+                <div class="globe-decoration globe-star globe-star-2">💫</div>
+                <div class="globe-decoration globe-star globe-star-3">⭐</div>
+                <div class="globe-decoration globe-heart globe-heart-1">💕</div>
+                <div class="globe-decoration globe-heart globe-heart-2">💖</div>
+            </div>
+            
+            <!-- Panel de lugares -->
+            <div class="places-panel">
+                <div class="places-header">
+                    <h3 class="places-title">Nuestros Lugares 💝</h3>
+                    <button id="add-place-btn" class="btn btn-primary btn-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Agregar Lugar
+                    </button>
+                </div>
+                
+                <div class="places-tabs">
+                    <button class="places-tab active" data-tab="visited">
+                        <span class="tab-icon">📍</span>
+                        <span>Visitados</span>
+                        <span class="tab-badge" id="visited-count">0</span>
+                    </button>
+                    <button class="places-tab" data-tab="wishlist">
+                        <span class="tab-icon">✈️</span>
+                        <span>Por Visitar</span>
+                        <span class="tab-badge" id="wishlist-count">0</span>
+                    </button>
+                </div>
+                
+                <div id="places-list" class="places-list">
+                    <!-- Las tarjetas de lugares se agregarán aquí -->
+                    <div class="places-empty">
+                        <div class="empty-icon">🌍</div>
+                        <p>Aún no han marcado lugares</p>
+                        <p class="empty-subtitle">¡Empiecen a crear sus recuerdos!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para agregar/editar lugar -->
+<div id="place-form-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 class="modal-title">
+                <span id="place-form-title">✨ Agregar Lugar</span>
+            </h2>
+            <button id="close-place-form-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Nombre del Lugar</label>
+                <input type="text" id="place-name-input" class="input" placeholder="Ej: París, Torre Eiffel" maxlength="100">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">País</label>
+                <input type="text" id="place-country-input" class="input" placeholder="Ej: Francia" maxlength="50">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Latitud</label>
+                    <input type="number" id="place-lat-input" class="input" placeholder="48.8584" step="0.0001">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Longitud</label>
+                    <input type="number" id="place-lng-input" class="input" placeholder="2.2945" step="0.0001">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Estado</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="place-status" value="visited" checked>
+                        <span class="radio-custom"></span>
+                        <span>Ya visitado 📍</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="place-status" value="wishlist">
+                        <span class="radio-custom"></span>
+                        <span>Queremos ir ✈️</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Recuerdo o Nota (opcional)</label>
+                <textarea id="place-note-input" class="textarea" placeholder="Escribe un recuerdo especial de este lugar..." maxlength="500" rows="4"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Fecha (opcional)</label>
+                <input type="date" id="place-date-input" class="input">
+            </div>
+            
+            <div class="modal-actions">
+                <button id="cancel-place-btn" class="btn btn-outline">Cancelar</button>
+                <button id="save-place-btn" class="btn btn-primary">Guardar Lugar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- ============================================ -->
 <!-- ======> MODAL RESULTADO DE LA RULETA <======= -->

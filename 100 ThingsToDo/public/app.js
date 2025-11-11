@@ -4955,6 +4955,405 @@ function initWheel() {
 }
 
 // ============================================
+// MAPA DE AVENTURAS
+// ============================================
+
+const openMapModalBtn = document.getElementById('open-map-modal-btn');
+const mapModal = document.getElementById('map-modal');
+const closeMapModalBtn = document.getElementById('close-map-modal-btn');
+const placeFormModal = document.getElementById('place-form-modal');
+const closePlaceFormBtn = document.getElementById('close-place-form-btn');
+const addPlaceBtn = document.getElementById('add-place-btn');
+const savePlaceBtn = document.getElementById('save-place-btn');
+const cancelPlaceBtn = document.getElementById('cancel-place-btn');
+const placesList = document.getElementById('places-list');
+const placeTabs = document.querySelectorAll('.places-tab');
+const visitedCount = document.getElementById('visited-count');
+const wishlistCount = document.getElementById('wishlist-count');
+
+// Canvas para el globo
+const globeCanvas = document.getElementById('globe-canvas');
+let globeCtx = null;
+let globeAnimationId = null;
+let globeRotation = 0;
+let isRotating = false;
+let currentTab = 'visited';
+let editingPlaceId = null;
+
+if (globeCanvas) {
+  globeCtx = globeCanvas.getContext('2d');
+}
+
+// Abrir modal del mapa
+if (openMapModalBtn) {
+  openMapModalBtn.onclick = () => {
+    mapModal.style.display = 'flex';
+    initGlobe();
+    loadPlaces();
+  };
+}
+
+// Cerrar modal del mapa
+if (closeMapModalBtn) {
+  closeMapModalBtn.onclick = () => {
+    mapModal.style.display = 'none';
+    stopGlobeAnimation();
+  };
+}
+
+// Controles de pestañas
+placeTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    placeTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTab = tab.dataset.tab;
+    loadPlaces();
+  });
+});
+
+// Abrir formulario para agregar lugar
+if (addPlaceBtn) {
+  addPlaceBtn.onclick = () => {
+    editingPlaceId = null;
+    document.getElementById('place-form-title').textContent = '✨ Agregar Lugar';
+    document.getElementById('place-name-input').value = '';
+    document.getElementById('place-country-input').value = '';
+    document.getElementById('place-lat-input').value = '';
+    document.getElementById('place-lng-input').value = '';
+    document.getElementById('place-note-input').value = '';
+    document.getElementById('place-date-input').value = '';
+    document.querySelector('input[name="place-status"][value="visited"]').checked = true;
+    placeFormModal.style.display = 'flex';
+  };
+}
+
+// Cerrar formulario
+if (closePlaceFormBtn) {
+  closePlaceFormBtn.onclick = () => {
+    placeFormModal.style.display = 'none';
+  };
+}
+
+if (cancelPlaceBtn) {
+  cancelPlaceBtn.onclick = () => {
+    placeFormModal.style.display = 'none';
+  };
+}
+
+// Guardar lugar
+if (savePlaceBtn) {
+  savePlaceBtn.onclick = async () => {
+    const name = document.getElementById('place-name-input').value.trim();
+    const country = document.getElementById('place-country-input').value.trim();
+    const lat = parseFloat(document.getElementById('place-lat-input').value);
+    const lng = parseFloat(document.getElementById('place-lng-input').value);
+    const note = document.getElementById('place-note-input').value.trim();
+    const dateStr = document.getElementById('place-date-input').value;
+    const status = document.querySelector('input[name="place-status"]:checked').value;
+    
+    if (!name || !country) {
+      alert('Por favor completa el nombre y país');
+      return;
+    }
+    
+    const placeData = {
+      name,
+      country,
+      lat: lat || 0,
+      lng: lng || 0,
+      note,
+      status,
+      date: dateStr ? new Date(dateStr) : null,
+      createdAt: new Date(),
+    };
+    
+    try {
+      if (editingPlaceId) {
+        await updatePlace(editingPlaceId, placeData);
+      } else {
+        await createPlace(placeData);
+      }
+      placeFormModal.style.display = 'none';
+      loadPlaces();
+    } catch (error) {
+      console.error('Error al guardar lugar:', error);
+      alert('Error al guardar el lugar');
+    }
+  };
+}
+
+// Funciones de Firestore
+async function createPlace(placeData) {
+  if (!currentCoupleId) return;
+  
+  const placesRef = collection(db, 'couples', currentCoupleId, 'places');
+  await addDoc(placesRef, placeData);
+}
+
+async function updatePlace(placeId, placeData) {
+  if (!currentCoupleId) return;
+  
+  const placeRef = doc(db, 'couples', currentCoupleId, 'places', placeId);
+  await updateDoc(placeRef, { ...placeData, updatedAt: new Date() });
+}
+
+async function deletePlace(placeId) {
+  if (!currentCoupleId) return;
+  
+  const placeRef = doc(db, 'couples', currentCoupleId, 'places', placeId);
+  await deleteDoc(placeRef);
+}
+
+async function loadPlaces() {
+  if (!currentCoupleId) return;
+  
+  try {
+    const placesRef = collection(db, 'couples', currentCoupleId, 'places');
+    const q = query(placesRef, orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    
+    const allPlaces = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      date: doc.data().date?.toDate(),
+      createdAt: doc.data().createdAt?.toDate(),
+    }));
+    
+    const places = allPlaces.filter(p => p.status === currentTab);
+    
+    // Actualizar contadores
+    visitedCount.textContent = allPlaces.filter(p => p.status === 'visited').length;
+    wishlistCount.textContent = allPlaces.filter(p => p.status === 'wishlist').length;
+    
+    renderPlaces(places);
+  } catch (error) {
+    console.error('Error al cargar lugares:', error);
+  }
+}
+
+function renderPlaces(places) {
+  if (places.length === 0) {
+    placesList.innerHTML = `
+      <div class="places-empty">
+        <div class="empty-icon">🌍</div>
+        <p>Aún no han marcado lugares</p>
+        <p class="empty-subtitle">¡Empiecen a crear sus recuerdos!</p>
+      </div>
+    `;
+    return;
+  }
+  
+  placesList.innerHTML = places.map(place => `
+    <div class="place-card" data-id="${place.id}">
+      <div class="place-card-header">
+        <span class="place-pin">${place.status === 'visited' ? '📍' : '✈️'}</span>
+        <div class="place-info">
+          <div class="place-name">${place.name}</div>
+          <div class="place-country">${place.country}</div>
+          ${place.date ? `<div class="place-date">${place.date.toLocaleDateString('es-ES')}</div>` : ''}
+        </div>
+      </div>
+      ${place.note ? `<div class="place-note">"${place.note}"</div>` : ''}
+      <div class="place-actions">
+        <button class="place-action-btn edit-place-btn" data-id="${place.id}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+          Editar
+        </button>
+        <button class="place-action-btn delete-place-btn" data-id="${place.id}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          Eliminar
+        </button>
+      </div>
+    </div>
+  `).join('');
+  
+  // Event listeners
+  document.querySelectorAll('.edit-place-btn').forEach(btn => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      const placeId = btn.dataset.id;
+      const place = places.find(p => p.id === placeId);
+      if (place) {
+        editingPlaceId = placeId;
+        document.getElementById('place-form-title').textContent = '✏️ Editar Lugar';
+        document.getElementById('place-name-input').value = place.name;
+        document.getElementById('place-country-input').value = place.country;
+        document.getElementById('place-lat-input').value = place.lat || '';
+        document.getElementById('place-lng-input').value = place.lng || '';
+        document.getElementById('place-note-input').value = place.note || '';
+        document.getElementById('place-date-input').value = place.date ? place.date.toISOString().split('T')[0] : '';
+        document.querySelector(`input[name="place-status"][value="${place.status}"]`).checked = true;
+        placeFormModal.style.display = 'flex';
+      }
+    };
+  });
+  
+  document.querySelectorAll('.delete-place-btn').forEach(btn => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      if (confirm('¿Seguro que quieres eliminar este lugar?')) {
+        await deletePlace(btn.dataset.id);
+        loadPlaces();
+      }
+    };
+  });
+}
+
+// Globo 3D
+function initGlobe() {
+  if (!globeCanvas || !globeCtx) return;
+  
+  // Ajustar tamaño del canvas
+  const container = globeCanvas.parentElement;
+  globeCanvas.width = container.clientWidth;
+  globeCanvas.height = container.clientHeight;
+  
+  startGlobeAnimation();
+  
+  // Controles
+  document.getElementById('rotate-globe-btn')?.addEventListener('click', () => {
+    isRotating = !isRotating;
+  });
+  
+  document.getElementById('reset-globe-btn')?.addEventListener('click', () => {
+    globeRotation = 0;
+    isRotating = false;
+  });
+}
+
+function drawGlobe() {
+  if (!globeCtx || !globeCanvas) return;
+  
+  const centerX = globeCanvas.width / 2;
+  const centerY = globeCanvas.height / 2;
+  const radius = Math.min(centerX, centerY) * 0.7;
+  
+  // Limpiar canvas
+  globeCtx.clearRect(0, 0, globeCanvas.width, globeCanvas.height);
+  
+  // Dibujar sombra del globo
+  globeCtx.beginPath();
+  globeCtx.arc(centerX, centerY + 10, radius, 0, Math.PI * 2);
+  globeCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+  globeCtx.fill();
+  
+  // Dibujar globo base
+  const gradient = globeCtx.createRadialGradient(
+    centerX - radius * 0.3, centerY - radius * 0.3, 0,
+    centerX, centerY, radius
+  );
+  gradient.addColorStop(0, '#E0F7FA');
+  gradient.addColorStop(0.5, '#81D4FA');
+  gradient.addColorStop(1, '#0288D1');
+  
+  globeCtx.beginPath();
+  globeCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  globeCtx.fillStyle = gradient;
+  globeCtx.fill();
+  
+  // Borde kawaii
+  globeCtx.strokeStyle = '#FFB6D9';
+  globeCtx.lineWidth = 4;
+  globeCtx.stroke();
+  
+  // Dibujar líneas de latitud/longitud
+  globeCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+  globeCtx.lineWidth = 1;
+  
+  // Latitudes
+  for (let i = 1; i < 6; i++) {
+    const y = centerY - radius + (radius * 2 * i / 6);
+    const width = Math.sqrt(radius * radius - Math.pow(y - centerY, 2)) * 2;
+    globeCtx.beginPath();
+    globeCtx.ellipse(centerX, y, width / 2, width * 0.1, 0, 0, Math.PI * 2);
+    globeCtx.stroke();
+  }
+  
+  // Longitudes
+  for (let i = 0; i < 12; i++) {
+    const angle = (i * Math.PI / 6) + globeRotation;
+    globeCtx.save();
+    globeCtx.translate(centerX, centerY);
+    globeCtx.rotate(angle);
+    globeCtx.beginPath();
+    globeCtx.ellipse(0, 0, radius * 0.3, radius, 0, 0, Math.PI * 2);
+    globeCtx.restore();
+    globeCtx.stroke();
+  }
+  
+  // Dibujar continentes simplificados (decorativo)
+  drawContinents(centerX, centerY, radius);
+  
+  // Brillo
+  const highlightGradient = globeCtx.createRadialGradient(
+    centerX - radius * 0.4, centerY - radius * 0.4, 0,
+    centerX - radius * 0.4, centerY - radius * 0.4, radius * 0.6
+  );
+  highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+  highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  
+  globeCtx.beginPath();
+  globeCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  globeCtx.fillStyle = highlightGradient;
+  globeCtx.fill();
+}
+
+function drawContinents(cx, cy, r) {
+  globeCtx.fillStyle = '#4CAF50';
+  globeCtx.globalAlpha = 0.6;
+  
+  // Formas aleatorias simulando continentes
+  const shapes = [
+    { x: 0.3, y: -0.2, size: 0.3 },
+    { x: -0.4, y: 0.1, size: 0.25 },
+    { x: 0.2, y: 0.4, size: 0.2 },
+    { x: -0.1, y: -0.5, size: 0.15 },
+  ];
+  
+  shapes.forEach(shape => {
+    globeCtx.beginPath();
+    const x = cx + r * shape.x;
+    const y = cy + r * shape.y;
+    const size = r * shape.size;
+    
+    globeCtx.ellipse(x, y, size, size * 0.7, Math.random() * Math.PI, 0, Math.PI * 2);
+    globeCtx.fill();
+  });
+  
+  globeCtx.globalAlpha = 1;
+}
+
+function animateGlobe() {
+  drawGlobe();
+  
+  if (isRotating) {
+    globeRotation += 0.005;
+  }
+  
+  globeAnimationId = requestAnimationFrame(animateGlobe);
+}
+
+function startGlobeAnimation() {
+  if (!globeAnimationId) {
+    isRotating = true;
+    animateGlobe();
+  }
+}
+
+function stopGlobeAnimation() {
+  if (globeAnimationId) {
+    cancelAnimationFrame(globeAnimationId);
+    globeAnimationId = null;
+  }
+}
+
+// ============================================
 // REGISTRO DEL SERVICE WORKER (PWA)
 // ============================================
 
