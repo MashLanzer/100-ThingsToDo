@@ -4980,163 +4980,322 @@ button, a, input, textarea {
 /* ESTILOS PARA LA APP "DIARIO DE PAREJA"       */
 /* ============================================ */
 
+/* ============================================ */
+/* MINI APP: DIARIO MEJORADO                    */
+/* ============================================ */
+
 .journal-calendar-body {
   padding: 0;
   justify-content: flex-start;
+  gap: 0.5rem;
 }
 
+/* Barra de búsqueda */
+.journal-search-bar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%);
+}
+
+.journal-search-input {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: 2px solid rgba(139, 92, 246, 0.2);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.journal-search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.mood-filter-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(139, 92, 246, 0.2);
+  background: white;
+  cursor: pointer;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.mood-filter-btn:hover {
+  transform: scale(1.1) rotate(10deg);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+}
+
+/* Calendario */
 .calendar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   width: 100%;
 }
+
 .calendar-header h3 {
   color: var(--primary);
-  font-size: 1.2rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: 'Fredoka', sans-serif;
 }
+
 .calendar-header button {
-  background: none;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
   border: none;
-  font-size: 1.5rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1.2rem;
   font-weight: bold;
-  color: var(--primary);
+  color: white;
   cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-header button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+/* Días de la semana */
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  width: 100%;
+  padding: 0 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-align: center;
+}
+
+.calendar-weekdays > div {
+  padding: 0.3rem 0;
 }
 
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
+  gap: 6px;
   width: 100%;
   padding: 0 10px 10px 10px;
-  flex: none; /* <--- AÑADE ESTA LÍNEA */
+  flex: none;
 }
 
 .calendar-day {
-  aspect-ratio: 1 / 1; /* Hace que los días sean cuadrados */
+  aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.8rem;
   font-weight: 600;
-  border-radius: 50%;
+  border-radius: 12px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  background: white;
+  border: 2px solid transparent;
 }
+
 .calendar-day.other-month {
   color: #ccc;
-}
-.calendar-day:not(.other-month):hover {
-  background-color: var(--pink-light);
-}
-/* POR ESTA NUEVA REGLA: */
-.day-entry-indicator {
-  position: absolute;
-  bottom: 4px; /* Ajusta la posición vertical */
-  right: 6px;  /* Ajusta la posición horizontal */
-  font-size: 12px; /* Tamaño del corazón más grande */
-  line-height: 1;
-  opacity: 0.8;
+  opacity: 0.5;
 }
 
-/* Vista de la entrada del diario */
+.calendar-day:not(.other-month):hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+  border-color: var(--primary);
+  transform: scale(1.1);
+}
+
+.calendar-day.today {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+.calendar-day.today:hover {
+  transform: scale(1.1);
+}
+
+.calendar-day.has-entry {
+  border: 2px solid var(--primary);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(236, 72, 153, 0.08) 100%);
+}
+
+.calendar-day.has-entry::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  width: 4px;
+  height: 4px;
+  background: var(--secondary);
+  border-radius: 50%;
+}
+
+/* Indicador de estado de ánimo en el día */
+.day-mood-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+/* Estadísticas de estados de ánimo */
+.journal-mood-stats {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%);
+  border-radius: 16px;
+  margin: 0.5rem 0;
+}
+
+.journal-mood-stats h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.75rem;
+  font-family: 'Fredoka', sans-serif;
+}
+
+.mood-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.mood-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 12px;
+  border: 2px solid rgba(139, 92, 246, 0.1);
+  transition: all 0.3s ease;
+}
+
+.mood-stat:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+}
+
+.mood-stat .mood-emoji {
+  font-size: 1.5rem;
+}
+
+.mood-stat .mood-count {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Vista de entrada del diario */
 .journal-entry-body {
   justify-content: flex-start;
-  gap: 1.5rem;
-  padding-top: 1rem;
+  gap: 1rem;
+  padding: 1rem;
+  overflow-y: auto;
 }
 
-.polaroid-container {
-  transform: rotate(-3deg); /* Ladea la foto para un look más casual */
-  transition: transform 0.3s ease;
-}
-.polaroid-container:hover {
-  transform: rotate(0deg) scale(1.05);
+/* Selector de estado de ánimo */
+.mood-selector {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%);
+  border-radius: 16px;
+  border: 2px dashed rgba(139, 92, 246, 0.2);
 }
 
-.polaroid {
+.mood-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 0.75rem;
+  font-family: 'Fredoka', sans-serif;
+}
+
+.mood-options {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.5rem;
+}
+
+.mood-option {
+  aspect-ratio: 1 / 1;
+  border: 2px solid rgba(139, 92, 246, 0.2);
   background: white;
-  padding: 15px 15px 70px 15px;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+  border-radius: 12px;
+  font-size: 1.5rem;
   cursor: pointer;
-}
-
-.polaroid-image-wrapper {
-  width: 200px;
-  height: 200px;
-  background-color: #f0f0f0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-}
-.polaroid-image-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
-.upload-prompt {
-  position: absolute;
-  text-align: center;
-  color: #aaa;
-}
-.upload-prompt p {
-  font-size: 3rem;
-  line-height: 1;
-  margin: 0;
-}
-.upload-prompt span {
-  font-size: 0.8rem;
-  font-weight: 600;
+.mood-option:hover {
+  transform: scale(1.15) rotate(5deg);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
-
-/* ... al final de la sección de estilos del Diario ... */
-
-.calendar-day.today {
-  background-color: var(--primary);
-  color: white;
-}
-.calendar-day.today:hover {
-  background-color: rgba(139, 111, 71, 0.8); /* Un poco más oscuro al pasar el ratón */
+.mood-option.selected {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  border-color: var(--primary);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
 }
 
-
-/* En la sección de estilos del Diario */
-
-.journal-entry-body {
-  justify-content: flex-start;
-  gap: 1.5rem;
-  padding-top: 1rem;
-  overflow-y: auto; /* <== AÑADE ESTA LÍNEA */
-}
-
-
-/* REEMPLAZA los estilos de .polaroid-container, .polaroid, etc. POR ESTOS: */
-
+/* Galería de fotos mejorada */
 .journal-gallery {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 10px;
-  padding: 10px;
-  background-color: #fdf6e3; /* Un fondo tipo corcho */
-  border-radius: 10px;
-  border: 1px dashed var(--border);
-  min-height: 100px;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 0.75rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(255, 182, 217, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border-radius: 16px;
+  border: 2px dashed rgba(139, 92, 246, 0.2);
+  min-height: 120px;
 }
 
 .gallery-thumbnail {
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 3px solid white;
+}
+
+.gallery-thumbnail:hover {
+  transform: scale(1.05) rotate(2deg);
+  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
 }
 
 .gallery-thumbnail img {
@@ -5148,29 +5307,58 @@ button, a, input, textarea {
 .add-photo-button {
   width: 100%;
   aspect-ratio: 1 / 1;
-  border: 2px dashed #ccc;
-  border-radius: 8px;
+  border: 2px dashed var(--primary);
+  background: white;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #aaa;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.3s ease;
+  gap: 0.25rem;
 }
+
 .add-photo-button:hover {
-  background-color: #f0f0f0;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+  border-color: var(--secondary);
+  transform: scale(1.05);
 }
+
 .add-photo-button p {
   font-size: 2rem;
-  line-height: 1;
+  color: var(--primary);
   margin: 0;
+  line-height: 1;
 }
+
 .add-photo-button span {
   font-size: 0.7rem;
   font-weight: 600;
+  color: var(--primary);
 }
 
+/* Textarea mejorado */
+.journal-textarea {
+  min-height: 120px;
+  resize: vertical;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  border: 2px solid rgba(139, 92, 246, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.journal-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+/* ============================================ */
+/* VISTA DE LECTURA DEL DIARIO - CARRUSEL      */
+/* ============================================ */
 
 /* ============================================ */
 /* ESTILOS PARA LAS NUEVAS MEJORAS DEL DIARIO   */

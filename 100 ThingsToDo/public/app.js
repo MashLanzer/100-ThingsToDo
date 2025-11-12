@@ -2024,6 +2024,27 @@ journalImageInput.addEventListener('change', (e) => {
 
 saveJournalEntryBtn.addEventListener('click', handleSaveJournalEntry);
 
+// Event Listeners para navegación de meses en el calendario
+journalPrevMonthBtn.addEventListener('click', () => {
+  currentJournalDate.setMonth(currentJournalDate.getMonth() - 1);
+  fetchJournalEntriesForMonth();
+});
+
+journalNextMonthBtn.addEventListener('click', () => {
+  currentJournalDate.setMonth(currentJournalDate.getMonth() + 1);
+  fetchJournalEntriesForMonth();
+});
+
+// Event Listeners para selector de emociones
+document.querySelectorAll('.mood-option').forEach(btn => {
+  btn.addEventListener('click', function() {
+    // Remover selección anterior
+    document.querySelectorAll('.mood-option').forEach(b => b.classList.remove('selected'));
+    // Agregar selección actual
+    this.classList.add('selected');
+  });
+});
+
 // Event Listeners para botones "Atrás" del diario
 document.querySelectorAll('.back-to-journal-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -4092,10 +4113,23 @@ function renderJournalCalendar() {
     // Marcar días que tienen entradas en el diario
     if (journalEntriesCache.has(dateStr)) {
       dayCell.classList.add('has-entry');
-      const indicator = document.createElement('span');
-      indicator.className = 'day-entry-indicator';
-      indicator.textContent = '💕';
-      dayCell.appendChild(indicator);
+      const entry = journalEntriesCache.get(dateStr);
+      
+      // Mostrar emoji de emoción si existe
+      if (entry.mood) {
+        const moodEmojis = {
+          happy: '😊',
+          love: '🥰',
+          fun: '😄',
+          romantic: '💕',
+          chill: '😌',
+          sad: '😢'
+        };
+        const indicator = document.createElement('span');
+        indicator.className = 'day-mood-indicator';
+        indicator.textContent = moodEmojis[entry.mood] || '💕';
+        dayCell.appendChild(indicator);
+      }
     }
     
     dayCell.onclick = () => handleDayClick(new Date(year, month, i));
@@ -4169,12 +4203,24 @@ async function openJournalEditView(date) {
   journalEntryText.value = '';
   journalGalleryContainer.querySelectorAll('.gallery-thumbnail').forEach(el => el.remove()); // Limpiar galería
   journalImageInput.value = null;
+  
+  // Resetear selector de emociones
+  document.querySelectorAll('.mood-option').forEach(btn => btn.classList.remove('selected'));
 
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   
   if (journalEntriesCache.has(dateStr)) {
     const entry = journalEntriesCache.get(dateStr);
     journalEntryText.value = entry.text || '';
+    
+    // Seleccionar la emoción guardada
+    if (entry.mood) {
+      const moodBtn = document.querySelector(`.mood-option[data-mood="${entry.mood}"]`);
+      if (moodBtn) {
+        moodBtn.classList.add('selected');
+      }
+    }
+    
     // Si hay imágenes, renderizarlas
     if (entry.imageUrls && entry.imageUrls.length > 0) {
       entry.imageUrls.forEach(url => {
@@ -4196,6 +4242,10 @@ async function handleSaveJournalEntry() {
   const text = journalEntryText.value.trim();
   const imageFiles = journalImageInput.files; // Ahora es plural
 
+  // Obtener el estado de ánimo seleccionado
+  const selectedMoodBtn = document.querySelector('.mood-option.selected');
+  const mood = selectedMoodBtn ? selectedMoodBtn.dataset.mood : null;
+
   // Obtener las URLs de las imágenes ya existentes
   const existingImageUrls = Array.from(journalGalleryContainer.querySelectorAll('.gallery-thumbnail img')).map(img => img.src);
 
@@ -4205,7 +4255,7 @@ async function handleSaveJournalEntry() {
   }
 
   saveJournalEntryBtn.disabled = true;
-  saveJournalEntryBtn.textContent = 'Guardando...';
+  saveJournalEntryBtn.querySelector('span').textContent = '💾 Guardando...';
 
   try {
     const imageUrls = [...existingImageUrls]; // Empezamos con las que ya estaban
@@ -4229,6 +4279,7 @@ async function handleSaveJournalEntry() {
       date: Timestamp.fromDate(selectedJournalDate),
       text: text,
       imageUrls: imageUrls, // Guardamos un array de URLs
+      mood: mood, // Guardamos la emoción seleccionada
       lastUpdatedBy: currentUser.uid,
     }, { merge: true });
 
@@ -4240,31 +4291,37 @@ async function handleSaveJournalEntry() {
     alert("No se pudo guardar el recuerdo.");
   } finally {
     saveJournalEntryBtn.disabled = false;
-    saveJournalEntryBtn.textContent = 'Guardar Recuerdo';
+    saveJournalEntryBtn.querySelector('span').textContent = '💾 Guardar Recuerdo';
   }
 }
 
 
 // Nueva función para el widget
 function updateJournalPreview() {
-  const sortedEntries = Array.from(journalEntriesCache.values()).sort((a, b) => b.date.toDate() - a.date.toDate());
+  // Actualizar estadísticas de emociones del mes
+  const moodCounts = {
+    happy: 0,
+    love: 0,
+    fun: 0,
+    romantic: 0,
+    chill: 0,
+    sad: 0
+  };
   
-  if (sortedEntries.length > 0) {
-    const latestEntry = sortedEntries[0];
-    const date = latestEntry.date.toDate();
-    
-    previewDate.textContent = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-    previewSnippet.textContent = latestEntry.text || 'Un recuerdo guardado en imágenes.';
-    previewImage.src = latestEntry.imageUrls?.[0] || 'scr/images/icon-192x192.png'; // Usa la primera imagen o un icono por defecto
-    
-    journalPreviewWidget.style.display = 'block';
-    // Trigger animation
-    journalPreviewWidget.classList.remove('journal-preview-show');
-    setTimeout(() => journalPreviewWidget.classList.add('journal-preview-show'), 10);
-    journalPreviewWidget.onclick = () => openJournalReadView(latestEntry);
-  } else {
-    journalPreviewWidget.style.display = 'none';
-  }
+  // Contar emociones de las entradas del mes actual
+  journalEntriesCache.forEach(entry => {
+    if (entry.mood && moodCounts.hasOwnProperty(entry.mood)) {
+      moodCounts[entry.mood]++;
+    }
+  });
+  
+  // Actualizar la UI de estadísticas
+  Object.keys(moodCounts).forEach(mood => {
+    const moodStatElement = document.querySelector(`.mood-stat[data-mood="${mood}"] .mood-count`);
+    if (moodStatElement) {
+      moodStatElement.textContent = moodCounts[mood];
+    }
+  });
 }
 
 

@@ -1142,28 +1142,68 @@
 <div id="phone-view-journal" class="phone-app-view">
     <div class="app-content-header">
         <button class="back-to-home-btn">‹</button>
-        <span>Nuestro Diario</span>
+        <span>Nuestro Diario 💕</span>
     </div>
     <div class="app-content-body journal-calendar-body">
+        <!-- Barra de búsqueda y filtros -->
+        <div class="journal-search-bar">
+            <input type="text" id="journal-search-input" class="journal-search-input" placeholder="🔍 Buscar recuerdos...">
+            <button id="journal-mood-filter-btn" class="mood-filter-btn" title="Filtrar por estado de ánimo">
+                <span>😊</span>
+            </button>
+        </div>
+        
         <div class="calendar-header">
             <button id="journal-prev-month-btn">‹</button>
             <h3 id="journal-month-year"></h3>
             <button id="journal-next-month-btn">›</button>
         </div>
+        
+        <!-- Nombres de días de la semana -->
+        <div class="calendar-weekdays">
+            <div>Dom</div>
+            <div>Lun</div>
+            <div>Mar</div>
+            <div>Mié</div>
+            <div>Jue</div>
+            <div>Vie</div>
+            <div>Sáb</div>
+        </div>
+        
         <div id="journal-calendar-grid" class="calendar-grid">
             <!-- Los días del calendario se generarán aquí -->
         </div>
-                <div id="journal-preview-widget" class="journal-preview" style="display: none;">
-            <h4>Último Recuerdo</h4>
-            <div class="preview-content">
-                <img id="preview-image" src="">
-                <div class="preview-text">
-                    <p id="preview-date"></p>
-                    <p id="preview-snippet"></p>
+        
+        <!-- Widget de estadísticas emocionales -->
+        <div id="journal-mood-stats" class="journal-mood-stats">
+            <h4>Estados de Ánimo del Mes</h4>
+            <div class="mood-stats-grid">
+                <div class="mood-stat" data-mood="happy">
+                    <span class="mood-emoji">😊</span>
+                    <span class="mood-count">0</span>
+                </div>
+                <div class="mood-stat" data-mood="love">
+                    <span class="mood-emoji">🥰</span>
+                    <span class="mood-count">0</span>
+                </div>
+                <div class="mood-stat" data-mood="fun">
+                    <span class="mood-emoji">😄</span>
+                    <span class="mood-count">0</span>
+                </div>
+                <div class="mood-stat" data-mood="romantic">
+                    <span class="mood-emoji">💕</span>
+                    <span class="mood-count">0</span>
+                </div>
+                <div class="mood-stat" data-mood="chill">
+                    <span class="mood-emoji">😌</span>
+                    <span class="mood-count">0</span>
+                </div>
+                <div class="mood-stat" data-mood="sad">
+                    <span class="mood-emoji">😢</span>
+                    <span class="mood-count">0</span>
                 </div>
             </div>
         </div>
-        <!-- ============================================ -->
     </div>
 </div>
 
@@ -1208,16 +1248,33 @@
         <span id="journal-entry-date"></span>
     </div>
     <div class="app-content-body journal-entry-body">
-<div id="journal-gallery-container" class="journal-gallery">
-    <!-- Las imágenes se añadirán aquí con JS -->
-    <div id="journal-add-photo-btn" class="add-photo-button">
-        <p>+</p>
-        <span>Añadir foto</span>
-    </div>
-    <input type="file" id="journal-image-input" accept="image/*" multiple style="display: none;">
-</div>
-        <textarea id="journal-entry-text" class="textarea" placeholder="¿Qué pasó este día tan especial?..." rows="5"></textarea>
-        <button id="save-journal-entry-btn" class="btn btn-primary">Guardar Recuerdo</button>
+        <!-- Selector de estado de ánimo -->
+        <div class="mood-selector">
+            <label class="mood-label">¿Cómo estuvo este día?</label>
+            <div class="mood-options">
+                <button class="mood-option" data-mood="happy" title="Feliz">😊</button>
+                <button class="mood-option" data-mood="love" title="Enamorado">🥰</button>
+                <button class="mood-option" data-mood="fun" title="Divertido">😄</button>
+                <button class="mood-option" data-mood="romantic" title="Romántico">💕</button>
+                <button class="mood-option" data-mood="chill" title="Relajado">😌</button>
+                <button class="mood-option" data-mood="sad" title="Triste">😢</button>
+            </div>
+        </div>
+        
+        <div id="journal-gallery-container" class="journal-gallery">
+            <!-- Las imágenes se añadirán aquí con JS -->
+            <div id="journal-add-photo-btn" class="add-photo-button">
+                <p>+</p>
+                <span>Añadir foto</span>
+            </div>
+            <input type="file" id="journal-image-input" accept="image/*" multiple style="display: none;">
+        </div>
+        
+        <textarea id="journal-entry-text" class="textarea journal-textarea" placeholder="Escribe aquí los detalles de este día especial... 💭" rows="6"></textarea>
+        
+        <button id="save-journal-entry-btn" class="btn btn-primary">
+            <span>💾 Guardar Recuerdo</span>
+        </button>
     </div>
 </div>
 <!-- ============================================ -->
