@@ -1204,6 +1204,21 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Widget de último recuerdo -->
+        <div id="journal-last-memory" class="journal-last-memory" style="display: none;">
+            <h4>✨ Último Recuerdo</h4>
+            <div class="last-memory-content">
+                <div class="last-memory-image">
+                    <img id="last-memory-image" src="" alt="Recuerdo">
+                </div>
+                <div class="last-memory-text">
+                    <p class="last-memory-date" id="last-memory-date"></p>
+                    <p class="last-memory-snippet" id="last-memory-snippet"></p>
+                </div>
+                <div class="last-memory-mood" id="last-memory-mood"></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1215,8 +1230,20 @@
     </div>
     <div class="app-content-body journal-read-body">
         
+        <!-- Información del día con emoción -->
+        <div class="journal-read-info">
+            <div class="journal-read-mood">
+                <div class="journal-read-mood-emoji" id="journal-read-mood-emoji">💭</div>
+                <div class="journal-read-mood-text">
+                    <div class="journal-read-mood-label">Estado de ánimo</div>
+                    <div class="journal-read-mood-name" id="journal-read-mood-name">Sin definir</div>
+                </div>
+            </div>
+            <div class="journal-read-date-full" id="journal-read-date-full"></div>
+        </div>
+        
         <!-- ============================================ -->
-        <!-- ======> NUEVO CARRUSEL DE FOTOS <======= -->
+        <!-- ======> CARRUSEL DE FOTOS <======= -->
         <!-- ============================================ -->
         <div id="journal-carousel-container" class="carousel-container">
             <div id="journal-carousel-track" class="carousel-track">

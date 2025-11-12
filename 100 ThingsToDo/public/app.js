@@ -443,6 +443,7 @@ const journalCalendarGrid = document.getElementById('journal-calendar-grid');
 const journalMonthYear = document.getElementById('journal-month-year');
 const journalPrevMonthBtn = document.getElementById('journal-prev-month-btn');
 const journalNextMonthBtn = document.getElementById('journal-next-month-btn');
+const journalSearchInput = document.getElementById('journal-search-input');
 const backToJournalBtn = document.querySelector('.back-to-journal-btn');
 const journalEntryDate = document.getElementById('journal-entry-date');
 const journalGalleryContainer = document.getElementById('journal-gallery-container');
@@ -2014,12 +2015,17 @@ journalImageInput.addEventListener('change', (e) => {
       reader.onload = (event) => {
         const thumb = document.createElement('div');
         thumb.className = 'gallery-thumbnail';
-        thumb.innerHTML = `<img src="${event.target.result}" alt="Previsualización">`;
+        thumb.innerHTML = `
+          <img src="${event.target.result}" alt="Previsualización">
+          <button class="delete-photo-btn" onclick="this.parentElement.remove()">×</button>
+        `;
         journalGalleryContainer.insertBefore(thumb, journalAddPhotoBtn);
       };
       reader.readAsDataURL(file);
     }
   }
+  // Resetear el input para poder seleccionar las mismas fotos de nuevo si se eliminan
+  e.target.value = '';
 });
 
 saveJournalEntryBtn.addEventListener('click', handleSaveJournalEntry);
@@ -2044,6 +2050,52 @@ document.querySelectorAll('.mood-option').forEach(btn => {
     this.classList.add('selected');
   });
 });
+
+// Event Listener para búsqueda de recuerdos
+if (journalSearchInput) {
+  journalSearchInput.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase().trim();
+    
+    // Filtrar días del calendario según el término de búsqueda
+    const allDays = journalCalendarGrid.querySelectorAll('.calendar-day:not(.other-month)');
+    
+    if (searchTerm === '') {
+      // Si no hay búsqueda, mostrar todos los días
+      allDays.forEach(day => {
+        day.style.opacity = '1';
+        day.style.pointerEvents = 'auto';
+      });
+    } else {
+      // Filtrar días que tienen entradas con el texto buscado
+      allDays.forEach(day => {
+        const dayNumber = parseInt(day.textContent);
+        const year = currentJournalDate.getFullYear();
+        const month = currentJournalDate.getMonth();
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
+        
+        if (journalEntriesCache.has(dateStr)) {
+          const entry = journalEntriesCache.get(dateStr);
+          const entryText = (entry.text || '').toLowerCase();
+          
+          if (entryText.includes(searchTerm)) {
+            day.style.opacity = '1';
+            day.style.pointerEvents = 'auto';
+            day.style.transform = 'scale(1.1)';
+            day.style.borderColor = 'var(--secondary)';
+          } else {
+            day.style.opacity = '0.3';
+            day.style.pointerEvents = 'none';
+            day.style.transform = 'scale(1)';
+            day.style.borderColor = 'transparent';
+          }
+        } else {
+          day.style.opacity = '0.3';
+          day.style.pointerEvents = 'none';
+        }
+      });
+    }
+  });
+}
 
 // Event Listeners para botones "Atrás" del diario
 document.querySelectorAll('.back-to-journal-btn').forEach(btn => {
@@ -4183,13 +4235,59 @@ async function handleDayClick(date) {
 
 // 2. La nueva función para la vista de LECTURA Carrusel
 function openJournalReadView(entry) {
-  journalReadDate.textContent = entry.date.toDate().toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+  const date = entry.date.toDate();
   
-  // ===> MODIFICACIÓN: Configurar el carrusel <===
+  // Título del header (formato corto)
+  journalReadDate.textContent = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+  
+  // Fecha completa en el widget de info
+  const fullDateElement = document.getElementById('journal-read-date-full');
+  if (fullDateElement) {
+    fullDateElement.textContent = date.toLocaleDateString('es-ES', { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+  }
+  
+  // Mostrar estado de ánimo
+  const moodEmojis = {
+    happy: '😊',
+    love: '🥰',
+    fun: '😄',
+    romantic: '💕',
+    chill: '😌',
+    sad: '😢'
+  };
+  
+  const moodNames = {
+    happy: 'Feliz',
+    love: 'Enamorado',
+    fun: 'Divertido',
+    romantic: 'Romántico',
+    chill: 'Relajado',
+    sad: 'Triste'
+  };
+  
+  const moodEmojiElement = document.getElementById('journal-read-mood-emoji');
+  const moodNameElement = document.getElementById('journal-read-mood-name');
+  
+  if (moodEmojiElement && moodNameElement) {
+    if (entry.mood && moodEmojis[entry.mood]) {
+      moodEmojiElement.textContent = moodEmojis[entry.mood];
+      moodNameElement.textContent = moodNames[entry.mood];
+    } else {
+      moodEmojiElement.textContent = '💭';
+      moodNameElement.textContent = 'Sin definir';
+    }
+  }
+  
+  // Configurar el carrusel
   setupCarousel(entry.imageUrls);
 
   // Rellenar el texto
-  journalReadText.textContent = entry.text || 'No hay nada escrito para este día.';
+  journalReadText.textContent = entry.text || '';
   
   showPhoneApp('journalread');
 }
@@ -4226,7 +4324,10 @@ async function openJournalEditView(date) {
       entry.imageUrls.forEach(url => {
         const thumb = document.createElement('div');
         thumb.className = 'gallery-thumbnail';
-        thumb.innerHTML = `<img src="${url}" alt="Recuerdo">`;
+        thumb.innerHTML = `
+          <img src="${url}" alt="Recuerdo">
+          <button class="delete-photo-btn" onclick="this.parentElement.remove()">×</button>
+        `;
         journalGalleryContainer.insertBefore(thumb, journalAddPhotoBtn);
       });
     }
@@ -4322,6 +4423,49 @@ function updateJournalPreview() {
       moodStatElement.textContent = moodCounts[mood];
     }
   });
+  
+  // Mostrar el último recuerdo
+  const sortedEntries = Array.from(journalEntriesCache.values()).sort((a, b) => {
+    const dateA = a.date.toDate ? a.date.toDate() : a.date;
+    const dateB = b.date.toDate ? b.date.toDate() : b.date;
+    return dateB - dateA;
+  });
+  
+  const lastMemoryWidget = document.getElementById('journal-last-memory');
+  
+  if (sortedEntries.length > 0) {
+    const latestEntry = sortedEntries[0];
+    const date = latestEntry.date.toDate ? latestEntry.date.toDate() : latestEntry.date;
+    
+    const moodEmojis = {
+      happy: '😊',
+      love: '🥰',
+      fun: '😄',
+      romantic: '💕',
+      chill: '😌',
+      sad: '😢'
+    };
+    
+    document.getElementById('last-memory-date').textContent = date.toLocaleDateString('es-ES', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    document.getElementById('last-memory-snippet').textContent = latestEntry.text || 'Un recuerdo guardado en imágenes ✨';
+    document.getElementById('last-memory-mood').textContent = latestEntry.mood ? moodEmojis[latestEntry.mood] : '💭';
+    
+    const lastMemoryImage = document.getElementById('last-memory-image');
+    if (latestEntry.imageUrls && latestEntry.imageUrls.length > 0) {
+      lastMemoryImage.src = latestEntry.imageUrls[0];
+    } else {
+      lastMemoryImage.src = 'scr/images/icon-192x192.png';
+    }
+    
+    lastMemoryWidget.style.display = 'block';
+    lastMemoryWidget.onclick = () => openJournalReadView(latestEntry);
+  } else {
+    lastMemoryWidget.style.display = 'none';
+  }
 }
 
 
