@@ -2456,12 +2456,17 @@ function hideAboutView() {
 
 function openPhoneModal() {
   console.log('Abriendo phoneModal. Estado del placeInfoModal antes:', placeInfoModal ? placeInfoModal.style.display : 'no modal');
-  // SIEMPRE ocultar el modal de detalles al abrir cualquier modal
+  // SIEMPRE ocultar el modal de detalles y el lightbox al abrir cualquier modal
   if (placeInfoModal) {
     placeInfoModal.style.display = 'none';
     // Asegurarse de que esté en el body
     document.body.appendChild(placeInfoModal);
     console.log('Modal de detalles forzosamente ocultado y movido al body');
+  }
+  // Cerrar lightbox si está abierto
+  if (lightbox && lightbox.classList.contains('active')) {
+    closeLightbox();
+    console.log('Lightbox cerrado al abrir modal del teléfono');
   }
   phoneModal.style.display = 'flex';
 }
@@ -5837,6 +5842,8 @@ function showPlaceInfo(place) {
     </div>
   `;
   
+  console.log('Contenido del modal cargado:', placeInfoBody.innerHTML.length, 'caracteres');
+  
   console.log('Mostrando modal de lugar:', place.name);
   
   // Asegurarse de que el modal se muestre correctamente y centrado
@@ -5845,15 +5852,16 @@ function showPlaceInfo(place) {
     mapModal.appendChild(placeInfoModal);
     placeInfoModal.style.position = 'absolute';
     placeInfoModal.style.inset = '0';
-    placeInfoModal.style.zIndex = '30000';
-  } else {
-    // Fallback: mostrar como modal fijo
-    placeInfoModal.style.position = 'fixed';
-    placeInfoModal.style.left = '0';
-    placeInfoModal.style.top = '0';
-    placeInfoModal.style.right = '0';
-    placeInfoModal.style.bottom = '0';
-    placeInfoModal.style.zIndex = '20000';
+    placeInfoModal.style.zIndex = '40000'; // Aumentado para estar encima de todo
+    placeInfoModal.style.pointerEvents = 'auto'; // Asegurar que sea interactuable
+  
+  // Asegurar que el contenido del modal sea interactuable
+  const modalContent = placeInfoModal.querySelector('.modal-content');
+  if (modalContent) {
+    modalContent.style.pointerEvents = 'auto';
+    modalContent.style.position = 'relative';
+    modalContent.style.zIndex = '50000'; // Asegurar que esté encima
+  }
   }
   
   placeInfoModal.style.display = 'flex';
@@ -5882,27 +5890,46 @@ function showPlaceInfo(place) {
   // Agregar event listeners a las fotos para el lightbox
   if (place.photos && place.photos.length > 0) {
     const photoElements = placeInfoBody.querySelectorAll('.place-info-photo');
+    console.log('Configurando event listeners para', photoElements.length, 'fotos');
     photoElements.forEach((img, index) => {
-      img.onclick = () => openLightbox(place.photos, index);
+      img.onclick = () => {
+        console.log('Clic en foto', index);
+        openLightbox(place.photos, index);
+      };
+      img.style.cursor = 'pointer'; // Asegurar que se vea clickeable
+      img.style.pointerEvents = 'auto'; // Asegurar interactividad
     });
+  }
+  
+  // Reconfigurar event listeners para cerrar el modal (por si el DOM cambió)
+  if (closePlaceInfoBtn) {
+    closePlaceInfoBtn.onclick = () => {
+      console.log('Clic en botón cerrar modal de detalles');
+      placeInfoModal.style.display = 'none';
+      // Devolver el modal a su posición original en el DOM
+      document.body.appendChild(placeInfoModal);
+    };
+    closePlaceInfoBtn.style.pointerEvents = 'auto'; // Asegurar que sea clickeable
+    closePlaceInfoBtn.style.cursor = 'pointer';
+  }
+
+  if (placeInfoModal) {
+    const overlay = placeInfoModal.querySelector('.modal-overlay');
+    if (overlay) {
+      overlay.onclick = () => {
+        console.log('Clic en overlay del modal de detalles');
+        placeInfoModal.style.display = 'none';
+        // Devolver el modal a su posición original en el DOM
+        document.body.appendChild(placeInfoModal);
+      };
+      overlay.style.pointerEvents = 'auto'; // Asegurar que sea clickeable
+      overlay.style.cursor = 'pointer';
+    }
   }
 }
 
-if (closePlaceInfoBtn) {
-  closePlaceInfoBtn.onclick = () => {
-    placeInfoModal.style.display = 'none';
-    // Devolver el modal a su posición original en el DOM
-    document.body.appendChild(placeInfoModal);
-  };
-}
-
-if (placeInfoModal) {
-  placeInfoModal.querySelector('.modal-overlay')?.addEventListener('click', () => {
-    placeInfoModal.style.display = 'none';
-    // Devolver el modal a su posición original en el DOM
-    document.body.appendChild(placeInfoModal);
-  });
-}
+// Event listeners para cerrar el modal se configuran dentro de showPlaceInfo
+// para que funcionen cuando el modal se mueve en el DOM
 
 // Lightbox para ver fotos en grande
 const lightbox = document.getElementById('photo-lightbox');
@@ -5916,21 +5943,44 @@ let currentPhotos = [];
 let currentPhotoIndex = 0;
 
 function openLightbox(photos, index) {
+  console.log('Abriendo lightbox con', photos.length, 'fotos, índice:', index);
+  console.log('Lightbox element:', lightbox);
+  if (!lightbox) {
+    console.error('Lightbox element not found!');
+    return;
+  }
+  
+  // Asegurar que el lightbox esté en el body para máximo z-index
+  document.body.appendChild(lightbox);
+  
   currentPhotos = photos;
   currentPhotoIndex = index;
   showCurrentPhoto();
   lightbox.classList.add('active');
   document.body.style.overflow = 'hidden';
+  console.log('Lightbox activado, clase active:', lightbox.classList.contains('active'));
+  console.log('Lightbox display:', window.getComputedStyle(lightbox).display);
+  
+  // Verificar después de un momento si sigue abierto
+  setTimeout(() => {
+    console.log('Lightbox después de timeout - display:', window.getComputedStyle(lightbox).display);
+    console.log('Lightbox después de timeout - active:', lightbox.classList.contains('active'));
+  }, 100);
 }
 
 function closeLightbox() {
+  console.log('Cerrando lightbox');
   lightbox.classList.remove('active');
   document.body.style.overflow = '';
 }
 
 function showCurrentPhoto() {
-  if (currentPhotos.length === 0) return;
+  if (currentPhotos.length === 0) {
+    console.log('No hay fotos para mostrar');
+    return;
+  }
   
+  console.log('Mostrando foto:', currentPhotos[currentPhotoIndex]);
   lightboxImage.src = currentPhotos[currentPhotoIndex];
   lightboxCounter.textContent = `${currentPhotoIndex + 1} / ${currentPhotos.length}`;
   
@@ -5991,11 +6041,16 @@ document.addEventListener('keydown', (e) => {
 // Abrir modal del mapa
 if (openMapModalBtn) {
   openMapModalBtn.onclick = () => {
-    // SIEMPRE ocultar el modal de detalles al abrir cualquier modal
+    // SIEMPRE ocultar el modal de detalles y el lightbox al abrir cualquier modal
     if (placeInfoModal) {
       placeInfoModal.style.display = 'none';
       document.body.appendChild(placeInfoModal);
       console.log('Modal de detalles forzosamente ocultado al abrir modal del mapa');
+    }
+    // Cerrar lightbox si está abierto
+    if (lightbox && lightbox.classList.contains('active')) {
+      closeLightbox();
+      console.log('Lightbox cerrado al abrir modal del mapa');
     }
     mapModal.style.display = 'flex';
     setTimeout(() => {

@@ -8728,7 +8728,7 @@ button, a, input, textarea {
 
 /* Modal de información de lugar */
 #place-info-modal {
-  z-index: 20000 !important; /* Más alto que cualquier otro modal */
+  z-index: 40000 !important; /* Aumentado para estar encima de todo */
   display: none;
   position: fixed;
   inset: 0;
@@ -8737,7 +8737,7 @@ button, a, input, textarea {
 }
 
 #place-info-modal .modal-overlay {
-  z-index: 25000 !important; /* Overlay mucho más alto */
+  z-index: 45000 !important; /* Overlay mucho más alto */
   position: absolute;
   inset: 0;
   background: rgba(16,12,8,0.65) !important;
@@ -8749,10 +8749,13 @@ button, a, input, textarea {
   box-shadow: 0 20px 60px rgba(255, 107, 157, 0.15),
               0 8px 20px rgba(255, 182, 217, 0.1);
   border: 2px solid rgba(255, 182, 217, 0.2);
-  z-index: 16000 !important; /* Contenido encima del overlay y del mapa */
+  z-index: 50000 !important; /* Contenido encima de todo */
   position: relative;
   margin: auto; /* Centrar horizontalmente */
   transform: none !important; /* Eliminar cualquier transformación */
+  pointer-events: auto !important; /* Asegurar interactividad */
+  max-height: 80vh; /* Limitar altura para scroll si es necesario */
+  overflow-y: auto; /* Permitir scroll si el contenido es largo */
 }
 
 #place-info-modal .modal-header {
@@ -8927,7 +8930,7 @@ flex: 1;
     rgba(255, 245, 250, 0.97) 75%,
     rgba(245, 240, 255, 0.97) 100%);
   backdrop-filter: blur(20px);
-  z-index: 10000;
+  z-index: 50000; /* Aumentado para estar encima de todo */
   align-items: center;
   justify-content: center;
   animation: fadeIn 400ms ease;
