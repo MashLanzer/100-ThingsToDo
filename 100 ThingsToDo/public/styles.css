@@ -5545,6 +5545,8 @@ button, a, input, textarea {
   padding: 1rem;
   width: 100%;
   min-height: 120px;
+  max-height: 300px;
+  overflow-y: auto;
   font-family: 'Quicksand', sans-serif;
   font-size: 0.9rem;
   line-height: 1.7;
@@ -5558,6 +5560,25 @@ button, a, input, textarea {
   content: 'Sin texto escrito para este día ✨';
   color: rgba(139, 111, 71, 0.4);
   font-style: italic;
+}
+
+/* Estilos para el scrollbar del texto */
+.journal-text-display::-webkit-scrollbar {
+  width: 6px;
+}
+
+.journal-text-display::-webkit-scrollbar-track {
+  background: rgba(139, 92, 246, 0.05);
+  border-radius: 10px;
+}
+
+.journal-text-display::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  border-radius: 10px;
+}
+
+.journal-text-display::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
 }
 
 /* Widget de Previsualización - REMOVIDO (ya no se usa) */
