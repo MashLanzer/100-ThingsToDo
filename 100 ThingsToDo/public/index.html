@@ -38,7 +38,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     
     <!-- Globe.GL para el mapa 3D -->
-    <script src="https://unpkg.com/three"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
     <script src="https://unpkg.com/globe.gl"></script>
 
 </head>
@@ -914,24 +914,95 @@
 <div id="phone-view-surprise" class="phone-app-view">
     <div class="app-content-header">
         <button class="back-to-home-btn">‹</button>
-        <span>Reto Diario</span>
+        <span>🎲 Reto Diario</span>
     </div>
     <div class="app-content-body surprise-app-body">
-        <div class="surprise-card">
-            <div class="surprise-card-inner">
-                <div class="surprise-card-front">
-                    <div class="question-mark">?</div>
-                    <p>¿Listos para un nuevo reto?</p>
+        
+        <!-- Estadísticas de retos -->
+        <div class="challenge-stats">
+            <div class="challenge-stat-card">
+                <div class="stat-icon">🔥</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="challenges-today">0</div>
+                    <div class="stat-label">Hoy</div>
                 </div>
-                <div class="surprise-card-back">
-                    <div class="surprise-emoji"></div>
-                    <p class="surprise-text"></p>
+            </div>
+            <div class="challenge-stat-card">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="challenges-total">0</div>
+                    <div class="stat-label">Total</div>
                 </div>
             </div>
         </div>
+
+        <!-- Filtros de categoría -->
+        <div class="challenge-categories">
+            <button class="category-chip active" data-category="all">
+                <span>✨ Todos</span>
+            </button>
+            <button class="category-chip" data-category="romantic">
+                <span>💕 Romántico</span>
+            </button>
+            <button class="category-chip" data-category="adventure">
+                <span>🗺️ Aventura</span>
+            </button>
+            <button class="category-chip" data-category="chill">
+                <span>😌 Relax</span>
+            </button>
+            <button class="category-chip" data-category="creative">
+                <span>🎨 Creativo</span>
+            </button>
+        </div>
+
+        <!-- Contenedor del reto con altura fija -->
+        <div class="challenge-display-area">
+            <!-- Vista: Pregunta inicial -->
+            <div id="challenge-question-view" class="challenge-view active">
+                <div class="challenge-question-card">
+                    <div class="question-icon">❓</div>
+                    <h3>¿Listos para un nuevo reto?</h3>
+                    <button id="reveal-challenge-btn" class="btn btn-primary">
+                        <span>🎲 Descubrir Reto</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vista: Reto revelado -->
+            <div id="challenge-revealed-view" class="challenge-view">
+                <div class="challenge-content-card">
+                    <div class="challenge-badges">
+                        <span class="challenge-category-badge"></span>
+                        <span class="difficulty-label"></span>
+                    </div>
+                    <div class="challenge-emoji-large surprise-emoji"></div>
+                    <p class="challenge-text surprise-text"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acciones del reto -->
         <div class="surprise-actions">
-            <button id="reroll-surprise-task-btn" class="btn btn-outline">Buscar otra idea</button>
-            <button id="accept-surprise-task-btn" class="btn btn-primary">¡Aceptamos!</button>
+            <button id="favorite-challenge-btn" class="btn-action btn-action-favorite" title="Guardar favorito">
+                ⭐
+            </button>
+            <button id="reroll-surprise-task-btn" class="btn btn-outline">
+                <span>Otro Reto</span>
+            </button>
+            <button id="accept-surprise-task-btn" class="btn btn-primary">
+                <span>¡Aceptar!</span>
+            </button>
+        </div>
+
+        <!-- Historial de retos recientes -->
+        <div class="challenge-history">
+            <div class="history-header">
+                <h3>📜 Retos Recientes</h3>
+                <button id="toggle-history-btn" class="toggle-history-btn">▼</button>
+            </div>
+            <div id="history-list" class="history-list">
+                <!-- Se llenará dinámicamente -->
+            </div>
         </div>
     </div>
 </div>

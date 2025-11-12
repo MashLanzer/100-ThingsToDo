@@ -149,6 +149,9 @@ let selectedIcon = 'clipboard';
 let coupleData = null;
 let sortableInstance = null;
 let currentSurpriseTask = null;
+let currentChallengeCategory = 'all';
+let challengeHistory = [];
+let favoriteChallenges = [];
 
 // ============================================
 // SISTEMA DE NOTIFICACIONES UNIVERSAL
@@ -397,8 +400,10 @@ const phoneTimeDisplay = document.getElementById('phone-time-display');
 const favorsFullscreenModal = document.getElementById('favors-fullscreen-modal');
 const closeFavorsModalBtn = document.getElementById('close-favors-modal-btn');
 
-
-const surpriseCard = document.querySelector('.surprise-card'); // Obtenemos la tarjeta una sola vez
+// NUEVO: Elementos del rediseño de Reto Diario
+const challengeQuestionView = document.getElementById('challenge-question-view');
+const challengeRevealedView = document.getElementById('challenge-revealed-view');
+const revealChallengeBtn = document.getElementById('reveal-challenge-btn');
 
 // Reutilizamos las referencias de la tarea sorpresa, pero las hacemos más específicas
 // CORRECCIÓN
@@ -406,6 +411,14 @@ const surpriseEmoji = document.querySelector('#phone-view-surprise .surprise-emo
 const surpriseText = document.querySelector('#phone-view-surprise .surprise-text');
 const acceptSurpriseTaskBtn = document.querySelector('#phone-view-surprise #accept-surprise-task-btn');
 const rerollSurpriseTaskBtn = document.querySelector('#phone-view-surprise #reroll-surprise-task-btn');
+const favoriteChallengeBtn = document.getElementById('favorite-challenge-btn');
+const challengesTodayCount = document.getElementById('challenges-today');
+const challengesTotalCount = document.getElementById('challenges-total');
+const challengeCategoryBadge = document.querySelector('.challenge-category-badge');
+const difficultyLabel = document.querySelector('.difficulty-label');
+const categoryChips = document.querySelectorAll('.category-chip');
+const historyList = document.getElementById('history-list');
+const toggleHistoryBtn = document.getElementById('toggle-history-btn');
 
 // ... al final de la sección de elementos del DOM ...
 
@@ -2007,8 +2020,9 @@ allPhoneBackBtns.forEach(btn => {
     showPhoneApp(targetApp);
     
     // Lógica extra si volvemos al homescreen
-    if (targetApp === 'homescreen' && surpriseCard) {
-      surpriseCard.classList.remove('is-flipped');
+    if (targetApp === 'homescreen' && challengeQuestionView && challengeRevealedView) {
+      challengeRevealedView.classList.remove('active');
+      challengeQuestionView.classList.add('active');
     }
   });
 });
@@ -2039,13 +2053,58 @@ backToHomeBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     showPhoneApp('homescreen');
     // Resetea la tarjeta al volver al home
-    surpriseCard.classList.remove('is-flipped');
+    if (challengeQuestionView && challengeRevealedView) {
+      challengeRevealedView.classList.remove('active');
+      challengeQuestionView.classList.add('active');
+    }
   });
 });
 
 // Listeners para la app de Tarea Sorpresa
-rerollSurpriseTaskBtn.addEventListener('click', handleReroll); // <== Usa la nueva función
+rerollSurpriseTaskBtn.addEventListener('click', handleReroll);
 acceptSurpriseTaskBtn.addEventListener('click', acceptSurpriseTask);
+
+// NUEVO: Listener para revelar reto
+if (revealChallengeBtn) {
+  revealChallengeBtn.addEventListener('click', () => {
+    updateSurpriseContent();
+    challengeQuestionView.classList.remove('active');
+    challengeRevealedView.classList.add('active');
+  });
+}
+
+// Listeners para categorías de retos
+categoryChips.forEach(chip => {
+  chip.addEventListener('click', () => {
+    // Remover active de todos
+    categoryChips.forEach(c => c.classList.remove('active'));
+    // Añadir active al seleccionado
+    chip.classList.add('active');
+    
+    // Actualizar categoría actual
+    currentChallengeCategory = chip.dataset.category;
+    
+    // Volver a vista de pregunta
+    challengeRevealedView.classList.remove('active');
+    challengeQuestionView.classList.add('active');
+  });
+});
+
+// Listener para botón de favorito
+if (favoriteChallengeBtn) {
+  favoriteChallengeBtn.addEventListener('click', () => {
+    favoriteChallengeBtn.classList.toggle('active');
+    // TODO: Guardar en favoritos en Firestore
+  });
+}
+
+// Listener para toggle de historial
+if (toggleHistoryBtn) {
+  toggleHistoryBtn.addEventListener('click', () => {
+    historyList.classList.toggle('collapsed');
+    toggleHistoryBtn.classList.toggle('collapsed');
+  });
+}
 
 
 
@@ -2401,8 +2460,11 @@ function openPhoneModal() {
 
 function closePhoneModal() {
   phoneModal.style.display = 'none';
-  // Al cerrar, reseteamos la tarjeta a su estado inicial (sin voltear)
-  surpriseCard.classList.remove('is-flipped');
+  // Al cerrar, reseteamos las vistas al estado inicial
+  if (challengeQuestionView && challengeRevealedView) {
+    challengeRevealedView.classList.remove('active');
+    challengeQuestionView.classList.add('active');
+  }
   // Y volvemos a la pantalla de inicio del teléfono
   showPhoneApp('homescreen');
 
@@ -2411,9 +2473,6 @@ function closePhoneModal() {
     phoneContainer.classList.remove('is-tablet');
     deviceSwitchBtn.title = "Cambiar a modo Tablet";
     deviceSwitchBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"></rect><line x1="2" y1="12" x2="22" y2="12"></line></svg>`;
-  }  
-  if (surpriseCard) {
-    surpriseCard.classList.remove('is-flipped');
   }
 
 }
@@ -3621,27 +3680,27 @@ async function saveCustomFavor() {
 
 // Función simplificada para generar y mostrar el contenido de la tarea
 function updateSurpriseContent() {
-  currentSurpriseTask = getRandomTask();
+  currentSurpriseTask = getRandomTask(currentChallengeCategory);
   surpriseEmoji.textContent = currentSurpriseTask.emoji;
   surpriseText.textContent = currentSurpriseTask.text;
+  
+  // Actualizar categoría
+  if (challengeCategoryBadge) {
+    challengeCategoryBadge.textContent = currentSurpriseTask.categoryLabel || '✨ Variado';
+  }
+  
+  // Actualizar dificultad
+  if (difficultyLabel) {
+    difficultyLabel.textContent = currentSurpriseTask.difficultyLabel || 'Medio';
+    difficultyLabel.className = 'difficulty-label difficulty-' + (currentSurpriseTask.difficulty || 'medium');
+  }
 }
 
 // Función para manejar el botón "Buscar otra idea" (reroll)
 function handleReroll() {
-  // 1. Ocultar la tarjeta (volteándola de vuelta a la pregunta)
-  surpriseCard.classList.remove('is-flipped');
-
-  // 2. Esperar a que la animación de vuelta termine (aprox. 400ms)
-  setTimeout(() => {
-    // 3. Cambiar el contenido de la tarea
-    updateSurpriseContent();
-    
-    // 4. Voltear la tarjeta de nuevo para mostrar el nuevo reto
-    // Usamos otro pequeño delay para asegurar que el contenido se ha actualizado
-    setTimeout(() => {
-      surpriseCard.classList.add('is-flipped');
-    }, 50);
-  }, 400); // Este tiempo debe coincidir con la mitad de la transición en CSS (0.8s / 2)
+  // Volver a la vista de pregunta
+  challengeRevealedView.classList.remove('active');
+  challengeQuestionView.classList.add('active');
 }
 
 async function acceptSurpriseTask() {
@@ -3662,6 +3721,12 @@ async function acceptSurpriseTask() {
       }
     }
     
+    // Guardar en historial
+    await saveChallengeToHistory(currentSurpriseTask);
+    
+    // Actualizar estadísticas
+    await updateChallengeStats();
+    
     await loadPlans();
     closePhoneModal();
     showNotification({
@@ -3670,6 +3735,15 @@ async function acceptSurpriseTask() {
       icon: '🎉',
       type: 'party'
     });
+    
+    // Confeti effect
+    createConfettiEffect();
+    
+    // Volver a vista de pregunta
+    setTimeout(() => {
+      challengeRevealedView.classList.remove('active');
+      challengeQuestionView.classList.add('active');
+    }, 300);
 
   } catch (error) {
     showNotification({
@@ -3682,6 +3756,156 @@ async function acceptSurpriseTask() {
   } finally {
     acceptSurpriseTaskBtn.disabled = false;
     acceptSurpriseTaskBtn.textContent = '¡Aceptamos!';
+  }
+}
+
+// ============================================
+// NUEVAS FUNCIONES PARA RETO DIARIO
+// ============================================
+
+// Guardar reto en historial (Firestore)
+async function saveChallengeToHistory(challenge) {
+  if (!currentCoupleId) return;
+  
+  try {
+    const historyRef = collection(db, 'couples', currentCoupleId, 'challengeHistory');
+    await addDoc(historyRef, {
+      emoji: challenge.emoji,
+      text: challenge.text,
+      category: challenge.category || 'all',
+      categoryLabel: challenge.categoryLabel || '✨ Variado',
+      difficulty: challenge.difficulty || 'medium',
+      acceptedAt: Timestamp.now(),
+      acceptedBy: currentUser.uid,
+      status: 'accepted'
+    });
+  } catch (error) {
+    console.error('Error al guardar reto en historial:', error);
+  }
+}
+
+// Cargar historial desde Firestore
+async function loadChallengeHistory() {
+  if (!currentCoupleId) return;
+  
+  try {
+    const historyRef = collection(db, 'couples', currentCoupleId, 'challengeHistory');
+    const q = query(historyRef, orderBy('acceptedAt', 'desc'), limit(5));
+    const snapshot = await getDocs(q);
+    
+    challengeHistory = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    renderChallengeHistory();
+  } catch (error) {
+    console.error('Error al cargar historial:', error);
+  }
+}
+
+// Renderizar historial
+function renderChallengeHistory() {
+  if (!historyList) return;
+  
+  if (challengeHistory.length === 0) {
+    historyList.innerHTML = `
+      <div class="empty-state-message" style="padding: 1.5rem;">
+        <p style="font-size: 0.85rem; margin: 0;">Aún no hay retos en el historial</p>
+      </div>
+    `;
+    return;
+  }
+  
+  historyList.innerHTML = '';
+  
+  challengeHistory.forEach(challenge => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    
+    const date = challenge.acceptedAt?.toDate ? challenge.acceptedAt.toDate() : new Date();
+    const dateStr = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    
+    item.innerHTML = `
+      <div class="history-item-emoji">${challenge.emoji}</div>
+      <div class="history-item-content">
+        <div class="history-item-text">${challenge.text}</div>
+        <div class="history-item-date">${dateStr}</div>
+      </div>
+      <div class="history-item-status">✅</div>
+    `;
+    
+    historyList.appendChild(item);
+  });
+}
+
+// Actualizar estadísticas
+async function updateChallengeStats() {
+  if (!currentCoupleId) return;
+  
+  try {
+    const historyRef = collection(db, 'couples', currentCoupleId, 'challengeHistory');
+    
+    // Total de retos
+    const totalSnapshot = await getDocs(historyRef);
+    const total = totalSnapshot.size;
+    
+    // Retos de hoy
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayTimestamp = Timestamp.fromDate(today);
+    
+    const todayQuery = query(historyRef, where('acceptedAt', '>=', todayTimestamp));
+    const todaySnapshot = await getDocs(todayQuery);
+    const todayCount = todaySnapshot.size;
+    
+    if (challengesTodayCount) challengesTodayCount.textContent = todayCount;
+    if (challengesTotalCount) challengesTotalCount.textContent = total;
+    
+  } catch (error) {
+    console.error('Error al actualizar estadísticas:', error);
+  }
+}
+
+// Efecto de confeti
+function createConfettiEffect() {
+  const colors = ['#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6'];
+  const confettiCount = 50;
+  
+  for (let i = 0; i < confettiCount; i++) {
+    const confetti = document.createElement('div');
+    confetti.style.position = 'fixed';
+    confetti.style.width = '10px';
+    confetti.style.height = '10px';
+    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    confetti.style.left = Math.random() * 100 + '%';
+    confetti.style.top = '-20px';
+    confetti.style.opacity = '1';
+    confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+    confetti.style.zIndex = '10000';
+    confetti.style.pointerEvents = 'none';
+    
+    document.body.appendChild(confetti);
+    
+    const duration = 2000 + Math.random() * 1000;
+    const rotation = Math.random() * 360;
+    const xMovement = (Math.random() - 0.5) * 200;
+    
+    confetti.animate([
+      { 
+        transform: 'translateY(0) rotate(0deg) translateX(0)',
+        opacity: 1
+      },
+      {
+        transform: `translateY(${window.innerHeight + 20}px) rotate(${rotation}deg) translateX(${xMovement}px)`,
+        opacity: 0
+      }
+    ], {
+      duration: duration,
+      easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+    });
+    
+    setTimeout(() => confetti.remove(), duration);
   }
 }
 
@@ -3728,8 +3952,14 @@ function showPhoneApp(appName) {
       // --- Apps que ya tenías ---
       case 'surprise':
         updateSurpriseContent();
-        // Añadimos un pequeño retardo para que la animación de volteo se vea bien
-        setTimeout(() => { if (surpriseCard) surpriseCard.classList.add('is-flipped'); }, 100);
+        // Cargar estadísticas e historial
+        updateChallengeStats();
+        loadChallengeHistory();
+        // Aseguramos que empiece en la vista de pregunta
+        if (challengeQuestionView && challengeRevealedView) {
+          challengeRevealedView.classList.remove('active');
+          challengeQuestionView.classList.add('active');
+        }
         break;
       case 'timecapsule':
         loadAndRenderCapsules();

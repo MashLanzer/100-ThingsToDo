@@ -966,8 +966,109 @@ const tasks = [
     }
 ];
 
-
-export function getRandomTask() {
-  const randomIndex = Math.floor(Math.random() * tasks.length);
-  return tasks[randomIndex];
+// Función para determinar la categoría basándose en el contenido
+function determineCategory(task) {
+  const text = task.text.toLowerCase();
+  const emoji = task.emoji;
+  
+  // Romántico
+  if (text.includes('amor') || text.includes('cartas') || text.includes('primera cita') ||
+      text.includes('lenguajes del amor') || text.includes('36 preguntas') ||
+      emoji === '💕' || emoji === '💌' || emoji === '💝' || emoji === '🌹') {
+    return 'romantic';
+  }
+  
+  // Aventura
+  if (text.includes('senderismo') || text.includes('kayak') || text.includes('bicicleta') ||
+      text.includes('paseo') || text.includes('viaje') || text.includes('explorar') ||
+      text.includes('ruta') || emoji === '🗺️' || emoji === '🚴' || emoji === '⛰️' || emoji === '🏔️') {
+    return 'adventure';
+  }
+  
+  // Relax
+  if (text.includes('spa') || text.includes('yoga') || text.includes('meditación') ||
+      text.includes('baño') || text.includes('relajante') || text.includes('masaje') ||
+      text.includes('pereza') || emoji === '🧘' || emoji === '🛀' || emoji === '💆') {
+    return 'chill';
+  }
+  
+  // Creativo
+  if (text.includes('pintar') || text.includes('dibujar') || text.includes('crear') ||
+      text.includes('escribir') || text.includes('canción') || text.includes('arte') ||
+      text.includes('cerámica') || text.includes('fotos') || text.includes('collage') ||
+      emoji === '🎨' || emoji === '🎵' || emoji === '📸' || emoji === '🖌️' || emoji === '🏺') {
+    return 'creative';
+  }
+  
+  // Por defecto
+  return 'all';
 }
+
+// Función para determinar la dificultad
+function determineDifficulty(task) {
+  const text = task.text.toLowerCase();
+  const subtasksCount = task.subtasks ? task.subtasks.length : 0;
+  
+  // Difícil: Requiere mucha planificación o es físicamente exigente
+  if (text.includes('senderismo') || text.includes('kayak') || text.includes('viaje') ||
+      text.includes('pintar una pared') || text.includes('montar un mueble') ||
+      text.includes('clase de') || subtasksCount > 5) {
+    return 'hard';
+  }
+  
+  // Fácil: Actividades simples en casa
+  if (text.includes('ver') || text.includes('escuchar') || text.includes('leer') ||
+      text.includes('hablar sobre') || text.includes('jugar a') ||
+      text.includes('pereza') || subtasksCount <= 3) {
+    return 'easy';
+  }
+  
+  // Medio: Todo lo demás
+  return 'medium';
+}
+
+// Etiquetas en español para cada categoría
+const categoryLabels = {
+  all: '✨ Variado',
+  romantic: '💕 Romántico',
+  adventure: '🗺️ Aventura',
+  chill: '😌 Relax',
+  creative: '🎨 Creativo'
+};
+
+// Etiquetas en español para cada dificultad
+const difficultyLabels = {
+  easy: 'Fácil',
+  medium: 'Medio',
+  hard: 'Difícil'
+};
+
+export function getRandomTask(categoryFilter = 'all') {
+  // Filtrar tareas por categoría
+  let filteredTasks = tasks;
+  
+  if (categoryFilter !== 'all') {
+    filteredTasks = tasks.filter(task => {
+      const category = determineCategory(task);
+      return category === categoryFilter || category === 'all';
+    });
+  }
+  
+  // Si no hay tareas en la categoría, usar todas
+  if (filteredTasks.length === 0) {
+    filteredTasks = tasks;
+  }
+  
+  const randomIndex = Math.floor(Math.random() * filteredTasks.length);
+  const task = filteredTasks[randomIndex];
+  
+  // Añadir metadatos
+  task.category = determineCategory(task);
+  task.categoryLabel = categoryLabels[task.category];
+  task.difficulty = determineDifficulty(task);
+  task.difficultyLabel = difficultyLabels[task.difficulty];
+  
+  return task;
+}
+
+export { categoryLabels, difficultyLabels };
