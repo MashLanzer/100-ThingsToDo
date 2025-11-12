@@ -2342,6 +2342,24 @@ setInterval(updatePhoneClock, 1000);
 // ============================================
 
 async function openStatsModal() { // <== Convertir la función en async
+  // SIEMPRE ocultar otros modales al abrir el modal de estadísticas
+  if (placeInfoModal) {
+    placeInfoModal.style.display = 'none';
+    document.body.appendChild(placeInfoModal);
+    console.log('Modal de detalles cerrado al abrir modal de estadísticas');
+  }
+  // Cerrar modal de favores si está abierto
+  const favorsModal = document.getElementById('favors-fullscreen-modal');
+  if (favorsModal && !favorsModal.classList.contains('hidden')) {
+    favorsModal.classList.add('hidden');
+    console.log('Modal de favores cerrado al abrir modal de estadísticas');
+  }
+  // Cerrar lightbox si está abierto
+  if (lightbox && lightbox.classList.contains('active')) {
+    closeLightbox();
+    console.log('Lightbox cerrado al abrir modal de estadísticas');
+  }
+  
   statsModal.style.display = 'flex';
   
   // Mostrar la vista de carga inmediatamente
@@ -2456,12 +2474,25 @@ function hideAboutView() {
 
 function openPhoneModal() {
   console.log('Abriendo phoneModal. Estado del placeInfoModal antes:', placeInfoModal ? placeInfoModal.style.display : 'no modal');
-  // SIEMPRE ocultar el modal de detalles y el lightbox al abrir cualquier modal
+  // SIEMPRE ocultar el modal de detalles, favores y el lightbox al abrir cualquier modal
   if (placeInfoModal) {
     placeInfoModal.style.display = 'none';
     // Asegurarse de que esté en el body
     document.body.appendChild(placeInfoModal);
     console.log('Modal de detalles forzosamente ocultado y movido al body');
+  }
+  // Cerrar modal de favores si está abierto
+  const favorsModal = document.getElementById('favors-fullscreen-modal');
+  console.log('Checking favors modal for closing:', favorsModal);
+  if (favorsModal) {
+    console.log('Favors modal exists, classes:', favorsModal.className);
+    console.log('Favors modal has hidden class:', favorsModal.classList.contains('hidden'));
+    console.log('Favors modal computed display:', window.getComputedStyle(favorsModal).display);
+  }
+  if (favorsModal && !favorsModal.classList.contains('hidden')) {
+    console.log('Closing favors modal...');
+    favorsModal.classList.add('hidden');
+    console.log('Modal de favores cerrado al abrir modal del teléfono');
   }
   // Cerrar lightbox si está abierto
   if (lightbox && lightbox.classList.contains('active')) {
@@ -2498,6 +2529,18 @@ function closePhoneModal() {
 // Funciones para el modal fullscreen de Favores
 function openFavorsFullscreenModal() {
   console.log('=== openFavorsFullscreenModal called ===');
+  
+  // SIEMPRE ocultar otros modales al abrir el modal de favores
+  if (placeInfoModal) {
+    placeInfoModal.style.display = 'none';
+    document.body.appendChild(placeInfoModal);
+    console.log('Modal de detalles cerrado al abrir modal de favores');
+  }
+  // Cerrar lightbox si está abierto
+  if (lightbox && lightbox.classList.contains('active')) {
+    closeLightbox();
+    console.log('Lightbox cerrado al abrir modal de favores');
+  }
   
   let modal = document.getElementById('favors-fullscreen-modal');
   
@@ -2588,8 +2631,24 @@ function openFavorsFullscreenModal() {
   }
   
   // Mostrar el modal
-  console.log('Showing modal...');
+  console.log('=== SHOWING FAVORS MODAL ===');
+  console.log('Modal exists:', !!modal);
+  console.log('Modal classes before:', modal.className);
+  
+  // Asegurarse de que el modal esté al final del body para el stacking context
+  document.body.appendChild(modal);
+  
   modal.classList.remove('hidden');
+  
+  console.log('Modal classes after:', modal.className);
+  console.log('Modal computed display:', window.getComputedStyle(modal).display);
+  console.log('Modal computed z-index:', window.getComputedStyle(modal).zIndex);
+  
+  // Forzar visibilidad como último recurso
+  modal.style.display = 'flex';
+  modal.style.zIndex = '100000';
+  
+  console.log('Favors modal should now be visible');
   
   // Cargar datos si el usuario está autenticado
   if (currentUser && currentCoupleId) {
@@ -6041,11 +6100,23 @@ document.addEventListener('keydown', (e) => {
 // Abrir modal del mapa
 if (openMapModalBtn) {
   openMapModalBtn.onclick = () => {
-    // SIEMPRE ocultar el modal de detalles y el lightbox al abrir cualquier modal
+    // SIEMPRE ocultar el modal de detalles, favores y el lightbox al abrir cualquier modal
     if (placeInfoModal) {
       placeInfoModal.style.display = 'none';
       document.body.appendChild(placeInfoModal);
       console.log('Modal de detalles forzosamente ocultado al abrir modal del mapa');
+    }
+    // Cerrar modal de favores si está abierto
+    const favorsModal = document.getElementById('favors-fullscreen-modal');
+    console.log('Checking favors modal for closing in map modal:', favorsModal);
+    if (favorsModal) {
+      console.log('Favors modal exists in map, classes:', favorsModal.className);
+      console.log('Favors modal has hidden class in map:', favorsModal.classList.contains('hidden'));
+    }
+    if (favorsModal && !favorsModal.classList.contains('hidden')) {
+      console.log('Closing favors modal from map modal...');
+      favorsModal.classList.add('hidden');
+      console.log('Modal de favores cerrado al abrir modal del mapa');
     }
     // Cerrar lightbox si está abierto
     if (lightbox && lightbox.classList.contains('active')) {
