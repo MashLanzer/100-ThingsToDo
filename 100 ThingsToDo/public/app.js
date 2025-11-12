@@ -496,6 +496,15 @@ const goToAddSongBtn = document.getElementById('go-to-add-song-btn');
 const songNameInput = document.getElementById('song-name-input');
 const youtubeLinkInput = document.getElementById('youtube-link-input');
 const saveSongBtn = document.getElementById('save-song-btn');
+const totalPlaylistsCount = document.getElementById('total-playlists');
+const totalSongsCount = document.getElementById('total-songs');
+
+// Elementos de modales de edición
+const editPlaylistModal = document.getElementById('edit-playlist-modal');
+const editSongModal = document.getElementById('edit-song-modal');
+const editPlaylistNameInput = document.getElementById('edit-playlist-name-input');
+const editSongNameInput = document.getElementById('edit-song-name-input');
+const editSongUrlInput = document.getElementById('edit-song-url-input');
 
 // Elementos del Reproductor de Música (Tocadiscos)
 const youtubePlayerContainer = document.getElementById('youtube-player-container');
@@ -1898,6 +1907,59 @@ statsModal.addEventListener('click', (e) => {
 createPlaylistBtn.addEventListener('click', handleCreatePlaylist);
 goToAddSongBtn.addEventListener('click', goToAddSongView);
 saveSongBtn.addEventListener('click', handleSaveSong);
+
+// Validación visual en tiempo real para URL de YouTube
+youtubeLinkInput.addEventListener('input', (e) => {
+  const url = e.target.value.trim();
+  if (url.length === 0) {
+    youtubeLinkInput.style.borderColor = 'rgba(139, 92, 246, 0.2)';
+    return;
+  }
+  
+  if (url.includes('youtu.be/') || url.includes('youtube.com/watch')) {
+    youtubeLinkInput.style.borderColor = '#10b981'; // Verde
+    youtubeLinkInput.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)';
+  } else {
+    youtubeLinkInput.style.borderColor = '#ef4444'; // Rojo
+    youtubeLinkInput.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+  }
+});
+
+// Listeners para modales de edición
+document.getElementById('cancel-edit-playlist-btn').addEventListener('click', closeEditPlaylistModal);
+document.getElementById('save-edit-playlist-btn').addEventListener('click', handleSaveEditPlaylist);
+document.getElementById('cancel-edit-song-btn').addEventListener('click', closeEditSongModal);
+document.getElementById('save-edit-song-btn').addEventListener('click', handleSaveEditSong);
+
+// Validación visual para URL en modal de edición de canción
+editSongUrlInput.addEventListener('input', (e) => {
+  const url = e.target.value.trim();
+  if (url.length === 0) {
+    editSongUrlInput.style.borderColor = 'rgba(139, 92, 246, 0.2)';
+    return;
+  }
+  
+  if (url.includes('youtu.be/') || url.includes('youtube.com/watch')) {
+    editSongUrlInput.style.borderColor = '#10b981'; // Verde
+    editSongUrlInput.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)';
+  } else {
+    editSongUrlInput.style.borderColor = '#ef4444'; // Rojo
+    editSongUrlInput.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+  }
+});
+
+// Cerrar modales al hacer clic fuera
+editPlaylistModal.addEventListener('click', (e) => {
+  if (e.target === editPlaylistModal) {
+    closeEditPlaylistModal();
+  }
+});
+
+editSongModal.addEventListener('click', (e) => {
+  if (e.target === editSongModal) {
+    closeEditSongModal();
+  }
+});
 
 // Listener para el clic en el disco del tocadiscos
 turntableDisc.addEventListener('click', togglePlayPause);
@@ -4510,6 +4572,41 @@ async function getSongsFromPlaylist(playlistId) {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
+async function updatePlaylist(playlistId, newName) {
+  if (!currentCoupleId || !playlistId) return;
+  const playlistRef = doc(db, 'couples', currentCoupleId, 'playlists', playlistId);
+  await updateDoc(playlistRef, { name: newName });
+}
+
+async function deletePlaylist(playlistId) {
+  if (!currentCoupleId || !playlistId) return;
+  
+  // Primero eliminar todas las canciones de la playlist
+  const songsRef = collection(db, 'couples', currentCoupleId, 'playlists', playlistId, 'songs');
+  const songsSnapshot = await getDocs(songsRef);
+  const deletePromises = songsSnapshot.docs.map(songDoc => deleteDoc(songDoc.ref));
+  await Promise.all(deletePromises);
+  
+  // Luego eliminar la playlist
+  const playlistRef = doc(db, 'couples', currentCoupleId, 'playlists', playlistId);
+  await deleteDoc(playlistRef);
+}
+
+async function updateSong(playlistId, songId, songName, youtubeUrl) {
+  if (!currentCoupleId || !playlistId || !songId) return;
+  const songRef = doc(db, 'couples', currentCoupleId, 'playlists', playlistId, 'songs', songId);
+  await updateDoc(songRef, {
+    name: songName,
+    url: youtubeUrl
+  });
+}
+
+async function deleteSong(playlistId, songId) {
+  if (!currentCoupleId || !playlistId || !songId) return;
+  const songRef = doc(db, 'couples', currentCoupleId, 'playlists', playlistId, 'songs', songId);
+  await deleteDoc(songRef);
+}
+
 
 // ============================================
 // FUNCIONES DE UI - BANDA SONORA
@@ -4520,17 +4617,66 @@ async function getSongsFromPlaylist(playlistId) {
 async function renderPlaylists() {
   const playlists = await getPlaylists();
   playlistsList.innerHTML = '';
+  
+  // Actualizar estadísticas
+  totalPlaylistsCount.textContent = playlists.length;
+  
+  // Calcular total de canciones en todas las playlists
+  let totalSongs = 0;
+  for (const playlist of playlists) {
+    const songs = await getSongsFromPlaylist(playlist.id);
+    totalSongs += songs.length;
+  }
+  totalSongsCount.textContent = totalSongs;
+  
   if (playlists.length > 0) {
     playlists.forEach(p => {
       const item = document.createElement('div');
       item.className = 'playlist-item';
-      item.onclick = () => openPlaylistDetail(p.id, p.name);
+      
       item.innerHTML = `
         <span class="playlist-item-icon">🎵</span>
-        <span class="playlist-item-name">${p.name}</span>
+        <div class="playlist-item-content">
+          <p class="playlist-item-name">${p.name}</p>
+        </div>
+        <div class="playlist-item-actions">
+          <button class="playlist-action-btn playlist-edit-btn" data-id="${p.id}" data-name="${p.name}">✏️</button>
+          <button class="playlist-action-btn playlist-delete-btn" data-id="${p.id}" data-name="${p.name}">🗑️</button>
+        </div>
+        <span class="playlist-item-arrow">›</span>
       `;
+      
+      // Click en el item para ver detalles (excepto en los botones)
+      item.addEventListener('click', (e) => {
+        if (!e.target.closest('.playlist-item-actions')) {
+          openPlaylistDetail(p.id, p.name);
+        }
+      });
+      
+      // Click en editar
+      const editBtn = item.querySelector('.playlist-edit-btn');
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEditPlaylistModal(p.id, p.name);
+      });
+      
+      // Click en eliminar
+      const deleteBtn = item.querySelector('.playlist-delete-btn');
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        confirmDeletePlaylist(p.id, p.name);
+      });
+      
       playlistsList.appendChild(item);
     });
+  } else {
+    playlistsList.innerHTML = `
+      <div class="empty-state-message">
+        <div class="empty-icon">🎵</div>
+        <p>Aún no tienes playlists.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.5rem; opacity: 0.7;">¡Crea tu primera playlist abajo!</p>
+      </div>
+    `;
   }
 }
 
@@ -4540,39 +4686,63 @@ async function openPlaylistDetail(playlistId, playlistName) {
   cassetteLabelTitle.textContent = playlistName;
   
   const songs = await getSongsFromPlaylist(playlistId);
+  
+  // Actualizar contador de canciones
+  const playlistSongCountElement = document.getElementById('playlist-song-count');
+  if (playlistSongCountElement) {
+    playlistSongCountElement.textContent = songs.length;
+  }
+  
   songList.innerHTML = '';
   if (songs.length > 0) {
-// DESPUÉS (CÓDIGO CORREGIDO)
-songs.forEach(song => {
-  const item = document.createElement('div');
-  item.className = 'song-item';
+    songs.forEach(song => {
+      const item = document.createElement('div');
+      item.className = 'song-item';
 
-  // Creamos el contenido del item sin el botón
-  item.innerHTML = `
-    <span class="song-icon">🎧</span>
-    <div class="song-info">
-      <p class="song-title">${song.name}</p>
-      <span class="song-added-by">Añadida por ${song.addedBy}</span>
-    </div>
-  `;
+      item.innerHTML = `
+        <span class="song-icon">🎧</span>
+        <div class="song-info">
+          <p class="song-title">${song.name}</p>
+          <span class="song-added-by">Añadida por ${song.addedBy}</span>
+        </div>
+        <div class="song-actions">
+          <button class="song-action-btn song-edit-btn" data-id="${song.id}" data-name="${song.name}" data-url="${song.url}">✏️</button>
+          <button class="song-action-btn song-delete-btn" data-id="${song.id}" data-name="${song.name}">🗑️</button>
+        </div>
+      `;
 
-  // Creamos el botón por separado
-  const playButton = document.createElement('button');
-  playButton.className = 'play-song-btn';
-  playButton.textContent = '▶';
+      // Crear el botón de reproducción por separado
+      const playButton = document.createElement('button');
+      playButton.className = 'play-song-btn';
+      playButton.textContent = '▶';
+      playButton.addEventListener('click', () => {
+        playSong(song.url, song.name, song.addedBy);
+      });
 
-  // Añadimos el listener de clic, que llamará a la función playSong
-  playButton.addEventListener('click', () => {
-    playSong(song.url, song.name, song.addedBy);
-  });
+      // Eventos de edición y eliminación
+      const editBtn = item.querySelector('.song-edit-btn');
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEditSongModal(song.id, song.name, song.url);
+      });
 
-  // Añadimos el botón al item y el item a la lista
-  item.appendChild(playButton);
-  songList.appendChild(item);
-});
+      const deleteBtn = item.querySelector('.song-delete-btn');
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        confirmDeleteSong(song.id, song.name);
+      });
 
+      item.appendChild(playButton);
+      songList.appendChild(item);
+    });
   } else {
-    songList.innerHTML = '<p style="text-align: center; font-size: 0.8rem; color: #aaa;">Añade la primera canción a esta playlist.</p>';
+    songList.innerHTML = `
+      <div class="empty-state-message">
+        <div class="empty-icon">🎶</div>
+        <p>Esta playlist está vacía.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.5rem; opacity: 0.7;">¡Añade tu primera canción!</p>
+      </div>
+    `;
   }
   
   showPhoneApp('playlistdetail');
@@ -4584,7 +4754,18 @@ async function handleCreatePlaylist() {
     alert('Por favor, dale un nombre a tu playlist.');
     return;
   }
+  
   await createPlaylist(name);
+  
+  // Animación de éxito
+  createPlaylistBtn.textContent = '✅ ¡Creada!';
+  createPlaylistBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+  
+  setTimeout(() => {
+    createPlaylistBtn.innerHTML = '<span>+ Crear Playlist</span>';
+    createPlaylistBtn.style.background = '';
+  }, 2000);
+  
   newPlaylistNameInput.value = '';
   await renderPlaylists();
 }
@@ -4609,8 +4790,119 @@ async function handleSaveSong() {
   }
   
   await addSongToPlaylist(currentPlaylistId, songName, youtubeLink);
+  
+  // Animación de éxito
+  saveSongBtn.textContent = '✅ ¡Guardada!';
+  saveSongBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+  
+  setTimeout(() => {
+    saveSongBtn.textContent = '💾 Guardar Canción';
+    saveSongBtn.style.background = '';
+  }, 1500);
+  
   const currentPlaylistName = playlistDetailTitle.textContent;
   await openPlaylistDetail(currentPlaylistId, currentPlaylistName); // Recargar la vista de la playlist
+}
+
+// ============================================
+// FUNCIONES DE EDICIÓN Y ELIMINACIÓN
+// ============================================
+
+// Variables para modales
+let editingPlaylistId = null;
+let editingSongId = null;
+
+// Función para abrir modal de editar playlist
+function openEditPlaylistModal(playlistId, currentName) {
+  editingPlaylistId = playlistId;
+  editPlaylistNameInput.value = currentName;
+  editPlaylistModal.classList.add('active');
+}
+
+// Función para cerrar modal de editar playlist
+function closeEditPlaylistModal() {
+  editPlaylistModal.classList.remove('active');
+  editingPlaylistId = null;
+  editPlaylistNameInput.value = '';
+}
+
+// Función para guardar edición de playlist
+async function handleSaveEditPlaylist() {
+  const newName = editPlaylistNameInput.value.trim();
+  if (!newName) {
+    alert('Por favor, ingresa un nombre para la playlist.');
+    return;
+  }
+  
+  await updatePlaylist(editingPlaylistId, newName);
+  closeEditPlaylistModal();
+  await renderPlaylists();
+}
+
+// Función para confirmar eliminación de playlist
+function confirmDeletePlaylist(playlistId, playlistName) {
+  if (confirm(`¿Estás seguro de que quieres eliminar la playlist "${playlistName}"? Se eliminarán todas las canciones.`)) {
+    handleDeletePlaylist(playlistId);
+  }
+}
+
+// Función para eliminar playlist
+async function handleDeletePlaylist(playlistId) {
+  await deletePlaylist(playlistId);
+  await renderPlaylists();
+}
+
+// Función para abrir modal de editar canción
+function openEditSongModal(songId, currentName, currentUrl) {
+  editingSongId = songId;
+  editSongNameInput.value = currentName;
+  editSongUrlInput.value = currentUrl;
+  editSongModal.classList.add('active');
+}
+
+// Función para cerrar modal de editar canción
+function closeEditSongModal() {
+  editSongModal.classList.remove('active');
+  editingSongId = null;
+  editSongNameInput.value = '';
+  editSongUrlInput.value = '';
+}
+
+// Función para guardar edición de canción
+async function handleSaveEditSong() {
+  const newName = editSongNameInput.value.trim();
+  const newUrl = editSongUrlInput.value.trim();
+  
+  if (!newName || !newUrl) {
+    alert('Por favor, completa todos los campos.');
+    return;
+  }
+  
+  if (!newUrl.includes('youtu.be/') && !newUrl.includes('youtube.com/watch')) {
+    alert('El enlace no parece ser un vídeo de YouTube válido.');
+    return;
+  }
+  
+  await updateSong(currentPlaylistId, editingSongId, newName, newUrl);
+  closeEditSongModal();
+  
+  const currentPlaylistName = playlistDetailTitle.textContent;
+  await openPlaylistDetail(currentPlaylistId, currentPlaylistName);
+}
+
+// Función para confirmar eliminación de canción
+function confirmDeleteSong(songId, songName) {
+  if (confirm(`¿Estás seguro de que quieres eliminar "${songName}"?`)) {
+    handleDeleteSong(songId);
+  }
+}
+
+// Función para eliminar canción
+async function handleDeleteSong(songId) {
+  await deleteSong(currentPlaylistId, songId);
+  
+  const currentPlaylistName = playlistDetailTitle.textContent;
+  await openPlaylistDetail(currentPlaylistId, currentPlaylistName);
 }
 
 
@@ -4707,12 +4999,18 @@ function onPlayerReady(event) {
  * Se ejecuta cuando el estado del reproductor cambia (play, pausa, etc.).
  */
 function onPlayerStateChange(event) {
+  const cassetteSpoools = document.querySelectorAll('.cassette-spool');
+  
   if (event.data === YT.PlayerState.PLAYING) {
     isPlaying = true;
     turntableContainer.classList.add('playing');
+    // Animar carretes del cassette
+    cassetteSpoools.forEach(spool => spool.classList.add('spinning'));
   } else {
     isPlaying = false;
     turntableContainer.classList.remove('playing');
+    // Detener animación de carretes
+    cassetteSpoools.forEach(spool => spool.classList.remove('spinning'));
   }
 }
 
@@ -4729,17 +5027,20 @@ function togglePlayPause() {
   }
 
   const playerState = youtubePlayer.getPlayerState();
+  const cassetteSpoools = document.querySelectorAll('.cassette-spool');
 
   if (playerState === YT.PlayerState.PLAYING) {
     // Si está sonando, lo pausamos
     youtubePlayer.pauseVideo();
     isPlaying = false;
     turntableContainer.classList.remove('playing'); // Detiene la animación
+    cassetteSpoools.forEach(spool => spool.classList.remove('spinning'));
   } else {
     // Si está pausado, en buffer o finalizado, lo reproducimos
     youtubePlayer.playVideo();
     isPlaying = true;
     turntableContainer.classList.add('playing'); // Inicia la animación
+    cassetteSpoools.forEach(spool => spool.classList.add('spinning'));
   }
 }
 
