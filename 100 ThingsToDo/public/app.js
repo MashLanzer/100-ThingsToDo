@@ -182,6 +182,30 @@ function showNotification({
   return new Promise((resolve) => {
     console.log('>>> showNotification called with confirm:', confirm, 'type:', type);
     
+    // SIEMPRE ocultar otros modales al mostrar notificación
+    if (placeInfoModal) {
+      placeInfoModal.style.display = 'none';
+      document.body.appendChild(placeInfoModal);
+      console.log('Modal de detalles cerrado al mostrar notificación');
+    }
+    // Cerrar modal de favores si está abierto
+    const favorsModal = document.getElementById('favors-fullscreen-modal');
+    if (favorsModal && !favorsModal.classList.contains('hidden')) {
+      favorsModal.classList.add('hidden');
+      console.log('Modal de favores cerrado al mostrar notificación');
+    }
+    // Cerrar modal de crear favor si está abierto
+    const createFavorModal = document.getElementById('create-favor-modal');
+    if (createFavorModal && !createFavorModal.classList.contains('hidden')) {
+      createFavorModal.classList.add('hidden');
+      console.log('Modal de crear favor cerrado al mostrar notificación');
+    }
+    // Cerrar lightbox si está abierto
+    if (lightbox && lightbox.classList.contains('active')) {
+      closeLightbox();
+      console.log('Lightbox cerrado al mostrar notificación');
+    }
+    
     const modal = document.getElementById('notification-modal');
     const iconEl = document.getElementById('notification-icon');
     const titleEl = document.getElementById('notification-title');
@@ -2354,6 +2378,18 @@ async function openStatsModal() { // <== Convertir la función en async
     favorsModal.classList.add('hidden');
     console.log('Modal de favores cerrado al abrir modal de estadísticas');
   }
+  // Cerrar modal de crear favor si está abierto
+  const createFavorModal = document.getElementById('create-favor-modal');
+  if (createFavorModal && !createFavorModal.classList.contains('hidden')) {
+    createFavorModal.classList.add('hidden');
+    console.log('Modal de crear favor cerrado al abrir modal de estadísticas');
+  }
+  // Cerrar modal de notificación si está abierto
+  const notificationModal = document.getElementById('notification-modal');
+  if (notificationModal && notificationModal.style.display !== 'none') {
+    notificationModal.style.display = 'none';
+    console.log('Modal de notificación cerrado al abrir modal de estadísticas');
+  }
   // Cerrar lightbox si está abierto
   if (lightbox && lightbox.classList.contains('active')) {
     closeLightbox();
@@ -2494,6 +2530,18 @@ function openPhoneModal() {
     favorsModal.classList.add('hidden');
     console.log('Modal de favores cerrado al abrir modal del teléfono');
   }
+  // Cerrar modal de crear favor si está abierto
+  const createFavorModal = document.getElementById('create-favor-modal');
+  if (createFavorModal && !createFavorModal.classList.contains('hidden')) {
+    createFavorModal.classList.add('hidden');
+    console.log('Modal de crear favor cerrado al abrir modal del teléfono');
+  }
+  // Cerrar modal de notificación si está abierto
+  const notificationModal = document.getElementById('notification-modal');
+  if (notificationModal && notificationModal.style.display !== 'none') {
+    notificationModal.style.display = 'none';
+    console.log('Modal de notificación cerrado al abrir modal del teléfono');
+  }
   // Cerrar lightbox si está abierto
   if (lightbox && lightbox.classList.contains('active')) {
     closeLightbox();
@@ -2535,6 +2583,18 @@ function openFavorsFullscreenModal() {
     placeInfoModal.style.display = 'none';
     document.body.appendChild(placeInfoModal);
     console.log('Modal de detalles cerrado al abrir modal de favores');
+  }
+  // Cerrar modal de crear favor si está abierto
+  const createFavorModal = document.getElementById('create-favor-modal');
+  if (createFavorModal && !createFavorModal.classList.contains('hidden')) {
+    createFavorModal.classList.add('hidden');
+    console.log('Modal de crear favor cerrado al abrir modal de favores');
+  }
+  // Cerrar modal de notificación si está abierto
+  const notificationModal = document.getElementById('notification-modal');
+  if (notificationModal && notificationModal.style.display !== 'none') {
+    notificationModal.style.display = 'none';
+    console.log('Modal de notificación cerrado al abrir modal de favores');
   }
   // Cerrar lightbox si está abierto
   if (lightbox && lightbox.classList.contains('active')) {
@@ -3523,6 +3583,30 @@ async function acceptRandomChallengePhone() {
 function openCreateFavorModal() {
   console.log('openCreateFavorModal called');
   
+  // SIEMPRE ocultar otros modales al abrir el modal de crear favor
+  if (placeInfoModal) {
+    placeInfoModal.style.display = 'none';
+    document.body.appendChild(placeInfoModal);
+    console.log('Modal de detalles cerrado al abrir modal de crear favor');
+  }
+  // Cerrar modal de favores si está abierto
+  const favorsModal = document.getElementById('favors-fullscreen-modal');
+  if (favorsModal && !favorsModal.classList.contains('hidden')) {
+    favorsModal.classList.add('hidden');
+    console.log('Modal de favores cerrado al abrir modal de crear favor');
+  }
+  // Cerrar modal de notificación si está abierto
+  const notificationModal = document.getElementById('notification-modal');
+  if (notificationModal && notificationModal.style.display !== 'none') {
+    notificationModal.style.display = 'none';
+    console.log('Modal de notificación cerrado al abrir modal de crear favor');
+  }
+  // Cerrar lightbox si está abierto
+  if (lightbox && lightbox.classList.contains('active')) {
+    closeLightbox();
+    console.log('Lightbox cerrado al abrir modal de crear favor');
+  }
+  
   let modal = document.getElementById('create-favor-modal');
   
   // Si no existe, crearlo dinámicamente
@@ -3581,7 +3665,24 @@ function openCreateFavorModal() {
   }
   
   console.log('Opening create favor modal...');
+  console.log('Create favor modal exists:', !!modal);
+  console.log('Create favor modal classes before:', modal.className);
+  
+  // Asegurarse de que el modal esté al final del body para el stacking context
+  document.body.appendChild(modal);
+  
   modal.classList.remove('hidden');
+  
+  console.log('Create favor modal classes after:', modal.className);
+  console.log('Create favor modal computed display:', window.getComputedStyle(modal).display);
+  console.log('Create favor modal computed z-index:', window.getComputedStyle(modal).zIndex);
+  
+  // Forzar visibilidad como último recurso
+  modal.style.opacity = '1';
+  modal.style.transform = 'scale(1)';
+  modal.style.zIndex = '55000';
+  
+  console.log('Create favor modal should now be visible');
   
   // Configurar listeners cada vez que se abre (para asegurar que funcione)
   setupCreateFavorModalListeners();
@@ -6117,6 +6218,18 @@ if (openMapModalBtn) {
       console.log('Closing favors modal from map modal...');
       favorsModal.classList.add('hidden');
       console.log('Modal de favores cerrado al abrir modal del mapa');
+    }
+    // Cerrar modal de crear favor si está abierto
+    const createFavorModal = document.getElementById('create-favor-modal');
+    if (createFavorModal && !createFavorModal.classList.contains('hidden')) {
+      createFavorModal.classList.add('hidden');
+      console.log('Modal de crear favor cerrado al abrir modal del mapa');
+    }
+    // Cerrar modal de notificación si está abierto
+    const notificationModal = document.getElementById('notification-modal');
+    if (notificationModal && notificationModal.style.display !== 'none') {
+      notificationModal.style.display = 'none';
+      console.log('Modal de notificación cerrado al abrir modal del mapa');
     }
     // Cerrar lightbox si está abierto
     if (lightbox && lightbox.classList.contains('active')) {
