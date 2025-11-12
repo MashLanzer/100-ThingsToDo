@@ -1419,6 +1419,36 @@ p {
   flex: 1;
 }
 
+/* Botones de cancelar en formularios - ROJO */
+.form-actions .btn-outline {
+  background: transparent !important;
+  border: 2px solid var(--destructive) !important;
+  color: var(--destructive) !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1) !important;
+}
+
+.form-actions .btn-outline::before {
+  background: var(--destructive) !important;
+  transform: translateY(100%) !important;
+  z-index: -1 !important;
+}
+
+.form-actions .btn-outline:hover {
+  color: white !important;
+  border-color: var(--destructive-dark) !important;
+  box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.3) !important;
+  transform: translateY(-2px) !important;
+}
+
+.form-actions .btn-outline:hover::before {
+  transform: translateY(0) !important;
+}
+
+.form-actions .btn-outline span {
+  position: relative;
+  z-index: 1;
+}
+
 /* Icon Selector */
 .icon-selector {
   margin-bottom: 1.5rem;
@@ -1577,22 +1607,6 @@ p {
 }
 
 .plan-card:hover::before {
-  opacity: 1;
-}
-
-.plan-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at top right, 
-    var(--primary-lighter) 0%,
-    transparent 70%);
-  opacity: 0;
-  transition: opacity 400ms ease;
-  pointer-events: none;
-}
-
-.plan-card:hover::after {
   opacity: 1;
 }
 
@@ -1870,22 +1884,6 @@ p {
 .task-item:not(.completed) {
   background: linear-gradient(135deg, var(--surface) 0%, var(--surface-hover) 100%);
   box-shadow: var(--shadow-sm);
-}
-
-.task-item:not(.completed)::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at top right, 
-    rgba(255, 182, 217, 0.05) 0%,
-    transparent 60%);
-  opacity: 0;
-  transition: opacity 350ms ease;
-  pointer-events: none;
-}
-
-.task-item:not(.completed):hover::after {
-  opacity: 1;
 }
 
 .task-item:not(.completed):hover {
@@ -7211,8 +7209,7 @@ button, a, input, textarea {
 
 /* Botones de cancelar en modales - ROJO */
 .modal-actions-row .btn-secondary,
-.modal-actions-row .btn-outline:last-child,
-.modal-actions-row .btn:last-child:not(.btn-primary) {
+.modal-actions-row .btn-outline {
   background: transparent !important;
   border: 2px solid var(--destructive) !important;
   color: var(--destructive) !important;
@@ -7220,16 +7217,14 @@ button, a, input, textarea {
 }
 
 .modal-actions-row .btn-secondary::before,
-.modal-actions-row .btn-outline:last-child::before,
-.modal-actions-row .btn:last-child:not(.btn-primary)::before {
+.modal-actions-row .btn-outline::before {
   background: var(--destructive) !important;
   transform: translateY(100%) !important;
   z-index: -1 !important;
 }
 
 .modal-actions-row .btn-secondary:hover,
-.modal-actions-row .btn-outline:last-child:hover,
-.modal-actions-row .btn:last-child:not(.btn-primary):hover {
+.modal-actions-row .btn-outline:hover {
   color: white !important;
   border-color: var(--destructive-dark) !important;
   box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.3) !important;
@@ -7237,14 +7232,52 @@ button, a, input, textarea {
 }
 
 .modal-actions-row .btn-secondary:hover::before,
-.modal-actions-row .btn-outline:last-child:hover::before,
-.modal-actions-row .btn:last-child:not(.btn-primary):hover::before {
+.modal-actions-row .btn-outline:hover::before {
   transform: translateY(0) !important;
 }
 
 .modal-actions-row .btn-secondary span,
-.modal-actions-row .btn-outline:last-child span,
-.modal-actions-row .btn:last-child:not(.btn-primary) span {
+.modal-actions-row .btn-outline span {
+  position: relative;
+  z-index: 1;
+}
+
+/* Botones específicos de cancelar por ID - ROJO */
+#confirm-modal-cancel,
+#cancel-plan-btn,
+#cancel-task-btn {
+  background: transparent !important;
+  border: 2px solid var(--destructive) !important;
+  color: var(--destructive) !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1) !important;
+}
+
+#confirm-modal-cancel::before,
+#cancel-plan-btn::before,
+#cancel-task-btn::before {
+  background: var(--destructive) !important;
+  transform: translateY(100%) !important;
+  z-index: -1 !important;
+}
+
+#confirm-modal-cancel:hover,
+#cancel-plan-btn:hover,
+#cancel-task-btn:hover {
+  color: white !important;
+  border-color: var(--destructive-dark) !important;
+  box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.3) !important;
+  transform: translateY(-2px) !important;
+}
+
+#confirm-modal-cancel:hover::before,
+#cancel-plan-btn:hover::before,
+#cancel-task-btn:hover::before {
+  transform: translateY(0) !important;
+}
+
+#confirm-modal-cancel span,
+#cancel-plan-btn span,
+#cancel-task-btn span {
   position: relative;
   z-index: 1;
 }
