@@ -5803,6 +5803,21 @@ button, a, input, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+/* Animación de rotación del vinilo */
+.turntable-container.playing .turntable-disc {
+  animation: spin-vinyl 3s linear infinite;
+}
+
+@keyframes spin-vinyl {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 

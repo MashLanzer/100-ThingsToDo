@@ -1306,7 +1306,20 @@ function renderTasks(tasks) {
       // Checkbox
       const checkbox = document.createElement('div');
       checkbox.className = `task-checkbox ${task.completed ? 'checked' : ''}`;
-      checkbox.onclick = () => handleToggleTask(task.id, task.completed);
+      
+      // Verificar si la tarea fue completada por otra persona
+      const completedByOther = task.completed && task.completedBy && task.completedBy !== currentUser.uid;
+      
+      if (completedByOther) {
+        // Si fue completada por otra persona, deshabilitar el checkbox
+        checkbox.style.cursor = 'not-allowed';
+        checkbox.style.opacity = '0.7';
+        checkbox.title = `Completado por ${task.completedByName || 'tu pareja'}`;
+      } else {
+        // Si no está completada o la completó el usuario actual, permitir toggle
+        checkbox.onclick = () => handleToggleTask(task.id, task.completed);
+      }
+      
       if (task.completed) {
         checkbox.textContent = '✓';
       }
