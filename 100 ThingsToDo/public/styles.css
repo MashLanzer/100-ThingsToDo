@@ -106,7 +106,7 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 500; /* Reducido para que el modal de detalles esté encima */
   align-items: center;
   justify-content: center;
 }
@@ -8032,7 +8032,7 @@ button, a, input, textarea {
   gap: 1.5rem;
   height: 70vh;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Globo 3D Container */
@@ -8727,12 +8727,32 @@ button, a, input, textarea {
 }
 
 /* Modal de información de lugar */
+#place-info-modal {
+  z-index: 20000 !important; /* Más alto que cualquier otro modal */
+  display: none;
+  position: fixed;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+#place-info-modal .modal-overlay {
+  z-index: 25000 !important; /* Overlay mucho más alto */
+  position: absolute;
+  inset: 0;
+  background: rgba(16,12,8,0.65) !important;
+}
+
 #place-info-modal .modal-content {
   max-width: 600px;
   background: linear-gradient(135deg, #FFF5FA 0%, #FFFFFF 50%, #FFF8FC 100%);
   box-shadow: 0 20px 60px rgba(255, 107, 157, 0.15),
               0 8px 20px rgba(255, 182, 217, 0.1);
   border: 2px solid rgba(255, 182, 217, 0.2);
+  z-index: 16000 !important; /* Contenido encima del overlay y del mapa */
+  position: relative;
+  margin: auto; /* Centrar horizontalmente */
+  transform: none !important; /* Eliminar cualquier transformación */
 }
 
 #place-info-modal .modal-header {

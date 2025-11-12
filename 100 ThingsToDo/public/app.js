@@ -2455,11 +2455,24 @@ function hideAboutView() {
 
 
 function openPhoneModal() {
+  console.log('Abriendo phoneModal. Estado del placeInfoModal antes:', placeInfoModal ? placeInfoModal.style.display : 'no modal');
+  // SIEMPRE ocultar el modal de detalles al abrir cualquier modal
+  if (placeInfoModal) {
+    placeInfoModal.style.display = 'none';
+    // Asegurarse de que esté en el body
+    document.body.appendChild(placeInfoModal);
+    console.log('Modal de detalles forzosamente ocultado y movido al body');
+  }
   phoneModal.style.display = 'flex';
 }
 
 function closePhoneModal() {
   phoneModal.style.display = 'none';
+  // Ocultar el modal de detalles si está abierto
+  if (placeInfoModal && placeInfoModal.style.display === 'flex') {
+    placeInfoModal.style.display = 'none';
+    console.log('Modal de detalles ocultado al cerrar modal del teléfono');
+  }
   // Al cerrar, reseteamos las vistas al estado inicial
   if (challengeQuestionView && challengeRevealedView) {
     challengeRevealedView.classList.remove('active');
@@ -3728,7 +3741,8 @@ async function acceptSurpriseTask() {
     await updateChallengeStats();
     
     await loadPlans();
-    closePhoneModal();
+    
+    // Mostrar notificación y confeti ANTES de cerrar el modal
     showNotification({
       title: '¡Reto Aceptado!',
       message: '¡Nuevo reto con sus pasos añadido a vuestra lista!',
@@ -3739,11 +3753,15 @@ async function acceptSurpriseTask() {
     // Confeti effect
     createConfettiEffect();
     
-    // Volver a vista de pregunta
+    // Esperar un momento para que se vea la notificación y luego cerrar el modal
     setTimeout(() => {
-      challengeRevealedView.classList.remove('active');
-      challengeQuestionView.classList.add('active');
-    }, 300);
+      closePhoneModal();
+      // Volver a vista de pregunta después de cerrar
+      setTimeout(() => {
+        challengeRevealedView.classList.remove('active');
+        challengeQuestionView.classList.add('active');
+      }, 100);
+    }, 1500);
 
   } catch (error) {
     showNotification({
@@ -5771,6 +5789,18 @@ const placeInfoBody = document.getElementById('place-info-body');
 const closePlaceInfoBtn = document.getElementById('close-place-info-btn');
 
 function showPlaceInfo(place) {
+  if (!placeInfoModal || !placeInfoTitle || !placeInfoBody) {
+    console.error('Modal elements not found:', { placeInfoModal, placeInfoTitle, placeInfoBody });
+    return;
+  }
+  // Solo mostrar el modal de detalles si el globo está visible
+  var globeContainer = document.querySelector('.globe-container');
+  var mapModal = document.getElementById('map-modal');
+  if (!globeContainer || !mapModal || mapModal.style.display !== 'flex' || !globe) {
+    console.warn('El globo no está visible, no se muestra el modal de detalles');
+    return;
+  }
+  
   const icon = place.status === 'visited' ? '📍' : '✈️';
   placeInfoTitle.textContent = `${icon} ${place.name}`;
   
@@ -5807,7 +5837,47 @@ function showPlaceInfo(place) {
     </div>
   `;
   
+  console.log('Mostrando modal de lugar:', place.name);
+  
+  // Asegurarse de que el modal se muestre correctamente y centrado
+  if (mapModal && mapModal.style.display === 'flex') {
+    // Mostrar el modal como hijo del modal del mapa para mejor stacking
+    mapModal.appendChild(placeInfoModal);
+    placeInfoModal.style.position = 'absolute';
+    placeInfoModal.style.inset = '0';
+    placeInfoModal.style.zIndex = '30000';
+  } else {
+    // Fallback: mostrar como modal fijo
+    placeInfoModal.style.position = 'fixed';
+    placeInfoModal.style.left = '0';
+    placeInfoModal.style.top = '0';
+    placeInfoModal.style.right = '0';
+    placeInfoModal.style.bottom = '0';
+    placeInfoModal.style.zIndex = '20000';
+  }
+  
   placeInfoModal.style.display = 'flex';
+  placeInfoModal.style.alignItems = 'center';
+  placeInfoModal.style.justifyContent = 'center';
+  placeInfoModal.style.transform = 'none';
+  placeInfoModal.style.opacity = '1';
+  placeInfoModal.style.transition = 'none';
+  
+  // Forzar centrado del contenido
+  const modalContent = placeInfoModal.querySelector('.modal-content');
+  if (modalContent) {
+    modalContent.style.margin = 'auto';
+    modalContent.style.transform = 'none';
+    modalContent.style.transition = 'none'; // Deshabilitar transiciones
+  }
+  
+  console.log('Modal configurado:', {
+    display: placeInfoModal.style.display,
+    zIndex: placeInfoModal.style.zIndex,
+    position: placeInfoModal.style.position,
+    visibility: window.getComputedStyle(placeInfoModal).visibility,
+    opacity: window.getComputedStyle(placeInfoModal).opacity
+  });
   
   // Agregar event listeners a las fotos para el lightbox
   if (place.photos && place.photos.length > 0) {
@@ -5821,12 +5891,16 @@ function showPlaceInfo(place) {
 if (closePlaceInfoBtn) {
   closePlaceInfoBtn.onclick = () => {
     placeInfoModal.style.display = 'none';
+    // Devolver el modal a su posición original en el DOM
+    document.body.appendChild(placeInfoModal);
   };
 }
 
 if (placeInfoModal) {
   placeInfoModal.querySelector('.modal-overlay')?.addEventListener('click', () => {
     placeInfoModal.style.display = 'none';
+    // Devolver el modal a su posición original en el DOM
+    document.body.appendChild(placeInfoModal);
   });
 }
 
@@ -5917,11 +5991,17 @@ document.addEventListener('keydown', (e) => {
 // Abrir modal del mapa
 if (openMapModalBtn) {
   openMapModalBtn.onclick = () => {
+    // SIEMPRE ocultar el modal de detalles al abrir cualquier modal
+    if (placeInfoModal) {
+      placeInfoModal.style.display = 'none';
+      document.body.appendChild(placeInfoModal);
+      console.log('Modal de detalles forzosamente ocultado al abrir modal del mapa');
+    }
     mapModal.style.display = 'flex';
     setTimeout(() => {
       initGlobe();
       loadPlaces();
-    }, 100);
+    }, 500);
   };
 }
 
@@ -5929,6 +6009,13 @@ if (openMapModalBtn) {
 if (closeMapModalBtn) {
   closeMapModalBtn.onclick = () => {
     mapModal.style.display = 'none';
+    // Ocultar el modal de detalles y devolverlo a su posición original
+    if (placeInfoModal && placeInfoModal.style.display === 'flex') {
+      placeInfoModal.style.display = 'none';
+      // Devolver el modal a su posición original en el DOM
+      document.body.appendChild(placeInfoModal);
+      console.log('Modal de detalles ocultado y movido de vuelta al body');
+    }
   };
 }
 
