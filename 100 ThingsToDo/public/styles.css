@@ -3889,23 +3889,302 @@ button, a, input, textarea {
 }
 
 .capsule-item {
-  background: white;
-  border-radius: 1rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 50%, #e9ecef 100%);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  gap: 1.5rem;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.12),
+    0 4px 16px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.8),
+    inset 0 -1px 0 rgba(0,0,0,0.1);
   cursor: pointer;
-  transition: transform 0.2s ease;
-}
-.capsule-item:hover {
-  transform: scale(1.03);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  border: 2px solid rgba(255,255,255,0.2);
+  transform: perspective(1000px) rotateX(0deg) translateY(0);
 }
 
-.capsule-icon {
-  font-size: 2.5rem;
+.capsule-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.4) 0%,
+    rgba(255,255,255,0.1) 25%,
+    rgba(255,255,255,0) 50%,
+    rgba(0,0,0,0.05) 75%,
+    rgba(0,0,0,0.1) 100%);
+  border-radius: 1.5rem;
+  pointer-events: none;
+}
+
+.capsule-item:hover {
+  transform: perspective(1000px) rotateX(-5deg) translateY(-8px) scale(1.02);
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.2),
+    0 8px 32px rgba(0,0,0,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    inset 0 -2px 0 rgba(0,0,0,0.15);
+}
+
+.capsule-item:hover::before {
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.6) 0%,
+    rgba(255,255,255,0.2) 25%,
+    rgba(255,255,255,0) 50%,
+    rgba(0,0,0,0.03) 75%,
+    rgba(0,0,0,0.08) 100%);
+}
+
+.capsule-visual {
+  position: relative;
+}
+
+.capsule-body {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.capsule-cap {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 25px;
+  height: 15px;
+  border-radius: 50% 50% 25px 25px;
+}
+
+.capsule-seal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #FFD700 0%, #FFA500 100%);
+  border: 2px solid #DAA520;
+  transition: all 0.3s ease;
+}
+
+.capsule-seal.sealed {
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.capsule-seal.opened {
+  opacity: 0.3;
+  transform: translate(-50%, -50%) scale(0.8);
+}
+
+.capsule-lock, .capsule-sparkle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.2rem;
+  z-index: 2;
+}
+
+.time-indicator {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: linear-gradient(135deg, #FF6B6B 0%, #EE5A24 100%);
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+  border: 2px solid white;
+}
+
+/* Capsule Type Styles */
+.capsule-memory .capsule-body {
+  background: linear-gradient(145deg, #87CEEB 0%, #4682B4 50%, #1e3a5f 100%);
+  border: 3px solid #4169E1;
+}
+
+.capsule-memory .capsule-cap {
+  background: linear-gradient(145deg, #FFD700 0%, #FFA500 100%);
+}
+
+.capsule-dream .capsule-body {
+  background: linear-gradient(145deg, #FF69B4 0%, #DA70D6 50%, #8A2BE2 100%);
+  border: 3px solid #FF1493;
+}
+
+.capsule-dream .capsule-cap {
+  background: linear-gradient(145deg, #FFE4E1 0%, #FFB6C1 100%);
+}
+
+.capsule-achievement .capsule-body {
+  background: linear-gradient(145deg, #FFD700 0%, #FFA500 50%, #FF6347 100%);
+  border: 3px solid #DAA520;
+}
+
+.capsule-achievement .capsule-cap {
+  background: linear-gradient(145deg, #FFE4B5 0%, #DEB887 100%);
+}
+
+.capsule-mystery .capsule-body {
+  background: linear-gradient(145deg, #800080 0%, #4B0082 50%, #2F1B14 100%);
+  border: 3px solid #8B008B;
+}
+
+.capsule-mystery .capsule-cap {
+  background: linear-gradient(145deg, #DDA0DD 0%, #BA55D3 100%);
+}
+
+.capsule-achievement .capsule-body {
+  background: linear-gradient(145deg, #FFD700 0%, #FFA500 50%, #FF6347 100%);
+  border: 3px solid #DAA520;
+}
+
+.capsule-achievement .capsule-cap {
+  background: linear-gradient(145deg, #FFE4B5 0%, #DEB887 100%);
+}
+
+.capsule-love .capsule-body {
+  background: linear-gradient(145deg, #FF69B4 0%, #FF1493 50%, #DC143C 100%);
+  border: 3px solid #FF1493;
+}
+
+.capsule-love .capsule-cap {
+  background: linear-gradient(145deg, #FFE4E1 0%, #FFB6C1 100%);
+}
+
+.capsule-adventure .capsule-body {
+  background: linear-gradient(145deg, #32CD32 0%, #228B22 50%, #006400 100%);
+  border: 3px solid #228B22;
+}
+
+.capsule-adventure .capsule-cap {
+  background: linear-gradient(145deg, #90EE90 0%, #98FB98 100%);
+}
+
+.capsule-mystery .capsule-body {
+  background: linear-gradient(145deg, #800080 0%, #4B0082 50%, #2F1B14 100%);
+  border: 3px solid #8B008B;
+}
+
+.capsule-mystery .capsule-cap {
+  background: linear-gradient(145deg, #DDA0DD 0%, #BA55D3 100%);
+}
+
+/* Hover Effects */
+.capsule-item:hover .capsule-body {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+}
+
+.capsule-item:hover .capsule-seal {
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+}
+
+.capsule-item:hover .time-indicator {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.5);
+}
+
+/* Animations */
+@keyframes capsuleGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+  }
+}
+
+@keyframes capsuleFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes sealPulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+
+.capsule-item.locked .capsule-seal {
+  animation: sealPulse 2s ease-in-out infinite;
+}
+
+.capsule-item.locked .capsule-body {
+  animation: capsuleGlow 3s ease-in-out infinite;
+}
+
+.capsule-item.unlocked .capsule-body {
+  animation: capsuleFloat 3s ease-in-out infinite;
+}
+
+/* Opening Animation */
+.capsule-opening {
+  animation: capsuleOpen 0.8s ease-out forwards;
+}
+
+@keyframes capsuleOpen {
+  0% {
+    transform: scale(1) rotateY(0deg);
+  }
+  50% {
+    transform: scale(1.2) rotateY(180deg);
+  }
+  100% {
+    transform: scale(1) rotateY(360deg);
+    opacity: 0.8;
+  }
+}
+
+/* Sparkle effect for opened capsules */
+.capsule-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  25% {
+    transform: translate(-50%, -50%) rotate(90deg) scale(1.2);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(-50%, -50%) rotate(180deg) scale(1.1);
+    opacity: 1;
+  }
+  75% {
+    transform: translate(-50%, -50%) rotate(270deg) scale(0.9);
+    opacity: 0.9;
+  }
 }
 
 .capsule-info {

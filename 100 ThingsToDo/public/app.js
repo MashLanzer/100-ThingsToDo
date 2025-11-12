@@ -453,6 +453,7 @@ const goToCreateCapsuleBtn = document.getElementById('go-to-create-capsule-btn')
 const backToCapsuleListBtn = document.querySelector('.back-to-capsule-list-btn');
 const capsuleMessageInput = document.getElementById('capsule-message-input');
 const capsuleUnlockDateInput = document.getElementById('capsule-unlock-date-input');
+const capsuleTypeSelect = document.getElementById('capsule-type-select');
 const saveCapsuleBtn = document.getElementById('save-capsule-btn');
 
 // ... al final de la sección de elementos del DOM ...
@@ -4213,7 +4214,7 @@ function updatePhoneClock() {
 // FUNCIONES DE FIRESTORE - CÁPSULAS DEL TIEMPO
 // ============================================
 
-async function createCapsule(message, unlockDate) {
+async function createCapsule(message, unlockDate, capsuleType = 'memory') {
   if (!currentCoupleId || !currentUser) return;
   
   try {
@@ -4221,6 +4222,7 @@ async function createCapsule(message, unlockDate) {
     await addDoc(capsulesRef, {
       message,
       unlockDate: Timestamp.fromDate(new Date(unlockDate)),
+      type: capsuleType,
       createdBy: currentUser.uid,
       creatorName: currentUser.displayName,
       createdAt: Timestamp.now(),
@@ -4267,22 +4269,88 @@ async function loadAndRenderCapsules() {
     
     capsules.forEach(capsule => {
       const isLocked = capsule.unlockDate > now;
+      const timeLeft = isLocked ? Math.ceil((capsule.unlockDate - now) / (1000 * 60 * 60 * 24)) : 0;
+      const capsuleType = capsule.type || 'default';
+
       const item = document.createElement('div');
-      item.className = `capsule-item ${isLocked ? 'locked' : 'unlocked'}`;
+      item.className = `capsule-item ${isLocked ? 'locked' : 'unlocked'} capsule-${capsuleType}`;
       item.onclick = () => openCapsule(capsule, isLocked);
-      
+
+      // Determinar el contenido visual basado en el tipo
+      const capsuleVisuals = getCapsuleVisuals(capsuleType, isLocked);
+
       item.innerHTML = `
-        <div class="capsule-icon">${isLocked ? '🔒' : '🔓'}</div>
+        <div class="capsule-visual">
+          <div class="capsule-body ${capsuleVisuals.bodyClass}">
+            <div class="capsule-cap ${capsuleVisuals.capClass}"></div>
+            <div class="capsule-seal ${isLocked ? 'sealed' : 'opened'}"></div>
+            ${isLocked ? '<div class="capsule-lock">🔒</div>' : '<div class="capsule-sparkle">✨</div>'}
+          </div>
+          ${timeLeft > 0 ? `<div class="time-indicator">${timeLeft}d</div>` : ''}
+        </div>
         <div class="capsule-info">
-          <p>Cápsula de ${capsule.creatorName}</p>
+          <p class="capsule-title">${capsuleVisuals.title}</p>
           <span class="capsule-date">
-            ${isLocked ? `Se abre el ${capsule.unlockDate.toLocaleDateString()}` : `Abierta el ${capsule.unlockDate.toLocaleDateString()}`}
+            ${isLocked ? `Se abre en ${timeLeft} días` : `Abierta el ${capsule.unlockDate.toLocaleDateString()}`}
           </span>
+          <div class="capsule-creator">De: ${capsule.creatorName}</div>
         </div>
       `;
       capsulesList.appendChild(item);
     });
   }
+}
+
+function getCapsuleVisuals(type, isLocked) {
+  const visuals = {
+    default: {
+      title: 'Cápsula del Tiempo',
+      bodyClass: 'capsule-memory',
+      capClass: 'cap-memory'
+    },
+    memory: {
+      title: 'Recuerdo Especial',
+      bodyClass: 'capsule-memory',
+      capClass: 'cap-memory'
+    },
+    dream: {
+      title: 'Sueño Futuro',
+      bodyClass: 'capsule-dream',
+      capClass: 'cap-dream'
+    },
+    achievement: {
+      title: 'Logro Personal',
+      bodyClass: 'capsule-achievement',
+      capClass: 'cap-achievement'
+    },
+    love: {
+      title: 'Carta de Amor',
+      bodyClass: 'capsule-love',
+      capClass: 'cap-love'
+    },
+    adventure: {
+      title: 'Aventura Futura',
+      bodyClass: 'capsule-adventure',
+      capClass: 'cap-adventure'
+    },
+    mystery: {
+      title: 'Misterio Oculto',
+      bodyClass: 'capsule-mystery',
+      capClass: 'cap-mystery'
+    },
+    reflection: {
+      title: 'Reflexión Personal',
+      bodyClass: 'capsule-memory',
+      capClass: 'cap-memory'
+    },
+    surprise: {
+      title: 'Sorpresa Mágica',
+      bodyClass: 'capsule-dream',
+      capClass: 'cap-dream'
+    }
+  };
+
+  return visuals[type] || visuals.default;
 }
 
 function openCapsule(capsule, isLocked) {
@@ -4294,10 +4362,34 @@ function openCapsule(capsule, isLocked) {
       type: 'time'
     });
   } else {
+    // Efectos visuales sorprendentes al abrir la cápsula
+    const capsuleElement = event.target.closest('.capsule-item');
+    if (capsuleElement) {
+      capsuleElement.classList.add('capsule-opening');
+
+      // Confetti celebration
+      loadConfettiLib().then(confetti => {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#FFD700', '#FF69B4', '#87CEEB', '#32CD32', '#FF6347']
+        });
+      }).catch(() => {
+        // Fallback si no se puede cargar confetti
+        console.log('Confetti not available, but capsule opened successfully!');
+      });
+
+      // Remover la clase de animación después de que termine
+      setTimeout(() => {
+        capsuleElement.classList.remove('capsule-opening');
+      }, 800);
+    }
+
     showNotification({
-      title: '¡Cápsula del Tiempo Abierta!',
-      message: `Mensaje de ${capsule.creatorName}:\n\n"${capsule.message}"`,
-      icon: '🎉',
+      title: '🎉 ¡Cápsula del Tiempo Abierta!',
+      message: `Mensaje de ${capsule.creatorName}:\n\n"${capsule.message}"\n\n✨ Tu mensaje del pasado ha llegado justo a tiempo! ✨`,
+      icon: '�',
       type: 'success'
     });
   }
@@ -4306,6 +4398,7 @@ function openCapsule(capsule, isLocked) {
 async function handleSaveCapsule() {
   const message = capsuleMessageInput.value.trim();
   const unlockDate = capsuleUnlockDateInput.value;
+  const capsuleType = capsuleTypeSelect.value;
 
   if (!message || !unlockDate) {
     showNotification({
@@ -4335,11 +4428,12 @@ async function handleSaveCapsule() {
     saveCapsuleBtn.disabled = true;
     saveCapsuleBtn.textContent = 'Sellando...';
     
-    await createCapsule(message, unlockDate);
+    await createCapsule(message, unlockDate, capsuleType);
     
     // Limpiar formulario y volver a la lista
     capsuleMessageInput.value = '';
     capsuleUnlockDateInput.value = '';
+    capsuleTypeSelect.value = 'memory'; // Reset to default
     showPhoneApp('timecapsule');
     await loadAndRenderCapsules();
     
