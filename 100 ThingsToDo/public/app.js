@@ -48,7 +48,8 @@ import { calculateCoupleStats } from './scr/modules/stats.js';
 // import { initializeNotifications, requestNotificationPermission } from './scr/modules/notifications.js';
 import { getRandomTask } from './scr/modules/surpriseTasks.js';
 import { RANDOM_CHALLENGES } from './scr/modules/randomTasks.js';
-import { testQuestions, coupleTitles } from './scr/modules/testQuestions.js';
+import { testQuestions } from './scr/modules/questions.js';
+import { coupleTitles, createTest, getAvailableTests, getCreatedTests, updateTestAnswers, updateTestGuesses, hasActiveTest, getTest } from './scr/modules/testQuestions.js';
 // Canvas confetti para celebraciones avanzadas
 // Dynamic loader for canvas-confetti (UMD bundle). We load the browser UMD and use window.confetti.
 let confettiLib = null;
@@ -2397,7 +2398,31 @@ if (openFavorsModalBtn) {
   openFavorsModalBtn.addEventListener('click', openFavorsFullscreenModal);
 }
 if (openNewFeaturesBtn) {
-  openNewFeaturesBtn.addEventListener('click', openTestGameModal);
+  openNewFeaturesBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    // Verificar que no estamos dentro de ningún modal
+    const phoneModal = document.getElementById('phone-modal');
+    const testGameModal = document.getElementById('test-game-modal');
+    const favorsModal = document.getElementById('favors-modal');
+
+    const isInsidePhone = phoneModal && phoneModal.style.display === 'flex';
+    const isTestModalOpen = testGameModal && testGameModal.style.display === 'flex';
+    const isFavorsModalOpen = favorsModal && favorsModal.style.display === 'flex';
+
+    // Solo abrir si no hay ningún modal abierto
+    if (!isInsidePhone && !isTestModalOpen && !isFavorsModalOpen) {
+      console.log('Abriendo modal del test desde botón principal');
+      openTestGameModal();
+    } else {
+      console.log('Modal del test bloqueado - hay otro modal abierto:', {
+        phone: isInsidePhone,
+        test: isTestModalOpen,
+        favors: isFavorsModalOpen
+      });
+    }
+  });
 }
 if (closeFavorsModalBtn) {
   closeFavorsModalBtn.addEventListener('click', closeFavorsFullscreenModal);
@@ -3923,7 +3948,7 @@ function openCreateFavorModal() {
   console.log('Create favor modal classes before:', modal.className);
   
   // Usar la función de modales anidados para favores
-  showModal(modal, 'favors');
+  showModal(modal, 'standard');
   
   console.log('Create favor modal should now be visible');
   
@@ -7866,14 +7891,101 @@ const playAgainBtn = document.getElementById('play-again-btn');
 const shareResultsBtn = document.getElementById('share-results-btn');
 
 // Función para abrir el modal del juego
-function openTestGameModal() {
+async function openTestGameModal() {
   showModal(testGameModal, 'standard');
-  resetTestGame();
+
+  // Verificar estado de pareja para debugging
+  await checkCoupleStatus();
+
+  // Verificar el estado de tests
+  await checkTestStatus();
   showTestScreen('start');
 }
 
+// Función para verificar el estado de tests disponibles
+async function checkTestStatus() {
+  if (!currentUser) {
+    showTestStatus('Debes iniciar sesión para jugar', 'warning');
+    return;
+  }
+
+  try {
+    // Verificar si hay tests activos
+    const activeResult = await hasActiveTest(db, currentUser.uid);
+    if (!activeResult.success) {
+      showTestStatus('Error al verificar tests activos', 'warning');
+      return;
+    }
+
+    // Verificar tests disponibles para responder
+    const availableResult = await getAvailableTests(db, currentUser.uid);
+    if (!availableResult.success) {
+      showTestStatus('Error al cargar tests disponibles', 'warning');
+      return;
+    }
+
+    const hasAvailableTests = availableResult.tests.length > 0;
+    const hasActiveTestCreated = activeResult.createdActive;
+
+    // Actualizar la interfaz
+    const createBtn = document.getElementById('create-test-btn');
+    const respondBtn = document.getElementById('respond-test-btn');
+
+    if (hasActiveTestCreated) {
+      // Usuario creó un test activo, no puede crear otro hasta que se responda
+      createBtn.style.display = 'none';
+      respondBtn.style.display = 'none';
+      showTestStatus('Ya tienes un test activo esperando respuesta. ¡Sé paciente! 💕', 'info');
+    } else if (hasAvailableTests) {
+      // Hay tests disponibles para responder (creados por la pareja)
+      createBtn.style.display = 'block'; // Puede crear uno nuevo mientras responde
+      respondBtn.style.display = 'block';
+      showTestStatus(`¡Tienes ${availableResult.tests.length} test(s) disponible(s) para responder! 🎉`, 'success');
+    } else {
+      // No hay tests activos, puede crear uno
+      createBtn.style.display = 'block';
+      respondBtn.style.display = 'none';
+      showTestStatus('¡Crea un test para que tu pareja lo responda! ✨', 'info');
+    }
+
+  } catch (error) {
+    console.error('Error checking test status:', error);
+    showTestStatus('Error al verificar el estado de tests', 'warning');
+  }
+}
+
+// Función para mostrar mensajes de estado
+function showTestStatus(message, type = 'info') {
+  const statusEl = document.getElementById('test-status-message');
+  statusEl.textContent = message;
+  statusEl.className = `test-status-message ${type}`;
+  statusEl.style.display = 'block';
+}
+
 // Función para cerrar el modal del juego
-function closeTestGameModalFunc() {
+async function closeTestGameModalFunc() {
+  // Si estamos creando un test y no hemos completado todas las preguntas,
+  // marcar el test como cancelado en lugar de eliminarlo
+  if (testGameState.mode === 'creating' && testGameState.testId) {
+    const answeredQuestions = testGameState.answers.filter(answer => answer && answer.trim() !== '').length;
+    const totalQuestions = testGameState.questions.length;
+
+    if (answeredQuestions < totalQuestions) {
+      try {
+        // Marcar el test como cancelado en lugar de eliminarlo
+        const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+        await updateDoc(doc(db, 'tests', testGameState.testId), {
+          status: 'cancelled',
+          cancelledAt: new Date(),
+          cancelledReason: 'incomplete_creation'
+        });
+        console.log('Test incompleto marcado como cancelado en Firebase');
+      } catch (error) {
+        console.error('Error marcando test como cancelado:', error);
+      }
+    }
+  }
+
   hideModal(testGameModal, 'standard');
   resetTestGame();
 }
@@ -7881,9 +7993,12 @@ function closeTestGameModalFunc() {
 // Función para resetear el estado del juego
 function resetTestGame() {
   testGameState = {
-    currentScreen: 'start',
-    currentPlayer: null,
-    guessingPlayer: null,
+    mode: 'local', // 'local', 'creating', 'responding'
+    testId: null,
+    creatorId: null,
+    targetId: null,
+    creatorName: '',
+    targetName: '',
     questions: [...testQuestions].sort(() => Math.random() - 0.5).slice(0, 10), // 10 preguntas aleatorias
     currentQuestionIndex: 0,
     answers: [],
@@ -7953,10 +8068,10 @@ function selectPlayer(player) {
 
   // Actualizar nombres en la interfaz
   const currentPlayerName = player === 'player1' ? player1Name.textContent : player2Name.textContent;
-  const guessingPlayerName = player === 'player1' ? player2Name.textContent : player1Name.textContent;
+  const guessingPlayerNameValue = player === 'player1' ? player2Name.textContent : player1Name.textContent;
 
   answerPlayerName.textContent = currentPlayerName;
-  guessingPlayerNameEl.textContent = guessingPlayerName;
+  guessingPlayerName.textContent = guessingPlayerNameValue;
 
   showTestScreen('questions');
   loadCurrentQuestion();
@@ -7994,24 +8109,80 @@ function startQuestionTimer() {
 }
 
 // Función para enviar respuesta
-function submitAnswer() {
+async function submitAnswer() {
   clearInterval(testGameState.timer);
 
   const answer = answerInput.value.trim();
-  if (answer) {
-    testGameState.answers.push({
-      question: testGameState.questions[testGameState.currentQuestionIndex],
-      answer: answer
-    });
+  if (!answer) return;
+
+  testGameState.answers[testGameState.currentQuestionIndex] = answer;
+
+  // Si estamos creando un test, guardar en Firebase
+  if (testGameState.mode === 'creating' && testGameState.testId) {
+    await updateTestAnswers(db, testGameState.testId, testGameState.answers, testGameState.currentQuestionIndex);
   }
 
+  nextQuestion();
+}
+
+// Función para avanzar a la siguiente pregunta
+function nextQuestion() {
   testGameState.currentQuestionIndex++;
 
   if (testGameState.currentQuestionIndex < testGameState.questions.length) {
     loadCurrentQuestion();
   } else {
-    // Todas las preguntas respondidas, pasar a adivinación
-    startGuessingPhase();
+    // Verificar que todas las preguntas estén respondidas antes de pasar a adivinación
+    const totalQuestions = testGameState.questions.length;
+    const answeredQuestions = testGameState.answers.filter(answer => answer && answer.trim() !== '').length;
+
+    if (answeredQuestions < totalQuestions) {
+      // No todas las preguntas están respondidas, mostrar mensaje de error
+      alert(`Debes responder todas las ${totalQuestions} preguntas antes de continuar. Has respondido ${answeredQuestions} de ${totalQuestions}.`);
+      testGameState.currentQuestionIndex--; // Volver a la pregunta actual
+      return;
+    }
+
+    // Todas las preguntas respondidas
+    if (testGameState.mode === 'creating') {
+      // Modo creación: finalizar el test creado
+      finishTestCreation();
+    } else {
+      // Modo normal: pasar a adivinación
+      startGuessingPhase();
+    }
+  }
+}
+
+// Función para finalizar la creación del test
+async function finishTestCreation() {
+  try {
+    // Marcar el test como completado por el creador
+    await updateTestAnswers(db, testGameState.testId, testGameState.answers, testGameState.questions.length - 1, true);
+
+    // Mostrar notificación global de éxito
+    showNotification({
+      title: '¡Test Creado! 🎉',
+      message: 'Tu pareja recibirá una notificación para responder el test. Cuando ambos hayan terminado, podrán ver los resultados de compatibilidad.',
+      type: 'success',
+      confirm: false
+    });
+
+    // Cerrar el modal del test
+    closeTestGameModalFunc();
+
+    // Actualizar la UI para mostrar que hay un test activo creado
+    // Recargar el estado de los tests para actualizar los botones
+    await checkTestStatus();
+
+  } catch (error) {
+    console.error('Error finalizando creación del test:', error);
+    showNotification({
+      title: 'Error',
+      message: 'Error al finalizar la creación del test. Por favor intenta de nuevo.',
+      type: 'error',
+      confirm: false
+    });
   }
 }
 
@@ -8034,11 +8205,11 @@ function loadGuessingQuestion() {
 }
 
 // Función para enviar adivinanza
-function submitGuess() {
+async function submitGuess() {
   const guess = guessInput.value.trim();
-  const correctAnswer = testGameState.answers[testGameState.currentQuestionIndex].answer;
+  if (!guess) return;
 
-  // Comparar respuestas (básico por ahora, se puede mejorar)
+  const correctAnswer = testGameState.answers[testGameState.currentQuestionIndex].answer;
   const isCorrect = compareAnswers(guess, correctAnswer);
 
   testGameState.guesses.push({
@@ -8052,11 +8223,22 @@ function submitGuess() {
     testGameState.correctAnswers++;
   }
 
+  // Si estamos respondiendo un test, actualizar en Firebase
+  if (testGameState.mode === 'responding' && testGameState.testId) {
+    await updateTestGuesses(
+      db,
+      testGameState.testId,
+      testGameState.guesses,
+      testGameState.correctAnswers,
+      testGameState.skippedQuestions
+    );
+  }
+
   showResult();
 }
 
-// Función para saltar adivinanza
-function skipGuess() {
+// Modificar la función skipGuess para guardar en Firebase
+async function skipGuess() {
   testGameState.guesses.push({
     question: testGameState.answers[testGameState.currentQuestionIndex].question,
     correctAnswer: testGameState.answers[testGameState.currentQuestionIndex].answer,
@@ -8066,10 +8248,72 @@ function skipGuess() {
   });
 
   testGameState.skippedQuestions++;
+
+  // Si estamos respondiendo un test, actualizar en Firebase
+  if (testGameState.mode === 'responding' && testGameState.testId) {
+    await updateTestGuesses(
+      db,
+      testGameState.testId,
+      testGameState.guesses,
+      testGameState.correctAnswers,
+      testGameState.skippedQuestions
+    );
+  }
+
   showResult();
 }
 
-// Función para comparar respuestas (lógica básica)
+// Función para verificar el estado de la pareja (para debugging)
+async function checkCoupleStatus() {
+  try {
+    console.log('🔍 Verificando estado de pareja...');
+
+    // Verificar usuario actual
+    const userRef = doc(db, 'users', currentUser.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      console.log('👤 Usuario actual:', {
+        uid: currentUser.uid,
+        coupleId: userData.coupleId,
+        partnerId: userData.partnerId,
+        partnerName: userData.partnerName
+      });
+
+      if (userData.coupleId) {
+        // Verificar pareja
+        const coupleRef = doc(db, 'couples', userData.coupleId);
+        const coupleSnap = await getDoc(coupleRef);
+
+        if (coupleSnap.exists()) {
+          const coupleData = coupleSnap.data();
+          console.log('💑 Pareja encontrada:', {
+            coupleId: userData.coupleId,
+            user1Id: coupleData.user1Id,
+            user2Id: coupleData.user2Id
+          });
+        } else {
+          console.log('❌ Documento de pareja no encontrado');
+        }
+      } else {
+        console.log('ℹ️ Usuario no tiene coupleId');
+      }
+    } else {
+      console.log('❌ Documento de usuario no encontrado');
+    }
+
+    // Probar getCoupleInfo
+    const coupleInfo = await getCoupleInfo();
+    console.log('🔍 Resultado de getCoupleInfo:', coupleInfo);
+
+  } catch (error) {
+    console.error('❌ Error en checkCoupleStatus:', error);
+  }
+}
+
+// Agregar función global para debugging (temporal)
+window.checkCoupleStatus = checkCoupleStatus;
 function compareAnswers(guess, correct) {
   if (!guess || !correct) return false;
 
@@ -8112,6 +8356,12 @@ function showResult() {
 
 // Función para siguiente resultado
 function nextResult() {
+  // Validar que todas las preguntas hayan sido respondidas
+  if (testGameState.answers.length < 10) {
+    alert('Debes responder todas las 10 preguntas antes de continuar.');
+    return;
+  }
+
   testGameState.currentQuestionIndex++;
 
   if (testGameState.currentQuestionIndex < testGameState.answers.length) {
@@ -8167,7 +8417,155 @@ function shareResults() {
 }
 
 // Event listeners del juego
-startTestGameBtn.addEventListener('click', startTestGame);
+const createTestBtn = document.getElementById('create-test-btn');
+const respondTestBtn = document.getElementById('respond-test-btn');
+
+createTestBtn.addEventListener('click', createNewTest);
+respondTestBtn.addEventListener('click', respondToAvailableTest);
+
+// Función para crear un nuevo test
+async function createNewTest() {
+  if (!currentUser) {
+    alert('Debes iniciar sesión para crear un test');
+    return;
+  }
+
+  try {
+    // Obtener información de la pareja
+    const coupleInfo = await getCoupleInfo();
+    if (!coupleInfo.partnerId) {
+      alert('Necesitas tener una pareja conectada para crear un test');
+      return;
+    }
+
+    // Crear el test
+    const result = await createTest(
+      db,
+      currentUser.uid,
+      coupleInfo.partnerId,
+      coupleInfo.userName,
+      coupleInfo.partnerName
+    );
+
+    if (result.success) {
+      // Cambiar al modo de responder preguntas
+      testGameState = {
+        ...testGameState,
+        mode: 'creating',
+        testId: result.testId,
+        questions: result.test.questions,
+        currentQuestionIndex: 0,
+        answers: []
+      };
+
+      showTestScreen('questions');
+    } else {
+      alert('Error al crear el test: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Error creating test:', error);
+    alert('Error al crear el test');
+  }
+}
+
+// Función para responder a un test disponible
+async function respondToAvailableTest() {
+  if (!currentUser) {
+    alert('Debes iniciar sesión para responder un test');
+    return;
+  }
+
+  try {
+    const result = await getAvailableTests(db, currentUser.uid);
+    if (!result.success || result.tests.length === 0) {
+      alert('No hay tests disponibles para responder');
+      return;
+    }
+
+    // Tomar el test más reciente
+    const test = result.tests[0];
+
+    // Cambiar al modo de responder
+    testGameState = {
+      ...testGameState,
+      mode: 'responding',
+      testId: test.id,
+      questions: test.questions,
+      answers: test.answers, // Respuestas del creador
+      currentQuestionIndex: 0,
+      guesses: [],
+      correctAnswers: 0,
+      skippedQuestions: 0
+    };
+
+    showTestScreen('guessing');
+  } catch (error) {
+    console.error('Error responding to test:', error);
+    alert('Error al cargar el test');
+  }
+}
+
+// Función para obtener información de la pareja
+async function getCoupleInfo() {
+  try {
+    // Consultar la colección de parejas para encontrar la pareja del usuario actual
+    // Primero obtener el coupleId del usuario actual
+    const userRef = doc(db, 'users', currentUser.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists() || !userSnap.data().coupleId) {
+      return {
+        userName: currentUser.displayName || 'Tú',
+        partnerId: null,
+        partnerName: null
+      };
+    }
+
+    const coupleId = userSnap.data().coupleId;
+
+    // Obtener el documento de la pareja
+    const coupleRef = doc(db, 'couples', coupleId);
+    const coupleSnap = await getDoc(coupleRef);
+
+    if (!coupleSnap.exists()) {
+      return {
+        userName: currentUser.displayName || 'Tú',
+        partnerId: null,
+        partnerName: null
+      };
+    }
+
+    const coupleData = coupleSnap.data();
+
+    // Encontrar el ID del partner
+    const partnerId = coupleData.user1Id === currentUser.uid ? coupleData.user2Id : coupleData.user1Id;
+
+    if (partnerId) {
+      // Obtener información del partner desde la colección de usuarios
+      const partnerDoc = await getDoc(doc(db, 'users', partnerId));
+      const partnerData = partnerDoc.exists() ? partnerDoc.data() : {};
+
+      return {
+        userName: currentUser.displayName || 'Tú',
+        partnerId: partnerId,
+        partnerName: partnerData.displayName || partnerData.email || 'Tu Pareja'
+      };
+    }
+
+    return {
+      userName: currentUser.displayName || 'Tú',
+      partnerId: null,
+      partnerName: null
+    };
+  } catch (error) {
+    console.error('Error getting couple info:', error);
+    return {
+      userName: currentUser.displayName || 'Tú',
+      partnerId: null,
+      partnerName: null
+    };
+  }
+}
 
 playerOptions.forEach(option => {
   option.addEventListener('click', () => {

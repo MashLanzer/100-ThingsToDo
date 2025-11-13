@@ -152,9 +152,11 @@
                             </svg>
                         </button>
 
-                        <button id="open-new-features-btn" class="btn-icon" title="Nuevas Funciones">
+                        <button id="open-new-features-btn" class="btn-icon" title="El Test - Compatibilidad">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 5v14M5 12h14"></path>
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
                             </svg>
                         </button>
 
@@ -1963,7 +1965,8 @@ Hoy es un día especial porque..."
     </div>
 
     <!-- MODAL DEL JUEGO "EL TEST" -->
-    <div id="test-game-modal" class="modal-overlay">
+    <div id="test-game-modal" class="modal">
+        <div class="modal-overlay"></div>
         <div class="modal-content test-game-modal">
             <div class="modal-header">
                 <h2>❓ El Test</h2>
@@ -1981,11 +1984,11 @@ Hoy es un día especial porque..."
                         <div class="test-instructions">
                             <div class="instruction-step">
                                 <span class="step-number">1</span>
-                                <span>Uno responde preguntas sobre sí mismo</span>
+                                <span>Uno crea un test respondiendo preguntas</span>
                             </div>
                             <div class="instruction-step">
                                 <span class="step-number">2</span>
-                                <span>El otro intenta adivinar las respuestas</span>
+                                <span>El otro recibe el test y lo responde</span>
                             </div>
                             <div class="instruction-step">
                                 <span class="step-number">3</span>
@@ -1993,9 +1996,16 @@ Hoy es un día especial porque..."
                             </div>
                         </div>
 
-                        <button class="btn btn-primary test-start-btn" id="start-test-game">
-                            🚀 Comenzar el Test
-                        </button>
+                        <div class="test-actions">
+                            <button class="btn btn-primary test-create-btn" id="create-test-btn">
+                                ✨ Crear Test
+                            </button>
+                            <button class="btn btn-secondary test-respond-btn" id="respond-test-btn" style="display: none;">
+                                🎯 Responder Test Disponible
+                            </button>
+                        </div>
+
+                        <div id="test-status-message" class="test-status-message" style="display: none;"></div>
                     </div>
                 </div>
 

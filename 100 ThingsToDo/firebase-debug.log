@@ -1,0 +1,45 @@
+[debug] [2025-11-13T22:43:29.975Z] ----------------------------------------------------------------------
+[debug] [2025-11-13T22:43:29.981Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Mash\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js serve --only hosting
+[debug] [2025-11-13T22:43:29.982Z] CLI Version:   14.23.0
+[debug] [2025-11-13T22:43:29.982Z] Platform:      win32
+[debug] [2025-11-13T22:43:29.982Z] Node Version:  v22.20.0
+[debug] [2025-11-13T22:43:29.983Z] Time:          Thu Nov 13 2025 17:43:29 GMT-0500 (Eastern Standard Time)
+[debug] [2025-11-13T22:43:29.983Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-11-13T22:43:30.383Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-13T22:43:30.384Z] > authorizing via signed-in user (brayanibarra0105@gmail.com)
+[debug] [2025-11-13T22:43:30.384Z] [iam] checking project thingstodo-2772c for permissions ["firebase.projects.get"]
+[debug] [2025-11-13T22:43:30.386Z] Checked if tokens are valid: false, expires at: 1763074522523
+[debug] [2025-11-13T22:43:30.386Z] Checked if tokens are valid: false, expires at: 1763074522523
+[debug] [2025-11-13T22:43:30.387Z] > refreshing access token with scopes: []
+[debug] [2025-11-13T22:43:30.390Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-11-13T22:43:30.390Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-13T22:43:30.710Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-11-13T22:43:30.711Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-11-13T22:43:30.805Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/thingstodo-2772c:testIamPermissions [none]
+[debug] [2025-11-13T22:43:30.805Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/thingstodo-2772c:testIamPermissions x-goog-quota-user=projects/thingstodo-2772c
+[debug] [2025-11-13T22:43:30.805Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/thingstodo-2772c:testIamPermissions {"permissions":["firebase.projects.get"]}
+[debug] [2025-11-13T22:43:31.078Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/thingstodo-2772c:testIamPermissions 200
+[debug] [2025-11-13T22:43:31.078Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/thingstodo-2772c:testIamPermissions {"permissions":["firebase.projects.get"]}
+[debug] [2025-11-13T22:43:31.081Z] Checked if tokens are valid: true, expires at: 1763077409711
+[debug] [2025-11-13T22:43:31.081Z] Checked if tokens are valid: true, expires at: 1763077409711
+[debug] [2025-11-13T22:43:31.081Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/thingstodo-2772c [none]
+[debug] [2025-11-13T22:43:31.221Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/thingstodo-2772c 200
+[debug] [2025-11-13T22:43:31.222Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/thingstodo-2772c {"projectNumber":"258798229107","projectId":"thingstodo-2772c","lifecycleState":"ACTIVE","name":"100 ThingsToDo","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-11-05T08:21:57.776051Z"}
+[debug] [2025-11-13T22:43:31.226Z] Checked if tokens are valid: true, expires at: 1763077409711
+[debug] [2025-11-13T22:43:31.226Z] Checked if tokens are valid: true, expires at: 1763077409711
+[debug] [2025-11-13T22:43:31.226Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/thingstodo-2772c/sites 
+[debug] [2025-11-13T22:43:31.697Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/thingstodo-2772c/sites 200
+[debug] [2025-11-13T22:43:31.697Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/thingstodo-2772c/sites {"sites":[{"name":"projects/thingstodo-2772c/sites/thingstodo-2772c","defaultUrl":"https://thingstodo-2772c.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2025-11-13T22:43:31.697Z] Checked if tokens are valid: true, expires at: 1763077409711
+[debug] [2025-11-13T22:43:31.698Z] Checked if tokens are valid: true, expires at: 1763077409711
+[debug] [2025-11-13T22:43:31.698Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/thingstodo-2772c/webApps/-/config [none]
+[debug] [2025-11-13T22:43:32.403Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/thingstodo-2772c/webApps/-/config 200
+[debug] [2025-11-13T22:43:32.404Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/thingstodo-2772c/webApps/-/config {"projectId":"thingstodo-2772c","appId":"1:258798229107:web:085d79a496d1db8a2d3c06","storageBucket":"thingstodo-2772c.firebasestorage.app","apiKey":"AIzaSyChZQczwBwXu8TY6OImIFMYfjANJDAfBtU","authDomain":"thingstodo-2772c.firebaseapp.com","messagingSenderId":"258798229107","measurementId":"G-JMZX3BWYRF","projectNumber":"258798229107","version":"2"}
+[debug] [2025-11-13T22:43:32.456Z] Checked if tokens are valid: true, expires at: 1763077409711
+[debug] [2025-11-13T22:43:32.457Z] Checked if tokens are valid: true, expires at: 1763077409711
+[debug] [2025-11-13T22:43:32.457Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/thingstodo-2772c [none]
+[debug] [2025-11-13T22:43:32.669Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/thingstodo-2772c 200
+[debug] [2025-11-13T22:43:32.669Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/thingstodo-2772c {"projectId":"thingstodo-2772c","projectNumber":"258798229107","displayName":"100 ThingsToDo","name":"projects/thingstodo-2772c","resources":{"hostingSite":"thingstodo-2772c"},"state":"ACTIVE","etag":"1_e9e2f583-622b-434b-89f5-d6d2a23613a1"}
+[info] i  hosting[thingstodo-2772c]: Serving hosting files from: public {"metadata":{"emulator":{"name":"hosting"},"message":"Serving hosting files from: \u001b[1mpublic\u001b[22m"}}
+[info] +  hosting[thingstodo-2772c]: Local server: http://localhost:5000 {"metadata":{"emulator":{"name":"hosting"},"message":"Local server: \u001b[4m\u001b[1mhttp://localhost:5000\u001b[22m\u001b[24m"}}
