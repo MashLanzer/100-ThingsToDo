@@ -16,7 +16,7 @@ export const RANDOM_CHALLENGES = [
   { title: "Juego de mesa", description: "Jugar 3 partidas de vuestro juego favorito", difficulty: "easy", points: 10, category: "fun" },
   { title: "Leer juntos", description: "Leer un capítulo en voz alta el uno al otro", difficulty: "easy", points: 10, category: "romantic" },
   { title: "Picnic improvisado", description: "Preparar bocadillos y comer en el parque o balcón", difficulty: "easy", points: 10, category: "fun" },
-  { title: "Intercambio de regalos", description: "Comprar un pequeño detalle sorpresa (máx 5€)", difficulty: "easy", points: 10, category: "surprise" },
+  { title: "Intercambio de regalos", description: "Comprar un pequeño detalle sorpresa (máx 5$)", difficulty: "easy", points: 10, category: "surprise" },
   { title: "Sesión de estiramiento", description: "15 minutos de yoga o estiramientos juntos", difficulty: "easy", points: 10, category: "help" },
   { title: "Noche de postre", description: "Preparar y decorar un postre sencillo juntos", difficulty: "easy", points: 10, category: "fun" },
   { title: "Crear apodos", description: "Inventar nombres cariñosos nuevos el uno para el otro", difficulty: "easy", points: 10, category: "romantic" },

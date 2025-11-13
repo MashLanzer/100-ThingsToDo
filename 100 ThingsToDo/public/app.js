@@ -5050,13 +5050,15 @@ async function uploadCapsuleAttachments(capsuleId) {
 // ============================================
 
 async function createGoal(name, total) {
-  if (!currentCoupleId) return;
+  if (!currentCoupleId || !currentUser) return;
   const goalRef = doc(collection(db, 'couples', currentCoupleId, 'goals'));
   await setDoc(goalRef, {
     name,
     total: Number(total),
     current: 0,
     createdAt: Timestamp.now(),
+    createdBy: currentUser.uid,
+    creatorName: currentUser.displayName || currentUser.email,
   });
   return goalRef.id;
 }
@@ -5144,8 +5146,8 @@ async function renderGoalsList() {
             <div class="goal-progress-fill" style="width: ${percentage}%"></div>
           </div>
           <div class="goal-amounts">
-            <span class="goal-current">${goal.current}€</span>
-            <span class="goal-total">${goal.total}€</span>
+            <span class="goal-current">${goal.current}$</span>
+            <span class="goal-total">${goal.total}$</span>
           </div>
         </div>
       `;
@@ -5161,8 +5163,8 @@ function updateBudgetStats(goals) {
   const totalTarget = goals.reduce((sum, goal) => sum + goal.total, 0);
 
   if (totalGoalsEl) totalGoalsEl.textContent = totalGoals;
-  if (totalSavedEl) totalSavedEl.textContent = `${totalSaved}€`;
-  if (totalTargetEl) totalTargetEl.textContent = `${totalTarget}€`;
+  if (totalSavedEl) totalSavedEl.textContent = `${totalSaved}$`;
+  if (totalTargetEl) totalTargetEl.textContent = `${totalTarget}$`;
 }
 
 function openCreateGoalView() {
@@ -5187,8 +5189,8 @@ async function openGoalDetail(goalId) {
     goalDetailTitle.textContent = goal.name;
     const percentage = goal.total > 0 ? (goal.current / goal.total) * 100 : 0;
     piggyBankFill.style.width = `${Math.min(percentage, 100)}%`;
-    goalCurrentAmount.textContent = `${goal.current.toFixed(2)}€`;
-    goalTotalAmount.textContent = `${goal.total.toFixed(2)}€`;
+    goalCurrentAmount.textContent = `${goal.current.toFixed(2)}$`;
+    goalTotalAmount.textContent = `${goal.total.toFixed(2)}$`;
     
     goalContributionsList.innerHTML = '';
     contributions.forEach(c => {
@@ -5196,7 +5198,7 @@ async function openGoalDetail(goalId) {
       item.className = 'contribution-item';
       item.innerHTML = `
         <span class="contribution-item-user">${c.userName}</span>
-        <strong class="contribution-item-amount">+${c.amount.toFixed(2)}€</strong>
+        <strong class="contribution-item-amount">+${c.amount.toFixed(2)}$</strong>
       `;
       goalContributionsList.appendChild(item);
     });
@@ -5239,7 +5241,7 @@ async function handleAddContribution() {
   // Mostrar notificación de éxito
   showNotification({
     title: '¡Aportación Exitosa!',
-    message: `${currentUser.displayName} aportó ${Number(amount).toFixed(2)}€ a "${goalData.name}"`,
+    message: `${currentUser.displayName} aportó ${Number(amount).toFixed(2)}$ a "${goalData.name}"`,
     icon: '🐖',
     type: 'save'
   });
