@@ -48,6 +48,7 @@ import { calculateCoupleStats } from './scr/modules/stats.js';
 // import { initializeNotifications, requestNotificationPermission } from './scr/modules/notifications.js';
 import { getRandomTask } from './scr/modules/surpriseTasks.js';
 import { RANDOM_CHALLENGES } from './scr/modules/randomTasks.js';
+import { testQuestions, coupleTitles } from './scr/modules/testQuestions.js';
 // Canvas confetti para celebraciones avanzadas
 // Dynamic loader for canvas-confetti (UMD bundle). We load the browser UMD and use window.confetti.
 let confettiLib = null;
@@ -707,6 +708,7 @@ const backToCoupleViewBtn = document.getElementById('back-to-couple-view-btn');
 // ... al final de la sección de elementos del DOM ...
 const openPhoneModalBtn = document.getElementById('open-phone-modal-btn');
 const openFavorsModalBtn = document.getElementById('open-favors-modal-btn');
+const openNewFeaturesBtn = document.getElementById('open-new-features-btn');
 const phoneModal = document.getElementById('phone-modal');
 const closePhoneModalBtn = document.getElementById('close-phone-modal-btn');
 const phoneHomescreen = document.getElementById('phone-homescreen');
@@ -2394,6 +2396,9 @@ openPhoneModalBtn.addEventListener('click', openPhoneModal);
 if (openFavorsModalBtn) {
   openFavorsModalBtn.addEventListener('click', openFavorsFullscreenModal);
 }
+if (openNewFeaturesBtn) {
+  openNewFeaturesBtn.addEventListener('click', openTestGameModal);
+}
 if (closeFavorsModalBtn) {
   closeFavorsModalBtn.addEventListener('click', closeFavorsFullscreenModal);
 }
@@ -3918,7 +3923,7 @@ function openCreateFavorModal() {
   console.log('Create favor modal classes before:', modal.className);
   
   // Usar la función de modales anidados para favores
-  showFavorModal(modal, 'favors');
+  showModal(modal, 'favors');
   
   console.log('Create favor modal should now be visible');
   
@@ -3936,7 +3941,7 @@ function openCreateFavorModal() {
 
 // Cerrar modal de crear desafío
 function closeCreateFavorModal() {
-  hideFavorModal(document.getElementById('create-favor-modal'), 'favors');
+  hideModal(document.getElementById('create-favor-modal'), 'favors');
   
   // Limpiar formulario
   document.getElementById('coupon-title-input-large').value = '';
@@ -7782,6 +7787,426 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+// ============================================
+// JUEGO "EL TEST" - FUNCIONALIDAD COMPLETA
+// ============================================
+
+// Variables globales del juego
+let testGameState = {
+  currentScreen: 'start',
+  currentPlayer: null, // 'player1' o 'player2'
+  guessingPlayer: null,
+  questions: [],
+  currentQuestionIndex: 0,
+  answers: [],
+  guesses: [],
+  correctAnswers: 0,
+  skippedQuestions: 0,
+  timer: null,
+  timeLeft: 30
+};
+
+// Preguntas del juego (se cargan desde scr/modules/testQuestions.js)
+// Nota: Las preguntas y títulos se cargan desde el archivo separado
+
+// Elementos del DOM del juego
+const testGameModal = document.getElementById('test-game-modal');
+const closeTestGameModal = document.getElementById('close-test-game-modal');
+
+// Pantallas del juego
+const testGameStart = document.getElementById('test-game-start');
+const testPlayerSelection = document.getElementById('test-player-selection');
+const testQuestionsScreen = document.getElementById('test-questions');
+const testGuessing = document.getElementById('test-guessing');
+const testResult = document.getElementById('test-result');
+const testFinal = document.getElementById('test-final');
+
+// Elementos de la pantalla de inicio
+const startTestGameBtn = document.getElementById('start-test-game');
+
+// Elementos de selección de jugador
+const playerOptions = document.querySelectorAll('.player-option');
+const player1Name = document.getElementById('player1-name');
+const player2Name = document.getElementById('player2-name');
+
+// Elementos de preguntas
+const currentQuestionEl = document.getElementById('current-question');
+const totalQuestionsEl = document.getElementById('total-questions');
+const questionText = document.getElementById('question-text');
+const answerInput = document.getElementById('answer-input');
+const charCount = document.getElementById('char-count');
+const submitAnswerBtn = document.getElementById('submit-answer-btn');
+const questionTimerBar = document.getElementById('question-timer-bar');
+
+// Elementos de adivinación
+const guessingPlayerName = document.getElementById('guessing-player-name');
+const answerPlayerName = document.getElementById('answer-player-name');
+const guessingQuestionText = document.getElementById('guessing-question-text');
+const guessInput = document.getElementById('guess-input');
+const guessCharCount = document.getElementById('guess-char-count');
+const skipGuessBtn = document.getElementById('skip-guess-btn');
+const submitGuessBtn = document.getElementById('submit-guess-btn');
+
+// Elementos de resultado
+const resultQuestionText = document.getElementById('result-question-text');
+const correctAnswer = document.getElementById('correct-answer');
+const userGuess = document.getElementById('user-guess');
+const resultFeedback = document.getElementById('result-feedback');
+const nextResultBtn = document.getElementById('next-result-btn');
+
+// Elementos finales
+const finalPercentage = document.getElementById('final-percentage');
+const coupleTitle = document.getElementById('couple-title');
+const titleDescription = document.getElementById('title-description');
+const correctAnswersEl = document.getElementById('correct-answers');
+const totalQuestionsFinal = document.getElementById('total-questions-final');
+const skippedQuestionsEl = document.getElementById('skipped-questions');
+const playAgainBtn = document.getElementById('play-again-btn');
+const shareResultsBtn = document.getElementById('share-results-btn');
+
+// Función para abrir el modal del juego
+function openTestGameModal() {
+  showModal(testGameModal, 'standard');
+  resetTestGame();
+  showTestScreen('start');
+}
+
+// Función para cerrar el modal del juego
+function closeTestGameModalFunc() {
+  hideModal(testGameModal, 'standard');
+  resetTestGame();
+}
+
+// Función para resetear el estado del juego
+function resetTestGame() {
+  testGameState = {
+    currentScreen: 'start',
+    currentPlayer: null,
+    guessingPlayer: null,
+    questions: [...testQuestions].sort(() => Math.random() - 0.5).slice(0, 10), // 10 preguntas aleatorias
+    currentQuestionIndex: 0,
+    answers: [],
+    guesses: [],
+    correctAnswers: 0,
+    skippedQuestions: 0,
+    timer: null,
+    timeLeft: 30
+  };
+
+  // Resetear inputs
+  answerInput.value = '';
+  guessInput.value = '';
+  charCount.textContent = '0';
+  guessCharCount.textContent = '0';
+
+  // Resetear botones
+  submitAnswerBtn.disabled = true;
+  submitGuessBtn.disabled = true;
+}
+
+// Función para mostrar una pantalla específica
+function showTestScreen(screenName) {
+  // Ocultar todas las pantallas
+  const screens = [testGameStart, testPlayerSelection, testQuestionsScreen, testGuessing, testResult, testFinal];
+  screens.forEach(screen => screen.classList.add('hidden'));
+
+  // Mostrar la pantalla deseada
+  testGameState.currentScreen = screenName;
+  switch (screenName) {
+    case 'start':
+      testGameStart.classList.remove('hidden');
+      break;
+    case 'player-selection':
+      testPlayerSelection.classList.remove('hidden');
+      break;
+    case 'questions':
+      testQuestionsScreen.classList.remove('hidden');
+      break;
+    case 'guessing':
+      testGuessing.classList.remove('hidden');
+      break;
+    case 'result':
+      testResult.classList.remove('hidden');
+      break;
+    case 'final':
+      testFinal.classList.remove('hidden');
+      break;
+  }
+}
+
+// Función para iniciar el juego
+function startTestGame() {
+  // Obtener nombres de los usuarios
+  if (currentUser) {
+    player1Name.textContent = currentUser.displayName || currentUser.email || 'Jugador 1';
+    player2Name.textContent = 'Tu Pareja'; // Esto podría mejorarse para obtener el nombre de la pareja
+  }
+
+  showTestScreen('player-selection');
+}
+
+// Función para seleccionar jugador
+function selectPlayer(player) {
+  testGameState.currentPlayer = player;
+  testGameState.guessingPlayer = player === 'player1' ? 'player2' : 'player1';
+
+  // Actualizar nombres en la interfaz
+  const currentPlayerName = player === 'player1' ? player1Name.textContent : player2Name.textContent;
+  const guessingPlayerName = player === 'player1' ? player2Name.textContent : player1Name.textContent;
+
+  answerPlayerName.textContent = currentPlayerName;
+  guessingPlayerNameEl.textContent = guessingPlayerName;
+
+  showTestScreen('questions');
+  loadCurrentQuestion();
+}
+
+// Función para cargar la pregunta actual
+function loadCurrentQuestion() {
+  const question = testGameState.questions[testGameState.currentQuestionIndex];
+  questionText.textContent = question;
+  currentQuestionEl.textContent = testGameState.currentQuestionIndex + 1;
+  totalQuestionsEl.textContent = testGameState.questions.length;
+
+  // Resetear input y contador
+  answerInput.value = '';
+  charCount.textContent = '0';
+  submitAnswerBtn.disabled = true;
+
+  // Iniciar timer
+  startQuestionTimer();
+}
+
+// Función para el timer de preguntas
+function startQuestionTimer() {
+  testGameState.timeLeft = 30;
+  testGameState.timer = setInterval(() => {
+    testGameState.timeLeft--;
+    const percentage = (testGameState.timeLeft / 30) * 100;
+    questionTimerBar.style.width = `${percentage}%`;
+
+    if (testGameState.timeLeft <= 0) {
+      clearInterval(testGameState.timer);
+      submitAnswer(); // Auto-submit cuando se acaba el tiempo
+    }
+  }, 1000);
+}
+
+// Función para enviar respuesta
+function submitAnswer() {
+  clearInterval(testGameState.timer);
+
+  const answer = answerInput.value.trim();
+  if (answer) {
+    testGameState.answers.push({
+      question: testGameState.questions[testGameState.currentQuestionIndex],
+      answer: answer
+    });
+  }
+
+  testGameState.currentQuestionIndex++;
+
+  if (testGameState.currentQuestionIndex < testGameState.questions.length) {
+    loadCurrentQuestion();
+  } else {
+    // Todas las preguntas respondidas, pasar a adivinación
+    startGuessingPhase();
+  }
+}
+
+// Función para iniciar la fase de adivinación
+function startGuessingPhase() {
+  testGameState.currentQuestionIndex = 0;
+  showTestScreen('guessing');
+  loadGuessingQuestion();
+}
+
+// Función para cargar pregunta de adivinación
+function loadGuessingQuestion() {
+  const currentAnswer = testGameState.answers[testGameState.currentQuestionIndex];
+  guessingQuestionText.textContent = currentAnswer.question;
+
+  // Resetear input
+  guessInput.value = '';
+  guessCharCount.textContent = '0';
+  submitGuessBtn.disabled = true;
+}
+
+// Función para enviar adivinanza
+function submitGuess() {
+  const guess = guessInput.value.trim();
+  const correctAnswer = testGameState.answers[testGameState.currentQuestionIndex].answer;
+
+  // Comparar respuestas (básico por ahora, se puede mejorar)
+  const isCorrect = compareAnswers(guess, correctAnswer);
+
+  testGameState.guesses.push({
+    question: testGameState.answers[testGameState.currentQuestionIndex].question,
+    correctAnswer: correctAnswer,
+    userGuess: guess,
+    isCorrect: isCorrect
+  });
+
+  if (isCorrect) {
+    testGameState.correctAnswers++;
+  }
+
+  showResult();
+}
+
+// Función para saltar adivinanza
+function skipGuess() {
+  testGameState.guesses.push({
+    question: testGameState.answers[testGameState.currentQuestionIndex].question,
+    correctAnswer: testGameState.answers[testGameState.currentQuestionIndex].answer,
+    userGuess: '',
+    isCorrect: false,
+    skipped: true
+  });
+
+  testGameState.skippedQuestions++;
+  showResult();
+}
+
+// Función para comparar respuestas (lógica básica)
+function compareAnswers(guess, correct) {
+  if (!guess || !correct) return false;
+
+  // Convertir a minúsculas y quitar espacios/puntuación
+  const normalize = (str) => str.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  const normalizedGuess = normalize(guess);
+  const normalizedCorrect = normalize(correct);
+
+  // Comparación exacta
+  if (normalizedGuess === normalizedCorrect) return true;
+
+  // Contener la respuesta correcta
+  if (normalizedCorrect.includes(normalizedGuess) && normalizedGuess.length > 3) return true;
+
+  // La respuesta correcta contiene la adivinanza
+  if (normalizedGuess.includes(normalizedCorrect) && normalizedCorrect.length > 3) return true;
+
+  return false;
+}
+
+// Función para mostrar resultado
+function showResult() {
+  const currentGuess = testGameState.guesses[testGameState.currentQuestionIndex];
+
+  resultQuestionText.textContent = currentGuess.question;
+  correctAnswer.textContent = currentGuess.correctAnswer;
+  userGuess.textContent = currentGuess.userGuess || '(Saltada)';
+
+  // Feedback basado en el resultado
+  if (currentGuess.skipped) {
+    resultFeedback.innerHTML = '<div class="feedback-message skip">⏭️ Pregunta saltada</div>';
+  } else if (currentGuess.isCorrect) {
+    resultFeedback.innerHTML = '<div class="feedback-message correct">🎉 ¡Correcto! ¡Lo conoces bien!</div>';
+  } else {
+    resultFeedback.innerHTML = '<div class="feedback-message wrong">❌ No acertaste, pero ¡sigue intentándolo!</div>';
+  }
+
+  showTestScreen('result');
+}
+
+// Función para siguiente resultado
+function nextResult() {
+  testGameState.currentQuestionIndex++;
+
+  if (testGameState.currentQuestionIndex < testGameState.answers.length) {
+    loadGuessingQuestion();
+    showTestScreen('guessing');
+  } else {
+    showFinalResults();
+  }
+}
+
+// Función para mostrar resultados finales
+function showFinalResults() {
+  const totalQuestions = testGameState.questions.length;
+  const percentage = Math.round((testGameState.correctAnswers / totalQuestions) * 100);
+
+  // Mostrar porcentaje
+  finalPercentage.textContent = `${percentage}%`;
+
+  // Encontrar título de pareja
+  const coupleTitleData = coupleTitles.find(title =>
+    percentage >= title.min && percentage <= title.max
+  ) || coupleTitles[0];
+
+  coupleTitle.textContent = coupleTitleData.title;
+  titleDescription.textContent = coupleTitleData.description;
+
+  // Estadísticas
+  correctAnswersEl.textContent = testGameState.correctAnswers;
+  totalQuestionsFinal.textContent = totalQuestions;
+  skippedQuestionsEl.textContent = testGameState.skippedQuestions;
+
+  showTestScreen('final');
+}
+
+// Función para compartir resultados
+function shareResults() {
+  const percentage = finalPercentage.textContent;
+  const title = coupleTitle.textContent;
+
+  const shareText = `¡Hicimos "El Test" y tenemos ${percentage} de compatibilidad! Somos "${title}" 💕 #ElTest #Pareja`;
+
+  if (navigator.share) {
+    navigator.share({
+      title: 'Resultados de El Test',
+      text: shareText
+    });
+  } else {
+    // Fallback: copiar al portapapeles
+    navigator.clipboard.writeText(shareText).then(() => {
+      alert('¡Resultados copiados al portapapeles! 📋');
+    });
+  }
+}
+
+// Event listeners del juego
+startTestGameBtn.addEventListener('click', startTestGame);
+
+playerOptions.forEach(option => {
+  option.addEventListener('click', () => {
+    const player = option.dataset.player;
+    selectPlayer(player);
+  });
+});
+
+// Event listeners para inputs
+answerInput.addEventListener('input', () => {
+  const length = answerInput.value.length;
+  charCount.textContent = length;
+  submitAnswerBtn.disabled = length === 0;
+});
+
+guessInput.addEventListener('input', () => {
+  const length = guessInput.value.length;
+  guessCharCount.textContent = length;
+  submitGuessBtn.disabled = length === 0;
+});
+
+// Event listeners para botones
+submitAnswerBtn.addEventListener('click', submitAnswer);
+submitGuessBtn.addEventListener('click', submitGuess);
+skipGuessBtn.addEventListener('click', skipGuess);
+nextResultBtn.addEventListener('click', nextResult);
+playAgainBtn.addEventListener('click', () => {
+  resetTestGame();
+  showTestScreen('start');
+});
+shareResultsBtn.addEventListener('click', shareResults);
+
+// Event listener para cerrar modal
+closeTestGameModal.addEventListener('click', closeTestGameModalFunc);
+testGameModal.addEventListener('click', (e) => {
+  if (e.target === testGameModal) {
+    closeTestGameModalFunc();
+  }
+});
 
 // ============================================
 // INICIALIZACIÓN DE COMPONENTES

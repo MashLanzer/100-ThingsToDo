@@ -152,6 +152,12 @@
                             </svg>
                         </button>
 
+                        <button id="open-new-features-btn" class="btn-icon" title="Nuevas Funciones">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"></path>
+                            </svg>
+                        </button>
+
                         <button id="open-phone-modal-btn" class="btn-icon" title="Centro de Actividades">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
@@ -1953,6 +1959,212 @@ Hoy es un día especial porque..."
             <img id="lightbox-image" class="lightbox-image" src="" alt="Foto en grande">
             <button class="lightbox-nav lightbox-next" id="lightbox-next">›</button>
             <div class="lightbox-counter" id="lightbox-counter">1 / 1</div>
+        </div>
+    </div>
+
+    <!-- MODAL DEL JUEGO "EL TEST" -->
+    <div id="test-game-modal" class="modal-overlay">
+        <div class="modal-content test-game-modal">
+            <div class="modal-header">
+                <h2>❓ El Test</h2>
+                <button class="close-modal-btn" id="close-test-game-modal">×</button>
+            </div>
+
+            <div class="test-game-content">
+                <!-- Pantalla de inicio -->
+                <div id="test-game-start" class="test-game-screen">
+                    <div class="test-welcome">
+                        <div class="test-icon">🤔</div>
+                        <h3>¿Cuánto nos conocemos?</h3>
+                        <p>Un juego de preguntas y respuestas para descubrir cuánto conocen el uno del otro.</p>
+
+                        <div class="test-instructions">
+                            <div class="instruction-step">
+                                <span class="step-number">1</span>
+                                <span>Uno responde preguntas sobre sí mismo</span>
+                            </div>
+                            <div class="instruction-step">
+                                <span class="step-number">2</span>
+                                <span>El otro intenta adivinar las respuestas</span>
+                            </div>
+                            <div class="instruction-step">
+                                <span class="step-number">3</span>
+                                <span>¡Descubre tu porcentaje de compatibilidad!</span>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary test-start-btn" id="start-test-game">
+                            🚀 Comenzar el Test
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pantalla de selección de jugador -->
+                <div id="test-player-selection" class="test-game-screen hidden">
+                    <div class="player-selection">
+                        <h3>¿Quién va a responder primero?</h3>
+                        <div class="player-options">
+                            <button class="player-option" data-player="player1">
+                                <div class="player-avatar">👤</div>
+                                <div class="player-name" id="player1-name">Jugador 1</div>
+                            </button>
+                            <button class="player-option" data-player="player2">
+                                <div class="player-avatar">👤</div>
+                                <div class="player-name" id="player2-name">Jugador 2</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pantalla de preguntas -->
+                <div id="test-questions" class="test-game-screen hidden">
+                    <div class="question-header">
+                        <div class="question-counter">
+                            <span id="current-question">1</span> / <span id="total-questions">10</span>
+                        </div>
+                        <div class="question-timer">
+                            <div class="timer-bar" id="question-timer-bar"></div>
+                        </div>
+                    </div>
+
+                    <div class="question-content">
+                        <div class="question-card">
+                            <div class="question-icon">❓</div>
+                            <h3 id="question-text">Cargando pregunta...</h3>
+                            <div class="question-hint">
+                                <small>💡 Piensa bien tu respuesta antes de escribirla</small>
+                            </div>
+                        </div>
+
+                        <div class="answer-input-section">
+                            <textarea
+                                id="answer-input"
+                                class="answer-input"
+                                placeholder="Escribe tu respuesta aquí..."
+                                maxlength="200"
+                            ></textarea>
+                            <div class="char-counter">
+                                <span id="char-count">0</span>/200
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary" id="submit-answer-btn" disabled>
+                            ✅ Confirmar Respuesta
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pantalla de adivinación -->
+                <div id="test-guessing" class="test-game-screen hidden">
+                    <div class="guessing-header">
+                        <h3>¡Ahora adivina!</h3>
+                        <p id="guessing-player-name">Jugador 2</p>
+                        <p>¿Cuál crees que fue la respuesta de <span id="answer-player-name">Jugador 1</span>?</p>
+                    </div>
+
+                    <div class="question-display">
+                        <div class="question-card small">
+                            <div class="question-icon">❓</div>
+                            <h4 id="guessing-question-text">Pregunta...</h4>
+                        </div>
+                    </div>
+
+                    <div class="guess-input-section">
+                        <textarea
+                            id="guess-input"
+                            class="answer-input"
+                            placeholder="Escribe tu adivinanza aquí..."
+                            maxlength="200"
+                        ></textarea>
+                        <div class="char-counter">
+                            <span id="guess-char-count">0</span>/200
+                        </div>
+                    </div>
+
+                    <div class="guess-actions">
+                        <button class="btn btn-secondary" id="skip-guess-btn">
+                            ⏭️ Saltar
+                        </button>
+                        <button class="btn btn-primary" id="submit-guess-btn" disabled>
+                            🎯 Adivinar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pantalla de resultado -->
+                <div id="test-result" class="test-game-screen hidden">
+                    <div class="result-content">
+                        <div class="result-reveal">
+                            <div class="result-question">
+                                <h4 id="result-question-text">Pregunta...</h4>
+                            </div>
+
+                            <div class="answers-comparison">
+                                <div class="answer-box correct">
+                                    <div class="answer-label">Respuesta correcta:</div>
+                                    <div class="answer-text" id="correct-answer">...</div>
+                                </div>
+
+                                <div class="answer-box guess">
+                                    <div class="answer-label">Tu adivinanza:</div>
+                                    <div class="answer-text" id="user-guess">...</div>
+                                </div>
+                            </div>
+
+                            <div class="result-feedback" id="result-feedback">
+                                <!-- Aquí irá el feedback -->
+                            </div>
+                        </div>
+
+                        <div class="result-actions">
+                            <button class="btn btn-secondary" id="next-result-btn">
+                                ➡️ Siguiente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pantalla final -->
+                <div id="test-final" class="test-game-screen hidden">
+                    <div class="final-results">
+                        <div class="final-score">
+                            <div class="score-circle">
+                                <div class="score-number" id="final-percentage">0%</div>
+                                <div class="score-label">Compatibilidad</div>
+                            </div>
+                        </div>
+
+                        <div class="couple-title">
+                            <h3 id="couple-title">Título de Pareja</h3>
+                            <div class="title-description" id="title-description">Descripción del título</div>
+                        </div>
+
+                        <div class="final-stats">
+                            <div class="stat-item">
+                                <div class="stat-number" id="correct-answers">0</div>
+                                <div class="stat-label">Aciertos</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="total-questions-final">10</div>
+                                <div class="stat-label">Preguntas</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="skipped-questions">0</div>
+                                <div class="stat-label">Saltadas</div>
+                            </div>
+                        </div>
+
+                        <div class="final-actions">
+                            <button class="btn btn-secondary" id="play-again-btn">
+                                🔄 Jugar de Nuevo
+                            </button>
+                            <button class="btn btn-primary" id="share-results-btn">
+                                📤 Compartir Resultados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
