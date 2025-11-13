@@ -151,7 +151,6 @@ let sortableInstance = null;
 let currentSurpriseTask = null;
 let currentChallengeCategory = 'all';
 let challengeHistory = [];
-let favoriteChallenges = [];
 
 // ============================================
 // SISTEMA DE NOTIFICACIONES UNIVERSAL
@@ -174,6 +173,8 @@ function showNotification({
   icon = '💬', 
   type = 'info',
   confirm = false,
+  input = false,
+  inputPlaceholder = 'Ingresa el nombre...',
   confirmText = 'Aceptar',
   cancelText = 'Cancelar',
   onConfirm = null,
@@ -219,11 +220,13 @@ function showNotification({
     const iconEl = document.getElementById('notification-icon');
     const titleEl = document.getElementById('notification-title');
     const messageEl = document.getElementById('notification-message');
+    const inputEl = document.getElementById('notification-input');
     const btn = document.getElementById('notification-btn');
     const cancelBtn = document.getElementById('notification-cancel-btn');
     
     console.log('>>> Modal elements found:', {
       modal: !!modal,
+      input: !!inputEl,
       btn: !!btn,
       cancelBtn: !!cancelBtn
     });
@@ -249,13 +252,23 @@ function showNotification({
     titleEl.textContent = title;
     messageEl.textContent = message;
     
+    // Configurar input si es necesario
+    if (input) {
+      inputEl.style.display = 'block';
+      inputEl.placeholder = inputPlaceholder;
+      inputEl.value = '';
+      inputEl.focus();
+    } else {
+      inputEl.style.display = 'none';
+    }
+    
     // Definir handlers primero
     let cancelHandler = null;
     let confirmHandler = null;
     
-    // Si es confirmación, mostrar botón Cancelar
-    if (confirm || type === 'confirm') {
-      console.log('>>> Setting up confirm mode');
+    // Si es confirmación o tiene input, mostrar botón Cancelar
+    if (confirm || type === 'confirm' || input) {
+      console.log('>>> Setting up confirm/input mode');
       btn.textContent = confirmText;
       if (cancelBtn) {
         cancelBtn.textContent = cancelText;
@@ -264,23 +277,33 @@ function showNotification({
         
         // Handler para cancelar
         cancelHandler = () => {
-          console.log('>>> CANCEL clicked - resolving false');
+          console.log('>>> CANCEL clicked - resolving null');
           hideModal(modal, 'notification');
           if (onCancel) onCancel();
-          resolve(false);
+          resolve(null);
         };
         cancelBtn.onclick = cancelHandler;
       }
       
       // Handler para confirmar
       confirmHandler = () => {
-        console.log('>>> CONFIRM clicked - resolving true');
+        const inputValue = input ? inputEl.value.trim() : null;
+        console.log('>>> CONFIRM clicked - resolving:', inputValue || true);
         hideModal(modal, 'notification');
-        if (onConfirm) onConfirm();
-        resolve(true);
+        if (onConfirm) onConfirm(inputValue);
+        resolve(inputValue || true);
       };
       btn.onclick = confirmHandler;
       console.log('>>> Confirm handlers set');
+      
+      // Si hay input, permitir confirmar con Enter
+      if (input && inputEl) {
+        inputEl.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            confirmHandler();
+          }
+        });
+      }
       
     } else {
       btn.textContent = confirmText;
@@ -706,7 +729,6 @@ const surpriseEmoji = document.querySelector('#phone-view-surprise .surprise-emo
 const surpriseText = document.querySelector('#phone-view-surprise .surprise-text');
 const acceptSurpriseTaskBtn = document.querySelector('#phone-view-surprise #accept-surprise-task-btn');
 const rerollSurpriseTaskBtn = document.querySelector('#phone-view-surprise #reroll-surprise-task-btn');
-const favoriteChallengeBtn = document.getElementById('favorite-challenge-btn');
 const challengesTodayCount = document.getElementById('challenges-today');
 const challengesTotalCount = document.getElementById('challenges-total');
 const challengeCategoryBadge = document.querySelector('.challenge-category-badge');
@@ -2418,14 +2440,6 @@ categoryChips.forEach(chip => {
     challengeQuestionView.classList.add('active');
   });
 });
-
-// Listener para botón de favorito
-if (favoriteChallengeBtn) {
-  favoriteChallengeBtn.addEventListener('click', () => {
-    favoriteChallengeBtn.classList.toggle('active');
-    // TODO: Guardar en favoritos en Firestore
-  });
-}
 
 // Listener para toggle de historial
 if (toggleHistoryBtn) {
@@ -5460,7 +5474,12 @@ async function handleSaveJournalEntry() {
   const existingImageUrls = Array.from(journalGalleryContainer.querySelectorAll('.gallery-thumbnail img')).map(img => img.src);
 
   if (!text && imageFiles.length === 0 && existingImageUrls.length === 0) {
-    alert('Añade fotos o escribe algo para guardar el recuerdo.');
+    await showNotification({
+      title: '⚠️ Contenido requerido',
+      message: 'Añade fotos o escribe algo para guardar el recuerdo.',
+      icon: '⚠️',
+      type: 'warning'
+    });
     return;
   }
 
@@ -5798,11 +5817,24 @@ async function openPlaylistDetail(playlistId, playlistName) {
 async function handleCreatePlaylist() {
   const name = newPlaylistNameInput.value.trim();
   if (!name) {
-    alert('Por favor, dale un nombre a tu playlist.');
-    return;
+    // Mostrar notificación pidiendo el nombre
+    const playlistName = await showNotification({
+      title: '🎵 Crear Playlist',
+      message: '¿Cómo quieres llamar a tu nueva playlist?',
+      icon: '🎵',
+      input: true,
+      inputPlaceholder: 'Nombre de la playlist...',
+      confirmText: 'Crear',
+      cancelText: 'Cancelar'
+    });
+    
+    if (!playlistName) return; // Cancelado
+    
+    newPlaylistNameInput.value = playlistName;
   }
   
-  await createPlaylist(name);
+  const finalName = newPlaylistNameInput.value.trim();
+  await createPlaylist(finalName);
   
   // Animación de éxito
   createPlaylistBtn.textContent = '✅ ¡Creada!';
@@ -5827,12 +5859,22 @@ async function handleSaveSong() {
   const songName = songNameInput.value.trim();
   const youtubeLink = youtubeLinkInput.value.trim();
   if (!songName || !youtubeLink) {
-    alert('Por favor, completa el nombre y el enlace de la canción.');
+    await showNotification({
+      title: '⚠️ Campos incompletos',
+      message: 'Por favor, completa el nombre y el enlace de la canción.',
+      icon: '⚠️',
+      type: 'warning'
+    });
     return;
   }
   // Validación simple del enlace de YouTube
   if (!youtubeLink.includes('youtu.be/') && !youtubeLink.includes('youtube.com/watch')) {
-    alert('El enlace no parece ser un vídeo de YouTube válido.');
+    await showNotification({
+      title: '⚠️ Enlace inválido',
+      message: 'El enlace no parece ser un vídeo de YouTube válido.',
+      icon: '⚠️',
+      type: 'warning'
+    });
     return;
   }
   
@@ -5887,8 +5929,18 @@ async function handleSaveEditPlaylist() {
 }
 
 // Función para confirmar eliminación de playlist
-function confirmDeletePlaylist(playlistId, playlistName) {
-  if (confirm(`¿Estás seguro de que quieres eliminar la playlist "${playlistName}"? Se eliminarán todas las canciones.`)) {
+async function confirmDeletePlaylist(playlistId, playlistName) {
+  const confirmed = await showNotification({
+    title: '🗑️ Eliminar Playlist',
+    message: `¿Estás seguro de que quieres eliminar la playlist "${playlistName}"? Se eliminarán todas las canciones.`,
+    icon: '🗑️',
+    type: 'warning',
+    confirm: true,
+    confirmText: 'Eliminar',
+    cancelText: 'Cancelar'
+  });
+  
+  if (confirmed) {
     handleDeletePlaylist(playlistId);
   }
 }
@@ -5921,7 +5973,12 @@ async function handleSaveEditSong() {
   const newUrl = editSongUrlInput.value.trim();
   
   if (!newName || !newUrl) {
-    alert('Por favor, completa todos los campos.');
+    await showNotification({
+      title: '⚠️ Campos incompletos',
+      message: 'Por favor, completa todos los campos.',
+      icon: '⚠️',
+      type: 'warning'
+    });
     return;
   }
   
@@ -5938,8 +5995,18 @@ async function handleSaveEditSong() {
 }
 
 // Función para confirmar eliminación de canción
-function confirmDeleteSong(songId, songName) {
-  if (confirm(`¿Estás seguro de que quieres eliminar "${songName}"?`)) {
+async function confirmDeleteSong(songId, songName) {
+  const confirmed = await showNotification({
+    title: '🗑️ Eliminar Canción',
+    message: `¿Estás seguro de que quieres eliminar "${songName}"?`,
+    icon: '🗑️',
+    type: 'warning',
+    confirm: true,
+    confirmText: 'Eliminar',
+    cancelText: 'Cancelar'
+  });
+  
+  if (confirmed) {
     handleDeleteSong(songId);
   }
 }
