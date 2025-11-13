@@ -298,6 +298,15 @@ function showNotification({
     // Mostrar modal
     showModal(modal, 'notification');
     
+    // Si estamos dentro del favors-modal, mover la notificación dentro de él para nesting
+    if (isFavorsModalOpen) {
+      console.log('Moviendo notificación dentro del favors-modal para nesting');
+      favorsModal.appendChild(modal);
+      modal.style.position = 'absolute';
+      modal.style.inset = '0';
+      modal.style.zIndex = '76000'; // NOTIFICACIONES DENTRO DE FAVORES
+    }
+    
     // Animar icono (reiniciar animación)
     iconEl.style.animation = 'none';
     setTimeout(() => {
@@ -331,8 +340,10 @@ function showModal(modal, modalType = 'standard') {
 
   console.log(`showModal: Showing modal ${modal.id} with type ${modalType}`);
 
-  // Cerrar otros modales primero
-  closeAllModals(modal);
+  // Cerrar otros modales primero (excepto para notificaciones, que ya lo manejan)
+  if (modalType !== 'notification') {
+    closeAllModals(modal);
+  }
 
   // Asegurarse de que el modal esté al final del body para el stacking context
   document.body.appendChild(modal);
@@ -422,6 +433,13 @@ function hideModal(modal, modalType = 'standard') {
   } else if (modalType === 'notification') {
     // Sistema de clases is-open para modales de notificación
     modal.classList.remove('is-open');
+    
+    // Si está dentro del favors-modal, devolverlo al body
+    const favorsModal = document.getElementById('favors-fullscreen-modal');
+    if (favorsModal && favorsModal.contains(modal)) {
+      console.log('Devolviendo notificación al body desde favors-modal');
+      document.body.appendChild(modal);
+    }
   } else if (modalType === 'place') {
     // Sistema de clases is-open para modales de lugar
     modal.classList.remove('is-open');
@@ -443,7 +461,9 @@ function hideModal(modal, modalType = 'standard') {
 function closeAllModals(excludeModal = null) {
   console.log('closeAllModals: Closing all open modals, excluding:', excludeModal?.id);
 
-  // NO cerrar modales padre si están abiertos (para preservar nesting)
+  const isOpeningConfirmModal = excludeModal && excludeModal.id === 'confirm-modal';
+  
+  // NO cerrar modales padre si están abiertos (para preservar nesting) o si estamos abriendo un modal temporal como confirm
   const mapModal = document.getElementById('map-modal');
   const favorsModal = document.getElementById('favors-fullscreen-modal');
   
@@ -451,9 +471,9 @@ function closeAllModals(excludeModal = null) {
   const standardModals = document.querySelectorAll('.modal.is-open');
   standardModals.forEach(modal => {
     if (modal !== excludeModal) {
-      // No cerrar map-modal si está abierto (preservar nesting)
-      if (modal === mapModal && mapModal.classList.contains('is-open')) {
-        console.log('closeAllModals: No cerrando map-modal porque está abierto (preservando nesting)');
+      // No cerrar map-modal si está abierto (preservar nesting) o si estamos abriendo un modal temporal
+      if (modal === mapModal && (mapModal.classList.contains('is-open') || isOpeningConfirmModal)) {
+        console.log('closeAllModals: No cerrando map-modal porque está abierto o estamos abriendo modal temporal');
         return;
       }
       modal.classList.remove('is-open');
@@ -463,13 +483,17 @@ function closeAllModals(excludeModal = null) {
     }
   });
 
-  // Cerrar modales de favores (hidden) - pero no si está abierto como modal padre
+  // Cerrar modales de favores (hidden) - pero no si está abierto como modal padre o si estamos abriendo modal temporal
   if (favorsModal && !favorsModal.classList.contains('hidden') && favorsModal !== excludeModal) {
-    console.log('closeAllModals: Cerrando modal de favores');
-    favorsModal.classList.add('hidden');
-    favorsModal.style.display = 'none';
-    favorsModal.style.visibility = 'hidden';
-    favorsModal.style.opacity = '0';
+    if (!isOpeningConfirmModal) {
+      console.log('closeAllModals: Cerrando modal de favores');
+      favorsModal.classList.add('hidden');
+      favorsModal.style.display = 'none';
+      favorsModal.style.visibility = 'hidden';
+      favorsModal.style.opacity = '0';
+    } else {
+      console.log('closeAllModals: No cerrando modal de favores porque estamos abriendo modal temporal');
+    }
   }
 
   const createFavorModal = document.getElementById('create-favor-modal');
@@ -527,6 +551,7 @@ function closeAllModals(excludeModal = null) {
   console.log('closeAllModals: placeInfoModal exists:', !!placeInfoModal);
   console.log('closeAllModals: isPlaceInfoInsideMap:', isPlaceInfoInsideMap);
   console.log('closeAllModals: isOpeningMapModal:', isOpeningMapModal);
+  console.log('closeAllModals: isOpeningConfirmModal:', isOpeningConfirmModal);
 
   displayModals.forEach(modalId => {
     const modal = document.getElementById(modalId) || window[modalId];
@@ -537,8 +562,8 @@ function closeAllModals(excludeModal = null) {
         return;
       }
       // No cerrar map-modal si está abierto
-      if (modalId === 'map-modal' && mapModal.classList.contains('is-open')) {
-        console.log('closeAllModals: No cerrando map-modal porque está abierto');
+      if (modalId === 'map-modal' && (mapModal.classList.contains('is-open') || isOpeningConfirmModal)) {
+        console.log('closeAllModals: No cerrando map-modal porque está abierto o estamos abriendo modal temporal');
         return;
       }
       console.log(`closeAllModals: Cerrando modal ${modalId}`);
