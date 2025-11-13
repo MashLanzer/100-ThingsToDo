@@ -182,11 +182,16 @@ function showNotification({
   return new Promise((resolve) => {
     console.log('>>> showNotification called with confirm:', confirm, 'type:', type);
     
-    // SIEMPRE ocultar otros modales al mostrar notificación
-    if (placeInfoModal) {
+    // SIEMPRE ocultar otros modales al mostrar notificación, PERO respetar modales anidados
+    const mapModal = document.getElementById('map-modal');
+    const isPlaceInfoInsideMap = mapModal && mapModal.contains(placeInfoModal);
+    
+    if (placeInfoModal && !isPlaceInfoInsideMap) {
       placeInfoModal.style.display = 'none';
       document.body.appendChild(placeInfoModal);
-      console.log('Modal de detalles cerrado al mostrar notificación');
+      console.log('Modal de detalles cerrado al mostrar notificación (no estaba dentro del mapa)');
+    } else if (isPlaceInfoInsideMap) {
+      console.log('Modal de detalles NO cerrado al mostrar notificación (está dentro del mapa)');
     }
     // Cerrar modal de favores si está abierto
     const favorsModal = document.getElementById('favors-fullscreen-modal');
@@ -256,7 +261,7 @@ function showNotification({
         // Handler para cancelar
         cancelHandler = () => {
           console.log('>>> CANCEL clicked - resolving false');
-          modal.classList.remove('is-open');
+          hideModal(modal, 'notification');
           if (onCancel) onCancel();
           resolve(false);
         };
@@ -266,7 +271,7 @@ function showNotification({
       // Handler para confirmar
       confirmHandler = () => {
         console.log('>>> CONFIRM clicked - resolving true');
-        modal.classList.remove('is-open');
+        hideModal(modal, 'notification');
         if (onConfirm) onConfirm();
         resolve(true);
       };
@@ -279,7 +284,7 @@ function showNotification({
       
       // Cerrar al hacer click en el botón
       const closeHandler = () => {
-        modal.classList.remove('is-open');
+        hideModal(modal, 'notification');
         if (onConfirm) onConfirm();
         resolve(true);
       };
@@ -287,7 +292,7 @@ function showNotification({
     }
     
     // Mostrar modal
-    modal.classList.add('is-open');
+    showModal(modal, 'notification');
     
     // Animar icono (reiniciar animación)
     iconEl.style.animation = 'none';
@@ -299,11 +304,217 @@ function showNotification({
   // Cerrar al hacer click fuera del contenido
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
-      modal.classList.remove('is-open');
+      hideModal(modal, 'notification');
       if (onCancel) onCancel();
     }
   });
 }
+
+// ============================================
+// FUNCIONES DE UTILIDAD PARA MODALES
+// ============================================
+
+/**
+ * Muestra un modal usando el sistema de clases consistente
+ * @param {HTMLElement} modal - El elemento modal a mostrar
+ * @param {string} modalType - Tipo de modal ('standard' para .modal.is-open, 'favors' para .hidden, 'music' para .active)
+ */
+function showModal(modal, modalType = 'standard') {
+  if (!modal) {
+    console.warn('showModal: Modal element is null or undefined');
+    return;
+  }
+
+  console.log(`showModal: Showing modal ${modal.id} with type ${modalType}`);
+
+  // Cerrar otros modales primero
+  closeAllModals(modal);
+
+  // Asegurarse de que el modal esté al final del body para el stacking context
+  document.body.appendChild(modal);
+
+  if (modalType === 'standard') {
+    // Sistema de clases is-open para modales estándar
+    modal.classList.add('is-open');
+    modal.classList.remove('hidden');
+  } else if (modalType === 'favors') {
+    // Sistema de clases hidden para modales de favores
+    modal.classList.remove('hidden');
+  } else if (modalType === 'music') {
+    // Sistema de clases active para modales de música
+    modal.classList.add('active');
+  } else if (modalType === 'notification') {
+    // Sistema de clases is-open para modales de notificación
+    modal.classList.add('is-open');
+  } else if (modalType === 'place') {
+    // Sistema de clases is-open para modales de lugar
+    modal.classList.add('is-open');
+  }
+
+  // Forzar z-index basado en el tipo de modal
+  if (modalType === 'favors') {
+    modal.style.zIndex = '75000'; // SISTEMA DE FAVORES PRINCIPAL
+  } else if (modal.classList.contains('notification-modal')) {
+    modal.style.zIndex = '95000'; // NOTIFICACIONES CRÍTICAS
+  } else if (modal.id === 'photo-lightbox') {
+    modal.style.zIndex = '99999'; // LIGHTBOX SOBRE TODO
+  } else if (modal.id === 'place-info-modal' || modalType === 'place') {
+    modal.style.zIndex = '85000'; // DETALLES DE LUGARES - ALTO PRIORIDAD
+  } else if (modalType === 'music') {
+    modal.style.zIndex = '80000'; // MODALES DE MÚSICA
+  } else {
+    modal.style.zIndex = '70000'; // MODALES PRINCIPALES
+  }
+
+  // Forzar estilos inline para asegurar visibilidad (sobrescribe estilos de closeAllModals)
+  modal.style.display = 'flex';
+  modal.style.visibility = 'visible';
+  modal.style.opacity = '1';
+
+  console.log(`Modal ${modal.id} should now be visible with z-index ${modal.style.zIndex}`);
+  console.log(`Modal ${modal.id} classes: ${modal.className}`);
+  
+  // Verificación final - forzar visibilidad si es necesario
+  setTimeout(() => {
+    const computedDisplay = window.getComputedStyle(modal).display;
+    const computedVisibility = window.getComputedStyle(modal).visibility;
+    const computedOpacity = window.getComputedStyle(modal).opacity;
+    console.log(`Modal ${modal.id} after timeout - display: ${computedDisplay}, visibility: ${computedVisibility}, opacity: ${computedOpacity}, z-index: ${window.getComputedStyle(modal).zIndex}`);
+    
+    if (computedDisplay === 'none') {
+      console.warn(`Modal ${modal.id} computed display is still 'none', CSS may not be working`);
+    }
+    if (computedVisibility === 'hidden') {
+      console.warn(`Modal ${modal.id} computed visibility is still 'hidden', CSS may not be working`);
+    }
+    if (computedOpacity === '0') {
+      console.warn(`Modal ${modal.id} computed opacity is still '0', CSS may not be working`);
+    }
+  }, 100);
+}
+
+/**
+ * Oculta un modal usando el sistema de clases consistente
+ * @param {HTMLElement} modal - El elemento modal a ocultar
+ * @param {string} modalType - Tipo de modal ('standard' para .modal.is-open, 'favors' para .hidden, 'music' para .active)
+ */
+function hideModal(modal, modalType = 'standard') {
+  if (!modal) {
+    console.warn('hideModal: Modal element is null or undefined');
+    return;
+  }
+
+  console.log(`hideModal: Hiding modal ${modal.id} with type ${modalType}`);
+
+  if (modalType === 'standard') {
+    // Sistema de clases is-open para modales estándar
+    modal.classList.remove('is-open');
+  } else if (modalType === 'favors') {
+    // Sistema de clases hidden para modales de favores
+    modal.classList.add('hidden');
+  } else if (modalType === 'music') {
+    // Sistema de clases active para modales de música
+    modal.classList.remove('active');
+  } else if (modalType === 'notification') {
+    // Sistema de clases is-open para modales de notificación
+    modal.classList.remove('is-open');
+  } else if (modalType === 'place') {
+    // Sistema de clases is-open para modales de lugar
+    modal.classList.remove('is-open');
+  }
+
+  // Forzar ocultamiento
+  modal.style.display = 'none';
+  modal.style.visibility = 'hidden';
+  modal.style.opacity = '0';
+
+  // Limpiar z-index forzado
+  modal.style.zIndex = '';
+}
+
+/**
+ * Cierra todos los modales abiertos
+ * @param {HTMLElement} excludeModal - Modal a excluir del cierre (opcional)
+ */
+function closeAllModals(excludeModal = null) {
+  console.log('closeAllModals: Closing all open modals, excluding:', excludeModal?.id);
+
+  // Cerrar modales estándar (is-open)
+  const standardModals = document.querySelectorAll('.modal.is-open');
+  standardModals.forEach(modal => {
+    if (modal !== excludeModal) {
+      modal.classList.remove('is-open');
+      modal.style.display = 'none';
+      modal.style.visibility = 'hidden';
+      modal.style.opacity = '0';
+    }
+  });
+
+  // Cerrar modales de favores (hidden)
+  const favorsModal = document.getElementById('favors-fullscreen-modal');
+  if (favorsModal && !favorsModal.classList.contains('hidden') && favorsModal !== excludeModal) {
+    favorsModal.classList.add('hidden');
+    favorsModal.style.display = 'none';
+    favorsModal.style.visibility = 'hidden';
+    favorsModal.style.opacity = '0';
+  }
+
+  const createFavorModal = document.getElementById('create-favor-modal');
+  if (createFavorModal && !createFavorModal.classList.contains('hidden') && createFavorModal !== excludeModal) {
+    createFavorModal.classList.add('hidden');
+    createFavorModal.style.display = 'none';
+    createFavorModal.style.visibility = 'hidden';
+    createFavorModal.style.opacity = '0';
+  }
+
+  // Cerrar modales de música (active)
+  const musicModals = document.querySelectorAll('.music-edit-modal.active');
+  musicModals.forEach(modal => {
+    if (modal !== excludeModal) {
+      modal.classList.remove('active');
+      modal.style.display = 'none';
+      modal.style.visibility = 'hidden';
+      modal.style.opacity = '0';
+    }
+  });
+
+  // Cerrar modales de notificación (is-open)
+  const notificationModal = document.getElementById('notification-modal');
+  if (notificationModal && notificationModal.classList.contains('is-open') && notificationModal !== excludeModal) {
+    notificationModal.classList.remove('is-open');
+    notificationModal.style.display = 'none';
+    notificationModal.style.visibility = 'hidden';
+    notificationModal.style.opacity = '0';
+  }
+
+  // Cerrar lightbox
+  if (lightbox && lightbox.classList.contains('active')) {
+    closeLightbox();
+  }
+
+  // Cerrar otros modales que usan display directamente
+  const displayModals = [
+    'editPlanModal',
+    'coupleModal',
+    'statsModal',
+    'phoneModal',
+    'logoutConfirmModal',
+    'capsulePreviewModal',
+    'place-info-modal', // Modal de detalles de lugar
+    'map-modal' // Modal del mapa
+  ];
+
+  displayModals.forEach(modalId => {
+    const modal = document.getElementById(modalId) || window[modalId];
+    if (modal && (modal.style.display !== 'none' || modal.classList.contains('is-open'))) {
+      modal.style.display = 'none';
+      modal.style.visibility = 'hidden';
+      modal.style.opacity = '0';
+      modal.classList.remove('is-open');
+    }
+  });
+}
+
 let currentGoalId = null;
 // ===> AÑADE ESTAS LÍNEAS AQUÍ <===
 let currentJournalDate = new Date();
@@ -455,6 +666,35 @@ const capsuleMessageInput = document.getElementById('capsule-message-input');
 const capsuleUnlockDateInput = document.getElementById('capsule-unlock-date-input');
 const capsuleTypeSelect = document.getElementById('capsule-type-select');
 const saveCapsuleBtn = document.getElementById('save-capsule-btn');
+
+// Elementos del modal de preview
+const capsulePreviewModal = document.getElementById('capsule-preview-modal');
+const closePreviewModalBtn = document.getElementById('close-preview-modal-btn');
+const previewShakeBtn = document.getElementById('preview-shake-btn');
+const previewOpenBtn = document.getElementById('preview-open-btn');
+const previewCapsuleTitle = document.getElementById('preview-capsule-title');
+const previewCapsuleCreator = document.getElementById('preview-capsule-creator');
+const previewUnlockDate = document.getElementById('preview-unlock-date');
+const previewEffects = document.getElementById('preview-effects');
+const previewCapsuleBody = document.querySelector('.preview-capsule-body');
+const previewCapsuleCap = document.querySelector('.preview-capsule-cap');
+
+// Modales faltantes - agregar aquí
+const wheelResultModal = document.getElementById('wheel-result-modal');
+const closeWheelResultModalBtn = document.getElementById('close-wheel-result-modal');
+// surprise-task-modal ELIMINADO - era modal huérfano
+
+// Elementos de adjuntos multimedia
+const capsuleAddPhotoBtn = document.getElementById('add-photo-btn');
+const capsuleAddVideoBtn = document.getElementById('add-video-btn');
+const capsuleAddAudioBtn = document.getElementById('add-audio-btn');
+const capsulePhotoInput = document.getElementById('photo-input');
+const capsuleVideoInput = document.getElementById('video-input');
+const capsuleAudioInput = document.getElementById('audio-input');
+const capsuleAttachmentsPreview = document.getElementById('attachments-preview');
+
+// Variables para manejar adjuntos
+let capsuleAttachments = [];
 
 // ... al final de la sección de elementos del DOM ...
 
@@ -619,11 +859,11 @@ function openEditPlanModal(plan) {
   editPlanIdInput.value = plan.id;
   editPlanTitleInput.value = plan.title;
   editPlanDescInput.value = plan.description || '';
-  editPlanModal.style.display = 'flex';
+  showModal(editPlanModal, 'standard');
 }
 
 function closeEditPlanModal() {
-  editPlanModal.style.display = 'none';
+  hideModal(editPlanModal, 'standard');
 }
 
 async function handleUpdatePlan() {
@@ -1608,14 +1848,13 @@ async function handleDeleteTask(taskId) {
 // ============================================
 
 function openCoupleModal() {
-  coupleModal.style.display = 'flex';
+  showModal(coupleModal, 'standard');
   loadCoupleData();
 }
 
 function closeCoupleModal() {
-  coupleModal.style.display = 'none';
+  hideModal(coupleModal, 'standard');
   coupleAboutView.style.display = 'none'; // Asegura que no se quede abierta
-
 }
 
 async function loadCoupleData() {
@@ -1869,12 +2108,17 @@ loginBtn.addEventListener('click', handleLogin);
 // Dashboard
 // NUEVO BLOQUE DE CÓDIGO
 logoutBtn.addEventListener('click', () => {
-  logoutConfirmModal.style.display = 'flex'; // Abre el modal de confirmación
+  openLogoutConfirmModal();
 });
+
+// Función para abrir el modal de confirmación de logout
+function openLogoutConfirmModal() {
+  showModal(logoutConfirmModal, 'standard');
+}
 
 // Función para cerrar el modal
 function closeLogoutConfirmModal() {
-  logoutConfirmModal.style.display = 'none';
+  hideModal(logoutConfirmModal, 'standard');
 }
 
 // Listeners para los botones del nuevo modal
@@ -2367,37 +2611,7 @@ setInterval(updatePhoneClock, 1000);
 // ============================================
 
 async function openStatsModal() { // <== Convertir la función en async
-  // SIEMPRE ocultar otros modales al abrir el modal de estadísticas
-  if (placeInfoModal) {
-    placeInfoModal.style.display = 'none';
-    document.body.appendChild(placeInfoModal);
-    console.log('Modal de detalles cerrado al abrir modal de estadísticas');
-  }
-  // Cerrar modal de favores si está abierto
-  const favorsModal = document.getElementById('favors-fullscreen-modal');
-  if (favorsModal && !favorsModal.classList.contains('hidden')) {
-    favorsModal.classList.add('hidden');
-    console.log('Modal de favores cerrado al abrir modal de estadísticas');
-  }
-  // Cerrar modal de crear favor si está abierto
-  const createFavorModal = document.getElementById('create-favor-modal');
-  if (createFavorModal && !createFavorModal.classList.contains('hidden')) {
-    createFavorModal.classList.add('hidden');
-    console.log('Modal de crear favor cerrado al abrir modal de estadísticas');
-  }
-  // Cerrar modal de notificación si está abierto
-  const notificationModal = document.getElementById('notification-modal');
-  if (notificationModal && notificationModal.style.display !== 'none') {
-    notificationModal.style.display = 'none';
-    console.log('Modal de notificación cerrado al abrir modal de estadísticas');
-  }
-  // Cerrar lightbox si está abierto
-  if (lightbox && lightbox.classList.contains('active')) {
-    closeLightbox();
-    console.log('Lightbox cerrado al abrir modal de estadísticas');
-  }
-  
-  statsModal.style.display = 'flex';
+  showModal(statsModal, 'standard');
   
   // Mostrar la vista de carga inmediatamente
   statsLoadingView.style.display = 'block';
@@ -2420,7 +2634,7 @@ async function openStatsModal() { // <== Convertir la función en async
 }
 
 function closeStatsModal() {
-  statsModal.style.display = 'none';
+  hideModal(statsModal, 'standard');
 }
 
 // ESTA ES LA NUEVA VERSIÓN SIMPLIFICADA
@@ -2511,48 +2725,11 @@ function hideAboutView() {
 
 function openPhoneModal() {
   console.log('Abriendo phoneModal. Estado del placeInfoModal antes:', placeInfoModal ? placeInfoModal.style.display : 'no modal');
-  // SIEMPRE ocultar el modal de detalles, favores y el lightbox al abrir cualquier modal
-  if (placeInfoModal) {
-    placeInfoModal.style.display = 'none';
-    // Asegurarse de que esté en el body
-    document.body.appendChild(placeInfoModal);
-    console.log('Modal de detalles forzosamente ocultado y movido al body');
-  }
-  // Cerrar modal de favores si está abierto
-  const favorsModal = document.getElementById('favors-fullscreen-modal');
-  console.log('Checking favors modal for closing:', favorsModal);
-  if (favorsModal) {
-    console.log('Favors modal exists, classes:', favorsModal.className);
-    console.log('Favors modal has hidden class:', favorsModal.classList.contains('hidden'));
-    console.log('Favors modal computed display:', window.getComputedStyle(favorsModal).display);
-  }
-  if (favorsModal && !favorsModal.classList.contains('hidden')) {
-    console.log('Closing favors modal...');
-    favorsModal.classList.add('hidden');
-    console.log('Modal de favores cerrado al abrir modal del teléfono');
-  }
-  // Cerrar modal de crear favor si está abierto
-  const createFavorModal = document.getElementById('create-favor-modal');
-  if (createFavorModal && !createFavorModal.classList.contains('hidden')) {
-    createFavorModal.classList.add('hidden');
-    console.log('Modal de crear favor cerrado al abrir modal del teléfono');
-  }
-  // Cerrar modal de notificación si está abierto
-  const notificationModal = document.getElementById('notification-modal');
-  if (notificationModal && notificationModal.style.display !== 'none') {
-    notificationModal.style.display = 'none';
-    console.log('Modal de notificación cerrado al abrir modal del teléfono');
-  }
-  // Cerrar lightbox si está abierto
-  if (lightbox && lightbox.classList.contains('active')) {
-    closeLightbox();
-    console.log('Lightbox cerrado al abrir modal del teléfono');
-  }
-  phoneModal.style.display = 'flex';
+  showModal(phoneModal, 'standard');
 }
 
 function closePhoneModal() {
-  phoneModal.style.display = 'none';
+  hideModal(phoneModal, 'standard');
   // Ocultar el modal de detalles si está abierto
   if (placeInfoModal && placeInfoModal.style.display === 'flex') {
     placeInfoModal.style.display = 'none';
@@ -2696,20 +2873,18 @@ function openFavorsFullscreenModal() {
   console.log('Modal exists:', !!modal);
   console.log('Modal classes before:', modal.className);
   
-  // Asegurarse de que el modal esté al final del body para el stacking context
-  document.body.appendChild(modal);
-  
-  modal.classList.remove('hidden');
-  
-  console.log('Modal classes after:', modal.className);
-  console.log('Modal computed display:', window.getComputedStyle(modal).display);
-  console.log('Modal computed z-index:', window.getComputedStyle(modal).zIndex);
-  
-  // Forzar visibilidad como último recurso
-  modal.style.display = 'flex';
-  modal.style.zIndex = '100000';
+  // Mostrar el modal usando el sistema unificado
+  showModal(modal, 'favors');
   
   console.log('Favors modal should now be visible');
+  
+  // Configurar click outside para cerrar el modal
+  const closeFavorsOnClickOutside = (e) => {
+    if (e.target === modal) {
+      closeFavorsFullscreenModal();
+    }
+  };
+  modal.addEventListener('click', closeFavorsOnClickOutside);
   
   // Cargar datos si el usuario está autenticado
   if (currentUser && currentCoupleId) {
@@ -2719,10 +2894,7 @@ function openFavorsFullscreenModal() {
 }
 
 function closeFavorsFullscreenModal() {
-  const modal = document.getElementById('favors-fullscreen-modal');
-  if (modal) {
-    modal.classList.add('hidden');
-  }
+  hideModal(document.getElementById('favors-fullscreen-modal'), 'favors');
 }
 
 // Setup para listeners de favores en phone-modal (sin sufijo -large)
@@ -3669,21 +3841,18 @@ function openCreateFavorModal() {
   console.log('Create favor modal exists:', !!modal);
   console.log('Create favor modal classes before:', modal.className);
   
-  // Asegurarse de que el modal esté al final del body para el stacking context
-  document.body.appendChild(modal);
-  
-  modal.classList.remove('hidden');
-  
-  console.log('Create favor modal classes after:', modal.className);
-  console.log('Create favor modal computed display:', window.getComputedStyle(modal).display);
-  console.log('Create favor modal computed z-index:', window.getComputedStyle(modal).zIndex);
-  
-  // Forzar visibilidad como último recurso
-  modal.style.opacity = '1';
-  modal.style.transform = 'scale(1)';
-  modal.style.zIndex = '55000';
+  // Mostrar modal usando el sistema consistente
+  showModal(modal, 'favors');
   
   console.log('Create favor modal should now be visible');
+  
+  // Configurar click outside para cerrar el modal
+  const closeCreateFavorOnClickOutside = (e) => {
+    if (e.target === modal) {
+      closeCreateFavorModal();
+    }
+  };
+  modal.addEventListener('click', closeCreateFavorOnClickOutside);
   
   // Configurar listeners cada vez que se abre (para asegurar que funcione)
   setupCreateFavorModalListeners();
@@ -3691,14 +3860,11 @@ function openCreateFavorModal() {
 
 // Cerrar modal de crear desafío
 function closeCreateFavorModal() {
-  const modal = document.getElementById('create-favor-modal');
-  if (modal) {
-    modal.classList.add('hidden');
-    
-    // Limpiar formulario
-    document.getElementById('coupon-title-input-large').value = '';
-    document.getElementById('coupon-description-input-large').value = '';
-  }
+  hideModal(document.getElementById('create-favor-modal'), 'favors');
+  
+  // Limpiar formulario
+  document.getElementById('coupon-title-input-large').value = '';
+  document.getElementById('coupon-description-input-large').value = '';
 }
 
 // Variables para el modal de crear desafío
@@ -4219,7 +4385,7 @@ async function createCapsule(message, unlockDate, capsuleType = 'memory') {
   
   try {
     const capsulesRef = collection(db, 'couples', currentCoupleId, 'capsules');
-    await addDoc(capsulesRef, {
+    const docRef = await addDoc(capsulesRef, {
       message,
       unlockDate: Timestamp.fromDate(new Date(unlockDate)),
       type: capsuleType,
@@ -4227,6 +4393,8 @@ async function createCapsule(message, unlockDate, capsuleType = 'memory') {
       creatorName: currentUser.displayName,
       createdAt: Timestamp.now(),
     });
+    
+    return docRef.id; // Devolver el ID de la cápsula creada
   } catch (error) {
     console.error('Error al crear la cápsula:', error);
     throw error;
@@ -4278,6 +4446,7 @@ async function loadAndRenderCapsules() {
 
       // Determinar el contenido visual basado en el tipo
       const capsuleVisuals = getCapsuleVisuals(capsuleType, isLocked);
+      const hasAttachments = capsule.attachments && capsule.attachments.length > 0;
 
       item.innerHTML = `
         <div class="capsule-visual">
@@ -4287,6 +4456,7 @@ async function loadAndRenderCapsules() {
             ${isLocked ? '<div class="capsule-lock">🔒</div>' : '<div class="capsule-sparkle">✨</div>'}
           </div>
           ${timeLeft > 0 ? `<div class="time-indicator">${timeLeft}d</div>` : ''}
+          ${hasAttachments ? '<div class="attachment-indicator">📎</div>' : ''}
         </div>
         <div class="capsule-info">
           <p class="capsule-title">${capsuleVisuals.title}</p>
@@ -4355,44 +4525,347 @@ function getCapsuleVisuals(type, isLocked) {
 
 function openCapsule(capsule, isLocked) {
   if (isLocked) {
-    showNotification({
-      title: '¡Paciencia!',
-      message: `Esta cápsula del tiempo no se puede abrir hasta el ${capsule.unlockDate.toLocaleDateString()}.\n\nFue creada por ${capsule.creatorName}.`,
-      icon: '⏳',
-      type: 'time'
-    });
+    // Mostrar preview modal para cápsulas bloqueadas
+    showCapsulePreview(capsule);
   } else {
-    // Efectos visuales sorprendentes al abrir la cápsula
-    const capsuleElement = event.target.closest('.capsule-item');
-    if (capsuleElement) {
-      capsuleElement.classList.add('capsule-opening');
+    // Abrir directamente cápsulas desbloqueadas
+    openCapsuleDirectly(capsule);
+  }
+}
 
-      // Confetti celebration
-      loadConfettiLib().then(confetti => {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#FFD700', '#FF69B4', '#87CEEB', '#32CD32', '#FF6347']
-        });
-      }).catch(() => {
-        // Fallback si no se puede cargar confetti
-        console.log('Confetti not available, but capsule opened successfully!');
+function showCapsulePreview(capsule) {
+  const capsuleVisuals = getCapsuleVisuals(capsule.type || 'default', true);
+  const timeLeft = Math.ceil((capsule.unlockDate - new Date()) / (1000 * 60 * 60 * 24));
+  
+  // Actualizar información del preview
+  previewCapsuleTitle.textContent = capsuleVisuals.title;
+  previewCapsuleCreator.textContent = `De: ${capsule.creatorName}`;
+  previewUnlockDate.textContent = `Se abre en ${timeLeft} días`;
+  
+  // Aplicar estilos visuales de la cápsula
+  previewCapsuleBody.className = `capsule-body preview-capsule-body ${capsuleVisuals.bodyClass}`;
+  previewCapsuleCap.className = `capsule-cap preview-capsule-cap ${capsuleVisuals.capClass}`;
+  
+  // Configurar eventos
+  previewShakeBtn.onclick = () => shakeCapsule();
+  previewOpenBtn.onclick = () => {
+    hideModal(capsulePreviewModal, 'standard');
+    openCapsuleDirectly(capsule);
+  };
+  
+  closePreviewModalBtn.onclick = () => {
+    hideModal(capsulePreviewModal, 'standard');
+  };
+  
+  capsulePreviewModal.onclick = (e) => {
+    if (e.target === capsulePreviewModal) {
+      hideModal(capsulePreviewModal, 'standard');
+    }
+  };
+  
+  // Mostrar modal
+  showModal(capsulePreviewModal, 'standard');
+}
+
+function shakeCapsule() {
+  const shakeEffect = previewEffects.querySelector('.shake-effect');
+  shakeEffect.style.display = 'flex';
+  
+  // Ocultar después de la animación
+  setTimeout(() => {
+    shakeEffect.style.display = 'none';
+  }, 1500);
+  
+  // Efecto de sonido simulado (podríamos agregar audio real aquí)
+  console.log('🎵 Shake shake shake!');
+}
+
+function openCapsuleDirectly(capsule) {
+  // Efectos visuales sorprendentes al abrir la cápsula
+  const capsuleElement = document.querySelector('.capsule-item.unlocked');
+  if (capsuleElement) {
+    capsuleElement.classList.add('capsule-opening');
+
+    // Sonido de apertura
+    playSound('capsule-open');
+
+    // Crear efecto de explosión de partículas
+    createParticleExplosion(capsuleElement);
+
+    // Agregar clase de brillo intenso durante la apertura
+    capsuleElement.classList.add('capsule-opening-glow');
+
+    // Efectos de chispa durante la animación
+    setTimeout(() => playSound('sparkle'), 200);
+    setTimeout(() => playSound('sparkle'), 400);
+
+    // Confetti celebration con más intensidad
+    loadConfettiLib().then(confetti => {
+      // Primera ráfaga
+      confetti({
+        particleCount: 150,
+        spread: 90,
+        origin: { y: 0.6 },
+        colors: ['#FFD700', '#FF69B4', '#87CEEB', '#32CD32', '#FF6347', '#FF1493', '#00CED1']
       });
 
-      // Remover la clase de animación después de que termine
+      // Segunda ráfaga con delay
       setTimeout(() => {
-        capsuleElement.classList.remove('capsule-opening');
-      }, 800);
-    }
+        confetti({
+          particleCount: 80,
+          spread: 120,
+          origin: { y: 0.4 },
+          colors: ['#FFD700', '#FF69B4', '#87CEEB', '#32CD32', '#FF6347']
+        });
+      }, 300);
+    }).catch(() => {
+      // Fallback si no se puede cargar confetti
+      console.log('Confetti not available, but capsule opened successfully!');
+    });
 
-    showNotification({
-      title: '🎉 ¡Cápsula del Tiempo Abierta!',
-      message: `Mensaje de ${capsule.creatorName}:\n\n"${capsule.message}"\n\n✨ Tu mensaje del pasado ha llegado justo a tiempo! ✨`,
-      icon: '�',
-      type: 'success'
+    // Remover las clases de animación después de que terminen
+    setTimeout(() => {
+      capsuleElement.classList.remove('capsule-opening', 'capsule-opening-glow');
+      // Limpiar partículas
+      const particles = capsuleElement.querySelectorAll('.particle-explosion');
+      particles.forEach(particle => particle.remove());
+    }, 1500);
+  }
+
+  // Sonido de éxito al final
+  setTimeout(() => playSound('success'), 800);
+
+  // Mostrar mensaje con adjuntos si los hay
+  let message = `Mensaje de ${capsule.creatorName}:\n\n"${capsule.message}"`;
+
+  if (capsule.attachments && capsule.attachments.length > 0) {
+    message += '\n\n📎 Adjuntos especiales:';
+    capsule.attachments.forEach((attachment, index) => {
+      const typeEmoji = getAttachmentTypeEmoji(attachment.type);
+      message += `\n${typeEmoji} ${attachment.name}`;
     });
   }
+
+  message += '\n\n✨ Tu mensaje del pasado ha llegado justo a tiempo! ✨';
+
+  showNotification({
+    title: '🎉 ¡Cápsula del Tiempo Abierta!',
+    message: message,
+    icon: '🎊',
+    type: 'success'
+  });
+}
+
+// Función para reproducir sonidos
+function playSound(type) {
+  try {
+    // Crear contexto de audio si no existe
+    if (!window.audioContext) {
+      window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    const ctx = window.audioContext;
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    // Configurar sonido según el tipo
+    switch (type) {
+      case 'capsule-open':
+        // Sonido mágico de apertura
+        oscillator.frequency.setValueAtTime(523, ctx.currentTime); // C5
+        oscillator.frequency.setValueAtTime(659, ctx.currentTime + 0.1); // E5
+        oscillator.frequency.setValueAtTime(784, ctx.currentTime + 0.2); // G5
+        oscillator.frequency.setValueAtTime(1047, ctx.currentTime + 0.3); // C6
+        gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.5);
+        break;
+
+      case 'sparkle':
+        // Sonido de chispa
+        oscillator.frequency.setValueAtTime(1000 + Math.random() * 500, ctx.currentTime);
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.2);
+        break;
+
+      case 'success':
+        // Sonido de éxito
+        oscillator.frequency.setValueAtTime(440, ctx.currentTime); // A4
+        oscillator.frequency.setValueAtTime(554, ctx.currentTime + 0.1); // C#5
+        oscillator.frequency.setValueAtTime(659, ctx.currentTime + 0.2); // E5
+        gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.4);
+        break;
+    }
+  } catch (error) {
+    // Fallback: no sonido si Web Audio API no está disponible
+    console.log(`Sound effect: ${type}`);
+  }
+}
+
+// Función para crear explosión de partículas
+function createParticleExplosion(capsuleElement) {
+  const rect = capsuleElement.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+
+  // Crear 5 partículas con posiciones aleatorias alrededor del centro
+  for (let i = 0; i < 5; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle-explosion';
+
+    // Posición aleatoria alrededor del centro
+    const angle = (i * 72) * (Math.PI / 180); // 72 grados entre cada partícula
+    const distance = 30 + Math.random() * 20; // Distancia aleatoria
+    const x = Math.cos(angle) * distance;
+    const y = Math.sin(angle) * distance;
+
+    particle.style.left = `${centerX + x}px`;
+    particle.style.top = `${centerY + y}px`;
+
+    document.body.appendChild(particle);
+
+    // Remover partícula después de la animación
+    setTimeout(() => {
+      if (particle.parentNode) {
+        particle.parentNode.removeChild(particle);
+      }
+    }, 1200);
+  }
+}
+
+// Funciones para manejar adjuntos multimedia
+function initCapsuleAttachments() {
+  // Event listeners para botones de adjuntos
+  capsuleAddPhotoBtn?.addEventListener('click', () => capsulePhotoInput.click());
+  capsuleAddVideoBtn?.addEventListener('click', () => capsuleVideoInput.click());
+  capsuleAddAudioBtn?.addEventListener('click', () => capsuleAudioInput.click());
+  
+  // Event listeners para inputs de archivos
+  capsulePhotoInput?.addEventListener('change', (e) => handleFileSelection(e.target.files, 'image'));
+  capsuleVideoInput?.addEventListener('change', (e) => handleFileSelection(e.target.files, 'video'));
+  capsuleAudioInput?.addEventListener('change', (e) => handleFileSelection(e.target.files, 'audio'));
+}
+
+function handleFileSelection(files, type) {
+  Array.from(files).forEach(file => {
+    // Validar tamaño del archivo (máximo 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      showNotification({
+        title: 'Archivo demasiado grande',
+        message: 'Los archivos no pueden superar los 10MB.',
+        icon: '⚠️',
+        type: 'warning'
+      });
+      return;
+    }
+    
+    // Validar tipo de archivo
+    if (!isValidFileType(file, type)) {
+      showNotification({
+        title: 'Tipo de archivo no válido',
+        message: `Por favor selecciona un archivo de tipo ${type} válido.`,
+        icon: '⚠️',
+        type: 'warning'
+      });
+      return;
+    }
+    
+    // Agregar archivo a la lista
+    const attachment = {
+      file: file,
+      type: type,
+      name: file.name,
+      size: file.size,
+      id: Date.now() + Math.random()
+    };
+    
+    capsuleAttachments.push(attachment);
+    renderAttachmentsPreview();
+  });
+}
+
+function isValidFileType(file, expectedType) {
+  const mimeType = file.type.toLowerCase();
+  switch (expectedType) {
+    case 'image':
+      return mimeType.startsWith('image/');
+    case 'video':
+      return mimeType.startsWith('video/');
+    case 'audio':
+      return mimeType.startsWith('audio/');
+    default:
+      return false;
+  }
+}
+
+function renderAttachmentsPreview() {
+  if (!capsuleAttachmentsPreview) return;
+  
+  capsuleAttachmentsPreview.innerHTML = capsuleAttachments.map(attachment => `
+    <div class="attachment-item" data-id="${attachment.id}">
+      <div class="attachment-icon">${getAttachmentTypeEmoji(attachment.type)}</div>
+      <div class="attachment-info">
+        <div class="attachment-name">${attachment.name}</div>
+        <div class="attachment-size">${formatFileSize(attachment.size)}</div>
+      </div>
+      <button class="attachment-remove" onclick="removeCapsuleAttachment('${attachment.id}')">×</button>
+    </div>
+  `).join('');
+}
+
+function removeCapsuleAttachment(attachmentId) {
+  capsuleAttachments = capsuleAttachments.filter(att => att.id !== attachmentId);
+  renderAttachmentsPreview();
+}
+
+function getAttachmentTypeEmoji(type) {
+  switch (type) {
+    case 'image': return '📸';
+    case 'video': return '🎥';
+    case 'audio': return '🎵';
+    default: return '📎';
+  }
+}
+
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Función para subir adjuntos a Firebase Storage
+async function uploadCapsuleAttachments(capsuleId) {
+  const uploadedUrls = [];
+  
+  for (const attachment of capsuleAttachments) {
+    try {
+      const storageRef = ref(storage, `couples/${currentCoupleId}/capsules/${capsuleId}/${attachment.name}`);
+      await uploadBytes(storageRef, attachment.file);
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      uploadedUrls.push({
+        name: attachment.name,
+        type: attachment.type,
+        size: attachment.size,
+        url: downloadURL
+      });
+    } catch (error) {
+      console.error('Error al subir adjunto:', error);
+    }
+  }
+  
+  return uploadedUrls;
 }
 
 async function handleSaveCapsule() {
@@ -4428,12 +4901,22 @@ async function handleSaveCapsule() {
     saveCapsuleBtn.disabled = true;
     saveCapsuleBtn.textContent = 'Sellando...';
     
-    await createCapsule(message, unlockDate, capsuleType);
+    const capsuleId = await createCapsule(message, unlockDate, capsuleType);
+    
+    // Subir adjuntos si los hay
+    if (capsuleAttachments.length > 0) {
+      const attachmentUrls = await uploadCapsuleAttachments(capsuleId);
+      // Actualizar la cápsula con los adjuntos
+      const capsuleRef = doc(db, 'couples', currentCoupleId, 'capsules', capsuleId);
+      await updateDoc(capsuleRef, { attachments: attachmentUrls });
+    }
     
     // Limpiar formulario y volver a la lista
     capsuleMessageInput.value = '';
     capsuleUnlockDateInput.value = '';
     capsuleTypeSelect.value = 'memory'; // Reset to default
+    capsuleAttachments = []; // Limpiar adjuntos
+    renderAttachmentsPreview(); // Actualizar preview
     showPhoneApp('timecapsule');
     await loadAndRenderCapsules();
     
@@ -5323,12 +5806,12 @@ let editingSongId = null;
 function openEditPlaylistModal(playlistId, currentName) {
   editingPlaylistId = playlistId;
   editPlaylistNameInput.value = currentName;
-  editPlaylistModal.classList.add('active');
+  showModal(editPlaylistModal, 'music');
 }
 
 // Función para cerrar modal de editar playlist
 function closeEditPlaylistModal() {
-  editPlaylistModal.classList.remove('active');
+  hideModal(editPlaylistModal, 'music');
   editingPlaylistId = null;
   editPlaylistNameInput.value = '';
 }
@@ -5364,12 +5847,12 @@ function openEditSongModal(songId, currentName, currentUrl) {
   editingSongId = songId;
   editSongNameInput.value = currentName;
   editSongUrlInput.value = currentUrl;
-  editSongModal.classList.add('active');
+  showModal(editSongModal, 'music');
 }
 
 // Función para cerrar modal de editar canción
 function closeEditSongModal() {
-  editSongModal.classList.remove('active');
+  hideModal(editSongModal, 'music');
   editingSongId = null;
   editSongNameInput.value = '';
   editSongUrlInput.value = '';
@@ -5668,12 +6151,40 @@ function spinWheel() {
 }
 
 function showWheelResult(winner) {
-  showNotification({
-    title: '¡Decisión tomada! 🎉',
-    message: `La ruleta ha elegido: ${winner}`,
-    icon: '🎡',
-    type: 'success'
-  });
+  // Actualizar contenido del modal
+  const wheelResultIcon = document.getElementById('wheel-result-icon');
+  const wheelResultText = document.getElementById('wheel-result-text');
+  const okWheelResultBtn = document.getElementById('ok-wheel-result-btn');
+
+  if (wheelResultIcon) wheelResultIcon.textContent = '🎉';
+  if (wheelResultText) wheelResultText.textContent = winner;
+
+  // Configurar event listeners
+  if (closeWheelResultModalBtn) {
+    closeWheelResultModalBtn.onclick = () => {
+      wheelResultModal.style.display = 'none';
+    };
+  }
+
+  if (okWheelResultBtn) {
+    okWheelResultBtn.onclick = () => {
+      wheelResultModal.style.display = 'none';
+    };
+  }
+
+  // Cerrar al hacer click fuera
+  if (wheelResultModal) {
+    wheelResultModal.onclick = (e) => {
+      if (e.target === wheelResultModal) {
+        wheelResultModal.style.display = 'none';
+      }
+    };
+  }
+
+  // Mostrar modal
+  if (wheelResultModal) {
+    wheelResultModal.style.display = 'flex';
+  }
 }
 
 function createConfetti() {
@@ -6013,13 +6524,17 @@ function showConfirmDialog(title, message, onConfirm) {
   confirmModalTitle.textContent = title;
   confirmModalMessage.textContent = message;
   confirmCallback = onConfirm;
-  confirmModal.style.display = 'flex';
+  showModal(confirmModal, 'standard');
+}
+
+function hideConfirmModal() {
+  hideModal(confirmModal, 'standard');
+  confirmCallback = null;
 }
 
 if (confirmModalCancel) {
   confirmModalCancel.onclick = () => {
-    confirmModal.style.display = 'none';
-    confirmCallback = null;
+    hideConfirmModal();
   };
 }
 
@@ -6028,9 +6543,17 @@ if (confirmModalConfirm) {
     if (confirmCallback) {
       confirmCallback();
     }
-    confirmModal.style.display = 'none';
-    confirmCallback = null;
+    hideConfirmModal();
   };
+}
+
+// Click outside para cerrar confirm modal
+if (confirmModal) {
+  confirmModal.addEventListener('click', (e) => {
+    if (e.target === confirmModal) {
+      hideConfirmModal();
+    }
+  });
 }
 
 // Cerrar modal de confirmación al hacer click en overlay
@@ -6100,25 +6623,32 @@ function showPlaceInfo(place) {
   
   console.log('Mostrando modal de lugar:', place.name);
   
-  // Asegurarse de que el modal se muestre correctamente y centrado
+  // Configuración especial para cuando está dentro del modal del mapa
   if (mapModal && mapModal.style.display === 'flex') {
     // Mostrar el modal como hijo del modal del mapa para mejor stacking
     mapModal.appendChild(placeInfoModal);
     placeInfoModal.style.position = 'absolute';
     placeInfoModal.style.inset = '0';
-    placeInfoModal.style.zIndex = '40000'; // Aumentado para estar encima de todo
+    placeInfoModal.style.zIndex = '86000'; // DETALLES DE LUGARES - MUY ALTO
     placeInfoModal.style.pointerEvents = 'auto'; // Asegurar que sea interactuable
+    placeInfoModal.style.display = 'flex';
+    placeInfoModal.style.visibility = 'visible';
+    placeInfoModal.style.opacity = '1';
+    placeInfoModal.classList.add('is-open');
   
-  // Asegurar que el contenido del modal sea interactuable
-  const modalContent = placeInfoModal.querySelector('.modal-content');
-  if (modalContent) {
-    modalContent.style.pointerEvents = 'auto';
-    modalContent.style.position = 'relative';
-    modalContent.style.zIndex = '50000'; // Asegurar que esté encima
-  }
+    // Asegurar que el contenido del modal sea interactuable
+    const modalContent = placeInfoModal.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.style.pointerEvents = 'auto';
+      modalContent.style.position = 'relative';
+      modalContent.style.zIndex = '87000'; // CONTENIDO DETALLES - MUY ALTO
+    }
+  } else {
+    // Usar el sistema unificado de modales cuando no está dentro del mapa
+    showModal(placeInfoModal, 'standard');
   }
   
-  placeInfoModal.style.display = 'flex';
+  // Configuración visual adicional
   placeInfoModal.style.alignItems = 'center';
   placeInfoModal.style.justifyContent = 'center';
   placeInfoModal.style.transform = 'none';
@@ -6146,7 +6676,8 @@ function showPlaceInfo(place) {
     const photoElements = placeInfoBody.querySelectorAll('.place-info-photo');
     console.log('Configurando event listeners para', photoElements.length, 'fotos');
     photoElements.forEach((img, index) => {
-      img.onclick = () => {
+      img.onclick = (e) => {
+        e.stopPropagation(); // Prevenir que el evento se propague al overlay
         console.log('Clic en foto', index);
         openLightbox(place.photos, index);
       };
@@ -6159,9 +6690,7 @@ function showPlaceInfo(place) {
   if (closePlaceInfoBtn) {
     closePlaceInfoBtn.onclick = () => {
       console.log('Clic en botón cerrar modal de detalles');
-      placeInfoModal.style.display = 'none';
-      // Devolver el modal a su posición original en el DOM
-      document.body.appendChild(placeInfoModal);
+      closePlaceInfoModal();
     };
     closePlaceInfoBtn.style.pointerEvents = 'auto'; // Asegurar que sea clickeable
     closePlaceInfoBtn.style.cursor = 'pointer';
@@ -6172,9 +6701,7 @@ function showPlaceInfo(place) {
     if (overlay) {
       overlay.onclick = () => {
         console.log('Clic en overlay del modal de detalles');
-        placeInfoModal.style.display = 'none';
-        // Devolver el modal a su posición original en el DOM
-        document.body.appendChild(placeInfoModal);
+        closePlaceInfoModal();
       };
       overlay.style.pointerEvents = 'auto'; // Asegurar que sea clickeable
       overlay.style.cursor = 'pointer';
@@ -6184,6 +6711,79 @@ function showPlaceInfo(place) {
 
 // Event listeners para cerrar el modal se configuran dentro de showPlaceInfo
 // para que funcionen cuando el modal se mueve en el DOM
+
+function closePlaceInfoModal() {
+  console.log('Cerrando modal de detalles de lugar');
+  
+  const mapModal = document.getElementById('map-modal');
+  const isInsideMap = mapModal && mapModal.contains(placeInfoModal);
+  
+  if (isInsideMap) {
+    // Si está dentro del modal del mapa, solo ocultar este modal
+    console.log('Modal está dentro del mapa, ocultando solo el modal de detalles');
+    placeInfoModal.style.display = 'none';
+    // Devolver el modal a su posición original en el DOM
+    document.body.appendChild(placeInfoModal);
+  } else {
+    // Si está standalone, usar el sistema unificado de modales
+    console.log('Modal está standalone, usando hideModal');
+    hideModal(placeInfoModal, 'standard');
+  }
+}
+
+// Función para mostrar modales de lugar respetando modales anidados
+function showPlaceModal(modal, modalType = 'place') {
+  console.log(`showPlaceModal: Showing modal ${modal.id} with type ${modalType}`);
+  
+  const mapModal = document.getElementById('map-modal');
+  const isInsideMap = mapModal && mapModal.style.display === 'flex';
+  
+  if (isInsideMap) {
+    // Si estamos dentro del modal del mapa, mostrar como hijo sin cerrar el mapa
+    console.log('Modal de lugar mostrado dentro del mapa, sin cerrar el modal padre');
+    mapModal.appendChild(modal);
+    modal.style.position = 'absolute';
+    modal.style.inset = '0';
+    modal.style.zIndex = '85000'; // MODALES DE LUGAR - ALTO
+    modal.style.pointerEvents = 'auto';
+    modal.style.display = 'flex';
+    modal.style.visibility = 'visible';
+    modal.style.opacity = '1';
+    modal.classList.add('is-open');
+    
+    // Asegurar que el contenido del modal sea interactuable
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.style.pointerEvents = 'auto';
+      modalContent.style.position = 'relative';
+      modalContent.style.zIndex = '86000';
+    }
+  } else {
+    // Si no estamos dentro del mapa, usar el sistema unificado normal
+    console.log('Modal de lugar mostrado normalmente (no dentro del mapa)');
+    showModal(modal, modalType);
+  }
+}
+
+// Función para ocultar modales de lugar respetando modales anidados
+function hidePlaceModal(modal, modalType = 'place') {
+  console.log(`hidePlaceModal: Hiding modal ${modal.id} with type ${modalType}`);
+  
+  const mapModal = document.getElementById('map-modal');
+  const isInsideMap = mapModal && mapModal.contains(modal);
+  
+  if (isInsideMap) {
+    // Si está dentro del modal del mapa, solo ocultar este modal
+    console.log('Modal de lugar ocultado (estaba dentro del mapa)');
+    modal.style.display = 'none';
+    // Devolver el modal a su posición original en el DOM
+    document.body.appendChild(modal);
+  } else {
+    // Si está standalone, usar el sistema unificado de modales
+    console.log('Modal de lugar ocultado normalmente');
+    hideModal(modal, modalType);
+  }
+}
 
 // Lightbox para ver fotos en grande
 const lightbox = document.getElementById('photo-lightbox');
@@ -6295,42 +6895,7 @@ document.addEventListener('keydown', (e) => {
 // Abrir modal del mapa
 if (openMapModalBtn) {
   openMapModalBtn.onclick = () => {
-    // SIEMPRE ocultar el modal de detalles, favores y el lightbox al abrir cualquier modal
-    if (placeInfoModal) {
-      placeInfoModal.style.display = 'none';
-      document.body.appendChild(placeInfoModal);
-      console.log('Modal de detalles forzosamente ocultado al abrir modal del mapa');
-    }
-    // Cerrar modal de favores si está abierto
-    const favorsModal = document.getElementById('favors-fullscreen-modal');
-    console.log('Checking favors modal for closing in map modal:', favorsModal);
-    if (favorsModal) {
-      console.log('Favors modal exists in map, classes:', favorsModal.className);
-      console.log('Favors modal has hidden class in map:', favorsModal.classList.contains('hidden'));
-    }
-    if (favorsModal && !favorsModal.classList.contains('hidden')) {
-      console.log('Closing favors modal from map modal...');
-      favorsModal.classList.add('hidden');
-      console.log('Modal de favores cerrado al abrir modal del mapa');
-    }
-    // Cerrar modal de crear favor si está abierto
-    const createFavorModal = document.getElementById('create-favor-modal');
-    if (createFavorModal && !createFavorModal.classList.contains('hidden')) {
-      createFavorModal.classList.add('hidden');
-      console.log('Modal de crear favor cerrado al abrir modal del mapa');
-    }
-    // Cerrar modal de notificación si está abierto
-    const notificationModal = document.getElementById('notification-modal');
-    if (notificationModal && notificationModal.style.display !== 'none') {
-      notificationModal.style.display = 'none';
-      console.log('Modal de notificación cerrado al abrir modal del mapa');
-    }
-    // Cerrar lightbox si está abierto
-    if (lightbox && lightbox.classList.contains('active')) {
-      closeLightbox();
-      console.log('Lightbox cerrado al abrir modal del mapa');
-    }
-    mapModal.style.display = 'flex';
+    showModal(mapModal, 'standard');
     setTimeout(() => {
       initGlobe();
       loadPlaces();
@@ -6341,7 +6906,7 @@ if (openMapModalBtn) {
 // Cerrar modal del mapa
 if (closeMapModalBtn) {
   closeMapModalBtn.onclick = () => {
-    mapModal.style.display = 'none';
+    hideModal(mapModal, 'standard');
     // Ocultar el modal de detalles y devolverlo a su posición original
     if (placeInfoModal && placeInfoModal.style.display === 'flex') {
       placeInfoModal.style.display = 'none';
@@ -6350,6 +6915,20 @@ if (closeMapModalBtn) {
       console.log('Modal de detalles ocultado y movido de vuelta al body');
     }
   };
+}
+
+// Click outside para cerrar map modal
+if (mapModal) {
+  mapModal.addEventListener('click', (e) => {
+    if (e.target === mapModal) {
+      mapModal.style.display = 'none';
+      // Ocultar el modal de detalles y devolverlo a su posición original
+      if (placeInfoModal && placeInfoModal.style.display === 'flex') {
+        placeInfoModal.style.display = 'none';
+        document.body.appendChild(placeInfoModal);
+      }
+    }
+  });
 }
 
 // Controles de pestañas
@@ -6379,7 +6958,7 @@ if (addPlaceBtn) {
     document.getElementById('photos-preview').innerHTML = '';
     document.querySelector('input[name="place-status"][value="visited"]').checked = true;
     updatePhotosFieldVisibility();
-    placeFormModal.style.display = 'flex';
+    showPlaceModal(placeFormModal, 'place');
   };
 }
 
@@ -6547,14 +7126,23 @@ function displaySearchResults(results) {
 // Cerrar formulario
 if (closePlaceFormBtn) {
   closePlaceFormBtn.onclick = () => {
-    placeFormModal.style.display = 'none';
+    hidePlaceModal(placeFormModal, 'place');
   };
 }
 
 if (cancelPlaceBtn) {
   cancelPlaceBtn.onclick = () => {
-    placeFormModal.style.display = 'none';
+    hidePlaceModal(placeFormModal, 'place');
   };
+}
+
+// Click outside para cerrar place form modal
+if (placeFormModal) {
+  placeFormModal.addEventListener('click', (e) => {
+    if (e.target === placeFormModal) {
+      hidePlaceModal(placeFormModal, 'place');
+    }
+  });
 }
 
 // Guardar lugar
@@ -6627,7 +7215,7 @@ if (savePlaceBtn) {
         await createPlace(placeData);
       }
       
-      placeFormModal.style.display = 'none';
+      hidePlaceModal(placeFormModal, 'place');
       selectedPhotos = [];
       await loadPlaces();
       updateGlobeMarkers();
@@ -6788,7 +7376,7 @@ function renderPlaces(places) {
         
         document.querySelector(`input[name="place-status"][value="${place.status}"]`).checked = true;
         updatePhotosFieldVisibility();
-        placeFormModal.style.display = 'flex';
+        showPlaceModal(placeFormModal, 'place');
       }
     };
   });
@@ -6941,3 +7529,12 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+// ============================================
+// INICIALIZACIÓN DE COMPONENTES
+// ============================================
+
+// Inicializar adjuntos de cápsulas cuando se carga la aplicación
+document.addEventListener('DOMContentLoaded', () => {
+  initCapsuleAttachments();
+});

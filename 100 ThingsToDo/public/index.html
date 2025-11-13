@@ -793,29 +793,8 @@
 
 
 <!-- ============================================ -->
-<!-- ======> MODAL DE TAREA SORPRESA <======= -->
-<!-- ============================================ -->
-<div id="surprise-task-modal" class="modal" style="display: none;">
-    <div class="modal-overlay"></div>
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title">¡Tarea Sorpresa!</h2>
-            <button id="close-surprise-modal-btn" class="btn-icon">
-                <!-- ... SVG de cierre (X) ... -->
-            </button>
-        </div>
-        <div class="modal-body" style="text-align: center;">
-            <div id="surprise-task-content" class="surprise-task-reveal">
-                <div class="surprise-emoji"></div>
-                <p class="surprise-text"></p>
-            </div>
-            <div class="form-actions" style="margin-top: 1.5rem;">
-                <button id="accept-surprise-task-btn" class="btn btn-primary">¡Aceptamos el reto!</button>
-                <button id="reroll-surprise-task-btn" class="btn btn-outline">Otra, por favor</button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- ======> MODAL DE TAREA SORPRESA - ELIMINADO (HUÉRFANO) <======= -->
+<!-- Este modal no se usa - las tareas sorpresa funcionan dentro del teléfono -->
 
 
 
@@ -1019,9 +998,93 @@
             <option value="mystery">🔮 Misterio Oculto</option>
         </select>
         
+        <!-- Adjuntos Multimedia -->
+        <div class="capsule-attachments-section">
+            <label class="attachments-label">Adjuntos Especiales (opcional)</label>
+            <p class="attachments-description">Agrega fotos, videos o audios para hacer tu cápsula aún más especial</p>
+            
+            <div class="attachment-buttons">
+                <button type="button" id="add-photo-btn" class="btn-attachment">
+                    📸 Foto
+                </button>
+                <button type="button" id="add-video-btn" class="btn-attachment">
+                    🎥 Video
+                </button>
+                <button type="button" id="add-audio-btn" class="btn-attachment">
+                    🎵 Audio
+                </button>
+            </div>
+            
+            <input type="file" id="photo-input" accept="image/*" multiple style="display: none;">
+            <input type="file" id="video-input" accept="video/*" multiple style="display: none;">
+            <input type="file" id="audio-input" accept="audio/*" multiple style="display: none;">
+            
+            <div id="attachments-preview" class="attachments-preview">
+                <!-- Los adjuntos se mostrarán aquí -->
+            </div>
+        </div>
+        
         <label for="capsule-unlock-date-input">Fecha de apertura:</label>
         <input type="date" id="capsule-unlock-date-input" class="input">
         <button id="save-capsule-btn" class="btn btn-primary">Sellar Cápsula</button>
+    </div>
+</div>
+
+<!-- Modal de Preview de Cápsula -->
+<div id="capsule-preview-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h2 class="modal-title">👀 Vista Previa de la Cápsula</h2>
+            <button id="close-preview-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="capsule-preview-container">
+                <!-- Información de la cápsula -->
+                <div class="capsule-preview-info">
+                    <div class="capsule-preview-visual">
+                        <div class="capsule-body preview-capsule-body">
+                            <div class="capsule-cap preview-capsule-cap"></div>
+                            <div class="capsule-seal sealed"></div>
+                            <div class="capsule-lock">🔒</div>
+                        </div>
+                    </div>
+                    <div class="capsule-preview-details">
+                        <h3 id="preview-capsule-title" class="capsule-title">Cápsula del Tiempo</h3>
+                        <p id="preview-capsule-creator" class="capsule-creator">De: Tú</p>
+                        <p id="preview-unlock-date" class="capsule-date">Se abre en X días</p>
+                        <div class="capsule-preview-hint">
+                            <div class="hint-icon">💡</div>
+                            <p>Esta cápsula contiene un mensaje especial que podrás leer cuando llegue el momento indicado.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Controles de preview -->
+                <div class="capsule-preview-actions">
+                    <button id="preview-shake-btn" class="btn btn-outline">
+                        <span>🤲 Agitar Cápsula</span>
+                    </button>
+                    <button id="preview-open-btn" class="btn btn-primary">
+                        <span>🎉 ¡Abrir Ahora!</span>
+                    </button>
+                </div>
+                
+                <!-- Efectos visuales -->
+                <div id="preview-effects" class="preview-effects">
+                    <div class="shake-effect" style="display: none;">
+                        <div class="sparkle-particle">✨</div>
+                        <div class="sparkle-particle">💫</div>
+                        <div class="sparkle-particle">⭐</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 <!-- ============================================ -->
