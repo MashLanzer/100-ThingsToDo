@@ -443,10 +443,19 @@ function hideModal(modal, modalType = 'standard') {
 function closeAllModals(excludeModal = null) {
   console.log('closeAllModals: Closing all open modals, excluding:', excludeModal?.id);
 
+  // NO cerrar modales padre si están abiertos (para preservar nesting)
+  const mapModal = document.getElementById('map-modal');
+  const favorsModal = document.getElementById('favors-fullscreen-modal');
+  
   // Cerrar modales estándar (is-open)
   const standardModals = document.querySelectorAll('.modal.is-open');
   standardModals.forEach(modal => {
     if (modal !== excludeModal) {
+      // No cerrar map-modal si está abierto (preservar nesting)
+      if (modal === mapModal && mapModal.classList.contains('is-open')) {
+        console.log('closeAllModals: No cerrando map-modal porque está abierto (preservando nesting)');
+        return;
+      }
       modal.classList.remove('is-open');
       modal.style.display = 'none';
       modal.style.visibility = 'hidden';
@@ -454,9 +463,9 @@ function closeAllModals(excludeModal = null) {
     }
   });
 
-  // Cerrar modales de favores (hidden)
-  const favorsModal = document.getElementById('favors-fullscreen-modal');
+  // Cerrar modales de favores (hidden) - pero no si está abierto como modal padre
   if (favorsModal && !favorsModal.classList.contains('hidden') && favorsModal !== excludeModal) {
+    console.log('closeAllModals: Cerrando modal de favores');
     favorsModal.classList.add('hidden');
     favorsModal.style.display = 'none';
     favorsModal.style.visibility = 'hidden';
@@ -509,21 +518,27 @@ function closeAllModals(excludeModal = null) {
   ];
 
   // Verificar si el place-info-modal está dentro del map-modal antes de cerrarlo
-  const mapModal = document.getElementById('map-modal');
   const placeInfoModal = document.getElementById('place-info-modal');
   const isPlaceInfoInsideMap = mapModal && mapModal.contains(placeInfoModal);
+  const isOpeningMapModal = excludeModal && excludeModal.id === 'map-modal';
   
   console.log('closeAllModals: Checking place-info-modal containment');
   console.log('closeAllModals: mapModal exists:', !!mapModal);
   console.log('closeAllModals: placeInfoModal exists:', !!placeInfoModal);
   console.log('closeAllModals: isPlaceInfoInsideMap:', isPlaceInfoInsideMap);
+  console.log('closeAllModals: isOpeningMapModal:', isOpeningMapModal);
 
   displayModals.forEach(modalId => {
     const modal = document.getElementById(modalId) || window[modalId];
     if (modal && (modal.style.display !== 'none' || modal.classList.contains('is-open'))) {
-      // No cerrar place-info-modal si está dentro del map-modal
-      if (modalId === 'place-info-modal' && isPlaceInfoInsideMap) {
-        console.log('closeAllModals: No cerrando place-info-modal porque está dentro del map-modal');
+      // No cerrar place-info-modal si está dentro del map-modal O si estamos abriendo el map-modal
+      if (modalId === 'place-info-modal' && (isPlaceInfoInsideMap || isOpeningMapModal)) {
+        console.log('closeAllModals: No cerrando place-info-modal porque está dentro del map-modal o estamos abriendo el map-modal');
+        return;
+      }
+      // No cerrar map-modal si está abierto
+      if (modalId === 'map-modal' && mapModal.classList.contains('is-open')) {
+        console.log('closeAllModals: No cerrando map-modal porque está abierto');
         return;
       }
       console.log(`closeAllModals: Cerrando modal ${modalId}`);
