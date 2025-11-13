@@ -5905,12 +5905,12 @@ let editingSongId = null;
 function openEditPlaylistModal(playlistId, currentName) {
   editingPlaylistId = playlistId;
   editPlaylistNameInput.value = currentName;
-  showModal(editPlaylistModal, 'music');
+  showMusicModal(editPlaylistModal, 'music');
 }
 
 // Función para cerrar modal de editar playlist
 function closeEditPlaylistModal() {
-  hideModal(editPlaylistModal, 'music');
+  hideMusicModal(editPlaylistModal, 'music');
   editingPlaylistId = null;
   editPlaylistNameInput.value = '';
 }
@@ -5956,12 +5956,12 @@ function openEditSongModal(songId, currentName, currentUrl) {
   editingSongId = songId;
   editSongNameInput.value = currentName;
   editSongUrlInput.value = currentUrl;
-  showModal(editSongModal, 'music');
+  showMusicModal(editSongModal, 'music');
 }
 
 // Función para cerrar modal de editar canción
 function closeEditSongModal() {
-  hideModal(editSongModal, 'music');
+  hideMusicModal(editSongModal, 'music');
   editingSongId = null;
   editSongNameInput.value = '';
   editSongUrlInput.value = '';
@@ -6855,56 +6855,57 @@ function closePlaceInfoModal() {
   }
 }
 
-// Función para mostrar modales de favores respetando modales anidados
-function showFavorModal(modal, modalType = 'favors') {
-  console.log(`showFavorModal: Showing modal ${modal.id} with type ${modalType}`);
+// Función para mostrar modales de música respetando modales anidados
+function showMusicModal(modal, modalType = 'music') {
+  console.log(`showMusicModal: Showing modal ${modal.id} with type ${modalType}`);
   
-  const favorsModal = document.getElementById('favors-fullscreen-modal');
-  const isInsideFavors = favorsModal && !favorsModal.classList.contains('hidden');
+  const phoneModal = document.getElementById('phone-modal');
+  const isInsidePhone = phoneModal && phoneModal.classList.contains('is-open');
   
-  if (isInsideFavors) {
-    // Si estamos dentro del modal de favores, mostrar como hijo sin cerrar el modal padre
-    console.log('Modal de favor mostrado dentro del modal de favores, sin cerrar el modal padre');
-    favorsModal.appendChild(modal);
+  if (isInsidePhone) {
+    // Si estamos dentro del teléfono, mostrar como hijo sin cerrar el modal padre
+    console.log('Modal de música mostrado dentro del teléfono, sin cerrar el modal padre');
+    phoneModal.appendChild(modal);
     modal.style.position = 'absolute';
     modal.style.inset = '0';
-    modal.style.zIndex = '76000'; // MODALES DE FAVORES HIJOS - ALTO
+    modal.style.zIndex = '75000'; // MODALES DE MÚSICA HIJOS - ALTO
     modal.style.pointerEvents = 'auto';
     modal.style.display = 'flex';
     modal.style.visibility = 'visible';
     modal.style.opacity = '1';
-    modal.classList.remove('hidden');
+    modal.classList.add('is-open');
     
     // Asegurar que el contenido del modal sea interactuable
-    const modalContent = modal.querySelector('.favors-modal-container');
+    const modalContent = modal.querySelector('.modal-content');
     if (modalContent) {
       modalContent.style.pointerEvents = 'auto';
       modalContent.style.position = 'relative';
-      modalContent.style.zIndex = '77000';
+      modalContent.style.zIndex = '76000';
     }
   } else {
-    // Si no estamos dentro del modal de favores, usar el sistema unificado normal
-    console.log('Modal de favor mostrado normalmente (no dentro del modal de favores)');
+    // Si no estamos dentro del teléfono, usar el sistema unificado normal
+    console.log('Modal de música mostrado normalmente (no dentro del teléfono)');
     showModal(modal, modalType);
   }
 }
 
-// Función para ocultar modales de favores respetando modales anidados
-function hideFavorModal(modal, modalType = 'favors') {
-  console.log(`hideFavorModal: Hiding modal ${modal.id} with type ${modalType}`);
+// Función para ocultar modales de música respetando modales anidados
+function hideMusicModal(modal, modalType = 'music') {
+  console.log(`hideMusicModal: Hiding modal ${modal.id} with type ${modalType}`);
   
-  const favorsModal = document.getElementById('favors-fullscreen-modal');
-  const isInsideFavors = favorsModal && favorsModal.contains(modal);
+  const phoneModal = document.getElementById('phone-modal');
+  const isInsidePhone = phoneModal && phoneModal.contains(modal);
   
-  if (isInsideFavors) {
-    // Si está dentro del modal de favores, solo ocultar este modal
-    console.log('Modal de favor ocultado (estaba dentro del modal de favores)');
-    modal.classList.add('hidden');
+  if (isInsidePhone) {
+    // Si está dentro del teléfono, solo ocultar este modal
+    console.log('Modal de música ocultado (estaba dentro del teléfono)');
+    modal.classList.remove('is-open');
+    modal.style.display = 'none';
     // Devolver el modal a su posición original en el DOM
     document.body.appendChild(modal);
   } else {
     // Si está standalone, usar el sistema unificado de modales
-    console.log('Modal de favor ocultado normalmente');
+    console.log('Modal de música ocultado normalmente');
     hideModal(modal, modalType);
   }
 }
