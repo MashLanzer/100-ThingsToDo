@@ -559,7 +559,6 @@ function closeAllModals(excludeModal = null) {
     'statsModal',
     'phoneModal',
     'logoutConfirmModal',
-    'capsulePreviewModal',
     'place-info-modal', // Modal de detalles de lugar
     'map-modal' // Modal del mapa
   ];
@@ -738,26 +737,6 @@ const historyList = document.getElementById('history-list');
 const toggleHistoryBtn = document.getElementById('toggle-history-btn');
 
 // ... al final de la sección de elementos del DOM ...
-
-// Elementos de la Cápsula del Tiempo
-const capsulesList = document.getElementById('capsules-list'); // <--- ASEGÚRATE DE QUE SE LLAME "capsulesList"
-const capsulesEmptyState = document.getElementById('capsules-empty-state');
-const goToCreateCapsuleBtn = document.getElementById('go-to-create-capsule-btn');
-const backToCapsuleListBtn = document.querySelector('.back-to-capsule-list-btn');
-const capsuleMessageInput = document.getElementById('capsule-message-input');
-const capsuleUnlockDateInput = document.getElementById('capsule-unlock-date-input');
-const capsuleTypeSelect = document.getElementById('capsule-type-select');
-const saveCapsuleBtn = document.getElementById('save-capsule-btn');
-
-// Elementos del modal de preview
-const capsulePreviewModal = document.getElementById('capsule-preview-modal');
-const closePreviewModalBtn = document.getElementById('close-preview-modal-btn');
-const previewShakeBtn = document.getElementById('preview-shake-btn');
-const previewOpenBtn = document.getElementById('preview-open-btn');
-const previewCapsuleTitle = document.getElementById('preview-capsule-title');
-const previewCapsuleCreator = document.getElementById('preview-capsule-creator');
-const previewUnlockDate = document.getElementById('preview-unlock-date');
-const previewEffects = document.getElementById('preview-effects');
 const previewCapsuleBody = document.querySelector('.preview-capsule-body');
 const previewCapsuleCap = document.querySelector('.preview-capsule-cap');
 
@@ -767,20 +746,40 @@ const closeWheelResultModalBtn = document.getElementById('close-wheel-result-mod
 // surprise-task-modal ELIMINADO - era modal huérfano
 
 // Elementos de adjuntos multimedia
-const capsuleAddPhotoBtn = document.getElementById('add-photo-btn');
-const capsuleAddVideoBtn = document.getElementById('add-video-btn');
-const capsuleAddAudioBtn = document.getElementById('add-audio-btn');
-const capsulePhotoInput = document.getElementById('photo-input');
-const capsuleVideoInput = document.getElementById('video-input');
-const capsuleAudioInput = document.getElementById('audio-input');
-const capsuleAttachmentsPreview = document.getElementById('attachments-preview');
+// ... al final de la sección de elementos del DOM ...
 
-// Variables para manejar adjuntos
+// Elementos de Cápsulas del Tiempo
+const capsulesList = document.getElementById('capsules-list');
+const capsulesEmptyState = document.getElementById('capsules-empty-state');
+const createCapsuleFab = document.getElementById('create-capsule-fab');
+const backToCapsuleListBtn = document.querySelector('.back-to-capsule-list-btn');
+const goToCreateCapsuleBtn = document.getElementById('go-to-create-capsule-btn');
+const saveCapsuleBtn = document.getElementById('save-capsule-btn');
+
+// Elementos del formulario de creación
+const capsuleMessageInput = document.getElementById('capsule-message-input');
+const capsuleTypeCards = document.querySelectorAll('.capsule-type-card');
+const dateOptionCards = document.querySelectorAll('.date-option-card');
+const customDateContainer = document.getElementById('custom-date-container');
+const capsuleUnlockDateInput = document.getElementById('capsule-unlock-date-input');
+const attachmentBtns = document.querySelectorAll('.attachment-btn');
+const attachmentsPreview = document.getElementById('attachments-preview');
+const capsulePrevBtn = document.getElementById('capsule-prev-btn');
+const capsuleNextBtn = document.getElementById('capsule-next-btn');
+const stepIndicators = document.querySelectorAll('.step-dot');
+
+// Elementos de estadísticas
+const totalCapsulesEl = document.getElementById('total-capsules');
+const pendingCapsulesEl = document.getElementById('pending-capsules');
+const openedCapsulesEl = document.getElementById('opened-capsules');
+
+// Variables de estado
+let currentCapsuleStep = 1;
+let selectedCapsuleType = 'memory';
+let selectedUnlockDate = null;
 let capsuleAttachments = [];
 
 // ... al final de la sección de elementos del DOM ...
-
-// Elementos de Presupuesto Compartido
 const goalsList = document.getElementById('goals-list');
 const goalsEmptyState = document.getElementById('goals-empty-state');
 const goToCreateGoalBtn = document.getElementById('go-to-create-goal-btn');
@@ -2452,9 +2451,9 @@ if (toggleHistoryBtn) {
 
 
 // Listeners para la app de Cápsula del Tiempo
-goToCreateCapsuleBtn.addEventListener('click', () => showPhoneApp('createcapsule'));
-backToCapsuleListBtn.addEventListener('click', () => showPhoneApp('timecapsule'));
-saveCapsuleBtn.addEventListener('click', handleSaveCapsule);
+// goToCreateCapsuleBtn.addEventListener('click', () => showPhoneApp('createcapsule')); // Ya manejado por createCapsuleFab
+// backToCapsuleListBtn.addEventListener('click', () => showPhoneApp('timecapsule')); // Ya manejado en initTimeCapsules
+// saveCapsuleBtn.addEventListener('click', handleSaveCapsule); // Función no existe
 
 
 
@@ -4451,286 +4450,208 @@ function updatePhoneClock() {
 // FUNCIONES DE FIRESTORE - CÁPSULAS DEL TIEMPO
 // ============================================
 
-async function createCapsule(message, unlockDate, capsuleType = 'memory') {
-  if (!currentCoupleId || !currentUser) return;
-  
-  try {
-    const capsulesRef = collection(db, 'couples', currentCoupleId, 'capsules');
-    const docRef = await addDoc(capsulesRef, {
-      message,
-      unlockDate: Timestamp.fromDate(new Date(unlockDate)),
-      type: capsuleType,
-      createdBy: currentUser.uid,
-      creatorName: currentUser.displayName,
-      createdAt: Timestamp.now(),
-    });
-    
-    return docRef.id; // Devolver el ID de la cápsula creada
-  } catch (error) {
-    console.error('Error al crear la cápsula:', error);
-    throw error;
+// ============================================
+// FUNCIONES DE CÁPSULAS DEL TIEMPO
+// ============================================
+
+// Inicializar cápsulas del tiempo
+async function initTimeCapsules() {
+  console.log('Inicializando Cápsulas del Tiempo...');
+
+  // Event listeners principales
+  createCapsuleFab?.addEventListener('click', () => showPhoneApp('createcapsule'));
+  backToCapsuleListBtn?.addEventListener('click', () => showPhoneApp('timecapsule'));
+
+  // Event listeners del formulario
+  capsuleMessageInput?.addEventListener('input', updateCharCounter);
+  capsuleTypeCards.forEach(card => {
+    card.addEventListener('click', () => selectCapsuleType(card));
+  });
+  dateOptionCards.forEach(card => {
+    card.addEventListener('click', () => selectDateOption(card));
+  });
+  capsulePrevBtn?.addEventListener('click', goToPreviousStep);
+  capsuleNextBtn?.addEventListener('click', goToNextStep);
+
+  // Event listeners de adjuntos
+  attachmentBtns.forEach(btn => {
+    btn.addEventListener('click', () => handleAttachmentClick(btn.dataset.type));
+  });
+
+  // Inputs de archivos
+  document.getElementById('photo-input')?.addEventListener('change', (e) => handleFileSelection(e.target.files, 'image'));
+  document.getElementById('video-input')?.addEventListener('change', (e) => handleFileSelection(e.target.files, 'video'));
+  document.getElementById('audio-input')?.addEventListener('change', (e) => handleFileSelection(e.target.files, 'audio'));
+
+  // Cargar cápsulas cuando se abre la app
+  if (window.location.hash === '#timecapsule' || document.querySelector('[data-app="timecapsule"]')?.classList.contains('active')) {
+    await loadAndRenderCapsules();
   }
 }
 
-async function getCapsules() {
-  if (!currentCoupleId) return [];
-  
-  try {
-    const capsulesRef = collection(db, 'couples', currentCoupleId, 'capsules');
-    const q = query(capsulesRef, orderBy('unlockDate', 'asc'));
-    const snapshot = await getDocs(q);
-    
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      unlockDate: doc.data().unlockDate.toDate(),
-    }));
-  } catch (error) {
-    console.error('Error al obtener cápsulas:', error);
-    return [];
-  }
-}
-
-// ============================================
-// FUNCIONES DE UI - CÁPSULA DEL TIEMPO
-// ============================================
-
+// Cargar y renderizar cápsulas
 async function loadAndRenderCapsules() {
-  const capsules = await getCapsules();
-  capsulesList.innerHTML = ''; // Limpiar la lista
-  
+  try {
+    const capsules = await getCapsules();
+    updateCapsuleStats(capsules);
+    renderCapsules(capsules);
+  } catch (error) {
+    console.error('Error al cargar cápsulas:', error);
+    showNotification({
+      title: 'Error',
+      message: 'No se pudieron cargar las cápsulas.',
+      icon: '❌',
+      type: 'error'
+    });
+  }
+}
+
+// Actualizar estadísticas
+function updateCapsuleStats(capsules) {
+  const now = new Date();
+  const total = capsules.length;
+  const pending = capsules.filter(c => c.unlockDate.toDate() > now).length;
+  const opened = total - pending;
+
+  totalCapsulesEl.textContent = total;
+  pendingCapsulesEl.textContent = pending;
+  openedCapsulesEl.textContent = opened;
+}
+
+// Renderizar cápsulas
+function renderCapsules(capsules) {
+  if (!capsulesList) return;
+
+  capsulesList.innerHTML = '';
+
   if (capsules.length === 0) {
     capsulesList.appendChild(capsulesEmptyState);
     capsulesEmptyState.style.display = 'block';
-  } else {
-    capsulesEmptyState.style.display = 'none';
-    const now = new Date();
-    
-    capsules.forEach(capsule => {
-      const isLocked = capsule.unlockDate > now;
-      const timeLeft = isLocked ? Math.ceil((capsule.unlockDate - now) / (1000 * 60 * 60 * 24)) : 0;
-      const capsuleType = capsule.type || 'default';
+    return;
+  }
 
-      const item = document.createElement('div');
-      item.className = `capsule-item ${isLocked ? 'locked' : 'unlocked'} capsule-${capsuleType}`;
-      item.onclick = () => openCapsule(capsule, isLocked);
+  capsulesEmptyState.style.display = 'none';
+  const now = new Date();
 
-      // Determinar el contenido visual basado en el tipo
-      const capsuleVisuals = getCapsuleVisuals(capsuleType, isLocked);
-      const hasAttachments = capsule.attachments && capsule.attachments.length > 0;
+  capsules.forEach(capsule => {
+    const isLocked = capsule.unlockDate.toDate() > now;
+    const timeLeft = isLocked ? Math.ceil((capsule.unlockDate.toDate() - now) / (1000 * 60 * 60 * 24)) : 0;
+    const hasAttachments = capsule.attachments && capsule.attachments.length > 0;
 
-      item.innerHTML = `
-        <div class="capsule-visual">
-          <div class="capsule-body ${capsuleVisuals.bodyClass}">
-            <div class="capsule-cap ${capsuleVisuals.capClass}"></div>
-            <div class="capsule-seal ${isLocked ? 'sealed' : 'opened'}"></div>
-            ${isLocked ? '<div class="capsule-lock">🔒</div>' : '<div class="capsule-sparkle">✨</div>'}
-          </div>
-          ${timeLeft > 0 ? `<div class="time-indicator">${timeLeft}d</div>` : ''}
-          ${hasAttachments ? '<div class="attachment-indicator">📎</div>' : ''}
-        </div>
+    const capsuleCard = document.createElement('div');
+    capsuleCard.className = `capsule-card ${isLocked ? 'locked' : 'opened'}`;
+    capsuleCard.onclick = () => handleCapsuleClick(capsule, isLocked);
+
+    capsuleCard.innerHTML = `
+      <div class="capsule-header">
+        <div class="capsule-type-icon">${getCapsuleTypeEmoji(capsule.type)}</div>
         <div class="capsule-info">
-          <p class="capsule-title">${capsuleVisuals.title}</p>
-          <span class="capsule-date">
-            ${isLocked ? `Se abre en ${timeLeft} días` : `Abierta el ${capsule.unlockDate.toLocaleDateString()}`}
-          </span>
-          <div class="capsule-creator">De: ${capsule.creatorName}</div>
+          <div class="capsule-title">${getCapsuleTypeName(capsule.type)}</div>
+          <div class="capsule-creator">Por: ${capsule.creatorName || 'Tú'}</div>
+          <div class="capsule-meta">
+            <span class="capsule-date">
+              📅 ${isLocked ? `Se abre en ${timeLeft} días` : `Abierta`}
+            </span>
+          </div>
         </div>
-      `;
-      capsulesList.appendChild(item);
-    });
-  }
-}
+      </div>
+      ${!isLocked ? `<div class="capsule-preview">${capsule.message}</div>` : ''}
+      <div class="capsule-status">
+        <div class="capsule-status-badge ${isLocked ? 'locked' : 'opened'}">
+          ${isLocked ? '🔒 Sellada' : '✨ Abierta'}
+        </div>
+        ${!isLocked && hasAttachments ? `<div class="capsule-attachments-count">📎 ${capsule.attachments.length}</div>` : ''}
+      </div>
+    `;
 
-function getCapsuleVisuals(type, isLocked) {
-  const visuals = {
-    default: {
-      title: 'Cápsula del Tiempo',
-      bodyClass: 'capsule-memory',
-      capClass: 'cap-memory'
-    },
-    memory: {
-      title: 'Recuerdo Especial',
-      bodyClass: 'capsule-memory',
-      capClass: 'cap-memory'
-    },
-    dream: {
-      title: 'Sueño Futuro',
-      bodyClass: 'capsule-dream',
-      capClass: 'cap-dream'
-    },
-    achievement: {
-      title: 'Logro Personal',
-      bodyClass: 'capsule-achievement',
-      capClass: 'cap-achievement'
-    },
-    love: {
-      title: 'Carta de Amor',
-      bodyClass: 'capsule-love',
-      capClass: 'cap-love'
-    },
-    adventure: {
-      title: 'Aventura Futura',
-      bodyClass: 'capsule-adventure',
-      capClass: 'cap-adventure'
-    },
-    mystery: {
-      title: 'Misterio Oculto',
-      bodyClass: 'capsule-mystery',
-      capClass: 'cap-mystery'
-    },
-    reflection: {
-      title: 'Reflexión Personal',
-      bodyClass: 'capsule-memory',
-      capClass: 'cap-memory'
-    },
-    surprise: {
-      title: 'Sorpresa Mágica',
-      bodyClass: 'capsule-dream',
-      capClass: 'cap-dream'
-    }
-  };
-
-  return visuals[type] || visuals.default;
-}
-
-function openCapsule(capsule, isLocked) {
-  if (isLocked) {
-    // Mostrar preview modal para cápsulas bloqueadas
-    showCapsulePreview(capsule);
-  } else {
-    // Abrir directamente cápsulas desbloqueadas
-    openCapsuleDirectly(capsule);
-  }
-}
-
-function showCapsulePreview(capsule) {
-  const capsuleVisuals = getCapsuleVisuals(capsule.type || 'default', true);
-  const timeLeft = Math.ceil((capsule.unlockDate - new Date()) / (1000 * 60 * 60 * 24));
-  
-  // Actualizar información del preview
-  previewCapsuleTitle.textContent = capsuleVisuals.title;
-  previewCapsuleCreator.textContent = `De: ${capsule.creatorName}`;
-  previewUnlockDate.textContent = `Se abre en ${timeLeft} días`;
-  
-  // Aplicar estilos visuales de la cápsula
-  previewCapsuleBody.className = `capsule-body preview-capsule-body ${capsuleVisuals.bodyClass}`;
-  previewCapsuleCap.className = `capsule-cap preview-capsule-cap ${capsuleVisuals.capClass}`;
-  
-  // Configurar eventos
-  previewShakeBtn.onclick = () => shakeCapsule();
-  previewOpenBtn.onclick = () => {
-    hideModal(capsulePreviewModal, 'standard');
-    openCapsuleDirectly(capsule);
-  };
-  
-  closePreviewModalBtn.onclick = () => {
-    hideModal(capsulePreviewModal, 'standard');
-  };
-  
-  capsulePreviewModal.onclick = (e) => {
-    if (e.target === capsulePreviewModal) {
-      hideModal(capsulePreviewModal, 'standard');
-    }
-  };
-  
-  // Mostrar modal
-  showModal(capsulePreviewModal, 'standard');
-}
-
-function shakeCapsule() {
-  const shakeEffect = previewEffects.querySelector('.shake-effect');
-  shakeEffect.style.display = 'flex';
-  
-  // Ocultar después de la animación
-  setTimeout(() => {
-    shakeEffect.style.display = 'none';
-  }, 1500);
-  
-  // Efecto de sonido simulado (podríamos agregar audio real aquí)
-  console.log('🎵 Shake shake shake!');
-}
-
-function openCapsuleDirectly(capsule) {
-  // Efectos visuales sorprendentes al abrir la cápsula
-  const capsuleElement = document.querySelector('.capsule-item.unlocked');
-  if (capsuleElement) {
-    capsuleElement.classList.add('capsule-opening');
-
-    // Sonido de apertura
-    playSound('capsule-open');
-
-    // Crear efecto de explosión de partículas
-    createParticleExplosion(capsuleElement);
-
-    // Agregar clase de brillo intenso durante la apertura
-    capsuleElement.classList.add('capsule-opening-glow');
-
-    // Efectos de chispa durante la animación
-    setTimeout(() => playSound('sparkle'), 200);
-    setTimeout(() => playSound('sparkle'), 400);
-
-    // Confetti celebration con más intensidad
-    loadConfettiLib().then(confetti => {
-      // Primera ráfaga
-      confetti({
-        particleCount: 150,
-        spread: 90,
-        origin: { y: 0.6 },
-        colors: ['#FFD700', '#FF69B4', '#87CEEB', '#32CD32', '#FF6347', '#FF1493', '#00CED1']
-      });
-
-      // Segunda ráfaga con delay
-      setTimeout(() => {
-        confetti({
-          particleCount: 80,
-          spread: 120,
-          origin: { y: 0.4 },
-          colors: ['#FFD700', '#FF69B4', '#87CEEB', '#32CD32', '#FF6347']
-        });
-      }, 300);
-    }).catch(() => {
-      // Fallback si no se puede cargar confetti
-      console.log('Confetti not available, but capsule opened successfully!');
-    });
-
-    // Remover las clases de animación después de que terminen
-    setTimeout(() => {
-      capsuleElement.classList.remove('capsule-opening', 'capsule-opening-glow');
-      // Limpiar partículas
-      const particles = capsuleElement.querySelectorAll('.particle-explosion');
-      particles.forEach(particle => particle.remove());
-    }, 1500);
-  }
-
-  // Sonido de éxito al final
-  setTimeout(() => playSound('success'), 800);
-
-  // Mostrar mensaje con adjuntos si los hay
-  let message = `Mensaje de ${capsule.creatorName}:\n\n"${capsule.message}"`;
-
-  if (capsule.attachments && capsule.attachments.length > 0) {
-    message += '\n\n📎 Adjuntos especiales:';
-    capsule.attachments.forEach((attachment, index) => {
-      const typeEmoji = getAttachmentTypeEmoji(attachment.type);
-      message += `\n${typeEmoji} ${attachment.name}`;
-    });
-  }
-
-  message += '\n\n✨ Tu mensaje del pasado ha llegado justo a tiempo! ✨';
-
-  showNotification({
-    title: '🎉 ¡Cápsula del Tiempo Abierta!',
-    message: message,
-    icon: '🎊',
-    type: 'success'
+    capsulesList.appendChild(capsuleCard);
   });
 }
 
-// Función para reproducir sonidos
-function playSound(type) {
+// Manejar clic en cápsula
+function handleCapsuleClick(capsule, isLocked) {
+  if (isLocked) {
+    showCapsulePreview(capsule);
+  } else {
+    openCapsuleDirectly(capsule);
+  }
+}
+
+// Mostrar preview de cápsula bloqueada
+function showCapsulePreview(capsule) {
+  const timeLeft = Math.ceil((capsule.unlockDate.toDate() - new Date()) / (1000 * 60 * 60 * 24));
+
+  showNotification({
+    title: `⏳ ${getCapsuleTypeName(capsule.type)}`,
+    message: `Esta cápsula se abrirá automáticamente en ${timeLeft} días. ¡Será una sorpresa especial! ✨`,
+    icon: getCapsuleTypeEmoji(capsule.type),
+    type: 'info'
+  });
+}
+
+// Abrir cápsula directamente
+async function openCapsuleDirectly(capsule) {
   try {
-    // Crear contexto de audio si no existe
+    // Marcar como abierta en Firestore
+    await updateDoc(doc(db, 'couples', currentCoupleId, 'capsules', capsule.id), {
+      openedAt: Timestamp.now()
+    });
+
+    // Efectos visuales
+    createOpeningEffects();
+
+    // Mostrar contenido
+    let message = `💌 Mensaje de ${capsule.creatorName}:\n\n"${capsule.message}"`;
+
+    if (capsule.attachments && capsule.attachments.length > 0) {
+      message += '\n\n📎 Adjuntos:';
+      capsule.attachments.forEach((attachment, index) => {
+        message += `\n• ${attachment.name}`;
+      });
+    }
+
+    message += '\n\n✨ ¡Tu cápsula del tiempo ha sido abierta! ✨';
+
+    showNotification({
+      title: '🎉 ¡Cápsula Abierta!',
+      message: message,
+      icon: '🎊',
+      type: 'success'
+    });
+
+    // Recargar lista
+    await loadAndRenderCapsules();
+
+  } catch (error) {
+    console.error('Error al abrir cápsula:', error);
+    showNotification({
+      title: 'Error',
+      message: 'No se pudo abrir la cápsula.',
+      icon: '❌',
+      type: 'error'
+    });
+  }
+}
+
+// Crear efectos de apertura
+function createOpeningEffects() {
+  // Confetti
+  if (window.confetti) {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#8B5CF6', '#EC4899', '#F59E0B', '#06B6D4']
+    });
+  }
+
+  // Sonido de apertura
+  playCapsuleSound('open');
+}
+
+// Reproducir sonidos de cápsula
+function playCapsuleSound(type) {
+  try {
     if (!window.audioContext) {
       window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
     }
@@ -4742,153 +4663,203 @@ function playSound(type) {
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
 
-    // Configurar sonido según el tipo
     switch (type) {
-      case 'capsule-open':
-        // Sonido mágico de apertura
-        oscillator.frequency.setValueAtTime(523, ctx.currentTime); // C5
-        oscillator.frequency.setValueAtTime(659, ctx.currentTime + 0.1); // E5
-        oscillator.frequency.setValueAtTime(784, ctx.currentTime + 0.2); // G5
-        oscillator.frequency.setValueAtTime(1047, ctx.currentTime + 0.3); // C6
+      case 'open':
+        oscillator.frequency.setValueAtTime(523, ctx.currentTime);
+        oscillator.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+        oscillator.frequency.setValueAtTime(784, ctx.currentTime + 0.2);
         gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
         oscillator.start(ctx.currentTime);
         oscillator.stop(ctx.currentTime + 0.5);
         break;
-
-      case 'sparkle':
-        // Sonido de chispa
-        oscillator.frequency.setValueAtTime(1000 + Math.random() * 500, ctx.currentTime);
-        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-        oscillator.start(ctx.currentTime);
-        oscillator.stop(ctx.currentTime + 0.2);
-        break;
-
-      case 'success':
-        // Sonido de éxito
-        oscillator.frequency.setValueAtTime(440, ctx.currentTime); // A4
-        oscillator.frequency.setValueAtTime(554, ctx.currentTime + 0.1); // C#5
-        oscillator.frequency.setValueAtTime(659, ctx.currentTime + 0.2); // E5
-        gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-        oscillator.start(ctx.currentTime);
-        oscillator.stop(ctx.currentTime + 0.4);
-        break;
     }
   } catch (error) {
-    // Fallback: no sonido si Web Audio API no está disponible
-    console.log(`Sound effect: ${type}`);
+    console.log('Audio not available');
   }
 }
 
-// Función para crear explosión de partículas
-function createParticleExplosion(capsuleElement) {
-  const rect = capsuleElement.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height / 2;
+// Funciones auxiliares para tipos de cápsula
+function getCapsuleTypeEmoji(type) {
+  const emojis = {
+    memory: '💙',
+    dream: '💜',
+    love: '💕',
+    achievement: '🏆',
+    mystery: '🔮',
+    reflection: '🤔',
+    default: '💎'
+  };
+  return emojis[type] || emojis.default;
+}
 
-  // Crear 5 partículas con posiciones aleatorias alrededor del centro
-  for (let i = 0; i < 5; i++) {
-    const particle = document.createElement('div');
-    particle.className = 'particle-explosion';
+function getCapsuleTypeName(type) {
+  const names = {
+    memory: 'Recuerdo Especial',
+    dream: 'Sueño Futuro',
+    love: 'Carta de Amor',
+    achievement: 'Logro Personal',
+    mystery: 'Misterio Oculto',
+    reflection: 'Reflexión Personal',
+    default: 'Cápsula del Tiempo'
+  };
+  return names[type] || names.default;
+}
 
-    // Posición aleatoria alrededor del centro
-    const angle = (i * 72) * (Math.PI / 180); // 72 grados entre cada partícula
-    const distance = 30 + Math.random() * 20; // Distancia aleatoria
-    const x = Math.cos(angle) * distance;
-    const y = Math.sin(angle) * distance;
+// Funciones del formulario de creación
+function updateCharCounter() {
+  const counter = document.querySelector('.char-counter');
+  const count = capsuleMessageInput.value.length;
+  counter.innerHTML = `<span>${count}</span>/2000`;
+}
 
-    particle.style.left = `${centerX + x}px`;
-    particle.style.top = `${centerY + y}px`;
+function selectCapsuleType(card) {
+  capsuleTypeCards.forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+  selectedCapsuleType = card.dataset.type;
+}
 
-    document.body.appendChild(particle);
+function selectDateOption(card) {
+  dateOptionCards.forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
 
-    // Remover partícula después de la animación
-    setTimeout(() => {
-      if (particle.parentNode) {
-        particle.parentNode.removeChild(particle);
-      }
-    }, 1200);
+  if (card.classList.contains('custom')) {
+    customDateContainer.style.display = 'block';
+    selectedUnlockDate = null;
+  } else {
+    customDateContainer.style.display = 'none';
+    const days = parseInt(card.dataset.days);
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    selectedUnlockDate = date;
   }
 }
 
-// Funciones para manejar adjuntos multimedia
-function initCapsuleAttachments() {
-  // Event listeners para botones de adjuntos
-  capsuleAddPhotoBtn?.addEventListener('click', () => capsulePhotoInput.click());
-  capsuleAddVideoBtn?.addEventListener('click', () => capsuleVideoInput.click());
-  capsuleAddAudioBtn?.addEventListener('click', () => capsuleAudioInput.click());
-  
-  // Event listeners para inputs de archivos
-  capsulePhotoInput?.addEventListener('change', (e) => handleFileSelection(e.target.files, 'image'));
-  capsuleVideoInput?.addEventListener('change', (e) => handleFileSelection(e.target.files, 'video'));
-  capsuleAudioInput?.addEventListener('change', (e) => handleFileSelection(e.target.files, 'audio'));
+function goToPreviousStep() {
+  if (currentCapsuleStep > 1) {
+    currentCapsuleStep--;
+    updateStepDisplay();
+  }
+}
+
+function goToNextStep() {
+  if (currentCapsuleStep < 4) {
+    if (validateCurrentStep()) {
+      currentCapsuleStep++;
+      updateStepDisplay();
+    }
+  } else {
+    handleCreateCapsule();
+  }
+}
+
+function validateCurrentStep() {
+  switch (currentCapsuleStep) {
+    case 1:
+      return capsuleMessageInput.value.trim().length > 0;
+    case 2:
+      return selectedCapsuleType;
+    case 3:
+      return selectedUnlockDate || (customDateContainer.style.display === 'block' && capsuleUnlockDateInput.value);
+    case 4:
+      return true;
+  }
+  return false;
+}
+
+function updateStepDisplay() {
+  // Ocultar todos los pasos
+  document.querySelectorAll('.capsule-step').forEach(step => {
+    step.classList.remove('active');
+  });
+
+  // Mostrar paso actual
+  document.getElementById(`step-${getStepName(currentCapsuleStep)}`).classList.add('active');
+
+  // Actualizar indicadores
+  stepIndicators.forEach((dot, index) => {
+    if (index + 1 <= currentCapsuleStep) {
+      dot.classList.add('active');
+    } else {
+      dot.classList.remove('active');
+    }
+  });
+
+  // Actualizar botones de navegación
+  capsulePrevBtn.disabled = currentCapsuleStep === 1;
+  capsuleNextBtn.innerHTML = currentCapsuleStep === 4 ?
+    '<span>✨ Sellar Cápsula</span>' :
+    '<span>Siguiente ›</span>';
+}
+
+function getStepName(step) {
+  const names = ['', 'message', 'type', 'date', 'attachments'];
+  return names[step];
+}
+
+// Manejo de adjuntos
+function handleAttachmentClick(type) {
+  const input = document.getElementById(`${type}-input`);
+  input.click();
 }
 
 function handleFileSelection(files, type) {
   Array.from(files).forEach(file => {
-    // Validar tamaño del archivo (máximo 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      showNotification({
-        title: 'Archivo demasiado grande',
-        message: 'Los archivos no pueden superar los 10MB.',
-        icon: '⚠️',
-        type: 'warning'
-      });
-      return;
+    if (validateFile(file, type)) {
+      const attachment = {
+        file: file,
+        type: type,
+        name: file.name,
+        size: file.size,
+        id: Date.now() + Math.random()
+      };
+      capsuleAttachments.push(attachment);
+      renderAttachmentsPreview();
     }
-    
-    // Validar tipo de archivo
-    if (!isValidFileType(file, type)) {
-      showNotification({
-        title: 'Tipo de archivo no válido',
-        message: `Por favor selecciona un archivo de tipo ${type} válido.`,
-        icon: '⚠️',
-        type: 'warning'
-      });
-      return;
-    }
-    
-    // Agregar archivo a la lista
-    const attachment = {
-      file: file,
-      type: type,
-      name: file.name,
-      size: file.size,
-      id: Date.now() + Math.random()
-    };
-    
-    capsuleAttachments.push(attachment);
-    renderAttachmentsPreview();
   });
 }
 
-function isValidFileType(file, expectedType) {
-  const mimeType = file.type.toLowerCase();
-  switch (expectedType) {
-    case 'image':
-      return mimeType.startsWith('image/');
-    case 'video':
-      return mimeType.startsWith('video/');
-    case 'audio':
-      return mimeType.startsWith('audio/');
-    default:
-      return false;
+function validateFile(file, type) {
+  // Validar tamaño (10MB máximo)
+  if (file.size > 10 * 1024 * 1024) {
+    showNotification({
+      title: 'Archivo demasiado grande',
+      message: 'Los archivos no pueden superar los 10MB.',
+      icon: '⚠️',
+      type: 'warning'
+    });
+    return false;
   }
+
+  // Validar tipo
+  const validTypes = {
+    image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+    video: ['video/mp4', 'video/webm', 'video/ogg'],
+    audio: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3']
+  };
+
+  if (!validTypes[type].includes(file.type)) {
+    showNotification({
+      title: 'Tipo de archivo no válido',
+      message: `Por favor selecciona un archivo de tipo ${type} válido.`,
+      icon: '⚠️',
+      type: 'warning'
+    });
+    return false;
+  }
+
+  return true;
 }
 
 function renderAttachmentsPreview() {
-  if (!capsuleAttachmentsPreview) return;
-  
-  capsuleAttachmentsPreview.innerHTML = capsuleAttachments.map(attachment => `
+  attachmentsPreview.innerHTML = capsuleAttachments.map(attachment => `
     <div class="attachment-item" data-id="${attachment.id}">
-      <div class="attachment-icon">${getAttachmentTypeEmoji(attachment.type)}</div>
-      <div class="attachment-info">
-        <div class="attachment-name">${attachment.name}</div>
-        <div class="attachment-size">${formatFileSize(attachment.size)}</div>
+      <div class="attachment-item-icon">${getAttachmentTypeEmoji(attachment.type)}</div>
+      <div class="attachment-item-info">
+        <div class="attachment-item-name">${attachment.name}</div>
+        <div class="attachment-item-size">${formatFileSize(attachment.size)}</div>
       </div>
-      <button class="attachment-remove" onclick="removeCapsuleAttachment('${attachment.id}')">×</button>
+      <button class="attachment-item-remove" onclick="removeCapsuleAttachment('${attachment.id}')">×</button>
     </div>
   `).join('');
 }
@@ -4915,16 +4886,145 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// Función para subir adjuntos a Firebase Storage
+// Crear cápsula
+async function handleCreateCapsule() {
+  try {
+    // Obtener fecha final
+    let finalUnlockDate = selectedUnlockDate;
+    if (customDateContainer.style.display === 'block') {
+      finalUnlockDate = new Date(capsuleUnlockDateInput.value);
+    }
+
+    // Validar fecha
+    const now = new Date();
+    if (finalUnlockDate <= now) {
+      showNotification({
+        title: 'Fecha inválida',
+        message: 'La fecha de apertura debe ser en el futuro.',
+        icon: '⚠️',
+        type: 'warning'
+      });
+      return;
+    }
+
+    // Mostrar loading
+    capsuleNextBtn.disabled = true;
+    capsuleNextBtn.innerHTML = '<span>🔄 Sellando...</span>';
+
+    // Crear cápsula
+    const capsuleData = {
+      message: capsuleMessageInput.value.trim(),
+      unlockDate: Timestamp.fromDate(finalUnlockDate),
+      type: selectedCapsuleType,
+      createdBy: currentUser.uid,
+      creatorName: currentUser.displayName,
+      createdAt: Timestamp.now()
+    };
+
+    const capsuleId = await createCapsule(capsuleData.message, finalUnlockDate, capsuleData.type);
+
+    // Subir adjuntos si los hay
+    if (capsuleAttachments.length > 0) {
+      const attachmentUrls = await uploadCapsuleAttachments(capsuleId);
+      await updateDoc(doc(db, 'couples', currentCoupleId, 'capsules', capsuleId), {
+        attachments: attachmentUrls
+      });
+    }
+
+    // Limpiar formulario
+    resetCapsuleForm();
+
+    // Mostrar éxito
+    showNotification({
+      title: '✨ ¡Cápsula Sellada!',
+      message: 'Tu mensaje ha sido guardado para el futuro.',
+      icon: '⏳',
+      type: 'success'
+    });
+
+    // Volver a la lista
+    showPhoneApp('timecapsule');
+    await loadAndRenderCapsules();
+
+  } catch (error) {
+    console.error('Error al crear cápsula:', error);
+    showNotification({
+      title: 'Error',
+      message: 'No se pudo sellar la cápsula. Inténtalo de nuevo.',
+      icon: '❌',
+      type: 'error'
+    });
+  } finally {
+    capsuleNextBtn.disabled = false;
+    updateStepDisplay();
+  }
+}
+
+function resetCapsuleForm() {
+  capsuleMessageInput.value = '';
+  currentCapsuleStep = 1;
+  selectedCapsuleType = 'memory';
+  selectedUnlockDate = null;
+  capsuleAttachments = [];
+
+  // Reset UI
+  capsuleTypeCards.forEach(card => card.classList.remove('active'));
+  document.querySelector('[data-type="memory"]').classList.add('active');
+  dateOptionCards.forEach(card => card.classList.remove('active'));
+  customDateContainer.style.display = 'none';
+  renderAttachmentsPreview();
+  updateStepDisplay();
+  updateCharCounter();
+}
+
+// Funciones de Firestore
+async function createCapsule(message, unlockDate, capsuleType) {
+  if (!currentCoupleId || !currentUser) throw new Error('Usuario no autenticado');
+
+  const capsulesRef = collection(db, 'couples', currentCoupleId, 'capsules');
+  const docRef = await addDoc(capsulesRef, {
+    message,
+    unlockDate: Timestamp.fromDate(unlockDate),
+    type: capsuleType,
+    createdBy: currentUser.uid,
+    creatorName: currentUser.displayName,
+    createdAt: Timestamp.now(),
+    openedAt: null
+  });
+
+  return docRef.id;
+}
+
+async function getCapsules() {
+  if (!currentCoupleId) return [];
+
+  try {
+    const capsulesRef = collection(db, 'couples', currentCoupleId, 'capsules');
+    const q = query(capsulesRef, orderBy('unlockDate', 'asc'));
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      unlockDate: doc.data().unlockDate,
+      createdAt: doc.data().createdAt,
+      openedAt: doc.data().openedAt
+    }));
+  } catch (error) {
+    console.error('Error al obtener cápsulas:', error);
+    return [];
+  }
+}
+
 async function uploadCapsuleAttachments(capsuleId) {
   const uploadedUrls = [];
-  
+
   for (const attachment of capsuleAttachments) {
     try {
       const storageRef = ref(storage, `couples/${currentCoupleId}/capsules/${capsuleId}/${attachment.name}`);
       await uploadBytes(storageRef, attachment.file);
       const downloadURL = await getDownloadURL(storageRef);
-      
+
       uploadedUrls.push({
         name: attachment.name,
         type: attachment.type,
@@ -4935,82 +5035,9 @@ async function uploadCapsuleAttachments(capsuleId) {
       console.error('Error al subir adjunto:', error);
     }
   }
-  
+
   return uploadedUrls;
 }
-
-async function handleSaveCapsule() {
-  const message = capsuleMessageInput.value.trim();
-  const unlockDate = capsuleUnlockDateInput.value;
-  const capsuleType = capsuleTypeSelect.value;
-
-  if (!message || !unlockDate) {
-    showNotification({
-      title: 'Campos Requeridos',
-      message: 'Por favor, escribe un mensaje y elige una fecha de apertura.',
-      icon: '⚠️',
-      type: 'warning'
-    });
-    return;
-  }
-
-  // Validar que la fecha sea en el futuro
-  const today = new Date();
-  const selectedDate = new Date(unlockDate);
-  today.setHours(0, 0, 0, 0); // Poner la hora a cero para comparar solo fechas
-  if (selectedDate <= today) {
-    showNotification({
-      title: 'Fecha Inválida',
-      message: 'La fecha de apertura debe ser en el futuro.',
-      icon: '⚠️',
-      type: 'warning'
-    });
-    return;
-  }
-
-  try {
-    saveCapsuleBtn.disabled = true;
-    saveCapsuleBtn.textContent = 'Sellando...';
-    
-    const capsuleId = await createCapsule(message, unlockDate, capsuleType);
-    
-    // Subir adjuntos si los hay
-    if (capsuleAttachments.length > 0) {
-      const attachmentUrls = await uploadCapsuleAttachments(capsuleId);
-      // Actualizar la cápsula con los adjuntos
-      const capsuleRef = doc(db, 'couples', currentCoupleId, 'capsules', capsuleId);
-      await updateDoc(capsuleRef, { attachments: attachmentUrls });
-    }
-    
-    // Limpiar formulario y volver a la lista
-    capsuleMessageInput.value = '';
-    capsuleUnlockDateInput.value = '';
-    capsuleTypeSelect.value = 'memory'; // Reset to default
-    capsuleAttachments = []; // Limpiar adjuntos
-    renderAttachmentsPreview(); // Actualizar preview
-    showPhoneApp('timecapsule');
-    await loadAndRenderCapsules();
-    
-    showNotification({
-      title: '¡Cápsula Sellada!',
-      message: 'Tu cápsula del tiempo ha sido creada exitosamente.',
-      icon: '⏳',
-      type: 'success'
-    });
-
-  } catch (error) {
-    showNotification({
-      title: 'Error',
-      message: 'No se pudo sellar la cápsula. Inténtalo de nuevo.',
-      icon: '❌',
-      type: 'error'
-    });
-  } finally {
-    saveCapsuleBtn.disabled = false;
-    saveCapsuleBtn.textContent = 'Sellar Cápsula';
-  }
-}
-
 
 // ============================================
 // FUNCIONES DE FIRESTORE - METAS DE AHORRO
@@ -6627,6 +6654,7 @@ const placesList = document.getElementById('places-list');
 const placeTabs = document.querySelectorAll('.places-tab');
 const visitedCount = document.getElementById('visited-count');
 const wishlistCount = document.getElementById('wishlist-count');
+const placeInfoModal = document.getElementById('place-info-modal');
 
 // Globo 3D
 let globe = null;
@@ -6689,7 +6717,6 @@ if (confirmModal) {
 }
 
 // Modal de información de lugar
-const placeInfoModal = document.getElementById('place-info-modal');
 const placeInfoTitle = document.getElementById('place-info-title');
 const placeInfoBody = document.getElementById('place-info-body');
 const closePlaceInfoBtn = document.getElementById('close-place-info-btn');
@@ -7723,7 +7750,5 @@ if ('serviceWorker' in navigator) {
 // INICIALIZACIÓN DE COMPONENTES
 // ============================================
 
-// Inicializar adjuntos de cápsulas cuando se carga la aplicación
-document.addEventListener('DOMContentLoaded', () => {
-  initCapsuleAttachments();
-});
+// Inicializar cápsulas del tiempo
+initTimeCapsules();

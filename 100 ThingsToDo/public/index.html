@@ -847,12 +847,12 @@
                     <div class="app-icon-bg app-icon-gift" style="background: #ffdeeb;">🎁</div>
                     <span class="app-name">Reto Diario</span>
                 </div>
-                <!-- App 2: Capsula del tiempo -->
+                      <!-- App 2: Cápsulas del Tiempo -->
                     <div class="app-icon phone-app-icon" data-app="timecapsule">
-        <div class="app-icon-bg app-icon-time" style="background: #f6eac2;">⏳</div>
-        <span class="app-name">Cápsula Temporal</span>
+        <div class="app-icon-bg app-icon-time" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">⏳</div>
+        <span class="app-name">Cápsulas</span>
     </div>
-          <!-- App 2: Metas -->
+          <!-- App 3: Metas -->
         <div class="app-icon phone-app-icon" data-app="budget">
         <div class="app-icon-bg app-icon-money" style="background: #d4edda;">💰</div>
         <span class="app-name">Metas Futuras</span>
@@ -957,133 +957,254 @@
     <!-- ============================================ -->
 
 <!-- Vista Principal de la Cápsula del Tiempo (Lista de cápsulas) -->
+<!-- ============================================ -->
+
+
+<!-- Vista de Cápsulas del Tiempo Rediseñada -->
 <div id="phone-view-timecapsule" class="phone-app-view">
     <div class="app-content-header">
         <button class="back-to-home-btn">‹</button>
-        <span>Cápsulas del Tiempo</span>
+        <span>💎 Cápsulas del Tiempo</span>
     </div>
     <div class="app-content-body">
-        <div id="capsules-list" class="capsules-list">
-            <!-- Las cápsulas se cargarán aquí -->
-            <div id="capsules-empty-state" class="capsules-empty-state">
-                <div class="empty-icon">💌</div>
-                <p>Aún no hay cápsulas del tiempo. ¡Crea la primera!</p>
+        <!-- Hero Section -->
+        <div class="capsule-hero">
+            <div class="hero-icon">⏳</div>
+            <h2 class="hero-title">Mensajes del Futuro</h2>
+            <p class="hero-subtitle">Guarda recuerdos, sueños y mensajes para ti mismo en el futuro</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="capsule-stats">
+            <div class="stat-item">
+                <div class="stat-number" id="total-capsules">0</div>
+                <div class="stat-label">Cápsulas</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="pending-capsules">0</div>
+                <div class="stat-label">Pendientes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="opened-capsules">0</div>
+                <div class="stat-label">Abiertas</div>
             </div>
         </div>
-        <button id="go-to-create-capsule-btn" class="btn btn-primary" style="margin-top: auto;">
-            + Crear Nueva Cápsula
-        </button>
+
+        <!-- Capsules List -->
+        <div class="capsules-container">
+            <div id="capsules-list" class="capsules-grid">
+                <!-- Las cápsulas se cargarán aquí dinámicamente -->
+            </div>
+
+            <!-- Create Button - Sticky dentro del contenedor -->
+            <button id="create-capsule-fab" class="btn btn-primary">
+                ✨ Crear Cápsula
+            </button>
+
+            <!-- Empty State -->
+            <div id="capsules-empty-state" class="capsules-empty">
+                <div class="empty-visual">
+                    <div class="empty-crystal">💎</div>
+                    <div class="empty-sparkles">✨ ✨ ✨</div>
+                </div>
+                <h3 class="empty-title">Tu primera cápsula te espera</h3>
+                <p class="empty-text">Crea un mensaje especial para tu yo del futuro</p>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Vista para Crear una Nueva Cápsula -->
+<!-- Create Capsule View -->
 <div id="phone-view-createcapsule" class="phone-app-view">
     <div class="app-content-header">
         <button class="back-to-capsule-list-btn">‹</button>
-        <span>Nueva Cápsula</span>
+        <span>✨ Nueva Cápsula</span>
     </div>
     <div class="app-content-body">
-        <textarea id="capsule-message-input" class="textarea" placeholder="Escribe tu mensaje para el futuro..." rows="8"></textarea>
-        
-        <label for="capsule-type-select">Tipo de Cápsula:</label>
-        <select id="capsule-type-select" class="input">
-            <option value="memory">💙 Recuerdo Especial</option>
-            <option value="dream">💜 Sueño Futuro</option>
-            <option value="achievement">🏆 Logro Personal</option>
-            <option value="love">💕 Carta de Amor</option>
-            <option value="adventure">🌟 Aventura Futura</option>
-            <option value="mystery">🔮 Misterio Oculto</option>
-        </select>
-        
-        <!-- Adjuntos Multimedia -->
-        <div class="capsule-attachments-section">
-            <label class="attachments-label">Adjuntos Especiales (opcional)</label>
-            <p class="attachments-description">Agrega fotos, videos o audios para hacer tu cápsula aún más especial</p>
-            
-            <div class="attachment-buttons">
-                <button type="button" id="add-photo-btn" class="btn-attachment">
-                    📸 Foto
-                </button>
-                <button type="button" id="add-video-btn" class="btn-attachment">
-                    🎥 Video
-                </button>
-                <button type="button" id="add-audio-btn" class="btn-attachment">
-                    🎵 Audio
-                </button>
+        <div class="create-capsule-form">
+            <!-- Step 1: Message -->
+            <div class="capsule-step active" id="step-message">
+                <div class="step-header">
+                    <div class="step-icon">💌</div>
+                    <h3 class="step-title">Tu Mensaje</h3>
+                    <p class="step-description">Escribe algo especial para tu futuro</p>
+                </div>
+                <div class="step-content">
+                    <textarea
+                        id="capsule-message-input"
+                        class="capsule-textarea"
+                        placeholder="Querido yo del futuro...
+
+Hoy es un día especial porque..."
+                        maxlength="2000"
+                        rows="8"></textarea>
+                    <div class="char-counter">
+                        <span id="char-count">0</span>/2000
+                    </div>
+                </div>
             </div>
-            
-            <input type="file" id="photo-input" accept="image/*" multiple style="display: none;">
-            <input type="file" id="video-input" accept="video/*" multiple style="display: none;">
-            <input type="file" id="audio-input" accept="audio/*" multiple style="display: none;">
-            
-            <div id="attachments-preview" class="attachments-preview">
-                <!-- Los adjuntos se mostrarán aquí -->
+
+            <!-- Step 2: Type & Theme -->
+            <div class="capsule-step" id="step-type">
+                <div class="step-header">
+                    <div class="step-icon">🎨</div>
+                    <h3 class="step-title">Tipo de Cápsula</h3>
+                    <p class="step-description">Elige el tema que mejor represente tu mensaje</p>
+                </div>
+                <div class="step-content">
+                    <div class="capsule-types-grid">
+                        <div class="capsule-type-card active" data-type="memory">
+                            <div class="type-visual">
+                                <div class="type-icon">💙</div>
+                                <div class="type-sparkle">✨</div>
+                            </div>
+                            <div class="type-info">
+                                <h4 class="type-name">Recuerdo</h4>
+                                <p class="type-desc">Momentos especiales</p>
+                            </div>
+                        </div>
+                        <div class="capsule-type-card" data-type="dream">
+                            <div class="type-visual">
+                                <div class="type-icon">💜</div>
+                                <div class="type-sparkle">🌟</div>
+                            </div>
+                            <div class="type-info">
+                                <h4 class="type-name">Sueño</h4>
+                                <p class="type-desc">Metas y aspiraciones</p>
+                            </div>
+                        </div>
+                        <div class="capsule-type-card" data-type="love">
+                            <div class="type-visual">
+                                <div class="type-icon">💕</div>
+                                <div class="type-sparkle">💖</div>
+                            </div>
+                            <div class="type-info">
+                                <h4 class="type-name">Amor</h4>
+                                <p class="type-desc">Mensajes de corazón</p>
+                            </div>
+                        </div>
+                        <div class="capsule-type-card" data-type="achievement">
+                            <div class="type-visual">
+                                <div class="type-icon">🏆</div>
+                                <div class="type-sparkle">🎉</div>
+                            </div>
+                            <div class="type-info">
+                                <h4 class="type-name">Logro</h4>
+                                <p class="type-desc">Éxitos personales</p>
+                            </div>
+                        </div>
+                        <div class="capsule-type-card" data-type="mystery">
+                            <div class="type-visual">
+                                <div class="type-icon">🔮</div>
+                                <div class="type-sparkle">✨</div>
+                            </div>
+                            <div class="type-info">
+                                <h4 class="type-name">Misterio</h4>
+                                <p class="type-desc">Sorpresas ocultas</p>
+                            </div>
+                        </div>
+                        <div class="capsule-type-card" data-type="reflection">
+                            <div class="type-visual">
+                                <div class="type-icon">🤔</div>
+                                <div class="type-sparkle">💭</div>
+                            </div>
+                            <div class="type-info">
+                                <h4 class="type-name">Reflexión</h4>
+                                <p class="type-desc">Pensamientos profundos</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Unlock Date -->
+            <div class="capsule-step" id="step-date">
+                <div class="step-header">
+                    <div class="step-icon">📅</div>
+                    <h3 class="step-title">Fecha de Apertura</h3>
+                    <p class="step-description">¿Cuándo quieres que se abra esta cápsula?</p>
+                </div>
+                <div class="step-content">
+                    <div class="date-options">
+                        <div class="date-option-card" data-days="30">
+                            <div class="date-icon">📅</div>
+                            <div class="date-text">1 Mes</div>
+                        </div>
+                        <div class="date-option-card" data-days="90">
+                            <div class="date-icon">🗓️</div>
+                            <div class="date-text">3 Meses</div>
+                        </div>
+                        <div class="date-option-card" data-days="180">
+                            <div class="date-icon">📆</div>
+                            <div class="date-text">6 Meses</div>
+                        </div>
+                        <div class="date-option-card" data-days="365">
+                            <div class="date-icon">🎂</div>
+                            <div class="date-text">1 Año</div>
+                        </div>
+                        <div class="date-option-card custom" id="custom-date-option">
+                            <div class="date-icon">🎯</div>
+                            <div class="date-text">Personalizada</div>
+                        </div>
+                    </div>
+                    <div class="custom-date-picker" id="custom-date-container" style="display: none;">
+                        <input type="date" id="capsule-unlock-date-input" class="capsule-date-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Attachments (Optional) -->
+            <div class="capsule-step" id="step-attachments">
+                <div class="step-header">
+                    <div class="step-icon">📎</div>
+                    <h3 class="step-title">Adjuntos Especiales</h3>
+                    <p class="step-description">Agrega fotos, videos o audios (opcional)</p>
+                </div>
+                <div class="step-content">
+                    <div class="attachments-grid">
+                        <button type="button" class="attachment-btn" data-type="photo">
+                            <div class="attachment-icon">📸</div>
+                            <div class="attachment-label">Foto</div>
+                        </button>
+                        <button type="button" class="attachment-btn" data-type="video">
+                            <div class="attachment-icon">🎥</div>
+                            <div class="attachment-label">Video</div>
+                        </button>
+                        <button type="button" class="attachment-btn" data-type="audio">
+                            <div class="attachment-icon">🎵</div>
+                            <div class="attachment-label">Audio</div>
+                        </button>
+                    </div>
+                    <div id="attachments-preview" class="attachments-preview">
+                        <!-- Los adjuntos se mostrarán aquí -->
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <label for="capsule-unlock-date-input">Fecha de apertura:</label>
-        <input type="date" id="capsule-unlock-date-input" class="input">
-        <button id="save-capsule-btn" class="btn btn-primary">Sellar Cápsula</button>
+
+        <!-- Navigation -->
+        <div class="capsule-navigation">
+            <button id="capsule-prev-btn" class="nav-btn secondary" disabled>
+                <span>‹ Anterior</span>
+            </button>
+            <div class="step-indicators">
+                <div class="step-dot active" data-step="1"></div>
+                <div class="step-dot" data-step="2"></div>
+                <div class="step-dot" data-step="3"></div>
+                <div class="step-dot" data-step="4"></div>
+            </div>
+            <button id="capsule-next-btn" class="nav-btn primary">
+                <span>Siguiente ›</span>
+            </button>
+        </div>
+
+        <!-- Hidden file inputs -->
+        <input type="file" id="photo-input" accept="image/*" multiple style="display: none;">
+        <input type="file" id="video-input" accept="video/*" multiple style="display: none;">
+        <input type="file" id="audio-input" accept="audio/*" multiple style="display: none;">
     </div>
 </div>
 
-<!-- Modal de Preview de Cápsula -->
-<div id="capsule-preview-modal" class="modal" style="display: none;">
-    <div class="modal-overlay"></div>
-    <div class="modal-content modal-lg">
-        <div class="modal-header">
-            <h2 class="modal-title">👀 Vista Previa de la Cápsula</h2>
-            <button id="close-preview-modal-btn" class="btn-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-            </button>
-        </div>
-        <div class="modal-body">
-            <div class="capsule-preview-container">
-                <!-- Información de la cápsula -->
-                <div class="capsule-preview-info">
-                    <div class="capsule-preview-visual">
-                        <div class="capsule-body preview-capsule-body">
-                            <div class="capsule-cap preview-capsule-cap"></div>
-                            <div class="capsule-seal sealed"></div>
-                            <div class="capsule-lock">🔒</div>
-                        </div>
-                    </div>
-                    <div class="capsule-preview-details">
-                        <h3 id="preview-capsule-title" class="capsule-title">Cápsula del Tiempo</h3>
-                        <p id="preview-capsule-creator" class="capsule-creator">De: Tú</p>
-                        <p id="preview-unlock-date" class="capsule-date">Se abre en X días</p>
-                        <div class="capsule-preview-hint">
-                            <div class="hint-icon">💡</div>
-                            <p>Esta cápsula contiene un mensaje especial que podrás leer cuando llegue el momento indicado.</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Controles de preview -->
-                <div class="capsule-preview-actions">
-                    <button id="preview-shake-btn" class="btn btn-outline">
-                        <span>🤲 Agitar Cápsula</span>
-                    </button>
-                    <button id="preview-open-btn" class="btn btn-primary">
-                        <span>🎉 ¡Abrir Ahora!</span>
-                    </button>
-                </div>
-                
-                <!-- Efectos visuales -->
-                <div id="preview-effects" class="preview-effects">
-                    <div class="shake-effect" style="display: none;">
-                        <div class="sparkle-particle">✨</div>
-                        <div class="sparkle-particle">💫</div>
-                        <div class="sparkle-particle">⭐</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 <!-- ============================================ -->
 
 
