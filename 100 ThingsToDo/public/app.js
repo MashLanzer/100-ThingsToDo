@@ -184,7 +184,9 @@ function showNotification({
     
     // SIEMPRE ocultar otros modales al mostrar notificación, PERO respetar modales anidados
     const mapModal = document.getElementById('map-modal');
+    const favorsModal = document.getElementById('favors-fullscreen-modal');
     const isPlaceInfoInsideMap = mapModal && mapModal.contains(placeInfoModal);
+    const isFavorsModalOpen = favorsModal && !favorsModal.classList.contains('hidden');
     
     if (placeInfoModal && !isPlaceInfoInsideMap) {
       placeInfoModal.style.display = 'none';
@@ -193,11 +195,13 @@ function showNotification({
     } else if (isPlaceInfoInsideMap) {
       console.log('Modal de detalles NO cerrado al mostrar notificación (está dentro del mapa)');
     }
-    // Cerrar modal de favores si está abierto
-    const favorsModal = document.getElementById('favors-fullscreen-modal');
-    if (favorsModal && !favorsModal.classList.contains('hidden')) {
+    
+    // Cerrar modal de favores solo si no estamos dentro de él
+    if (favorsModal && !favorsModal.classList.contains('hidden') && !isFavorsModalOpen) {
       favorsModal.classList.add('hidden');
-      console.log('Modal de favores cerrado al mostrar notificación');
+      console.log('Modal de favores cerrado al mostrar notificación (no estábamos dentro de él)');
+    } else if (isFavorsModalOpen) {
+      console.log('Modal de favores NO cerrado al mostrar notificación (estamos dentro de él)');
     }
     // Cerrar modal de crear favor si está abierto
     const createFavorModal = document.getElementById('create-favor-modal');
@@ -504,9 +508,25 @@ function closeAllModals(excludeModal = null) {
     'map-modal' // Modal del mapa
   ];
 
+  // Verificar si el place-info-modal está dentro del map-modal antes de cerrarlo
+  const mapModal = document.getElementById('map-modal');
+  const placeInfoModal = document.getElementById('place-info-modal');
+  const isPlaceInfoInsideMap = mapModal && mapModal.contains(placeInfoModal);
+  
+  console.log('closeAllModals: Checking place-info-modal containment');
+  console.log('closeAllModals: mapModal exists:', !!mapModal);
+  console.log('closeAllModals: placeInfoModal exists:', !!placeInfoModal);
+  console.log('closeAllModals: isPlaceInfoInsideMap:', isPlaceInfoInsideMap);
+
   displayModals.forEach(modalId => {
     const modal = document.getElementById(modalId) || window[modalId];
     if (modal && (modal.style.display !== 'none' || modal.classList.contains('is-open'))) {
+      // No cerrar place-info-modal si está dentro del map-modal
+      if (modalId === 'place-info-modal' && isPlaceInfoInsideMap) {
+        console.log('closeAllModals: No cerrando place-info-modal porque está dentro del map-modal');
+        return;
+      }
+      console.log(`closeAllModals: Cerrando modal ${modalId}`);
       modal.style.display = 'none';
       modal.style.visibility = 'hidden';
       modal.style.opacity = '0';
@@ -2756,28 +2776,49 @@ function closePhoneModal() {
 function openFavorsFullscreenModal() {
   console.log('=== openFavorsFullscreenModal called ===');
   
-  // SIEMPRE ocultar otros modales al abrir el modal de favores
-  if (placeInfoModal) {
-    placeInfoModal.style.display = 'none';
-    document.body.appendChild(placeInfoModal);
-    console.log('Modal de detalles cerrado al abrir modal de favores');
-  }
-  // Cerrar modal de crear favor si está abierto
-  const createFavorModal = document.getElementById('create-favor-modal');
-  if (createFavorModal && !createFavorModal.classList.contains('hidden')) {
-    createFavorModal.classList.add('hidden');
-    console.log('Modal de crear favor cerrado al abrir modal de favores');
-  }
-  // Cerrar modal de notificación si está abierto
-  const notificationModal = document.getElementById('notification-modal');
-  if (notificationModal && notificationModal.style.display !== 'none') {
-    notificationModal.style.display = 'none';
-    console.log('Modal de notificación cerrado al abrir modal de favores');
-  }
-  // Cerrar lightbox si está abierto
-  if (lightbox && lightbox.classList.contains('active')) {
-    closeLightbox();
-    console.log('Lightbox cerrado al abrir modal de favores');
+  // Solo cerrar otros modales si NO estamos dentro del phone-modal
+  const phoneModal = document.getElementById('phone-modal');
+  const isInsidePhone = phoneModal && phoneModal.style.display === 'flex';
+  
+  if (!isInsidePhone) {
+    // Cerrar otros modales solo si no estamos dentro del teléfono
+    const mapModal = document.getElementById('map-modal');
+    const isPlaceInfoInsideMap = mapModal && mapModal.contains(placeInfoModal);
+    
+    if (placeInfoModal && !isPlaceInfoInsideMap) {
+      placeInfoModal.style.display = 'none';
+      document.body.appendChild(placeInfoModal);
+      console.log('Modal de detalles cerrado al abrir modal de favores (no estamos en teléfono y no está dentro del mapa)');
+    } else if (isPlaceInfoInsideMap) {
+      console.log('Modal de detalles NO cerrado al abrir modal de favores (está dentro del mapa)');
+    }
+    
+    // Cerrar modal del mapa si está abierto
+    if (mapModal && mapModal.classList.contains('is-open')) {
+      mapModal.classList.remove('is-open');
+      mapModal.style.display = 'none';
+      console.log('Modal del mapa cerrado al abrir modal de favores');
+    }
+    
+    // Cerrar modal de crear favor si está abierto
+    const createFavorModal = document.getElementById('create-favor-modal');
+    if (createFavorModal && !createFavorModal.classList.contains('hidden')) {
+      createFavorModal.classList.add('hidden');
+      console.log('Modal de crear favor cerrado al abrir modal de favores');
+    }
+    // Cerrar modal de notificación si está abierto
+    const notificationModal = document.getElementById('notification-modal');
+    if (notificationModal && notificationModal.style.display !== 'none') {
+      notificationModal.style.display = 'none';
+      console.log('Modal de notificación cerrado al abrir modal de favores');
+    }
+    // Cerrar lightbox si está abierto
+    if (lightbox && lightbox.classList.contains('active')) {
+      closeLightbox();
+      console.log('Lightbox cerrado al abrir modal de favores');
+    }
+  } else {
+    console.log('Estamos dentro del teléfono, no cerramos otros modales al abrir favores');
   }
   
   let modal = document.getElementById('favors-fullscreen-modal');
@@ -3756,30 +3797,6 @@ async function acceptRandomChallengePhone() {
 function openCreateFavorModal() {
   console.log('openCreateFavorModal called');
   
-  // SIEMPRE ocultar otros modales al abrir el modal de crear favor
-  if (placeInfoModal) {
-    placeInfoModal.style.display = 'none';
-    document.body.appendChild(placeInfoModal);
-    console.log('Modal de detalles cerrado al abrir modal de crear favor');
-  }
-  // Cerrar modal de favores si está abierto
-  const favorsModal = document.getElementById('favors-fullscreen-modal');
-  if (favorsModal && !favorsModal.classList.contains('hidden')) {
-    favorsModal.classList.add('hidden');
-    console.log('Modal de favores cerrado al abrir modal de crear favor');
-  }
-  // Cerrar modal de notificación si está abierto
-  const notificationModal = document.getElementById('notification-modal');
-  if (notificationModal && notificationModal.style.display !== 'none') {
-    notificationModal.style.display = 'none';
-    console.log('Modal de notificación cerrado al abrir modal de crear favor');
-  }
-  // Cerrar lightbox si está abierto
-  if (lightbox && lightbox.classList.contains('active')) {
-    closeLightbox();
-    console.log('Lightbox cerrado al abrir modal de crear favor');
-  }
-  
   let modal = document.getElementById('create-favor-modal');
   
   // Si no existe, crearlo dinámicamente
@@ -3841,8 +3858,8 @@ function openCreateFavorModal() {
   console.log('Create favor modal exists:', !!modal);
   console.log('Create favor modal classes before:', modal.className);
   
-  // Mostrar modal usando el sistema consistente
-  showModal(modal, 'favors');
+  // Usar la función de modales anidados para favores
+  showFavorModal(modal, 'favors');
   
   console.log('Create favor modal should now be visible');
   
@@ -3860,7 +3877,7 @@ function openCreateFavorModal() {
 
 // Cerrar modal de crear desafío
 function closeCreateFavorModal() {
-  hideModal(document.getElementById('create-favor-modal'), 'favors');
+  hideFavorModal(document.getElementById('create-favor-modal'), 'favors');
   
   // Limpiar formulario
   document.getElementById('coupon-title-input-large').value = '';
@@ -6731,20 +6748,74 @@ function closePlaceInfoModal() {
   }
 }
 
-// Función para mostrar modales de lugar respetando modales anidados
+// Función para mostrar modales de favores respetando modales anidados
+function showFavorModal(modal, modalType = 'favors') {
+  console.log(`showFavorModal: Showing modal ${modal.id} with type ${modalType}`);
+  
+  const favorsModal = document.getElementById('favors-fullscreen-modal');
+  const isInsideFavors = favorsModal && !favorsModal.classList.contains('hidden');
+  
+  if (isInsideFavors) {
+    // Si estamos dentro del modal de favores, mostrar como hijo sin cerrar el modal padre
+    console.log('Modal de favor mostrado dentro del modal de favores, sin cerrar el modal padre');
+    favorsModal.appendChild(modal);
+    modal.style.position = 'absolute';
+    modal.style.inset = '0';
+    modal.style.zIndex = '76000'; // MODALES DE FAVORES HIJOS - ALTO
+    modal.style.pointerEvents = 'auto';
+    modal.style.display = 'flex';
+    modal.style.visibility = 'visible';
+    modal.style.opacity = '1';
+    modal.classList.remove('hidden');
+    
+    // Asegurar que el contenido del modal sea interactuable
+    const modalContent = modal.querySelector('.favors-modal-container');
+    if (modalContent) {
+      modalContent.style.pointerEvents = 'auto';
+      modalContent.style.position = 'relative';
+      modalContent.style.zIndex = '77000';
+    }
+  } else {
+    // Si no estamos dentro del modal de favores, usar el sistema unificado normal
+    console.log('Modal de favor mostrado normalmente (no dentro del modal de favores)');
+    showModal(modal, modalType);
+  }
+}
+
+// Función para ocultar modales de favores respetando modales anidados
+function hideFavorModal(modal, modalType = 'favors') {
+  console.log(`hideFavorModal: Hiding modal ${modal.id} with type ${modalType}`);
+  
+  const favorsModal = document.getElementById('favors-fullscreen-modal');
+  const isInsideFavors = favorsModal && favorsModal.contains(modal);
+  
+  if (isInsideFavors) {
+    // Si está dentro del modal de favores, solo ocultar este modal
+    console.log('Modal de favor ocultado (estaba dentro del modal de favores)');
+    modal.classList.add('hidden');
+    // Devolver el modal a su posición original en el DOM
+    document.body.appendChild(modal);
+  } else {
+    // Si está standalone, usar el sistema unificado de modales
+    console.log('Modal de favor ocultado normalmente');
+    hideModal(modal, modalType);
+  }
+}
+
+// Función para mostrar modales de lugares respetando modales anidados
 function showPlaceModal(modal, modalType = 'place') {
   console.log(`showPlaceModal: Showing modal ${modal.id} with type ${modalType}`);
   
   const mapModal = document.getElementById('map-modal');
-  const isInsideMap = mapModal && mapModal.style.display === 'flex';
+  const isInsideMap = mapModal && mapModal.classList.contains('is-open');
   
   if (isInsideMap) {
-    // Si estamos dentro del modal del mapa, mostrar como hijo sin cerrar el mapa
-    console.log('Modal de lugar mostrado dentro del mapa, sin cerrar el modal padre');
+    // Si estamos dentro del modal del mapa, mostrar como hijo sin cerrar el modal padre
+    console.log('Modal de lugar mostrado dentro del modal del mapa, sin cerrar el modal padre');
     mapModal.appendChild(modal);
     modal.style.position = 'absolute';
     modal.style.inset = '0';
-    modal.style.zIndex = '85000'; // MODALES DE LUGAR - ALTO
+    modal.style.zIndex = '87000'; // MODALES DE LUGARES HIJOS - MUY ALTO
     modal.style.pointerEvents = 'auto';
     modal.style.display = 'flex';
     modal.style.visibility = 'visible';
@@ -6756,16 +6827,16 @@ function showPlaceModal(modal, modalType = 'place') {
     if (modalContent) {
       modalContent.style.pointerEvents = 'auto';
       modalContent.style.position = 'relative';
-      modalContent.style.zIndex = '86000';
+      modalContent.style.zIndex = '88000';
     }
   } else {
-    // Si no estamos dentro del mapa, usar el sistema unificado normal
-    console.log('Modal de lugar mostrado normalmente (no dentro del mapa)');
-    showModal(modal, modalType);
+    // Si no estamos dentro del modal del mapa, usar el sistema unificado normal
+    console.log('Modal de lugar mostrado normalmente (no dentro del modal del mapa)');
+    showModal(modal, 'standard');
   }
 }
 
-// Función para ocultar modales de lugar respetando modales anidados
+// Función para ocultar modales de lugares respetando modales anidados
 function hidePlaceModal(modal, modalType = 'place') {
   console.log(`hidePlaceModal: Hiding modal ${modal.id} with type ${modalType}`);
   
@@ -6774,14 +6845,15 @@ function hidePlaceModal(modal, modalType = 'place') {
   
   if (isInsideMap) {
     // Si está dentro del modal del mapa, solo ocultar este modal
-    console.log('Modal de lugar ocultado (estaba dentro del mapa)');
+    console.log('Modal de lugar ocultado (estaba dentro del modal del mapa)');
+    modal.classList.remove('is-open');
     modal.style.display = 'none';
     // Devolver el modal a su posición original en el DOM
     document.body.appendChild(modal);
   } else {
     // Si está standalone, usar el sistema unificado de modales
     console.log('Modal de lugar ocultado normalmente');
-    hideModal(modal, modalType);
+    hideModal(modal, 'standard');
   }
 }
 
@@ -6895,6 +6967,15 @@ document.addEventListener('keydown', (e) => {
 // Abrir modal del mapa
 if (openMapModalBtn) {
   openMapModalBtn.onclick = () => {
+    console.log('=== Abriendo modal del mapa ===');
+    console.log('Estado antes de abrir:');
+    const mapModalCheck = document.getElementById('map-modal');
+    const placeInfoModalCheck = document.getElementById('place-info-modal');
+    console.log('mapModal display:', mapModalCheck ? mapModalCheck.style.display : 'no modal');
+    console.log('placeInfoModal display:', placeInfoModalCheck ? placeInfoModalCheck.style.display : 'no modal');
+    console.log('placeInfoModal parent:', placeInfoModalCheck ? placeInfoModalCheck.parentElement?.id : 'no parent');
+    console.log('is placeInfoModal inside mapModal?', mapModalCheck && placeInfoModalCheck ? mapModalCheck.contains(placeInfoModalCheck) : 'cannot check');
+    
     showModal(mapModal, 'standard');
     setTimeout(() => {
       initGlobe();
