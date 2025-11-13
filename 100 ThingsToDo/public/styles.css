@@ -4738,8 +4738,130 @@ button, a, input, textarea {
 
 
 /* ============================================ */
-/* ESTILOS PARA LA APP "PRESUPUESTO COMPARTIDO" */
+/* METAS FUTURAS - REDISEÑO COMPLETO */
 /* ============================================ */
+
+.budget-hero {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg,
+    rgba(139, 92, 246, 0.1) 0%,
+    rgba(236, 72, 153, 0.1) 50%,
+    rgba(249, 115, 22, 0.1) 100%);
+  border-radius: 20px;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.budget-hero .hero-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+.budget-hero .hero-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary, #8B5CF6);
+  margin-bottom: 0.5rem;
+  font-family: 'Fredoka', sans-serif;
+}
+
+.budget-hero .hero-subtitle {
+  color: var(--foreground-light);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+/* Stats Section */
+.budget-stats {
+  display: flex;
+  gap: 1rem;
+  margin: 0 0.5rem 2rem 0.5rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg,
+    rgba(139, 92, 246, 0.1) 0%,
+    rgba(139, 92, 246, 0.1) 50%,
+    rgba(236, 72, 153, 0.1) 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.budget-stats .stat-item {
+  flex: 1;
+  text-align: center;
+}
+
+.budget-stats .stat-number {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--primary, #8B5CF6);
+  margin-bottom: 0.25rem;
+  font-family: 'Fredoka', sans-serif;
+}
+
+.budget-stats .stat-label {
+  font-size: 0.8rem;
+  color: var(--foreground-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* Goals Container */
+.goals-container {
+  flex: 1;
+  position: relative;
+}
+
+.goals-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Goals Empty State */
+.goals-empty {
+  text-align: center;
+  padding: 3rem 2rem;
+  display: none;
+}
+
+.goals-empty .empty-visual {
+  margin-bottom: 2rem;
+}
+
+.goals-empty .empty-crystal {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+.goals-empty .empty-sparkles {
+  font-size: 1.5rem;
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.goals-empty .empty-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-bottom: 0.5rem;
+  font-family: 'Fredoka', sans-serif;
+}
+
+.goals-empty .empty-text {
+  color: var(--foreground-light);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  max-width: 280px;
+  margin: 0 auto;
+}
 
 .goals-list {
   width: 100%;
@@ -4748,31 +4870,128 @@ button, a, input, textarea {
   padding: 0.5rem;
 }
 
+/* Botón sticky para crear metas */
+#go-to-create-goal-btn {
+  width: calc(100% - 1rem);
+  max-width: none;
+  padding: 1.25rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 1rem 0.5rem 0 0.5rem;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.2);
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background: var(--surface);
+  border: 2px solid var(--primary, #8B5CF6);
+}
+
+#go-to-create-goal-btn:hover {
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+  transform: translateY(-2px);
+}
+
 .goal-item {
-  background: white;
-  border-radius: 1rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  background: var(--surface);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
   cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.goal-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.15);
+  border-color: var(--primary, #8B5CF6);
+}
+
+.goal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem 1.25rem 1rem 1.25rem;
 }
 
 .goal-icon {
   font-size: 2rem;
-  background-color: #d4edda;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: linear-gradient(135deg, var(--primary, #8B5CF6), var(--secondary, #EC4899));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  flex-shrink: 0;
 }
 
 .goal-info {
   flex: 1;
+}
+
+.goal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-bottom: 0.25rem;
+  font-family: 'Fredoka', sans-serif;
+}
+
+.goal-creator {
+  font-size: 0.85rem;
+  color: var(--primary, #8B5CF6);
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  opacity: 0.8;
+}
+
+.goal-meta {
+  font-size: 0.8rem;
+  color: var(--foreground-light);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.goal-progress-text {
+  color: var(--primary, #8B5CF6);
+  font-weight: 600;
+}
+
+.goal-progress {
+  padding: 0 1.25rem 1.25rem 1.25rem;
+}
+
+.goal-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.goal-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary, #8B5CF6), var(--secondary, #EC4899));
+  border-radius: 4px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.goal-amounts {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--foreground-light);
+}
+
+.goal-current {
+  color: var(--primary, #8B5CF6);
+  font-weight: 600;
+}
+
+.goal-total {
+  color: var(--foreground);
+  font-weight: 500;
 }
 .goal-info p {
   font-size: 0.9rem;

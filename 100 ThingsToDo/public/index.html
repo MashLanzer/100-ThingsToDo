@@ -1212,19 +1212,53 @@ Hoy es un día especial porque..."
 <div id="phone-view-budget" class="phone-app-view">
     <div class="app-content-header">
         <button class="back-to-home-btn">‹</button>
-        <span>Nuestras Metas</span>
+        <span>💰 Metas Futuras</span>
     </div>
     <div class="app-content-body">
-        <div id="goals-list" class="goals-list">
-            <!-- Las metas se cargarán aquí -->
-            <div id="goals-empty-state" class="capsules-empty-state">
-                <div class="empty-icon">🎯</div>
-                <p>¡Vamos a por nuestro primer objetivo! Crea una nueva meta de ahorro.</p>
+        <!-- Hero Section -->
+        <div class="budget-hero">
+            <div class="hero-icon">💰</div>
+            <h2 class="hero-title">Metas Futuras</h2>
+            <p class="hero-subtitle">Construye tu futuro financiero juntos, un ahorro a la vez</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="budget-stats">
+            <div class="stat-item">
+                <div class="stat-number" id="total-goals">0</div>
+                <div class="stat-label">Metas</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="total-saved">0€</div>
+                <div class="stat-label">Ahorrado</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="total-target">0€</div>
+                <div class="stat-label">Objetivo</div>
             </div>
         </div>
-        <button id="go-to-create-goal-btn" class="btn btn-primary" style="margin-top: auto;">
-            + Nueva Meta de Ahorro
-        </button>
+
+        <!-- Goals Container -->
+        <div class="goals-container">
+            <div id="goals-list" class="goals-grid">
+                <!-- Las metas se cargarán aquí dinámicamente -->
+            </div>
+
+            <!-- Create Button - Sticky dentro del contenedor -->
+            <button id="go-to-create-goal-btn" class="btn btn-primary">
+                💰 Crear Nueva Meta
+            </button>
+
+            <!-- Empty State -->
+            <div id="goals-empty-state" class="goals-empty">
+                <div class="empty-visual">
+                    <div class="empty-crystal">🎯</div>
+                    <div class="empty-sparkles">✨ ✨ ✨</div>
+                </div>
+                <h3 class="empty-title">¡Tu primera meta te espera!</h3>
+                <p class="empty-text">Empieza a construir tu futuro financiero con una nueva meta de ahorro</p>
+            </div>
+        </div>
     </div>
 </div>
 

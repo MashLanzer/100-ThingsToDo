@@ -784,6 +784,12 @@ const goalsList = document.getElementById('goals-list');
 const goalsEmptyState = document.getElementById('goals-empty-state');
 const goToCreateGoalBtn = document.getElementById('go-to-create-goal-btn');
 const backToBudgetListBtn = document.querySelector('.back-to-budget-list-btn');
+
+// Elementos de estadísticas de presupuesto
+const totalGoalsEl = document.getElementById('total-goals');
+const totalSavedEl = document.getElementById('total-saved');
+const totalTargetEl = document.getElementById('total-target');
+
 const goalDetailTitle = document.getElementById('goal-detail-title');
 const createGoalContainer = document.getElementById('create-goal-container');
 const viewGoalContainer = document.getElementById('view-goal-container');
@@ -5107,6 +5113,10 @@ async function getContributions(goalId) {
 
 async function renderGoalsList() {
   const goals = await getGoals();
+
+  // Actualizar estadísticas
+  updateBudgetStats(goals);
+
   goalsList.innerHTML = '';
   if (goals.length === 0) {
     goalsList.appendChild(goalsEmptyState);
@@ -5119,15 +5129,40 @@ async function renderGoalsList() {
       item.className = 'goal-item';
       item.onclick = () => openGoalDetail(goal.id);
       item.innerHTML = `
-        <div class="goal-icon">🎯</div>
-        <div class="goal-info">
-          <p>${goal.name}</p>
-          <span class="goal-progress-text">${Math.round(percentage)}% completado</span>
+        <div class="goal-header">
+          <div class="goal-icon">🎯</div>
+          <div class="goal-info">
+            <div class="goal-title">${goal.name}</div>
+            <div class="goal-creator">Por: ${goal.creatorName || 'Tú'}</div>
+            <div class="goal-meta">
+              <span class="goal-progress-text">${Math.round(percentage)}% completado</span>
+            </div>
+          </div>
+        </div>
+        <div class="goal-progress">
+          <div class="goal-progress-bar">
+            <div class="goal-progress-fill" style="width: ${percentage}%"></div>
+          </div>
+          <div class="goal-amounts">
+            <span class="goal-current">${goal.current}€</span>
+            <span class="goal-total">${goal.total}€</span>
+          </div>
         </div>
       `;
       goalsList.appendChild(item);
     });
   }
+}
+
+// Actualizar estadísticas del presupuesto
+function updateBudgetStats(goals) {
+  const totalGoals = goals.length;
+  const totalSaved = goals.reduce((sum, goal) => sum + goal.current, 0);
+  const totalTarget = goals.reduce((sum, goal) => sum + goal.total, 0);
+
+  if (totalGoalsEl) totalGoalsEl.textContent = totalGoals;
+  if (totalSavedEl) totalSavedEl.textContent = `${totalSaved}€`;
+  if (totalTargetEl) totalTargetEl.textContent = `${totalTarget}€`;
 }
 
 function openCreateGoalView() {
