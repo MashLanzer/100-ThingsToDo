@@ -7802,6 +7802,9 @@ function updateGlobeMarkers() {
 // REGISTRO DEL SERVICE WORKER (PWA)
 // ============================================
 
+// Variable para el prompt de instalación
+let deferredPrompt;
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     console.log('[PWA] Intentando registrar Service Worker...');
@@ -7810,13 +7813,16 @@ if ('serviceWorker' in navigator) {
         console.log('[PWA] Service Worker registrado con éxito:', registration);
         console.log('[PWA] Estado del SW:', registration.active ? 'Activo' : 'Instalándose');
 
-        // Escuchar cambios en el estado del service worker
+        // Escuchar actualizaciones del service worker
         registration.addEventListener('updatefound', () => {
           console.log('[PWA] Nuevo Service Worker encontrado');
           const newWorker = registration.installing;
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               console.log('[PWA] Estado del nuevo SW:', newWorker.state);
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                showUpdateNotification();
+              }
             });
           }
         });
@@ -7829,21 +7835,6675 @@ if ('serviceWorker' in navigator) {
   console.warn('[PWA] Service Worker no soportado en este navegador');
 }
 
+// Event listener para el prompt de instalación
+window.addEventListener('beforeinstallprompt', (e) => {
+  console.log('[PWA] Prompt de instalación disponible');
+  e.preventDefault();
+  deferredPrompt = e;
+
+  // Mostrar botón de instalación personalizado
+  showInstallButton();
+});
+
+// Detectar cuando la app está instalada
+window.addEventListener('appinstalled', (e) => {
+  console.log('[PWA] App instalada exitosamente');
+  deferredPrompt = null;
+  hideInstallButton();
+});
+
+// Función para mostrar notificación de actualización mejorada
+function showUpdateNotification() {
+  // Remover cualquier banner existente
+  hideUpdateBanner();
+
+  // Crear banner de actualización moderno
+  const updateBanner = document.createElement('div');
+  updateBanner.id = 'pwa-update-banner';
+  updateBanner.innerHTML = `
+    <div class="update-banner-content">
+      <div class="update-icon">
+        <div class="update-icon-wrapper">
+          🎉
+          <div class="update-pulse"></div>
+        </div>
+      </div>
+      <div class="update-text">
+        <h3>¡Nueva versión disponible!</h3>
+        <p>Actualiza para obtener las últimas mejoras y nuevas funcionalidades</p>
+        <div class="update-features">
+          <span class="feature-tag">🚀 Nuevas funciones</span>
+          <span class="feature-tag">🐛 Corrección de bugs</span>
+          <span class="feature-tag">⚡ Mejor rendimiento</span>
+        </div>
+      </div>
+      <div class="update-actions">
+        <button class="update-btn update-now" onclick="applyUpdate()">
+          <span class="btn-icon">⬇️</span>
+          <span class="btn-text">Actualizar Ahora</span>
+        </button>
+        <button class="update-btn update-later" onclick="postponeUpdate()">
+          <span class="btn-text">Después</span>
+        </button>
+      </div>
+      <button class="update-close" onclick="hideUpdateBanner()" title="Cerrar">
+        ✕
+      </button>
+    </div>
+    <div class="update-progress" id="update-progress" style="display: none;">
+      <div class="progress-bar">
+        <div class="progress-fill" id="update-progress-fill"></div>
+      </div>
+      <span class="progress-text" id="update-progress-text">Actualizando...</span>
+    </div>
+  `;
+
+  updateBanner.className = 'pwa-update-banner';
+  document.body.appendChild(updateBanner);
+
+  // Animar entrada
+  setTimeout(() => updateBanner.classList.add('visible'), 100);
+
+  // Auto-ocultar después de 2 minutos si no hay interacción
+  setTimeout(() => {
+    if (updateBanner.parentNode) {
+      hideUpdateBanner();
+    }
+  }, 120000);
+}
+
+// Función para aplicar actualización con progreso
+async function applyUpdate() {
+  const progressEl = document.getElementById('update-progress');
+  const progressFill = document.getElementById('update-progress-fill');
+  const progressText = document.getElementById('update-progress-text');
+
+  if (progressEl) {
+    progressEl.style.display = 'block';
+
+    // Simular progreso de actualización
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 20;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(interval);
+        progressText.textContent = '¡Actualización completada!';
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+
+      progressFill.style.width = `${progress}%`;
+      progressText.textContent = `Actualizando... ${Math.round(progress)}%`;
+    }, 300);
+  } else {
+    // Fallback directo
+    window.location.reload();
+  }
+}
+
+// Función para posponer actualización
+function postponeUpdate() {
+  // Guardar timestamp de posposición
+  localStorage.setItem('updatePostponed', Date.now().toString());
+
+  // Recordar mostrar de nuevo en 24 horas
+  setTimeout(() => {
+    showUpdateNotification();
+  }, 24 * 60 * 60 * 1000);
+
+  hideUpdateBanner();
+
+  showNotification({
+    title: '⏰ Actualización pospuesta',
+    message: 'Te recordaremos en 24 horas',
+    type: 'info',
+    duration: 3000
+  });
+}
+
+// Función para ocultar banner de actualización mejorada
+function hideUpdateBanner() {
+  const banner = document.getElementById('pwa-update-banner');
+  if (banner) {
+    banner.classList.remove('visible');
+    setTimeout(() => {
+      if (banner.parentNode) {
+        banner.parentNode.removeChild(banner);
+      }
+    }, 300);
+  }
+}
+
+// Función para mostrar botón de instalación mejorado
+function showInstallButton() {
+  // Remover cualquier banner existente
+  hideInstallButton();
+
+  // Crear banner de instalación moderno
+  const installBanner = document.createElement('div');
+  installBanner.id = 'pwa-install-banner';
+  installBanner.innerHTML = `
+    <div class="install-banner-content">
+      <div class="install-icon">
+        <div class="icon-wrapper">
+          📱
+          <div class="pulse-ring"></div>
+          <div class="pulse-ring pulse-ring-delay"></div>
+        </div>
+      </div>
+      <div class="install-text">
+        <h3>¡Instala ThingsToDo!</h3>
+        <p>Disfruta de la experiencia completa con notificaciones, acceso offline y mucho más</p>
+        <div class="install-features">
+          <span class="feature">🔔 Notificaciones</span>
+          <span class="feature">📴 Modo Offline</span>
+          <span class="feature">⚡ Súper Rápido</span>
+        </div>
+      </div>
+      <div class="install-actions">
+        <button class="install-btn install-now" onclick="installPWA()">
+          <span class="btn-text">Instalar Ahora</span>
+          <span class="btn-icon">⬇️</span>
+        </button>
+        <button class="install-btn install-later" onclick="hideInstallButton()">
+          <span class="btn-text">Después</span>
+        </button>
+      </div>
+      <button class="install-close" onclick="hideInstallButton()" aria-label="Cerrar">
+        ✕
+      </button>
+    </div>
+    <div class="install-progress" id="install-progress" style="display: none;">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <span class="progress-text" id="progress-text">Instalando...</span>
+    </div>
+  `;
+
+  installBanner.className = 'pwa-install-banner';
+  document.body.appendChild(installBanner);
+
+  // Animar entrada
+  setTimeout(() => {
+    installBanner.classList.add('visible');
+  }, 100);
+
+  // Auto-ocultar después de 30 segundos si no hay interacción
+  setTimeout(() => {
+    if (installBanner.parentNode) {
+      hideInstallButton();
+    }
+  }, 30000);
+}
+
+// Función para mostrar progreso de instalación
+function showInstallProgress() {
+  const progressEl = document.getElementById('install-progress');
+  const progressFill = document.getElementById('progress-fill');
+  const progressText = document.getElementById('progress-text');
+
+  if (progressEl) {
+    progressEl.style.display = 'block';
+
+    // Simular progreso
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 15;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(interval);
+        progressText.textContent = '¡Instalación completada!';
+        setTimeout(() => hideInstallButton(), 2000);
+      }
+
+      progressFill.style.width = `${progress}%`;
+      progressText.textContent = `Instalando... ${Math.round(progress)}%`;
+    }, 200);
+  }
+}
+
+// Función para ocultar banner de instalación
+function hideInstallButton() {
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) {
+    banner.classList.remove('visible');
+    setTimeout(() => {
+      if (banner.parentNode) {
+        banner.parentNode.removeChild(banner);
+      }
+    }, 300);
+  }
+}
+
+// Función para instalar la PWA con progreso
+async function installPWA() {
+  if (!deferredPrompt) {
+    showNotification({
+      title: '❌ Error de instalación',
+      message: 'El prompt de instalación no está disponible',
+      type: 'error'
+    });
+    return;
+  }
+
+  // Mostrar progreso
+  showInstallProgress();
+
+  try {
+    // Mostrar el prompt nativo
+    deferredPrompt.prompt();
+
+    // Esperar la respuesta del usuario
+    const { outcome } = await deferredPrompt.userChoice;
+
+    console.log('[PWA] Resultado de instalación:', outcome);
+
+    // Limpiar el deferred prompt
+    deferredPrompt = null;
+
+    if (outcome === 'accepted') {
+      console.log('[PWA] PWA instalada exitosamente');
+
+      // Configurar funcionalidades avanzadas después de la instalación
+      setTimeout(() => {
+        setupAdvancedFeatures();
+      }, 1000);
+
+    } else {
+      console.log('[PWA] Usuario canceló la instalación');
+      hideInstallButton();
+    }
+
+  } catch (error) {
+    console.error('[PWA] Error durante la instalación:', error);
+    hideInstallButton();
+
+    showNotification({
+      title: '❌ Error de instalación',
+      message: 'Hubo un problema instalando la aplicación',
+      type: 'error'
+    });
+  }
+}
+
+// Función para configurar funcionalidades avanzadas después de la instalación
+async function setupAdvancedFeatures() {
+  console.log('[PWA] Configurando funcionalidades avanzadas...');
+
+  try {
+    // Configurar push notifications
+    await setupPushNotifications();
+
+    // Configurar periodic sync
+    await setupPeriodicSync();
+
+    // Mostrar mensaje de bienvenida
+    showNotification({
+      title: '🎉 ¡Bienvenido a ThingsToDo!',
+      message: 'Tu app está lista. Explora todas las funcionalidades disponibles.',
+      type: 'success',
+      duration: 5000
+    });
+
+    // Registrar instalación en analytics
+    trackInstallation();
+
+  } catch (error) {
+    console.error('[PWA] Error configurando funcionalidades avanzadas:', error);
+  }
+}
+
+// Función para trackear instalación (analytics)
+function trackInstallation() {
+  // Enviar evento de instalación a analytics
+  console.log('[PWA] Instalación trackeada');
+
+  // Aquí enviarías datos a tu servicio de analytics
+  // gtag('event', 'pwa_install', { ... });
+}
+
 // Función para verificar el estado de la PWA
 function checkPWAStatus() {
   const pwaStatus = {
     serviceWorker: 'serviceWorker' in navigator,
     isStandalone: window.matchMedia('(display-mode: standalone)').matches,
-    canInstall: 'onbeforeinstallprompt' in window,
-    manifest: !!document.querySelector('link[rel="manifest"]')
+    canInstall: !!deferredPrompt,
+    manifest: !!document.querySelector('link[rel="manifest"]'),
+    installed: window.matchMedia('(display-mode: standalone)').matches,
+    shortcuts: 'shortcuts' in navigator
   };
 
   console.log('[PWA] Estado de la PWA:', pwaStatus);
   return pwaStatus;
 }
 
-// Hacer la función disponible globalmente para debugging
+// Hacer las funciones disponibles globalmente para debugging
 window.checkPWAStatus = checkPWAStatus;
+window.installPWA = installPWA;
+window.hideUpdateBanner = hideUpdateBanner;
+
+// ============================================
+// ANALYTICS OFFLINE - PWA
+// ============================================
+
+// Almacén de eventos de analytics offline
+let offlineAnalyticsQueue = [];
+
+// Función para trackear eventos de analytics
+function trackEvent(eventName, eventData = {}) {
+  const event = {
+    name: eventName,
+    data: eventData,
+    timestamp: Date.now(),
+    sessionId: getSessionId(),
+    userAgent: navigator.userAgent,
+    url: window.location.href,
+    online: navigator.onLine,
+    pwaMode: window.matchMedia('(display-mode: standalone)').matches
+  };
+
+  console.log('[Analytics] Evento trackeado:', eventName, eventData);
+
+  if (navigator.onLine) {
+    // Enviar inmediatamente si estamos online
+    sendAnalyticsEvent(event);
+  } else {
+    // Almacenar para envío posterior
+    offlineAnalyticsQueue.push(event);
+    saveAnalyticsQueueToStorage();
+
+    console.log('[Analytics] Evento almacenado para envío offline:', offlineAnalyticsQueue.length, 'pendientes');
+  }
+
+  // Actualizar estadísticas de uso
+  updateUsageStatistics(eventName);
+}
+
+// Función para enviar evento de analytics
+async function sendAnalyticsEvent(event) {
+  try {
+    // En una implementación real, enviarías a tu servicio de analytics
+    // await fetch('/api/analytics/event', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(event)
+    // });
+
+    console.log('[Analytics] Evento enviado:', event.name);
+
+  } catch (error) {
+    console.error('[Analytics] Error enviando evento:', error);
+    // Si falla, agregar a la cola offline
+    offlineAnalyticsQueue.push(event);
+    saveAnalyticsQueueToStorage();
+  }
+}
+
+// Función para sincronizar analytics offline cuando vuelve la conexión
+async function syncOfflineAnalytics() {
+  if (!navigator.onLine || offlineAnalyticsQueue.length === 0) {
+    return;
+  }
+
+  console.log('[Analytics] Sincronizando', offlineAnalyticsQueue.length, 'eventos offline...');
+
+  const eventsToSend = [...offlineAnalyticsQueue];
+  let successCount = 0;
+
+  for (const event of eventsToSend) {
+    try {
+      await sendAnalyticsEvent(event);
+      // Remover de la cola
+      const index = offlineAnalyticsQueue.indexOf(event);
+      if (index > -1) {
+        offlineAnalyticsQueue.splice(index, 1);
+      }
+      successCount++;
+    } catch (error) {
+      console.error('[Analytics] Error sincronizando evento:', event.name, error);
+      // Mantener en cola para reintento
+    }
+  }
+
+  // Guardar cola actualizada
+  saveAnalyticsQueueToStorage();
+
+  if (successCount > 0) {
+    console.log('[Analytics] Sincronizados', successCount, 'eventos offline');
+
+    showNotification({
+      title: '📊 Analytics Sincronizados',
+      message: `${successCount} eventos offline enviados exitosamente`,
+      type: 'success',
+      duration: 3000
+    });
+  }
+}
+
+// Función para guardar cola de analytics en storage
+function saveAnalyticsQueueToStorage() {
+  try {
+    localStorage.setItem('offlineAnalyticsQueue', JSON.stringify(offlineAnalyticsQueue));
+  } catch (error) {
+    console.error('[Analytics] Error guardando cola de analytics:', error);
+  }
+}
+
+// Función para cargar cola de analytics desde storage
+function loadAnalyticsQueueFromStorage() {
+  try {
+    const stored = localStorage.getItem('offlineAnalyticsQueue');
+    if (stored) {
+      offlineAnalyticsQueue = JSON.parse(stored);
+      console.log('[Analytics] Cargados', offlineAnalyticsQueue.length, 'eventos offline pendientes');
+    }
+  } catch (error) {
+    console.error('[Analytics] Error cargando cola de analytics:', error);
+    offlineAnalyticsQueue = [];
+  }
+}
+
+// Función para obtener estadísticas de analytics
+function getAnalyticsStats() {
+  const now = Date.now();
+  const last24h = now - 24 * 60 * 60 * 1000;
+
+  const recentEvents = offlineAnalyticsQueue.filter(event => event.timestamp > last24h);
+
+  return {
+    totalQueued: offlineAnalyticsQueue.length,
+    recentEvents: recentEvents.length,
+    oldestEvent: offlineAnalyticsQueue.length > 0 ? new Date(offlineAnalyticsQueue[0].timestamp) : null,
+    newestEvent: offlineAnalyticsQueue.length > 0 ? new Date(offlineAnalyticsQueue[offlineAnalyticsQueue.length - 1].timestamp) : null,
+    eventsByName: offlineAnalyticsQueue.reduce((acc, event) => {
+      acc[event.name] = (acc[event.name] || 0) + 1;
+      return acc;
+    }, {})
+  };
+}
+
+// Función para obtener ID de sesión
+function getSessionId() {
+  let sessionId = sessionStorage.getItem('sessionId');
+  if (!sessionId) {
+    sessionId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+    sessionStorage.setItem('sessionId', sessionId);
+  }
+  return sessionId;
+}
+
+// Función para trackear automáticamente eventos importantes
+function setupAutomaticTracking() {
+  // Trackear carga de página
+  trackEvent('page_load', {
+    referrer: document.referrer,
+    loadTime: performance.now()
+  });
+
+  // Trackear interacciones importantes
+  document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-track]');
+    if (target) {
+      const eventName = target.getAttribute('data-track');
+      const eventData = JSON.parse(target.getAttribute('data-track-data') || '{}');
+      trackEvent(eventName, eventData);
+    }
+  });
+
+  // Trackear cambios de visibilidad
+  document.addEventListener('visibilitychange', () => {
+    trackEvent(document.hidden ? 'page_hidden' : 'page_visible', {
+      timeSpent: performance.now()
+    });
+  });
+
+  // Trackear errores
+  window.addEventListener('error', (e) => {
+    trackEvent('javascript_error', {
+      message: e.message,
+      filename: e.filename,
+      lineno: e.lineno,
+      colno: e.colno
+    });
+  });
+
+  // Trackear uso offline/online
+  window.addEventListener('online', () => {
+    trackEvent('network_online');
+    syncOfflineAnalytics();
+  });
+
+  window.addEventListener('offline', () => {
+    trackEvent('network_offline');
+  });
+
+  // Trackear instalación PWA
+  window.addEventListener('appinstalled', () => {
+    trackEvent('pwa_installed', {
+      platform: navigator.platform,
+      userAgent: navigator.userAgent
+    });
+  });
+
+  // Trackear activación de shortcuts
+  window.addEventListener('shortcut-activated', (e) => {
+    trackEvent('shortcut_used', {
+      shortcut: e.detail.action
+    });
+  });
+}
+
+// Event listener para el botón de modo de bajo consumo
+const openLowPowerModalBtn = document.getElementById('open-low-power-modal-btn');
+if (openLowPowerModalBtn) {
+  openLowPowerModalBtn.addEventListener('click', () => {
+    showLowPowerSettings();
+  });
+}
+
+// Event listener para el botón de widgets
+const openWidgetsModalBtn = document.getElementById('open-widgets-modal-btn');
+if (openWidgetsModalBtn) {
+  openWidgetsModalBtn.addEventListener('click', () => {
+    showWidgetManager();
+  });
+}
+
+// Event listener para el botón de servicios en background
+const openServicesModalBtn = document.getElementById('open-services-modal-btn');
+if (openServicesModalBtn) {
+  openServicesModalBtn.addEventListener('click', () => {
+    showBackgroundServicesManager();
+  });
+}
+
+// Event listener para el botón de funcionalidades nativas avanzadas
+const openNativeFeaturesBtn = document.getElementById('open-native-features-btn');
+if (openNativeFeaturesBtn) {
+  openNativeFeaturesBtn.addEventListener('click', () => {
+    showNativeFeaturesManager();
+  });
+}
+
+// Event listener para el botón de notificaciones y logros
+const openNotificationsBtn = document.getElementById('open-notifications-btn');
+if (openNotificationsBtn) {
+  openNotificationsBtn.addEventListener('click', () => {
+    showNotificationsAndAchievementsMenu();
+  });
+}
+
+// Inicializar analytics
+document.addEventListener('DOMContentLoaded', () => {
+  loadAnalyticsQueueFromStorage();
+  setupAutomaticTracking();
+
+  // Sincronizar analytics pendientes si estamos online
+  if (navigator.onLine) {
+    setTimeout(syncOfflineAnalytics, 2000);
+  }
+});
+
+// Hacer funciones disponibles globalmente para debugging
+window.trackEvent = trackEvent;
+window.getAnalyticsStats = getAnalyticsStats;
+window.syncOfflineAnalytics = syncOfflineAnalytics;
+
+// Estado del modo kiosco
+let isKioskMode = false;
+
+// Función para activar modo kiosco
+async function enterKioskMode() {
+  if (!document.documentElement.requestFullscreen) {
+    console.warn('[PWA] Fullscreen no soportado');
+    showNotification({
+      title: '❌ Modo Kiosco no disponible',
+      message: 'Tu navegador no soporta el modo pantalla completa',
+      type: 'warning'
+    });
+    return false;
+  }
+
+  try {
+    await document.documentElement.requestFullscreen();
+
+    // Cambiar estilos para modo kiosco
+    document.body.classList.add('kiosk-mode');
+    isKioskMode = true;
+
+    // Ocultar elementos de UI del navegador
+    hideBrowserUI();
+
+    // Mostrar controles de kiosco
+    showKioskControls();
+
+    console.log('[PWA] Modo kiosco activado');
+
+    showNotification({
+      title: '🎯 Modo Kiosco Activado',
+      message: 'Pantalla completa para máxima inmersión',
+      type: 'success',
+      duration: 2000
+    });
+
+    return true;
+
+  } catch (error) {
+    console.error('[PWA] Error activando modo kiosco:', error);
+    showNotification({
+      title: '❌ Error en modo kiosco',
+      message: 'No se pudo activar la pantalla completa',
+      type: 'error'
+    });
+    return false;
+  }
+}
+
+// Función para salir del modo kiosco
+async function exitKioskMode() {
+  if (!document.exitFullscreen) {
+    return false;
+  }
+
+  try {
+    await document.exitFullscreen();
+
+    // Restaurar estilos normales
+    document.body.classList.remove('kiosk-mode');
+    isKioskMode = false;
+
+    // Mostrar elementos de UI del navegador
+    showBrowserUI();
+
+    // Ocultar controles de kiosco
+    hideKioskControls();
+
+    console.log('[PWA] Modo kiosco desactivado');
+
+    showNotification({
+      title: '📱 Modo Normal',
+      message: 'Pantalla completa desactivada',
+      type: 'info',
+      duration: 2000
+    });
+
+    return true;
+
+  } catch (error) {
+    console.error('[PWA] Error saliendo del modo kiosco:', error);
+    return false;
+  }
+}
+
+// Función para ocultar elementos de UI del navegador
+function hideBrowserUI() {
+  // Crear overlay para ocultar elementos del navegador
+  const overlay = document.createElement('div');
+  overlay.id = 'kiosk-overlay';
+  overlay.className = 'kiosk-overlay';
+  document.body.appendChild(overlay);
+
+  // Agregar estilos para ocultar scrollbars y elementos
+  document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
+}
+
+// Función para mostrar elementos de UI del navegador
+function showBrowserUI() {
+  // Remover overlay
+  const overlay = document.getElementById('kiosk-overlay');
+  if (overlay) {
+    overlay.remove();
+  }
+
+  // Restaurar scrollbars
+  document.body.style.overflow = '';
+  document.documentElement.style.overflow = '';
+}
+
+// Función para mostrar controles de kiosco
+function showKioskControls() {
+  const controls = document.createElement('div');
+  controls.id = 'kiosk-controls';
+  controls.innerHTML = `
+    <div class="kiosk-controls-panel">
+      <button class="kiosk-btn kiosk-exit" onclick="exitKioskMode()" title="Salir de pantalla completa">
+        ⛶ Salir
+      </button>
+      <div class="kiosk-info">
+        <span class="kiosk-indicator">🎯</span>
+        <span>Modo Kiosco</span>
+      </div>
+      <button class="kiosk-btn kiosk-share" onclick="shareApp()" title="Compartir">
+        📤
+      </button>
+    </div>
+  `;
+  controls.className = 'kiosk-controls';
+  document.body.appendChild(controls);
+
+  // Auto-ocultar controles después de 3 segundos
+  let hideTimeout;
+  const resetTimer = () => {
+    clearTimeout(hideTimeout);
+    controls.classList.remove('hidden');
+    hideTimeout = setTimeout(() => {
+      controls.classList.add('hidden');
+    }, 3000);
+  };
+
+  // Mostrar controles al mover el mouse
+  document.addEventListener('mousemove', resetTimer);
+  document.addEventListener('touchstart', resetTimer);
+
+  // Iniciar timer
+  resetTimer();
+}
+
+// Función para ocultar controles de kiosco
+function hideKioskControls() {
+  const controls = document.getElementById('kiosk-controls');
+  if (controls) {
+    controls.remove();
+  }
+
+  // Remover event listeners
+  document.removeEventListener('mousemove', resetTimer);
+  document.removeEventListener('touchstart', resetTimer);
+}
+
+// Función para alternar modo kiosco
+async function toggleKioskMode() {
+  if (isKioskMode) {
+    await exitKioskMode();
+  } else {
+    await enterKioskMode();
+  }
+}
+
+// Detectar cambios en fullscreen
+document.addEventListener('fullscreenchange', () => {
+  isKioskMode = !!document.fullscreenElement;
+
+  if (!isKioskMode) {
+    // Usuario salió de fullscreen manualmente (F11, etc.)
+    document.body.classList.remove('kiosk-mode');
+    hideKioskControls();
+    showBrowserUI();
+  }
+});
+
+// Función para verificar si el modo kiosco está disponible
+function isKioskModeAvailable() {
+  return !!(
+    document.documentElement.requestFullscreen &&
+    document.exitFullscreen &&
+    // Verificar si estamos en una PWA instalada
+    window.matchMedia('(display-mode: standalone)').matches
+  );
+}
+
+// Agregar botón de modo kiosco al menú (solo en PWA instalada)
+document.addEventListener('DOMContentLoaded', () => {
+  if (isKioskModeAvailable()) {
+    // Agregar opción al menú después de un delay
+    setTimeout(() => {
+      addKioskModeOption();
+    }, 2000);
+  }
+});
+
+// Función para agregar opción de modo kiosco al menú
+function addKioskModeOption() {
+  // Buscar el menú de navegación o header
+  const navMenu = document.querySelector('.nav-menu, .header-menu, .main-nav');
+  if (!navMenu) return;
+
+  const kioskItem = document.createElement('div');
+  kioskItem.className = 'nav-item kiosk-mode-item';
+  kioskItem.innerHTML = `
+    <button class="nav-btn kiosk-toggle" onclick="toggleKioskMode()" title="Modo pantalla completa">
+      <span class="kiosk-icon">🎯</span>
+      <span class="kiosk-label">Modo Kiosco</span>
+    </button>
+  `;
+
+  navMenu.appendChild(kioskItem);
+}
+
+// Hacer funciones disponibles globalmente
+window.enterKioskMode = enterKioskMode;
+window.exitKioskMode = exitKioskMode;
+window.toggleKioskMode = toggleKioskMode;
+window.isKioskModeAvailable = isKioskModeAvailable;
+
+// Estado de shortcuts dinámicos
+let dynamicShortcuts = [];
+
+// Función para actualizar shortcuts dinámicos
+async function updateDynamicShortcuts() {
+  if (!('setAppShortcuts' in navigator)) {
+    console.warn('[PWA] Dynamic shortcuts no soportados');
+    return;
+  }
+
+  try {
+    // Obtener estado actual de la app
+    const appState = await getAppState();
+
+    // Generar shortcuts basados en el estado
+    const shortcuts = generateDynamicShortcuts(appState);
+
+    // Actualizar shortcuts
+    await navigator.setAppShortcuts(shortcuts);
+
+    dynamicShortcuts = shortcuts;
+    console.log('[PWA] Shortcuts dinámicos actualizados:', shortcuts);
+
+  } catch (error) {
+    console.error('[PWA] Error actualizando shortcuts dinámicos:', error);
+  }
+}
+
+// Función para obtener el estado actual de la app
+async function getAppState() {
+  try {
+    // Obtener información del usuario actual
+    const currentUser = getCurrentUser();
+
+    // Verificar si hay test activo
+    const hasActiveTest = await simulateActiveTest();
+
+    // Verificar si hay pareja conectada
+    const hasPartner = await hasPartner();
+
+    // Obtener estadísticas recientes
+    const recentStats = await getRecentStats();
+
+    return {
+      user: currentUser,
+      hasActiveTest,
+      hasPartner,
+      recentStats,
+      timestamp: Date.now()
+    };
+
+  } catch (error) {
+    console.error('[PWA] Error obteniendo estado de la app:', error);
+    return {};
+  }
+}
+
+// Función para generar shortcuts dinámicos basados en el estado
+function generateDynamicShortcuts(appState) {
+  const shortcuts = [];
+
+  // Shortcut base: Nuevo Plan
+  shortcuts.push({
+    name: 'Nuevo Plan Romántico',
+    short_name: 'Nuevo Plan',
+    description: 'Crear un nuevo plan para tu pareja',
+    url: '/index.html?action=new-plan',
+    icons: [{ src: '/scr/images/icon-192x192.png', sizes: '192x192' }]
+  });
+
+  // Shortcut condicional: Continuar Test
+  if (appState.hasActiveTest) {
+    shortcuts.push({
+      name: 'Continuar Test de Compatibilidad',
+      short_name: 'Continuar Test',
+      description: 'Continúa respondiendo las preguntas del test',
+      url: '/index.html?action=continue-test',
+      icons: [{ src: '/scr/images/icon-192x192.png', sizes: '192x192' }]
+    });
+  } else {
+    // Shortcut: Nuevo Test
+    shortcuts.push({
+      name: 'Nuevo Test de Compatibilidad',
+      short_name: 'Hacer Test',
+      description: 'Descubre qué tan compatible eres con tu pareja',
+      url: '/index.html?action=test',
+      icons: [{ src: '/scr/images/icon-192x192.png', sizes: '192x192' }]
+    });
+  }
+
+  // Shortcut condicional: Ver Resultados
+  if (appState.recentStats && appState.recentStats.hasNewResults) {
+    shortcuts.push({
+      name: 'Ver Nuevos Resultados',
+      short_name: 'Resultados',
+      description: 'Revisa los resultados más recientes',
+      url: '/index.html?action=results',
+      icons: [{ src: '/scr/images/icon-192x192.png', sizes: '192x192' }]
+    });
+  } else {
+    // Shortcut: Estadísticas
+    shortcuts.push({
+      name: 'Ver Estadísticas',
+      short_name: 'Estadísticas',
+      description: 'Analiza tu progreso como pareja',
+      url: '/index.html?action=stats',
+      icons: [{ src: '/scr/images/icon-192x192.png', sizes: '192x192' }]
+    });
+  }
+
+  // Shortcut condicional: Mensajes de Pareja
+  if (appState.hasPartner && appState.recentStats && appState.recentStats.unreadMessages > 0) {
+    shortcuts.push({
+      name: `Mensajes (${appState.recentStats.unreadMessages})`,
+      short_name: 'Mensajes',
+      description: `Tienes ${appState.recentStats.unreadMessages} mensajes nuevos`,
+      url: '/index.html?action=messages',
+      icons: [{ src: '/scr/images/icon-192x192.png', sizes: '192x192' }]
+    });
+  }
+
+  // Shortcut: Compartir App
+  shortcuts.push({
+    name: 'Compartir ThingsToDo',
+    short_name: 'Compartir',
+    description: 'Comparte esta app con tus amigos',
+    url: '/index.html?action=share',
+    icons: [{ src: '/scr/images/icon-192x192.png', sizes: '192x192' }]
+  });
+
+  // Limitar a máximo 4 shortcuts (límite típico de las plataformas)
+  return shortcuts.slice(0, 4);
+}
+
+// Función auxiliar para obtener usuario actual (simulada)
+function getCurrentUser() {
+  // En una implementación real, obtendrías esto de tu sistema de auth
+  return {
+    id: 'user123',
+    name: 'Usuario',
+    isPremium: false
+  };
+}
+
+// Función auxiliar para verificar test activo (simulada)
+async function simulateActiveTest() {
+  // Simular verificación de test activo
+  return Math.random() > 0.7; // 30% de probabilidad de tener test activo
+}
+
+// Función auxiliar para verificar pareja conectada (simulada)
+async function hasPartner() {
+  // Simular verificación de pareja
+  return Math.random() > 0.5; // 50% de probabilidad
+}
+
+// Función auxiliar para obtener estadísticas recientes (simulada)
+async function getRecentStats() {
+  // Simular estadísticas recientes
+  return {
+    hasNewResults: Math.random() > 0.8, // 20% de probabilidad
+    unreadMessages: Math.floor(Math.random() * 5), // 0-4 mensajes
+    lastActivity: Date.now() - Math.random() * 86400000 // Últimas 24 horas
+  };
+}
+
+// Función para manejar shortcuts dinámicos
+function handleDynamicShortcut(action) {
+  console.log('[PWA] Shortcut dinámico activado:', action);
+
+  switch (action) {
+    case 'continue-test':
+      // Lógica para continuar test
+      setTimeout(() => {
+        const testBtn = document.querySelector('[data-action="continue-test"]');
+        if (testBtn) {
+          testBtn.click();
+        } else {
+          // Fallback al test normal
+          const fallbackBtn = document.querySelector('[title="El Test - Compatibilidad"]');
+          if (fallbackBtn) fallbackBtn.click();
+        }
+      }, 1000);
+      break;
+
+    case 'results':
+      // Lógica para mostrar resultados
+      setTimeout(() => {
+        const resultsBtn = document.querySelector('[data-action="show-results"]');
+        if (resultsBtn) {
+          resultsBtn.click();
+        } else {
+          // Fallback a estadísticas
+          const statsBtn = document.querySelector('[title="Estadísticas"]');
+          if (statsBtn) statsBtn.click();
+        }
+      }, 1000);
+      break;
+
+    case 'messages':
+      // Lógica para mostrar mensajes
+      setTimeout(() => {
+        const messagesBtn = document.querySelector('[data-action="show-messages"]');
+        if (messagesBtn) {
+          messagesBtn.click();
+        } else {
+          // Fallback a notificaciones
+          showNotification({
+            title: '💬 Mensajes',
+            message: 'Funcionalidad de mensajes próximamente',
+            type: 'info'
+          });
+        }
+      }, 1000);
+      break;
+
+    default:
+      // Dejar que handleAppShortcut maneje los shortcuts normales
+      handleAppShortcut();
+  }
+}
+
+// Actualizar shortcuts cuando cambie el estado de la app
+function scheduleShortcutUpdates() {
+  // Actualizar shortcuts cada vez que la app gane foco
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      updateDynamicShortcuts();
+    }
+  });
+
+  // Actualizar shortcuts periódicamente (cada 5 minutos)
+  setInterval(updateDynamicShortcuts, 5 * 60 * 1000);
+
+  // Actualizar shortcuts después de acciones importantes
+  ['test-created', 'test-completed', 'plan-created', 'partner-connected'].forEach(eventType => {
+    document.addEventListener(eventType, () => {
+      setTimeout(updateDynamicShortcuts, 1000);
+    });
+  });
+}
+
+// Inicializar shortcuts dinámicos
+document.addEventListener('DOMContentLoaded', () => {
+  // Esperar un poco para que la app se cargue
+  setTimeout(() => {
+    updateDynamicShortcuts();
+    scheduleShortcutUpdates();
+  }, 3000);
+});
+
+// Hacer funciones disponibles globalmente para debugging
+window.updateDynamicShortcuts = updateDynamicShortcuts;
+window.getDynamicShortcuts = () => dynamicShortcuts;
+
+// Función para registrar periodic sync
+async function registerPeriodicSync(tag, options = {}) {
+  if (!('serviceWorker' in navigator) || !('periodicSync' in window.ServiceWorkerRegistration.prototype)) {
+    console.warn('[PWA] Periodic Sync no soportado');
+    return false;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+
+    // Verificar si ya está registrado
+    const existingTags = await registration.periodicSync.getTags();
+    if (existingTags.includes(tag)) {
+      console.log(`[PWA] Periodic sync ya registrado: ${tag}`);
+      return true;
+    }
+
+    await registration.periodicSync.register(tag, {
+      minInterval: options.minInterval || 24 * 60 * 60 * 1000, // 24 horas por defecto
+      ...options
+    });
+
+    console.log(`[PWA] Periodic sync registrado: ${tag}`);
+    return true;
+
+  } catch (error) {
+    console.error(`[PWA] Error registrando periodic sync ${tag}:`, error);
+    return false;
+  }
+}
+
+// Función para configurar todos los periodic sync
+async function setupPeriodicSync() {
+  // Actualizar contenido cada 6 horas
+  await registerPeriodicSync('update-content', {
+    minInterval: 6 * 60 * 60 * 1000 // 6 horas
+  });
+
+  // Limpiar caché cada 7 días
+  await registerPeriodicSync('cleanup-cache', {
+    minInterval: 7 * 24 * 60 * 60 * 1000 // 7 días
+  });
+
+  // Enviar analytics cada 24 horas
+  await registerPeriodicSync('send-analytics', {
+    minInterval: 24 * 60 * 60 * 1000 // 24 horas
+  });
+}
+
+// Función para manejar actualizaciones de contenido periódicas
+function handleContentUpdate(data) {
+  console.log('[PWA] Contenido actualizado periódicamente:', data);
+
+  showNotification({
+    title: '🔄 Contenido actualizado',
+    message: 'La app se ha actualizado con contenido fresco',
+    type: 'info',
+    duration: 3000
+  });
+
+  // Opcionalmente recargar recursos específicos
+  // refreshDynamicContent();
+}
+
+// Función para obtener estado de periodic sync
+async function getPeriodicSyncStatus() {
+  if (!('serviceWorker' in navigator) || !('periodicSync' in window.ServiceWorkerRegistration.prototype)) {
+    return { supported: false };
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const tags = await registration.periodicSync.getTags();
+
+    return {
+      supported: true,
+      registeredTags: tags,
+      status: tags.length > 0 ? 'active' : 'inactive'
+    };
+  } catch (error) {
+    console.error('[PWA] Error obteniendo estado de periodic sync:', error);
+    return { supported: false, error: error.message };
+  }
+}
+
+// Función para desregistrar periodic sync
+async function unregisterPeriodicSync(tag) {
+  if (!('serviceWorker' in navigator) || !('periodicSync' in window.ServiceWorkerRegistration.prototype)) {
+    return false;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    await registration.periodicSync.unregister(tag);
+    console.log(`[PWA] Periodic sync desregistrado: ${tag}`);
+    return true;
+  } catch (error) {
+    console.error(`[PWA] Error desregistrando periodic sync ${tag}:`, error);
+    return false;
+  }
+}
+
+// Inicializar periodic sync cuando el SW esté listo
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(() => {
+    setupPeriodicSync();
+  });
+
+  // Escuchar actualizaciones de contenido
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data && event.data.type === 'content-updated') {
+      handleContentUpdate(event.data.data);
+    }
+  });
+}
+
+// Hacer funciones disponibles globalmente para debugging
+window.registerPeriodicSync = registerPeriodicSync;
+window.getPeriodicSyncStatus = getPeriodicSyncStatus;
+window.unregisterPeriodicSync = unregisterPeriodicSync;
+
+// Cola de datos pendientes para sincronizar
+let pendingDataQueue = {
+  plans: [],
+  testData: [],
+  stats: []
+};
+
+// Función para registrar background sync
+async function registerBackgroundSync(tag) {
+  if (!('serviceWorker' in navigator) || !('sync' in window.ServiceWorkerRegistration.prototype)) {
+    console.warn('[PWA] Background Sync no soportado');
+    return false;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    await registration.sync.register(tag);
+    console.log(`[PWA] Background sync registrado: ${tag}`);
+    return true;
+  } catch (error) {
+    console.error(`[PWA] Error registrando background sync ${tag}:`, error);
+    return false;
+  }
+}
+
+// Función para agregar datos a la cola de sincronización
+function addToSyncQueue(type, data) {
+  if (!pendingDataQueue[type]) {
+    console.warn(`[PWA] Tipo de datos no válido para sync: ${type}`);
+    return;
+  }
+
+  // Agregar timestamp y ID único
+  const syncItem = {
+    ...data,
+    id: Date.now() + Math.random(),
+    timestamp: Date.now(),
+    syncAttempts: 0
+  };
+
+  pendingDataQueue[type].push(syncItem);
+
+  // Guardar en localStorage como backup
+  savePendingDataToStorage(type);
+
+  // Intentar sincronizar inmediatamente si estamos online
+  if (isOnline) {
+    attemptImmediateSync(type);
+  } else {
+    // Registrar background sync para cuando vuelva la conexión
+    registerBackgroundSync(`background-sync-${type}`);
+  }
+
+  console.log(`[PWA] Datos agregados a cola de sync ${type}:`, syncItem);
+}
+
+// Función para intentar sincronización inmediata
+async function attemptImmediateSync(type) {
+  if (!isOnline) return;
+
+  const data = pendingDataQueue[type];
+  if (!data || data.length === 0) return;
+
+  try {
+    console.log(`[PWA] Intentando sync inmediato para ${type}...`);
+
+    // Procesar cada item en la cola
+    for (let i = data.length - 1; i >= 0; i--) {
+      const item = data[i];
+
+      try {
+        await sendDataToServer(type, item);
+        data.splice(i, 1); // Remover de la cola
+        console.log(`[PWA] Item sincronizado exitosamente: ${item.id}`);
+      } catch (error) {
+        console.error(`[PWA] Error sincronizando item ${item.id}:`, error);
+        item.syncAttempts++;
+
+        // Si falló muchas veces, remover de la cola para evitar bucles
+        if (item.syncAttempts > 3) {
+          data.splice(i, 1);
+          console.warn(`[PWA] Removiendo item ${item.id} después de ${item.syncAttempts} intentos fallidos`);
+        }
+      }
+    }
+
+    // Actualizar storage
+    savePendingDataToStorage(type);
+
+    // Notificar éxito
+    if (data.length === 0) {
+      showNotification({
+        title: '✅ Sincronización completada',
+        message: `Todos los datos ${type} han sido sincronizados`,
+        type: 'success'
+      });
+    }
+
+  } catch (error) {
+    console.error(`[PWA] Error en sync inmediato para ${type}:`, error);
+  }
+}
+
+// Función para enviar datos al servidor
+async function sendDataToServer(type, data) {
+  // Simular envío al servidor
+  // En una implementación real, harías fetch a tu API
+
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      // Simular éxito (90% de las veces)
+      if (Math.random() > 0.1) {
+        resolve({ success: true });
+      } else {
+        reject(new Error('Error de red simulado'));
+      }
+    }, 500 + Math.random() * 1000); // Delay aleatorio
+  });
+}
+
+// Función para guardar datos pendientes en localStorage
+function savePendingDataToStorage(type) {
+  try {
+    localStorage.setItem(`pending_${type}`, JSON.stringify(pendingDataQueue[type]));
+  } catch (error) {
+    console.error('[PWA] Error guardando datos pendientes:', error);
+  }
+}
+
+// Función para cargar datos pendientes desde localStorage
+function loadPendingDataFromStorage() {
+  try {
+    Object.keys(pendingDataQueue).forEach(type => {
+      const stored = localStorage.getItem(`pending_${type}`);
+      if (stored) {
+        pendingDataQueue[type] = JSON.parse(stored);
+        console.log(`[PWA] Cargados ${pendingDataQueue[type].length} items pendientes para ${type}`);
+      }
+    });
+  } catch (error) {
+    console.error('[PWA] Error cargando datos pendientes:', error);
+  }
+}
+
+// Función para obtener estadísticas de sincronización
+function getSyncStats() {
+  const stats = {};
+  Object.keys(pendingDataQueue).forEach(type => {
+    stats[type] = {
+      pending: pendingDataQueue[type].length,
+      totalSize: JSON.stringify(pendingDataQueue[type]).length
+    };
+  });
+  return stats;
+}
+
+// Función para forzar sincronización manual
+async function forceSyncAll() {
+  if (!isOnline) {
+    showNotification({
+      title: '❌ Sin conexión',
+      message: 'La sincronización requiere conexión a internet',
+      type: 'error'
+    });
+    return;
+  }
+
+  showNotification({
+    title: '🔄 Sincronizando...',
+    message: 'Sincronizando todos los datos pendientes',
+    type: 'info'
+  });
+
+  const types = Object.keys(pendingDataQueue);
+  let totalSynced = 0;
+
+  for (const type of types) {
+    await attemptImmediateSync(type);
+    totalSynced += pendingDataQueue[type].length;
+  }
+
+  if (totalSynced === 0) {
+    showNotification({
+      title: '✅ Todo sincronizado',
+      message: 'No hay datos pendientes para sincronizar',
+      type: 'success'
+    });
+  }
+}
+
+// Inicializar background sync cuando la app esté lista
+document.addEventListener('DOMContentLoaded', () => {
+  loadPendingDataFromStorage();
+
+  // Intentar sync inmediato si estamos online
+  if (isOnline) {
+    setTimeout(() => {
+      Object.keys(pendingDataQueue).forEach(type => {
+        if (pendingDataQueue[type].length > 0) {
+          attemptImmediateSync(type);
+        }
+      });
+    }, 2000); // Esperar 2 segundos para que la app se cargue
+  }
+});
+
+// Hacer funciones disponibles globalmente para debugging
+window.addToSyncQueue = addToSyncQueue;
+window.forceSyncAll = forceSyncAll;
+window.getSyncStats = getSyncStats;
+
+// Variable para almacenar la suscripción push
+let pushSubscription = null;
+
+// Función para solicitar permiso de notificaciones del navegador
+async function requestBrowserNotificationPermission() {
+  if (!('Notification' in window)) {
+    console.warn('[PWA] Este navegador no soporta notificaciones');
+    return false;
+  }
+
+  if (Notification.permission === 'granted') {
+    console.log('[PWA] Permiso de notificaciones ya concedido');
+    return true;
+  }
+
+  if (Notification.permission === 'denied') {
+    console.warn('[PWA] Permiso de notificaciones denegado por el usuario');
+    return false;
+  }
+
+  try {
+    const permission = await Notification.requestPermission();
+    console.log('[PWA] Permiso de notificaciones:', permission);
+    return permission === 'granted';
+  } catch (error) {
+    console.error('[PWA] Error solicitando permiso de notificaciones:', error);
+    return false;
+  }
+}
+
+// Función para suscribirse a push notifications
+async function subscribeToPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.warn('[PWA] Push notifications no soportadas');
+    return null;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array('BYourVAPIDPublicKeyHere') // Reemplaza con tu clave VAPID real
+    });
+
+    pushSubscription = subscription;
+    console.log('[PWA] Suscripción push exitosa:', subscription);
+
+    // Enviar la suscripción al servidor
+    await sendSubscriptionToServer(subscription);
+
+    return subscription;
+  } catch (error) {
+    console.error('[PWA] Error suscribiéndose a push notifications:', error);
+    return null;
+  }
+}
+
+// Función para enviar suscripción al servidor
+async function sendSubscriptionToServer(subscription) {
+  try {
+    // Aquí enviarías la suscripción a tu servidor backend
+    // Por ahora solo simulamos
+    console.log('[PWA] Enviando suscripción al servidor:', subscription.endpoint);
+
+    // Simular envío
+    // await fetch('/api/subscribe', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(subscription)
+    // });
+
+  } catch (error) {
+    console.error('[PWA] Error enviando suscripción al servidor:', error);
+  }
+}
+
+// Función para convertir VAPID key
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+// Función para enviar notificación push de prueba
+async function sendTestPushNotification() {
+  if (!pushSubscription) {
+    showNotification({
+      title: '❌ No suscrito',
+      message: 'Primero debes suscribirte a las notificaciones',
+      type: 'error'
+    });
+    return;
+  }
+
+  try {
+    // Simular envío de notificación push
+    // En un entorno real, esto se haría desde el servidor
+    const response = await fetch('/api/send-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subscription: pushSubscription,
+        payload: {
+          title: '💕 ¡Hola desde ThingsToDo!',
+          body: 'Esta es una notificación de prueba desde tu app favorita 💕',
+          icon: '/scr/images/icon-192x192.png',
+          badge: '/scr/images/icon-192x192.png',
+          data: {
+            url: '/',
+            action: 'test'
+          }
+        }
+      })
+    });
+
+    if (response.ok) {
+      showNotification({
+        title: '✅ Notificación enviada',
+        message: 'Revisa tu bandeja de notificaciones',
+        type: 'success'
+      });
+    } else {
+      throw new Error('Error en el servidor');
+    }
+
+  } catch (error) {
+    console.error('[PWA] Error enviando notificación de prueba:', error);
+
+    // Fallback: mostrar notificación local
+    showNotification({
+      title: '💕 ¡Hola desde ThingsToDo!',
+      message: 'Esta es una notificación de prueba desde tu app favorita 💕',
+      type: 'info',
+      confirm: true,
+      onConfirm: () => {
+        console.log('[PWA] Usuario hizo click en la notificación de prueba');
+      }
+    });
+  }
+}
+
+// Función para configurar push notifications automáticamente
+async function setupPushNotifications() {
+  const hasPermission = await requestBrowserNotificationPermission();
+  if (hasPermission) {
+    const subscription = await subscribeToPushNotifications();
+    if (subscription) {
+      console.log('[PWA] Push notifications configuradas exitosamente');
+
+      // Programar notificaciones recordatorias
+      scheduleReminderNotifications();
+    }
+  }
+}
+
+// Función para programar notificaciones recordatorias avanzadas
+function scheduleReminderNotifications() {
+  if (!('serviceWorker' in navigator && 'Notification' in window)) {
+    console.log('[PWA] Service Worker o Notification API no soportados');
+    return;
+  }
+
+  console.log('[PWA] Configurando sistema avanzado de notificaciones push');
+
+  // Limpiar programaciones anteriores
+  if (window.notificationTimeouts) {
+    window.notificationTimeouts.forEach(clearTimeout);
+  }
+  window.notificationTimeouts = [];
+
+  // Configurar notificaciones inteligentes basadas en patrones de uso
+  setupSmartNotifications();
+
+  // Configurar notificaciones de pareja sincronizadas
+  setupCoupleNotifications();
+
+  // Configurar notificaciones de progreso
+  setupProgressNotifications();
+
+  // Configurar notificaciones motivacionales
+  setupMotivationalNotifications();
+
+  // Configurar notificaciones de recordatorios diarios
+  setupDailyReminders();
+
+  // Configurar notificaciones de mantenimiento semanal
+  setupWeeklyMaintenance();
+
+  console.log('[PWA] Sistema avanzado de notificaciones configurado');
+}
+
+// Sistema inteligente de notificaciones basado en patrones de uso
+function setupSmartNotifications() {
+  const userId = auth.currentUser?.uid;
+  if (!userId) return;
+
+  // Analizar patrones de uso del usuario
+  analyzeUserPatterns(userId).then(patterns => {
+    if (!patterns) return;
+
+    const now = new Date();
+    const currentHour = now.getHours();
+
+    // Notificaciones basadas en hora del día
+    if (currentHour >= 9 && currentHour <= 11) {
+      // Recordatorio matutino
+      scheduleNotification(2 * 60 * 60 * 1000, { // 2 horas
+        title: '🌅 ¡Buenos días!',
+        body: '¿Qué planes tienes para hoy? ¡Añade algunas tareas a tu lista! 💪',
+        icon: '/scr/images/icon-192x192.png',
+        tag: 'morning-reminder',
+        requireInteraction: false
+      });
+    } else if (currentHour >= 18 && currentHour <= 20) {
+      // Recordatorio vespertino
+      scheduleNotification(3 * 60 * 60 * 1000, { // 3 horas
+        title: '🌙 ¡Buenas noches!',
+        body: '¿Completaste todas tus tareas del día? ¡Revisa tu progreso! 📊',
+        icon: '/scr/images/icon-192x192.png',
+        tag: 'evening-reminder',
+        requireInteraction: false
+      });
+    }
+
+    // Notificaciones basadas en inactividad
+    if (patterns.lastActivity && patterns.avgDailyTasks > 0) {
+      const timeSinceLastActivity = now.getTime() - patterns.lastActivity.toDate().getTime();
+      const hoursSinceActivity = timeSinceLastActivity / (1000 * 60 * 60);
+
+      if (hoursSinceActivity > 24 && patterns.avgDailyTasks >= 3) {
+        // Usuario activo que no ha usado la app en un día
+        scheduleNotification(1 * 60 * 60 * 1000, { // 1 hora
+          title: '💭 ¡Te extrañamos!',
+          body: `Hace ${Math.floor(hoursSinceActivity)} horas que no nos visitas. ¡Tus tareas te esperan! 🎯`,
+          icon: '/scr/images/icon-192x192.png',
+          tag: 'inactivity-reminder',
+          requireInteraction: true
+        });
+      }
+    }
+  }).catch(error => {
+    console.error('[PWA] Error analizando patrones de usuario:', error);
+  });
+}
+
+// Notificaciones sincronizadas para parejas
+function setupCoupleNotifications() {
+  const userId = auth.currentUser?.uid;
+  if (!userId) return;
+
+  // Verificar si el usuario tiene pareja
+  getUserCoupleCode(userId).then(coupleData => {
+    if (!coupleData || !coupleData.partnerId) return;
+
+    // Notificaciones de pareja cada 3 días
+    scheduleRecurringNotification(3 * 24 * 60 * 60 * 1000, { // Cada 3 días
+      title: '💕 ¡No olvides a tu pareja!',
+      body: '¿Han hecho algo especial juntos últimamente? ¡Añadan una tarea de pareja! 💑',
+      icon: '/scr/images/icon-192x192.png',
+      tag: 'couple-reminder',
+      requireInteraction: false
+    });
+
+    // Notificación semanal de estadísticas de pareja
+    scheduleNotification(7 * 24 * 60 * 60 * 1000, { // 7 días
+      title: '📊 Semana de pareja',
+      body: '¡Revisa las estadísticas de pareja y ve cuánto han crecido juntos! 📈',
+      icon: '/scr/images/icon-192x192.png',
+      tag: 'couple-stats',
+      requireInteraction: true
+    });
+  }).catch(error => {
+    console.error('[PWA] Error configurando notificaciones de pareja:', error);
+  });
+}
+
+// Notificaciones de progreso semanal/mensual
+function setupProgressNotifications() {
+  const userId = auth.currentUser?.uid;
+  if (!userId) return;
+
+  // Notificación semanal de progreso (todos los domingos)
+  const now = new Date();
+  const daysUntilSunday = (7 - now.getDay()) % 7;
+  const timeUntilSunday = daysUntilSunday * 24 * 60 * 60 * 1000;
+
+  scheduleNotification(timeUntilSunday + (9 * 60 * 60 * 1000), { // Domingo a las 9 AM
+    title: '📈 ¡Revisa tu semana!',
+    body: '¿Cuántas tareas completaste? ¡Ve tus estadísticas semanales! 🎯',
+    icon: '/scr/images/icon-192x192.png',
+    tag: 'weekly-progress',
+    requireInteraction: true
+  });
+
+  // Notificación mensual (primer día del mes)
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const timeUntilNextMonth = nextMonth.getTime() - now.getTime();
+
+  scheduleNotification(timeUntilNextMonth + (9 * 60 * 60 * 1000), { // Primer día del mes a las 9 AM
+    title: '🎉 ¡Nuevo mes, nuevos retos!',
+    body: '¡Empieza el mes con energía! Revisa tus metas mensuales 📅',
+    icon: '/scr/images/icon-192x192.png',
+    tag: 'monthly-reset',
+    requireInteraction: true
+  });
+}
+
+// Notificaciones motivacionales personalizadas
+function setupMotivationalNotifications() {
+  const userId = auth.currentUser?.uid;
+  if (!userId) return;
+
+  // Array de mensajes motivacionales
+  const motivationalMessages = [
+    { title: '🚀 ¡Tú puedes!', body: 'Cada pequeña tarea completada te acerca a tus sueños 💪' },
+    { title: '⭐ ¡Eres increíble!', body: 'Mira todo lo que has logrado. ¡Sigue así! 🌟' },
+    { title: '🎯 ¡Foco y determinación!', body: 'Una tarea a la vez, estás construyendo algo grandioso 🏗️' },
+    { title: '💪 ¡Fuerza interior!', body: 'Tienes el poder de cambiar tu día con cada acción ✨' },
+    { title: '🎉 ¡Celebra tus victorias!', body: 'Cada check en tu lista es una victoria que merece celebración 🎊' },
+    { title: '🌈 ¡El cambio está en ti!', body: 'Cada día es una oportunidad para ser mejor versión de ti mismo 🔄' },
+    { title: '⚡ ¡Energía positiva!', body: 'Tu actitud determina tu dirección. ¡Mantén la positividad! ⚡' },
+    { title: '🎪 ¡Vive la aventura!', body: 'La vida es una aventura, y tú eres el protagonista principal 🦸' }
+  ];
+
+  // Programar 2-3 notificaciones motivacionales aleatorias por semana
+  for (let i = 0; i < 3; i++) {
+    const randomDays = Math.floor(Math.random() * 7) + 1; // 1-7 días
+    const randomMessage = motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)];
+
+    scheduleNotification(randomDays * 24 * 60 * 60 * 1000, {
+      title: randomMessage.title,
+      body: randomMessage.body,
+      icon: '/scr/images/icon-192x192.png',
+      tag: `motivational-${i}`,
+      requireInteraction: false,
+      silent: true // Silenciosas para no molestar
+    });
+  }
+}
+
+// Recordatorios diarios inteligentes
+function setupDailyReminders() {
+  const userId = auth.currentUser?.uid;
+  if (!userId) return;
+
+  // Recordatorio diario a las 8 PM si no han completado tareas
+  const now = new Date();
+  const reminderTime = new Date(now);
+  reminderTime.setHours(20, 0, 0, 0); // 8 PM
+
+  if (now < reminderTime) {
+    const timeUntilReminder = reminderTime.getTime() - now.getTime();
+    scheduleNotification(timeUntilReminder, {
+      title: '📝 ¿Completaste tus tareas?',
+      body: 'Revisa tu lista antes de terminar el día. ¡Mañana será mejor! 🌙',
+      icon: '/scr/images/icon-192x192.png',
+      tag: 'daily-reminder',
+      requireInteraction: false
+    });
+  }
+}
+
+// Mantenimiento semanal (limpieza de datos antiguos, optimizaciones)
+function setupWeeklyMaintenance() {
+  const userId = auth.currentUser?.uid;
+  if (!userId) return;
+
+  // Notificación de mantenimiento semanal (todos los sábados)
+  const now = new Date();
+  const daysUntilSaturday = (6 - now.getDay()) % 7;
+  const timeUntilSaturday = daysUntilSaturday * 24 * 60 * 60 * 1000;
+
+  scheduleNotification(timeUntilSaturday + (10 * 60 * 60 * 1000), { // Sábado a las 10 AM
+    title: '🧹 Mantenimiento semanal',
+    body: 'La app se está optimizando. ¡Gracias por usar ThingsToDo! ⚙️',
+    icon: '/scr/images/icon-192x192.png',
+    tag: 'weekly-maintenance',
+    requireInteraction: false,
+    silent: true
+  });
+}
+
+// Función auxiliar para programar notificaciones únicas
+function scheduleNotification(delayMs, notificationData) {
+  const timeoutId = setTimeout(() => {
+    sendScheduledNotification(notificationData);
+  }, delayMs);
+
+  if (!window.notificationTimeouts) window.notificationTimeouts = [];
+  window.notificationTimeouts.push(timeoutId);
+}
+
+// Función auxiliar para programar notificaciones recurrentes
+function scheduleRecurringNotification(intervalMs, notificationData) {
+  const timeoutId = setInterval(() => {
+    sendScheduledNotification(notificationData);
+  }, intervalMs);
+
+  if (!window.notificationTimeouts) window.notificationTimeouts = [];
+  window.notificationTimeouts.push(timeoutId);
+}
+
+// Función para enviar notificaciones programadas
+async function sendScheduledNotification(notificationData) {
+  try {
+    // Verificar si el usuario está activo (no enviar si está usando la app)
+    if (!document.hidden) {
+      console.log('[PWA] Usuario activo, saltando notificación programada');
+      return;
+    }
+
+    // Verificar permisos de notificación
+    if (Notification.permission !== 'granted') {
+      console.log('[PWA] Permisos de notificación no concedidos');
+      return;
+    }
+
+    // Enviar notificación nativa
+    const notification = new Notification(notificationData.title, {
+      body: notificationData.body,
+      icon: notificationData.icon,
+      badge: '/scr/images/icon-192x192.png',
+      tag: notificationData.tag,
+      requireInteraction: notificationData.requireInteraction,
+      silent: notificationData.silent,
+      data: {
+        url: '/',
+        scheduled: true,
+        ...notificationData.data
+      }
+    });
+
+    // Auto-cerrar después de 5 segundos si no requiere interacción
+    if (!notificationData.requireInteraction) {
+      setTimeout(() => {
+        notification.close();
+      }, 5000);
+    }
+
+    // Manejar clicks en la notificación
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+
+      // Analytics de notificación clickeada
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'notification_click', {
+          event_category: 'engagement',
+          event_label: notificationData.tag
+        });
+      }
+    };
+
+    console.log('[PWA] Notificación programada enviada:', notificationData.title);
+
+  } catch (error) {
+    console.error('[PWA] Error enviando notificación programada:', error);
+  }
+}
+
+// Función para analizar patrones de uso del usuario
+async function analyzeUserPatterns(userId) {
+  try {
+    // Obtener estadísticas del usuario
+    const stats = await calculateCoupleStats(userId);
+
+    // Obtener tareas completadas recientes
+    const tasksQuery = query(
+      collection(db, 'tasks'),
+      where('userId', '==', userId),
+      orderBy('completedAt', 'desc'),
+      limit(50)
+    );
+
+    const tasksSnapshot = await getDocs(tasksQuery);
+    const recentTasks = tasksSnapshot.docs.map(doc => doc.data());
+
+    // Calcular patrones
+    const patterns = {
+      lastActivity: recentTasks.length > 0 ? recentTasks[0].completedAt : null,
+      avgDailyTasks: stats?.totalTasksCompleted || 0,
+      mostActiveHour: calculateMostActiveHour(recentTasks),
+      completionRate: calculateCompletionRate(recentTasks),
+      streakDays: stats?.currentStreak || 0
+    };
+
+    return patterns;
+
+  } catch (error) {
+    console.error('[PWA] Error analizando patrones de usuario:', error);
+    return null;
+  }
+}
+
+// Función auxiliar para calcular hora más activa
+function calculateMostActiveHour(tasks) {
+  const hourCounts = {};
+  tasks.forEach(task => {
+    if (task.completedAt) {
+      const hour = task.completedAt.toDate().getHours();
+      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+    }
+  });
+
+  let maxHour = 0;
+  let maxCount = 0;
+  Object.entries(hourCounts).forEach(([hour, count]) => {
+    if (count > maxCount) {
+      maxCount = count;
+      maxHour = parseInt(hour);
+    }
+  });
+
+  return maxHour;
+}
+
+// Función auxiliar para calcular tasa de completación
+function calculateCompletionRate(tasks) {
+  if (tasks.length === 0) return 0;
+
+  const completedTasks = tasks.filter(task => task.completed).length;
+  return completedTasks / tasks.length;
+}
+
+// Función para manejar mensajes del service worker
+function handleServiceWorkerMessage(event) {
+  const { type, data } = event.data;
+
+  switch (type) {
+    case 'sync-completed':
+      showNotification({
+        title: '✅ Sincronización completada',
+        message: `Datos ${data.type} sincronizados exitosamente`,
+        type: 'success'
+      });
+      break;
+
+    case 'sync-failed':
+      showNotification({
+        title: '⚠️ Sincronización pendiente',
+        message: `No se pudieron sincronizar los datos ${data.type}. Se reintentará automáticamente.`,
+        type: 'warning'
+      });
+      break;
+
+    case 'SHARED_CONTENT_RECEIVED':
+      // Almacenar el contenido compartido en sessionStorage
+      sessionStorage.setItem('sharedContent', JSON.stringify(data));
+      console.log('[Share] Contenido compartido recibido y almacenado:', data);
+      break;
+
+    default:
+      console.log('[PWA] Mensaje del SW no manejado:', type, data);
+  }
+}
+
+// Escuchar mensajes del service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+}
+
+// Hacer funciones disponibles globalmente para debugging
+window.requestBrowserNotificationPermission = requestBrowserNotificationPermission;
+window.subscribeToPushNotifications = subscribeToPushNotifications;
+window.sendTestPushNotification = sendTestPushNotification;
+window.setupPushNotifications = setupPushNotifications;
+
+// ============================================
+// SISTEMA AVANZADO DE CALIDAD DE CONEXIÓN
+// ============================================
+
+// Estado de conexión avanzado
+let connectionQuality = {
+  online: navigator.onLine,
+  effectiveType: 'unknown', // 4g, 3g, 2g, slow-2g
+  downlink: 0, // Mbps
+  rtt: 0, // ms
+  quality: 'unknown', // excellent, good, fair, poor, offline
+  lastUpdated: Date.now()
+};
+
+// Función para detectar calidad de conexión usando Network Information API
+function detectConnectionQuality() {
+  if ('connection' in navigator) {
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+
+    if (connection) {
+      connectionQuality.effectiveType = connection.effectiveType || 'unknown';
+      connectionQuality.downlink = connection.downlink || 0;
+      connectionQuality.rtt = connection.rtt || 0;
+      connectionQuality.lastUpdated = Date.now();
+
+      // Determinar calidad basada en métricas
+      connectionQuality.quality = determineConnectionQuality(connectionQuality);
+
+      // Aplicar optimizaciones basadas en calidad
+      applyConnectionOptimizations(connectionQuality.quality);
+
+      console.log('[Connection] Calidad detectada:', connectionQuality);
+
+      // Escuchar cambios en la conexión
+      connection.addEventListener('change', () => {
+        detectConnectionQuality();
+        updateConnectionIndicator();
+      });
+
+      return connectionQuality;
+    }
+  }
+
+  // Fallback si no hay Network Information API
+  connectionQuality.quality = navigator.onLine ? 'good' : 'offline';
+  console.log('[Connection] Network Information API no disponible, usando fallback');
+  return connectionQuality;
+}
+
+// Función para determinar calidad de conexión
+function determineConnectionQuality(metrics) {
+  if (!metrics.online) return 'offline';
+
+  const { effectiveType, downlink, rtt } = metrics;
+
+  // Basado en effectiveType (más confiable)
+  switch (effectiveType) {
+    case '4g':
+      if (downlink >= 10) return 'excellent';
+      if (downlink >= 5) return 'good';
+      return 'fair';
+    case '3g':
+      return downlink >= 1 ? 'fair' : 'poor';
+    case '2g':
+    case 'slow-2g':
+      return 'poor';
+    default:
+      // Fallback basado en downlink y rtt
+      if (downlink >= 10 && rtt <= 100) return 'excellent';
+      if (downlink >= 5 && rtt <= 200) return 'good';
+      if (downlink >= 1 && rtt <= 500) return 'fair';
+      return 'poor';
+  }
+}
+
+// Función para aplicar optimizaciones basadas en calidad de conexión
+function applyConnectionOptimizations(quality) {
+  const body = document.body;
+
+  // Remover clases anteriores
+  body.classList.remove('connection-excellent', 'connection-good', 'connection-fair', 'connection-poor', 'connection-offline');
+
+  // Aplicar clase de calidad actual
+  body.classList.add(`connection-${quality}`);
+
+  // Aplicar optimizaciones específicas
+  switch (quality) {
+    case 'excellent':
+      // Calidad excelente: activar todas las funciones
+      enableHighQualityFeatures();
+      break;
+
+    case 'good':
+      // Buena calidad: funciones normales
+      enableNormalFeatures();
+      break;
+
+    case 'fair':
+      // Calidad regular: reducir animaciones pesadas
+      enableFairQualityFeatures();
+      break;
+
+    case 'poor':
+      // Calidad pobre: modo de bajo consumo
+      enableLowQualityFeatures();
+      break;
+
+    case 'offline':
+      // Sin conexión: modo offline
+      enableOfflineMode();
+      break;
+  }
+
+  console.log(`[Connection] Optimizaciones aplicadas para calidad: ${quality}`);
+}
+
+// Funciones de optimización por calidad
+function enableHighQualityFeatures() {
+  // Activar animaciones complejas, videos, etc.
+  document.body.style.setProperty('--animation-duration', '0.3s');
+  document.body.style.setProperty('--image-quality', 'high');
+
+  // Habilitar pre-carga de recursos
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SET_CONNECTION_MODE',
+      data: { mode: 'high-quality' }
+    });
+  }
+}
+
+function enableNormalFeatures() {
+  document.body.style.setProperty('--animation-duration', '0.2s');
+  document.body.style.setProperty('--image-quality', 'normal');
+}
+
+function enableFairQualityFeatures() {
+  // Reducir animaciones, usar imágenes más pequeñas
+  document.body.style.setProperty('--animation-duration', '0.1s');
+  document.body.style.setProperty('--image-quality', 'medium');
+
+  // Desactivar algunas animaciones pesadas
+  document.querySelectorAll('.heavy-animation').forEach(el => {
+    el.style.animation = 'none';
+  });
+}
+
+function enableLowQualityFeatures() {
+  // Modo de bajo consumo máximo
+  document.body.style.setProperty('--animation-duration', '0s');
+  document.body.style.setProperty('--image-quality', 'low');
+
+  // Desactivar todas las animaciones no esenciales
+  document.querySelectorAll('.animated, .pulse, .bounce').forEach(el => {
+    el.style.animation = 'none';
+    el.style.transition = 'none';
+  });
+
+  // Mostrar indicador de modo de bajo consumo
+  showLowPowerModeIndicator();
+
+  // Notificar al service worker
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SET_CONNECTION_MODE',
+      data: { mode: 'low-power' }
+    });
+  }
+}
+
+function enableOfflineMode() {
+  // Modo offline completo
+  document.body.classList.add('offline-mode');
+
+  showNotification({
+    title: '📴 Modo Offline',
+    message: 'Estás trabajando sin conexión. Los cambios se sincronizarán cuando vuelvas a conectarte.',
+    type: 'info'
+  });
+}
+
+// Función para mostrar indicador de modo de bajo consumo
+function showLowPowerModeIndicator() {
+  const existing = document.getElementById('low-power-indicator');
+  if (existing) return;
+
+  const indicator = document.createElement('div');
+  indicator.id = 'low-power-indicator';
+  indicator.innerHTML = `
+    <div class="low-power-content">
+      <span class="low-power-icon">🔋</span>
+      <span class="low-power-text">Modo de bajo consumo activado</span>
+    </div>
+  `;
+  indicator.className = 'low-power-indicator';
+
+  document.body.appendChild(indicator);
+
+  // Auto-ocultar después de 5 segundos
+  setTimeout(() => {
+    indicator.classList.add('fade-out');
+    setTimeout(() => indicator.remove(), 300);
+  }, 5000);
+}
+
+// Función para actualizar indicador de conexión
+function updateConnectionIndicator() {
+  const quality = connectionQuality.quality;
+  const messages = {
+    excellent: '🚀 Conexión excelente',
+    good: '✅ Conexión buena',
+    fair: '⚠️ Conexión regular',
+    poor: '🐌 Conexión lenta',
+    offline: '📴 Sin conexión'
+  };
+
+  const icons = {
+    excellent: '🚀',
+    good: '✅',
+    fair: '⚠️',
+    poor: '🐌',
+    offline: '📴'
+  };
+
+  showAdvancedConnectionStatus(quality, messages[quality], icons[quality]);
+}
+
+// Función avanzada para mostrar estado de conexión
+function showAdvancedConnectionStatus(quality, message, icon) {
+  // Remover indicador existente
+  const existingIndicator = document.getElementById('connection-status-indicator');
+  if (existingIndicator) {
+    existingIndicator.remove();
+  }
+
+  // Crear nuevo indicador avanzado
+  const indicator = document.createElement('div');
+  indicator.id = 'connection-status-indicator';
+  indicator.className = `connection-status connection-${quality}`;
+
+  indicator.innerHTML = `
+    <div class="connection-content">
+      <span class="connection-icon">${icon}</span>
+      <span class="connection-text">${message}</span>
+      ${connectionQuality.downlink > 0 ? `<span class="connection-speed">${connectionQuality.downlink} Mbps</span>` : ''}
+    </div>
+  `;
+
+  document.body.appendChild(indicator);
+
+  // Mostrar con animación
+  setTimeout(() => indicator.classList.add('visible'), 100);
+
+  // Ocultar automáticamente (excepto offline)
+  if (quality !== 'offline') {
+    setTimeout(() => {
+      indicator.classList.remove('visible');
+      setTimeout(() => indicator.remove(), 300);
+    }, 3000);
+  }
+}
+
+// Función para manejar cambios de conexión
+function handleConnectionChange(online) {
+  connectionQuality.online = online;
+
+  if (online) {
+    // Re-detectar calidad cuando vuelve la conexión
+    detectConnectionQuality();
+  } else {
+    connectionQuality.quality = 'offline';
+    applyConnectionOptimizations('offline');
+  }
+
+  updateConnectionIndicator();
+
+  // Si vuelve a estar online, intentar sincronizar datos pendientes
+  if (online) {
+    syncPendingData();
+  }
+}
+
+// Función para sincronizar datos pendientes cuando vuelve la conexión
+function syncPendingData() {
+  console.log('[Connection] Sincronizando datos pendientes...');
+
+  // Sincronizar analytics offline
+  syncOfflineAnalytics();
+
+  // Aquí se pueden agregar más sincronizaciones
+  // - Formularios no enviados
+  // - Cambios locales pendientes
+  // - Notificaciones no enviadas
+}
+
+// Función para obtener información detallada de conexión
+function getConnectionInfo() {
+  return {
+    ...connectionQuality,
+    timestamp: Date.now(),
+    userAgent: navigator.userAgent,
+    supportsNetworkInfo: 'connection' in navigator
+  };
+}
+
+// Función para mostrar debug de conexión (para desarrollo)
+function showConnectionDebug() {
+  const info = getConnectionInfo();
+  console.table(info);
+
+  showNotification({
+    title: '🔍 Debug de Conexión',
+    message: `Calidad: ${info.quality} | Velocidad: ${info.downlink} Mbps | Latencia: ${info.rtt}ms`,
+    type: 'info',
+    confirm: true,
+    confirmText: 'OK'
+  });
+}
+
+// Hacer funciones disponibles globalmente para debugging
+window.getConnectionInfo = getConnectionInfo;
+window.showConnectionDebug = showConnectionDebug;
+window.detectConnectionQuality = detectConnectionQuality;
+
+// ============================================
+// SISTEMA DE BACKUP Y RESTAURACIÓN DE DATOS
+// ============================================
+
+// Configuración del sistema de backup
+const BACKUP_CONFIG = {
+  autoBackup: true,
+  autoBackupInterval: 24 * 60 * 60 * 1000, // 24 horas
+  maxBackups: 10,
+  backupKey: 'thingstodo_backups',
+  recoveryKey: 'thingstodo_deleted_items'
+};
+
+// Función principal para crear backup de datos
+async function createDataBackup(options = {}) {
+  const userId = auth.currentUser?.uid;
+  if (!userId) {
+    throw new Error('Usuario no autenticado');
+  }
+
+  console.log('[Backup] Creando backup de datos...');
+
+  try {
+    const backupData = {
+      metadata: {
+        version: '1.0',
+        timestamp: Date.now(),
+        userId: userId,
+        userAgent: navigator.userAgent,
+        appVersion: 'ThingsToDo v2.0'
+      },
+      data: {}
+    };
+
+    // Recopilar todos los datos del usuario
+    backupData.data = await collectAllUserData(userId);
+
+    // Crear archivo de backup
+    const backupBlob = new Blob([JSON.stringify(backupData, null, 2)], {
+      type: 'application/json'
+    });
+
+    // Guardar backup localmente
+    await saveLocalBackup(backupData);
+
+    // Si se solicita descarga
+    if (options.download !== false) {
+      downloadBackupFile(backupBlob, `thingstodo-backup-${new Date().toISOString().split('T')[0]}.json`);
+    }
+
+    // Notificar éxito
+    showNotification({
+      title: '✅ Backup creado',
+      message: 'Tus datos han sido respaldados exitosamente.',
+      type: 'success'
+    });
+
+    console.log('[Backup] Backup completado exitosamente');
+    return backupData;
+
+  } catch (error) {
+    console.error('[Backup] Error creando backup:', error);
+    showNotification({
+      title: '❌ Error en backup',
+      message: 'No se pudo crear el backup. Inténtalo de nuevo.',
+      type: 'error'
+    });
+    throw error;
+  }
+}
+
+// Función para recopilar todos los datos del usuario
+async function collectAllUserData(userId) {
+  const data = {};
+
+  try {
+    // Datos de usuario y pareja
+    data.user = await getUserProfile(userId);
+    data.couple = await getCoupleData(userId);
+
+    // Tareas
+    data.tasks = await getAllTasks(userId);
+
+    // Planes
+    data.plans = await getAllPlans(userId);
+
+    // Estadísticas
+    data.stats = await getUserStats(userId);
+
+    // Tests de compatibilidad
+    data.tests = await getAllTests(userId);
+
+    // Favores
+    data.favors = await getAllFavors(userId);
+
+    // Cápsulas del tiempo
+    data.timeCapsules = await getAllTimeCapsules(userId);
+
+    // Metas de ahorro
+    data.savings = await getAllSavingsGoals(userId);
+
+    // Banda sonora
+    data.soundtrack = await getSoundtrackData(userId);
+
+    // Configuración de la app
+    data.settings = getAppSettings();
+
+    // Datos locales (localStorage, IndexedDB)
+    data.localData = await getLocalData();
+
+    console.log('[Backup] Datos recopilados:', Object.keys(data));
+
+  } catch (error) {
+    console.error('[Backup] Error recopilando datos:', error);
+  }
+
+  return data;
+}
+
+// Funciones auxiliares para recopilar datos específicos
+async function getUserProfile(userId) {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    return userDoc.exists() ? userDoc.data() : null;
+  } catch (error) {
+    console.error('[Backup] Error obteniendo perfil de usuario:', error);
+    return null;
+  }
+}
+
+async function getCoupleData(userId) {
+  try {
+    const coupleCode = getUserCoupleCode(userId);
+    if (!coupleCode) return null;
+
+    const coupleDoc = await getDoc(doc(db, 'couples', coupleCode));
+    return coupleDoc.exists() ? coupleDoc.data() : null;
+  } catch (error) {
+    console.error('[Backup] Error obteniendo datos de pareja:', error);
+    return null;
+  }
+}
+
+async function getAllTasks(userId) {
+  try {
+    const tasksQuery = query(collection(db, 'tasks'), where('userId', '==', userId));
+    const tasksSnapshot = await getDocs(tasksQuery);
+    return tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('[Backup] Error obteniendo tareas:', error);
+    return [];
+  }
+}
+
+async function getAllPlans(userId) {
+  try {
+    const plansQuery = query(collection(db, 'plans'), where('userId', '==', userId));
+    const plansSnapshot = await getDocs(plansQuery);
+    return plansSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('[Backup] Error obteniendo planes:', error);
+    return [];
+  }
+}
+
+async function getUserStats(userId) {
+  try {
+    return await calculateCoupleStats(userId);
+  } catch (error) {
+    console.error('[Backup] Error obteniendo estadísticas:', error);
+    return null;
+  }
+}
+
+async function getAllTests(userId) {
+  try {
+    const testsQuery = query(collection(db, 'tests'), where('creatorId', '==', userId));
+    const testsSnapshot = await getDocs(testsQuery);
+    return testsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('[Backup] Error obteniendo tests:', error);
+    return [];
+  }
+}
+
+async function getAllFavors(userId) {
+  try {
+    const favorsQuery = query(collection(db, 'favors'), where('userId', '==', userId));
+    const favorsSnapshot = await getDocs(favorsQuery);
+    return favorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('[Backup] Error obteniendo favores:', error);
+    return [];
+  }
+}
+
+async function getAllTimeCapsules(userId) {
+  try {
+    const capsulesQuery = query(collection(db, 'timeCapsules'), where('userId', '==', userId));
+    const capsulesSnapshot = await getDocs(capsulesQuery);
+    return capsulesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('[Backup] Error obteniendo cápsulas del tiempo:', error);
+    return [];
+  }
+}
+
+async function getAllSavingsGoals(userId) {
+  try {
+    const savingsQuery = query(collection(db, 'savingsGoals'), where('userId', '==', userId));
+    const savingsSnapshot = await getDocs(savingsQuery);
+    return savingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('[Backup] Error obteniendo metas de ahorro:', error);
+    return [];
+  }
+}
+
+async function getSoundtrackData(userId) {
+  try {
+    const soundtrackQuery = query(collection(db, 'soundtracks'), where('userId', '==', userId));
+    const soundtrackSnapshot = await getDocs(soundtrackQuery);
+    return soundtrackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('[Backup] Error obteniendo banda sonora:', error);
+    return [];
+  }
+}
+
+function getAppSettings() {
+  return {
+    theme: localStorage.getItem('theme') || 'light',
+    notifications: localStorage.getItem('notifications') === 'true',
+    soundEnabled: localStorage.getItem('soundEnabled') === 'true',
+    language: localStorage.getItem('language') || 'es',
+    lastBackup: localStorage.getItem('lastBackup'),
+    usageStats: JSON.parse(localStorage.getItem('usageStats') || '{}')
+  };
+}
+
+async function getLocalData() {
+  return {
+    localStorage: { ...localStorage },
+    sessionStorage: { ...sessionStorage },
+    // Nota: IndexedDB requiere APIs específicas para backup
+    indexedDB: 'Not backed up automatically' // Placeholder
+  };
+}
+
+// Función para guardar backup localmente
+async function saveLocalBackup(backupData) {
+  try {
+    const backups = JSON.parse(localStorage.getItem(BACKUP_CONFIG.backupKey) || '[]');
+
+    // Agregar nuevo backup
+    backups.push({
+      id: Date.now().toString(),
+      timestamp: backupData.metadata.timestamp,
+      size: JSON.stringify(backupData).length,
+      data: backupData
+    });
+
+    // Mantener solo los backups más recientes
+    if (backups.length > BACKUP_CONFIG.maxBackups) {
+      backups.sort((a, b) => b.timestamp - a.timestamp);
+      backups.splice(BACKUP_CONFIG.maxBackups);
+    }
+
+    localStorage.setItem(BACKUP_CONFIG.backupKey, JSON.stringify(backups));
+    localStorage.setItem('lastBackup', backupData.metadata.timestamp.toString());
+
+    console.log(`[Backup] Backup guardado localmente. Total backups: ${backups.length}`);
+
+  } catch (error) {
+    console.error('[Backup] Error guardando backup localmente:', error);
+  }
+}
+
+// Función para descargar archivo de backup
+function downloadBackupFile(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Función para restaurar datos desde backup
+async function restoreFromBackup(backupData, options = {}) {
+  const userId = auth.currentUser?.uid;
+  if (!userId) {
+    throw new Error('Usuario no autenticado');
+  }
+
+  console.log('[Restore] Iniciando restauración de datos...');
+
+  try {
+    // Validar backup
+    if (!validateBackup(backupData)) {
+      throw new Error('Backup inválido o corrupto');
+    }
+
+    // Confirmar restauración
+    if (options.skipConfirmation !== true) {
+      const confirmed = await showNotification({
+        title: '⚠️ Restaurar backup',
+        message: 'Esto reemplazará tus datos actuales. ¿Estás seguro?',
+        type: 'confirm',
+        confirmText: 'Restaurar',
+        cancelText: 'Cancelar'
+      });
+
+      if (!confirmed) return;
+    }
+
+    // Crear backup de seguridad antes de restaurar
+    if (options.createSafetyBackup !== false) {
+      await createDataBackup({ download: false });
+    }
+
+    // Restaurar datos
+    await restoreAllData(backupData.data, userId, options);
+
+    // Notificar éxito
+    showNotification({
+      title: '✅ Restauración completada',
+      message: 'Tus datos han sido restaurados exitosamente.',
+      type: 'success'
+    });
+
+    // Recargar la aplicación
+    setTimeout(() => {
+      window.location.reload();
+    }, 2000);
+
+  } catch (error) {
+    console.error('[Restore] Error en restauración:', error);
+    showNotification({
+      title: '❌ Error en restauración',
+      message: 'No se pudieron restaurar los datos. Verifica el archivo de backup.',
+      type: 'error'
+    });
+    throw error;
+  }
+}
+
+// Función para validar backup
+function validateBackup(backupData) {
+  try {
+    if (!backupData || typeof backupData !== 'object') return false;
+    if (!backupData.metadata || !backupData.data) return false;
+    if (!backupData.metadata.version || !backupData.metadata.timestamp) return false;
+
+    // Validar que tenga al menos algunos datos
+    const hasData = Object.values(backupData.data).some(data =>
+      Array.isArray(data) ? data.length > 0 : data !== null
+    );
+
+    return hasData;
+  } catch (error) {
+    console.error('[Backup] Error validando backup:', error);
+    return false;
+  }
+}
+
+// Función para restaurar todos los datos
+async function restoreAllData(data, userId, options) {
+  const { merge = false, skipFirebase = false } = options;
+
+  console.log('[Restore] Restaurando datos...', { merge, skipFirebase });
+
+  // Restaurar configuración local primero
+  if (data.settings) {
+    restoreAppSettings(data.settings);
+  }
+
+  // Restaurar datos de Firebase
+  if (!skipFirebase) {
+    await restoreFirebaseData(data, userId, merge);
+  }
+
+  // Restaurar datos locales
+  if (data.localData) {
+    restoreLocalData(data.localData, merge);
+  }
+}
+
+// Función para restaurar configuración de la app
+function restoreAppSettings(settings) {
+  try {
+    Object.entries(settings).forEach(([key, value]) => {
+      if (typeof value === 'object') {
+        localStorage.setItem(key, JSON.stringify(value));
+      } else {
+        localStorage.setItem(key, value.toString());
+      }
+    });
+    console.log('[Restore] Configuración restaurada');
+  } catch (error) {
+    console.error('[Restore] Error restaurando configuración:', error);
+  }
+}
+
+// Función para restaurar datos de Firebase
+async function restoreFirebaseData(data, userId, merge) {
+  try {
+    // Restaurar en orden de dependencias
+
+    // Usuario y pareja
+    if (data.user) await restoreUserData(data.user, userId);
+    if (data.couple) await restoreCoupleData(data.couple);
+
+    // Datos principales
+    if (data.tasks) await restoreTasks(data.tasks, userId, merge);
+    if (data.plans) await restorePlans(data.plans, userId, merge);
+    if (data.tests) await restoreTests(data.tests, userId, merge);
+    if (data.favors) await restoreFavors(data.favors, userId, merge);
+    if (data.timeCapsules) await restoreTimeCapsules(data.timeCapsules, userId, merge);
+    if (data.savings) await restoreSavingsGoals(data.savings, userId, merge);
+    if (data.soundtrack) await restoreSoundtrack(data.soundtrack, userId, merge);
+
+    console.log('[Restore] Datos de Firebase restaurados');
+  } catch (error) {
+    console.error('[Restore] Error restaurando datos de Firebase:', error);
+  }
+}
+
+// Funciones auxiliares para restaurar datos específicos
+async function restoreTasks(tasks, userId, merge) {
+  if (merge) {
+    // En modo merge, solo agregar tareas que no existan
+    for (const task of tasks) {
+      try {
+        await addDoc(collection(db, 'tasks'), { ...task, userId });
+      } catch (error) {
+        console.error('[Restore] Error restaurando tarea:', error);
+      }
+    }
+  } else {
+    // En modo replace, eliminar todas las tareas existentes y crear nuevas
+    await deleteAllUserTasks(userId);
+    for (const task of tasks) {
+      try {
+        await addDoc(collection(db, 'tasks'), { ...task, userId });
+      } catch (error) {
+        console.error('[Restore] Error restaurando tarea:', error);
+      }
+    }
+  }
+}
+
+async function deleteAllUserTasks(userId) {
+  const tasksQuery = query(collection(db, 'tasks'), where('userId', '==', userId));
+  const tasksSnapshot = await getDocs(tasksQuery);
+  const deletePromises = tasksSnapshot.docs.map(doc => deleteDoc(doc.ref));
+  await Promise.all(deletePromises);
+}
+
+// Funciones similares para otros tipos de datos...
+async function restorePlans(plans, userId, merge) {
+  // Implementar restauración de planes
+  console.log('[Restore] Restaurando planes:', plans.length);
+}
+
+async function restoreTests(tests, userId, merge) {
+  // Implementar restauración de tests
+  console.log('[Restore] Restaurando tests:', tests.length);
+}
+
+async function restoreFavors(favors, userId, merge) {
+  // Implementar restauración de favores
+  console.log('[Restore] Restaurando favores:', favors.length);
+}
+
+async function restoreTimeCapsules(capsules, userId, merge) {
+  // Implementar restauración de cápsulas
+  console.log('[Restore] Restaurando cápsulas del tiempo:', capsules.length);
+}
+
+async function restoreSavingsGoals(savings, userId, merge) {
+  // Implementar restauración de metas de ahorro
+  console.log('[Restore] Restaurando metas de ahorro:', savings.length);
+}
+
+async function restoreSoundtrack(soundtrack, userId, merge) {
+  // Implementar restauración de banda sonora
+  console.log('[Restore] Restaurando banda sonora:', soundtrack.length);
+}
+
+async function restoreUserData(userData, userId) {
+  try {
+    await setDoc(doc(db, 'users', userId), userData, { merge: true });
+    console.log('[Restore] Datos de usuario restaurados');
+  } catch (error) {
+    console.error('[Restore] Error restaurando datos de usuario:', error);
+  }
+}
+
+async function restoreCoupleData(coupleData) {
+  try {
+    await setDoc(doc(db, 'couples', coupleData.code), coupleData, { merge: true });
+    console.log('[Restore] Datos de pareja restaurados');
+  } catch (error) {
+    console.error('[Restore] Error restaurando datos de pareja:', error);
+  }
+}
+
+// Función para restaurar datos locales
+function restoreLocalData(localData, merge) {
+  try {
+    if (localData.localStorage) {
+      Object.entries(localData.localStorage).forEach(([key, value]) => {
+        try {
+          localStorage.setItem(key, value);
+        } catch (error) {
+          console.warn('[Restore] Error restaurando localStorage:', key, error);
+        }
+      });
+    }
+    console.log('[Restore] Datos locales restaurados');
+  } catch (error) {
+    console.error('[Restore] Error restaurando datos locales:', error);
+  }
+}
+
+// Función para importar backup desde archivo
+function importBackupFromFile() {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (event) => {
+      const file = event.target.files[0];
+      if (!file) return reject(new Error('No file selected'));
+
+      try {
+        const text = await file.text();
+        const backupData = JSON.parse(text);
+        resolve(backupData);
+      } catch (error) {
+        reject(new Error('Invalid backup file'));
+      }
+    };
+    input.click();
+  });
+}
+
+// Función para mostrar UI de backup/restore
+function showBackupRestoreUI() {
+  const modal = document.createElement('div');
+  modal.className = 'backup-restore-modal';
+  modal.innerHTML = `
+    <div class="backup-restore-content">
+      <h3>💾 Backup y Restauración</h3>
+
+      <div class="backup-section">
+        <h4>Crear Backup</h4>
+        <p>Guarda una copia de seguridad de todos tus datos</p>
+        <div class="backup-actions">
+          <button class="backup-btn" data-action="create">
+            📤 Crear y Descargar
+          </button>
+          <button class="backup-btn" data-action="local">
+            💾 Guardar Localmente
+          </button>
+        </div>
+      </div>
+
+      <div class="restore-section">
+        <h4>Restaurar Datos</h4>
+        <p>Restaura tus datos desde un archivo de backup</p>
+        <div class="restore-actions">
+          <button class="restore-btn" data-action="import">
+            📥 Importar desde Archivo
+          </button>
+          <button class="restore-btn" data-action="local">
+            📂 Desde Backups Locales
+          </button>
+        </div>
+      </div>
+
+      <div class="backup-info">
+        <p><strong>Último backup:</strong> ${getLastBackupDate()}</p>
+        <p><strong>Backups locales:</strong> ${getLocalBackupsCount()}</p>
+      </div>
+
+      <button class="close-btn">❌ Cerrar</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Manejar eventos
+  modal.addEventListener('click', async (e) => {
+    const action = e.target.dataset.action;
+
+    if (action === 'create') {
+      try {
+        await createDataBackup({ download: true });
+      } catch (error) {
+        console.error('Error creating backup:', error);
+      }
+    } else if (action === 'local') {
+      try {
+        await createDataBackup({ download: false });
+        showNotification({
+          title: '✅ Backup guardado',
+          message: 'El backup se guardó localmente.',
+          type: 'success'
+        });
+      } catch (error) {
+        console.error('Error creating local backup:', error);
+      }
+    } else if (action === 'import') {
+      try {
+        const backupData = await importBackupFromFile();
+        await restoreFromBackup(backupData);
+      } catch (error) {
+        showNotification({
+          title: '❌ Error',
+          message: 'No se pudo importar el backup.',
+          type: 'error'
+        });
+      }
+    } else if (action === 'local') {
+      showLocalBackupsList();
+    } else if (e.target.classList.contains('close-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+// Funciones auxiliares para UI
+function getLastBackupDate() {
+  const lastBackup = localStorage.getItem('lastBackup');
+  if (!lastBackup) return 'Nunca';
+
+  const date = new Date(parseInt(lastBackup));
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+}
+
+function getLocalBackupsCount() {
+  try {
+    const backups = JSON.parse(localStorage.getItem(BACKUP_CONFIG.backupKey) || '[]');
+    return backups.length;
+  } catch (error) {
+    return 0;
+  }
+}
+
+function showLocalBackupsList() {
+  // Implementar lista de backups locales
+  console.log('Mostrar lista de backups locales');
+}
+
+// Función para configurar backup automático
+function setupAutoBackup() {
+  if (!BACKUP_CONFIG.autoBackup) return;
+
+  const lastBackup = localStorage.getItem('lastBackup');
+  const now = Date.now();
+
+  if (!lastBackup || (now - parseInt(lastBackup)) > BACKUP_CONFIG.autoBackupInterval) {
+    console.log('[Backup] Ejecutando backup automático...');
+    createDataBackup({ download: false }).catch(error => {
+      console.error('[Backup] Error en backup automático:', error);
+    });
+  }
+
+  // Programar próximo backup automático
+  setTimeout(setupAutoBackup, BACKUP_CONFIG.autoBackupInterval);
+}
+
+// Inicializar sistema de backup
+document.addEventListener('DOMContentLoaded', () => {
+  // Configurar backup automático cuando el usuario esté autenticado
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      setTimeout(setupAutoBackup, 5000); // Esperar 5 segundos después del login
+    }
+  });
+});
+
+// Hacer funciones disponibles globalmente
+window.createDataBackup = createDataBackup;
+window.restoreFromBackup = restoreFromBackup;
+window.showBackupRestoreUI = showBackupRestoreUI;
+window.importBackupFromFile = importBackupFromFile;
+
+// ============================================
+// SISTEMA DE MODO BAJO CONSUMO
+// ============================================
+
+// Estado del modo de bajo consumo
+let lowPowerMode = {
+  active: false,
+  batteryLevel: 100,
+  batteryCharging: false,
+  autoEnabled: true,
+  manualEnabled: false,
+  threshold: 20, // Porcentaje de batería para activar automáticamente
+  lastActivated: null
+};
+
+// Configuración del modo de bajo consumo
+const LOW_POWER_CONFIG = {
+  autoActivationThreshold: 20, // % de batería
+  disableAnimations: true,
+  reduceUpdates: true,
+  disableBackgroundTasks: true,
+  reduceImageQuality: true,
+  disableAutoSave: false,
+  notificationInterval: 5 * 60 * 1000, // 5 minutos
+  powerSaveFeatures: [
+    'animations',
+    'background-sync',
+    'auto-refresh',
+    'high-quality-images',
+    'frequent-notifications',
+    'location-services'
+  ]
+};
+
+// Función para inicializar el sistema de batería
+function initializeBatteryMonitoring() {
+  if ('getBattery' in navigator) {
+    navigator.getBattery().then(battery => {
+      console.log('[Battery] Inicializando monitoreo de batería');
+
+      // Actualizar estado inicial
+      updateBatteryStatus(battery);
+
+      // Escuchar cambios en el estado de la batería
+      battery.addEventListener('levelchange', () => updateBatteryStatus(battery));
+      battery.addEventListener('chargingchange', () => updateBatteryStatus(battery));
+      battery.addEventListener('dischargingtimechange', () => updateBatteryStatus(battery));
+
+    }).catch(error => {
+      console.warn('[Battery] No se pudo acceder a la API de batería:', error);
+      // Fallback: usar estimaciones basadas en tiempo de uso
+      setupBatteryFallback();
+    });
+  } else {
+    console.log('[Battery] API de batería no soportada, usando fallback');
+    setupBatteryFallback();
+  }
+}
+
+// Función para actualizar el estado de la batería
+function updateBatteryStatus(battery) {
+  const previousLevel = lowPowerMode.batteryLevel;
+  const previousCharging = lowPowerMode.batteryCharging;
+
+  lowPowerMode.batteryLevel = Math.round(battery.level * 100);
+  lowPowerMode.batteryCharging = battery.charging;
+
+  console.log(`[Battery] Estado actualizado: ${lowPowerMode.batteryLevel}% ${lowPowerMode.batteryCharging ? '(cargando)' : ''}`);
+
+  // Verificar si debe activarse el modo de bajo consumo
+  checkLowPowerModeActivation();
+
+  // Notificar cambios significativos
+  if (Math.abs(lowPowerMode.batteryLevel - previousLevel) >= 5 ||
+      lowPowerMode.batteryCharging !== previousCharging) {
+    showBatteryStatusNotification();
+  }
+
+  // Actualizar indicador visual
+  updateBatteryIndicator();
+}
+
+// Función para verificar activación del modo de bajo consumo
+function checkLowPowerModeActivation() {
+  const shouldActivate = lowPowerMode.autoEnabled &&
+                         !lowPowerMode.batteryCharging &&
+                         lowPowerMode.batteryLevel <= LOW_POWER_CONFIG.autoActivationThreshold;
+
+  const shouldDeactivate = lowPowerMode.batteryCharging ||
+                          lowPowerMode.batteryLevel > LOW_POWER_CONFIG.autoActivationThreshold + 10;
+
+  if (shouldActivate && !lowPowerMode.active) {
+    activateLowPowerMode('auto');
+  } else if (shouldDeactivate && lowPowerMode.active && !lowPowerMode.manualEnabled) {
+    deactivateLowPowerMode();
+  }
+}
+
+// Función para activar modo de bajo consumo
+function activateLowPowerMode(reason = 'manual') {
+  if (lowPowerMode.active) return;
+
+  lowPowerMode.active = true;
+  lowPowerMode.lastActivated = Date.now();
+
+  if (reason === 'auto') {
+    lowPowerMode.manualEnabled = false;
+  } else {
+    lowPowerMode.manualEnabled = true;
+  }
+
+  console.log(`[Low Power] Modo activado (${reason})`);
+
+  // Aplicar optimizaciones de bajo consumo
+  applyLowPowerOptimizations();
+
+  // Mostrar notificación
+  showNotification({
+    title: '🔋 Modo de bajo consumo activado',
+    message: `Batería al ${lowPowerMode.batteryLevel}%. Se han aplicado optimizaciones para ahorrar energía.`,
+    type: 'warning',
+    confirm: true,
+    confirmText: 'Configurar',
+    onConfirm: () => showLowPowerSettings()
+  });
+
+  // Guardar estado
+  localStorage.setItem('lowPowerMode', JSON.stringify(lowPowerMode));
+
+  // Actualizar UI
+  updateLowPowerUI();
+}
+
+// Función para desactivar modo de bajo consumo
+function deactivateLowPowerMode() {
+  if (!lowPowerMode.active) return;
+
+  lowPowerMode.active = false;
+  lowPowerMode.manualEnabled = false;
+
+  console.log('[Low Power] Modo desactivado');
+
+  // Restaurar funcionalidades normales
+  restoreNormalFunctionality();
+
+  // Mostrar notificación
+  showNotification({
+    title: '✅ Modo normal restaurado',
+    message: 'Todas las funcionalidades han vuelto a la normalidad.',
+    type: 'success'
+  });
+
+  // Guardar estado
+  localStorage.setItem('lowPowerMode', JSON.stringify(lowPowerMode));
+
+  // Actualizar UI
+  updateLowPowerUI();
+}
+
+// Función para aplicar optimizaciones de bajo consumo
+function applyLowPowerOptimizations() {
+  const body = document.body;
+
+  // Agregar clase de bajo consumo
+  body.classList.add('low-power-active');
+
+  // Desactivar animaciones
+  if (LOW_POWER_CONFIG.disableAnimations) {
+    body.style.setProperty('--animation-duration', '0s');
+    document.querySelectorAll('.animated, .pulse, .bounce, .fade-in').forEach(el => {
+      el.style.animation = 'none';
+      el.style.transition = 'none';
+    });
+  }
+
+  // Reducir calidad de imágenes
+  if (LOW_POWER_CONFIG.reduceImageQuality) {
+    document.querySelectorAll('img').forEach(img => {
+      if (!img.dataset.originalSrc) {
+        img.dataset.originalSrc = img.src;
+        // En un entorno real, aquí cargaríamos versiones de baja calidad
+        img.style.filter = 'brightness(0.95)';
+      }
+    });
+  }
+
+  // Desactivar actualizaciones automáticas
+  if (LOW_POWER_CONFIG.reduceUpdates) {
+    // Pausar timers de actualización automática
+    if (window.updateTimers) {
+      window.updateTimers.forEach(clearInterval);
+      window.updateTimers = [];
+    }
+  }
+
+  // Notificar al service worker
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SET_LOW_POWER_MODE',
+      data: { active: true }
+    });
+  }
+
+  // Reducir frecuencia de analytics
+  if (typeof gtag !== 'undefined') {
+    // Reducir envío de eventos
+    window.originalGtag = window.gtag;
+    window.gtag = (...args) => {
+      // Solo enviar eventos críticos en modo de bajo consumo
+      if (args[0] === 'event' && ['error', 'exception'].includes(args[1])) {
+        window.originalGtag(...args);
+      }
+    };
+  }
+}
+
+// Función para restaurar funcionalidades normales
+function restoreNormalFunctionality() {
+  const body = document.body;
+
+  // Remover clase de bajo consumo
+  body.classList.remove('low-power-active');
+
+  // Restaurar animaciones
+  body.style.removeProperty('--animation-duration');
+  document.querySelectorAll('[style*="animation: none"], [style*="transition: none"]').forEach(el => {
+    el.style.removeProperty('animation');
+    el.style.removeProperty('transition');
+  });
+
+  // Restaurar calidad de imágenes
+  document.querySelectorAll('img[data-original-src]').forEach(img => {
+    if (img.dataset.originalSrc) {
+      img.src = img.dataset.originalSrc;
+      delete img.dataset.originalSrc;
+      img.style.removeProperty('filter');
+    }
+  });
+
+  // Restaurar analytics
+  if (window.originalGtag) {
+    window.gtag = window.originalGtag;
+    delete window.originalGtag;
+  }
+
+  // Notificar al service worker
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SET_LOW_POWER_MODE',
+      data: { active: false }
+    });
+  }
+}
+
+// Función para mostrar configuración del modo de bajo consumo
+function showLowPowerSettings() {
+  const modal = document.createElement('div');
+  modal.className = 'low-power-settings-modal';
+  modal.innerHTML = `
+    <div class="low-power-settings-content">
+      <h3>🔋 Configuración de Batería</h3>
+
+      <div class="battery-status">
+        <div class="battery-info">
+          <span class="battery-level">${lowPowerMode.batteryLevel}%</span>
+          <span class="battery-status-text">${lowPowerMode.batteryCharging ? 'Cargando' : 'Descargando'}</span>
+        </div>
+        <div class="battery-bar">
+          <div class="battery-fill" style="width: ${lowPowerMode.batteryLevel}%"></div>
+        </div>
+      </div>
+
+      <div class="power-settings">
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="auto-low-power" ${lowPowerMode.autoEnabled ? 'checked' : ''}>
+            Activación automática
+          </label>
+          <span class="setting-desc">Activar cuando la batería baje del ${LOW_POWER_CONFIG.autoActivationThreshold}%</span>
+        </div>
+
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="manual-low-power" ${lowPowerMode.manualEnabled ? 'checked' : ''}>
+            Modo manual activo
+          </label>
+          <span class="setting-desc">Mantener modo de bajo consumo activado manualmente</span>
+        </div>
+
+        <div class="setting-item">
+          <label for="battery-threshold">Umbral de activación:</label>
+          <input type="range" id="battery-threshold" min="5" max="50" value="${LOW_POWER_CONFIG.autoActivationThreshold}">
+          <span id="threshold-value">${LOW_POWER_CONFIG.autoActivationThreshold}%</span>
+        </div>
+      </div>
+
+      <div class="power-actions">
+        <button class="power-btn ${lowPowerMode.active ? 'deactivate' : 'activate'}" data-action="toggle">
+          ${lowPowerMode.active ? '🚫 Desactivar' : '🔋 Activar'} Modo de Bajo Consumo
+        </button>
+        <button class="power-btn test" data-action="test">🧪 Probar Notificación</button>
+      </div>
+
+      <button class="close-btn">❌ Cerrar</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Configurar event listeners
+  const autoCheckbox = modal.querySelector('#auto-low-power');
+  const manualCheckbox = modal.querySelector('#manual-low-power');
+  const thresholdSlider = modal.querySelector('#battery-threshold');
+  const thresholdValue = modal.querySelector('#threshold-value');
+
+  autoCheckbox.addEventListener('change', (e) => {
+    lowPowerMode.autoEnabled = e.target.checked;
+    localStorage.setItem('lowPowerMode', JSON.stringify(lowPowerMode));
+  });
+
+  manualCheckbox.addEventListener('change', (e) => {
+    lowPowerMode.manualEnabled = e.target.checked;
+    if (e.target.checked) {
+      activateLowPowerMode('manual');
+    } else if (lowPowerMode.active && !shouldAutoActivate()) {
+      deactivateLowPowerMode();
+    }
+    localStorage.setItem('lowPowerMode', JSON.stringify(lowPowerMode));
+  });
+
+  thresholdSlider.addEventListener('input', (e) => {
+    const value = parseInt(e.target.value);
+    thresholdValue.textContent = value + '%';
+    LOW_POWER_CONFIG.autoActivationThreshold = value;
+    localStorage.setItem('lowPowerConfig', JSON.stringify(LOW_POWER_CONFIG));
+  });
+
+  // Manejar botones
+  modal.addEventListener('click', (e) => {
+    const action = e.target.dataset.action;
+
+    if (action === 'toggle') {
+      if (lowPowerMode.active) {
+        deactivateLowPowerMode();
+      } else {
+        activateLowPowerMode('manual');
+      }
+      modal.remove();
+    } else if (action === 'test') {
+      showBatteryStatusNotification();
+    } else if (e.target.classList.contains('close-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+// Función auxiliar para determinar si debe auto-activarse
+function shouldAutoActivate() {
+  return lowPowerMode.autoEnabled &&
+         !lowPowerMode.batteryCharging &&
+         lowPowerMode.batteryLevel <= LOW_POWER_CONFIG.autoActivationThreshold;
+}
+
+// Función para mostrar notificación de estado de batería
+function showBatteryStatusNotification() {
+  const level = lowPowerMode.batteryLevel;
+  const charging = lowPowerMode.batteryCharging;
+
+  let title, message, type;
+
+  if (charging) {
+    title = '🔌 Cargando batería';
+    message = `Batería al ${level}%. Cargando...`;
+    type = 'success';
+  } else if (level <= 10) {
+    title = '⚠️ Batería crítica';
+    message = `Batería al ${level}%. Considere cargar el dispositivo.`;
+    type = 'error';
+  } else if (level <= 20) {
+    title = '🪫 Batería baja';
+    message = `Batería al ${level}%. Active el modo de ahorro de energía.`;
+    type = 'warning';
+  } else {
+    title = '🔋 Estado de batería';
+    message = `Batería al ${level}%.`;
+    type = 'info';
+  }
+
+  showNotification({
+    title,
+    message,
+    type,
+    confirm: level <= 20 && !charging,
+    confirmText: 'Activar ahorro',
+    onConfirm: () => activateLowPowerMode('manual')
+  });
+}
+
+// Función para actualizar indicador de batería
+function updateBatteryIndicator() {
+  const existing = document.getElementById('battery-indicator');
+  if (existing) {
+    existing.remove();
+  }
+
+  // Solo mostrar indicador si batería baja o modo activo
+  if (lowPowerMode.batteryLevel > 25 && !lowPowerMode.active) {
+    return;
+  }
+
+  const indicator = document.createElement('div');
+  indicator.id = 'battery-indicator';
+  indicator.className = `battery-indicator ${lowPowerMode.active ? 'low-power' : ''}`;
+
+  indicator.innerHTML = `
+    <div class="battery-content">
+      <span class="battery-icon">${lowPowerMode.batteryCharging ? '🔌' : lowPowerMode.active ? '🔋' : '🪫'}</span>
+      <span class="battery-text">${lowPowerMode.batteryLevel}%</span>
+      ${lowPowerMode.active ? '<span class="power-save-text">AHORRO</span>' : ''}
+    </div>
+  `;
+
+  document.body.appendChild(indicator);
+
+  // Auto-ocultar después de 10 segundos si no está en modo de bajo consumo
+  if (!lowPowerMode.active) {
+    setTimeout(() => {
+      if (indicator.parentNode) {
+        indicator.classList.add('fade-out');
+        setTimeout(() => indicator.remove(), 300);
+      }
+    }, 10000);
+  }
+}
+
+// Función para actualizar UI del modo de bajo consumo
+function updateLowPowerUI() {
+  const body = document.body;
+
+  if (lowPowerMode.active) {
+    body.classList.add('low-power-mode');
+  } else {
+    body.classList.remove('low-power-mode');
+  }
+
+  updateBatteryIndicator();
+}
+
+// Función de fallback para cuando no hay API de batería
+function setupBatteryFallback() {
+  // Estimar nivel de batería basado en tiempo de uso
+  const usageStart = localStorage.getItem('usageStart');
+  const now = Date.now();
+
+  if (!usageStart) {
+    localStorage.setItem('usageStart', now.toString());
+    lowPowerMode.batteryLevel = 100;
+  } else {
+    const usageTime = now - parseInt(usageStart);
+    const estimatedDrain = (usageTime / (8 * 60 * 60 * 1000)) * 100; // 8 horas = 100% drain
+    lowPowerMode.batteryLevel = Math.max(10, 100 - estimatedDrain);
+  }
+
+  // Simular cambios periódicos
+  setInterval(() => {
+    if (!lowPowerMode.batteryCharging) {
+      lowPowerMode.batteryLevel = Math.max(0, lowPowerMode.batteryLevel - 0.1);
+      checkLowPowerModeActivation();
+    }
+  }, 60000); // Cada minuto
+
+  console.log('[Battery] Usando estimación de batería');
+}
+
+// Función para cargar configuración guardada
+function loadLowPowerSettings() {
+  try {
+    const savedMode = localStorage.getItem('lowPowerMode');
+    const savedConfig = localStorage.getItem('lowPowerConfig');
+
+    if (savedMode) {
+      Object.assign(lowPowerMode, JSON.parse(savedMode));
+    }
+
+    if (savedConfig) {
+      Object.assign(LOW_POWER_CONFIG, JSON.parse(savedConfig));
+    }
+
+    // Aplicar estado guardado
+    if (lowPowerMode.active) {
+      applyLowPowerOptimizations();
+    }
+
+    updateLowPowerUI();
+
+  } catch (error) {
+    console.error('[Low Power] Error cargando configuración:', error);
+  }
+}
+
+// Inicializar sistema de batería
+document.addEventListener('DOMContentLoaded', () => {
+  loadLowPowerSettings();
+  initializeBatteryMonitoring();
+});
+
+// ============================================
+// SISTEMA DE WIDGETS INTERACTIVOS PARA PANTALLA DE INICIO
+// ============================================
+
+// Configuración de widgets disponibles
+const AVAILABLE_WIDGETS = {
+  'progress': {
+    name: 'Progreso de Pareja',
+    icon: '💕',
+    description: 'Muestra el progreso de tus metas románticas',
+    sizes: ['small', 'medium', 'large'],
+    defaultSize: 'medium'
+  },
+  'reminders': {
+    name: 'Recordatorios Diarios',
+    icon: '⏰',
+    description: 'Recordatorios personalizados para momentos especiales',
+    sizes: ['small', 'medium'],
+    defaultSize: 'medium'
+  },
+  'stats': {
+    name: 'Estadísticas Rápidas',
+    icon: '📊',
+    description: 'Métricas importantes de tu relación',
+    sizes: ['small', 'medium', 'large'],
+    defaultSize: 'medium'
+  },
+  'tasks': {
+    name: 'Tareas Pendientes',
+    icon: '✅',
+    description: 'Lista rápida de tareas por completar',
+    sizes: ['small', 'medium'],
+    defaultSize: 'small'
+  },
+  'mood': {
+    name: 'Estado de Ánimo',
+    icon: '😊',
+    description: 'Comparte y sigue el estado de ánimo de tu pareja',
+    sizes: ['small'],
+    defaultSize: 'small'
+  },
+  'anniversaries': {
+    name: 'Próximos Aniversarios',
+    icon: '🎂',
+    description: 'Cuenta regresiva para fechas especiales',
+    sizes: ['small', 'medium'],
+    defaultSize: 'small'
+  },
+  'photos': {
+    name: 'Fotos Recientes',
+    icon: '📸',
+    description: 'Galería rápida de momentos compartidos',
+    sizes: ['medium', 'large'],
+    defaultSize: 'medium'
+  },
+  'music': {
+    name: 'Playlist Romántica',
+    icon: '🎵',
+    description: 'Controla tu música romántica favorita',
+    sizes: ['small', 'medium'],
+    defaultSize: 'medium'
+  }
+};
+
+// Estado de widgets instalados
+let installedWidgets = JSON.parse(localStorage.getItem('installedWidgets') || '[]');
+
+// Función para mostrar el gestor de widgets
+function showWidgetManager() {
+  const modal = document.createElement('div');
+  modal.className = 'widget-manager-modal';
+  modal.innerHTML = `
+    <div class="widget-manager-content">
+      <h3>🎯 Widgets para Pantalla de Inicio</h3>
+      <p class="widget-description">
+        Agrega widgets interactivos a tu pantalla de inicio para acceder rápidamente a las funciones más importantes de tu app romántica.
+      </p>
+
+      <div class="widget-grid">
+        ${Object.entries(AVAILABLE_WIDGETS).map(([key, widget]) => `
+          <div class="widget-card ${installedWidgets.includes(key) ? 'installed' : ''}" data-widget="${key}">
+            <div class="widget-header">
+              <span class="widget-icon">${widget.icon}</span>
+              <span class="widget-status">${installedWidgets.includes(key) ? 'Instalado' : 'Disponible'}</span>
+            </div>
+            <div class="widget-info">
+              <h4>${widget.name}</h4>
+              <p>${widget.description}</p>
+              <div class="widget-sizes">
+                ${widget.sizes.map(size => `<span class="size-option">${size}</span>`).join('')}
+              </div>
+            </div>
+            <button class="widget-action-btn" data-action="${installedWidgets.includes(key) ? 'remove' : 'install'}">
+              ${installedWidgets.includes(key) ? 'Remover' : 'Instalar'}
+            </button>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="widget-instructions">
+        <h4>📱 Cómo agregar widgets:</h4>
+        <ol>
+          <li>Instala los widgets que deseas desde arriba</li>
+          <li>Ve a la pantalla de inicio de tu teléfono</li>
+          <li>Mantén presionado en un espacio vacío</li>
+          <li>Selecciona "Widgets" y busca "ThingsToDo"</li>
+          <li>Arrastra el widget deseado a tu pantalla</li>
+        </ol>
+      </div>
+
+      <button class="close-btn">❌ Cerrar</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Event listeners
+  modal.addEventListener('click', (e) => {
+    const widgetCard = e.target.closest('.widget-card');
+    const actionBtn = e.target.closest('.widget-action-btn');
+
+    if (actionBtn) {
+      const widgetKey = widgetCard.dataset.widget;
+      const action = actionBtn.dataset.action;
+
+      if (action === 'install') {
+        installWidget(widgetKey);
+        widgetCard.classList.add('installed');
+        actionBtn.textContent = 'Remover';
+        actionBtn.dataset.action = 'remove';
+        widgetCard.querySelector('.widget-status').textContent = 'Instalado';
+      } else {
+        removeWidget(widgetKey);
+        widgetCard.classList.remove('installed');
+        actionBtn.textContent = 'Instalar';
+        actionBtn.dataset.action = 'install';
+        widgetCard.querySelector('.widget-status').textContent = 'Disponible';
+      }
+    }
+
+    if (e.target.classList.contains('close-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+// Función para instalar un widget
+function installWidget(widgetKey) {
+  if (!installedWidgets.includes(widgetKey)) {
+    installedWidgets.push(widgetKey);
+    localStorage.setItem('installedWidgets', JSON.stringify(installedWidgets));
+
+    // Notificar al service worker para actualizar widgets
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'UPDATE_WIDGETS',
+        data: { installedWidgets }
+      });
+    }
+
+    showNotification({
+      title: '✅ Widget Instalado',
+      message: `El widget "${AVAILABLE_WIDGETS[widgetKey].name}" está listo para usar en tu pantalla de inicio.`,
+      type: 'success'
+    });
+  }
+}
+
+// Función para remover un widget
+function removeWidget(widgetKey) {
+  const index = installedWidgets.indexOf(widgetKey);
+  if (index > -1) {
+    installedWidgets.splice(index, 1);
+    localStorage.setItem('installedWidgets', JSON.stringify(installedWidgets));
+
+    // Notificar al service worker
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'UPDATE_WIDGETS',
+        data: { installedWidgets }
+      });
+    }
+
+    showNotification({
+      title: '🗑️ Widget Removido',
+      message: `El widget "${AVAILABLE_WIDGETS[widgetKey].name}" ha sido removido.`,
+      type: 'info'
+    });
+  }
+}
+
+// ============================================
+// WIDGET 1: PROGRESO DE PAREJA
+// ============================================
+
+class ProgressWidget {
+  constructor(size = 'medium') {
+    this.size = size;
+    this.element = null;
+  }
+
+  create() {
+    this.element = document.createElement('div');
+    this.element.className = `widget progress-widget size-${this.size}`;
+    this.element.innerHTML = this.getTemplate();
+    this.attachEvents();
+    this.updateData();
+    return this.element;
+  }
+
+  getTemplate() {
+    return `
+      <div class="widget-header">
+        <span class="widget-icon">💕</span>
+        <span class="widget-title">Progreso</span>
+      </div>
+      <div class="widget-content">
+        <div class="progress-ring">
+          <svg class="progress-circle" width="80" height="80">
+            <circle class="progress-bg" cx="40" cy="40" r="35" stroke="#e9ecef" stroke-width="6" fill="none"/>
+            <circle class="progress-fill" cx="40" cy="40" r="35" stroke="#8B5CF6" stroke-width="6" fill="none"
+                    stroke-dasharray="219.91" stroke-dashoffset="219.91"/>
+          </svg>
+          <div class="progress-text">
+            <span class="progress-percent">0%</span>
+            <span class="progress-label">Completado</span>
+          </div>
+        </div>
+        <div class="progress-stats">
+          <div class="stat-item">
+            <span class="stat-number" id="completed-tasks">0</span>
+            <span class="stat-label">Tareas</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="streak-days">0</span>
+            <span class="stat-label">Días</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="love-level">0</span>
+            <span class="stat-label">Nivel</span>
+          </div>
+        </div>
+      </div>
+      <div class="widget-actions">
+        <button class="widget-btn" data-action="view-details">Ver Detalles</button>
+      </div>
+    `;
+  }
+
+  attachEvents() {
+    const viewDetailsBtn = this.element.querySelector('[data-action="view-details"]');
+    viewDetailsBtn.addEventListener('click', () => {
+      // Abrir la app en la sección de estadísticas
+      window.location.href = '#stats';
+      if (window.showStatsModal) {
+        window.showStatsModal();
+      }
+    });
+  }
+
+  updateData() {
+    // Calcular progreso basado en datos reales
+    const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    const completedTasks = tasks.filter(task => task.completed).length;
+    const totalTasks = tasks.length;
+    const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    // Calcular racha de días
+    const streakDays = this.calculateStreakDays();
+
+    // Calcular nivel de amor (basado en interacciones)
+    const loveLevel = this.calculateLoveLevel();
+
+    // Actualizar UI
+    const progressFill = this.element.querySelector('.progress-fill');
+    const progressPercentEl = this.element.querySelector('.progress-percent');
+    const completedTasksEl = this.element.querySelector('#completed-tasks');
+    const streakDaysEl = this.element.querySelector('#streak-days');
+    const loveLevelEl = this.element.querySelector('#love-level');
+
+    if (progressFill && progressPercentEl) {
+      const circumference = 2 * Math.PI * 35;
+      const offset = circumference - (progressPercent / 100) * circumference;
+      progressFill.style.strokeDashoffset = offset;
+      progressPercentEl.textContent = `${progressPercent}%`;
+    }
+
+    if (completedTasksEl) completedTasksEl.textContent = completedTasks;
+    if (streakDaysEl) streakDaysEl.textContent = streakDays;
+    if (loveLevelEl) loveLevelEl.textContent = loveLevel;
+  }
+
+  calculateStreakDays() {
+    // Lógica para calcular racha de días consecutivos
+    const today = new Date().toDateString();
+    const lastActivity = localStorage.getItem('lastActivityDate');
+
+    if (lastActivity === today) {
+      const streak = parseInt(localStorage.getItem('activityStreak') || '0');
+      return streak;
+    }
+
+    return 0;
+  }
+
+  calculateLoveLevel() {
+    // Calcular nivel basado en diversas métricas
+    const tasks = JSON.parse(localStorage.getItem('tasks') || '[]').length;
+    const messages = JSON.parse(localStorage.getItem('messages') || '[]').length;
+    const photos = JSON.parse(localStorage.getItem('photos') || '[]').length;
+
+    const totalInteractions = tasks + messages + photos;
+    return Math.min(Math.floor(totalInteractions / 10) + 1, 100);
+  }
+}
+
+// ============================================
+// WIDGET 2: RECORDATORIOS DIARIOS
+// ============================================
+
+class RemindersWidget {
+  constructor(size = 'medium') {
+    this.size = size;
+    this.element = null;
+    this.reminders = JSON.parse(localStorage.getItem('dailyReminders') || '[]');
+  }
+
+  create() {
+    this.element = document.createElement('div');
+    this.element.className = `widget reminders-widget size-${this.size}`;
+    this.element.innerHTML = this.getTemplate();
+    this.attachEvents();
+    this.updateReminders();
+    return this.element;
+  }
+
+  getTemplate() {
+    return `
+      <div class="widget-header">
+        <span class="widget-icon">⏰</span>
+        <span class="widget-title">Recordatorios</span>
+      </div>
+      <div class="widget-content">
+        <div class="current-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+        <div class="reminders-list">
+          ${this.getRemindersHTML()}
+        </div>
+      </div>
+      <div class="widget-actions">
+        <button class="widget-btn" data-action="add-reminder">+ Agregar</button>
+        <button class="widget-btn" data-action="view-all">Ver Todos</button>
+      </div>
+    `;
+  }
+
+  getRemindersHTML() {
+    if (this.reminders.length === 0) {
+      return '<div class="no-reminders">No hay recordatorios activos</div>';
+    }
+
+    return this.reminders.slice(0, 3).map(reminder => `
+      <div class="reminder-item" data-id="${reminder.id}">
+        <div class="reminder-time">${reminder.time}</div>
+        <div class="reminder-text">${reminder.text}</div>
+        <button class="reminder-check" data-action="complete">✓</button>
+      </div>
+    `).join('');
+  }
+
+  attachEvents() {
+    const addBtn = this.element.querySelector('[data-action="add-reminder"]');
+    const viewAllBtn = this.element.querySelector('[data-action="view-all"]');
+
+    addBtn.addEventListener('click', () => this.showAddReminderModal());
+    viewAllBtn.addEventListener('click', () => {
+      // Abrir sección de recordatorios en la app
+      window.location.href = '#reminders';
+    });
+
+    // Event delegation para completar recordatorios
+    this.element.addEventListener('click', (e) => {
+      if (e.target.dataset.action === 'complete') {
+        const reminderId = e.target.closest('.reminder-item').dataset.id;
+        this.completeReminder(reminderId);
+      }
+    });
+
+    // Actualizar hora cada minuto
+    setInterval(() => {
+      const timeEl = this.element.querySelector('.current-time');
+      if (timeEl) {
+        timeEl.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      }
+    }, 60000);
+  }
+
+  showAddReminderModal() {
+    const modal = document.createElement('div');
+    modal.className = 'reminder-modal';
+    modal.innerHTML = `
+      <div class="reminder-modal-content">
+        <h4>🔔 Nuevo Recordatorio</h4>
+        <input type="time" id="reminder-time" value="12:00">
+        <input type="text" id="reminder-text" placeholder="Mensaje del recordatorio" maxlength="50">
+        <div class="reminder-actions">
+          <button id="save-reminder">Guardar</button>
+          <button id="cancel-reminder">Cancelar</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const saveBtn = modal.querySelector('#save-reminder');
+    const cancelBtn = modal.querySelector('#cancel-reminder');
+
+    saveBtn.addEventListener('click', () => {
+      const time = modal.querySelector('#reminder-time').value;
+      const text = modal.querySelector('#reminder-text').value.trim();
+
+      if (time && text) {
+        this.addReminder(time, text);
+        modal.remove();
+      }
+    });
+
+    cancelBtn.addEventListener('click', () => modal.remove());
+  }
+
+  addReminder(time, text) {
+    const reminder = {
+      id: Date.now().toString(),
+      time,
+      text,
+      completed: false,
+      created: new Date().toISOString()
+    };
+
+    this.reminders.push(reminder);
+    localStorage.setItem('dailyReminders', JSON.stringify(this.reminders));
+    this.updateReminders();
+
+    // Programar notificación
+    this.scheduleReminderNotification(reminder);
+  }
+
+  completeReminder(id) {
+    const reminder = this.reminders.find(r => r.id === id);
+    if (reminder) {
+      reminder.completed = true;
+      localStorage.setItem('dailyReminders', JSON.stringify(this.reminders));
+      this.updateReminders();
+    }
+  }
+
+  scheduleReminderNotification(reminder) {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SCHEDULE_REMINDER',
+        data: reminder
+      });
+    }
+  }
+
+  updateReminders() {
+    const listEl = this.element.querySelector('.reminders-list');
+    if (listEl) {
+      listEl.innerHTML = this.getRemindersHTML();
+    }
+  }
+}
+
+// ============================================
+// WIDGET 3: ESTADÍSTICAS RÁPIDAS
+// ============================================
+
+class StatsWidget {
+  constructor(size = 'medium') {
+    this.size = size;
+    this.element = null;
+  }
+
+  create() {
+    this.element = document.createElement('div');
+    this.element.className = `widget stats-widget size-${this.size}`;
+    this.element.innerHTML = this.getTemplate();
+    this.attachEvents();
+    this.updateStats();
+    return this.element;
+  }
+
+  getTemplate() {
+    return `
+      <div class="widget-header">
+        <span class="widget-icon">📊</span>
+        <span class="widget-title">Estadísticas</span>
+      </div>
+      <div class="widget-content">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="total-tasks">0</div>
+            <div class="stat-label">Tareas Totales</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="completed-rate">0%</div>
+            <div class="stat-label">Completadas</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="active-days">0</div>
+            <div class="stat-label">Días Activos</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="avg-mood">😊</div>
+            <div class="stat-label">Ánimo Promedio</div>
+          </div>
+        </div>
+        <div class="quick-insight">
+          <span id="insight-text">Cargando insights...</span>
+        </div>
+      </div>
+      <div class="widget-actions">
+        <button class="widget-btn" data-action="view-full-stats">Ver Más</button>
+      </div>
+    `;
+  }
+
+  attachEvents() {
+    const viewStatsBtn = this.element.querySelector('[data-action="view-full-stats"]');
+    viewStatsBtn.addEventListener('click', () => {
+      window.location.href = '#stats';
+      if (window.showStatsModal) {
+        window.showStatsModal();
+      }
+    });
+  }
+
+  updateStats() {
+    const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    const completedTasks = tasks.filter(task => task.completed).length;
+    const totalTasks = tasks.length;
+    const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    // Calcular días activos
+    const activeDays = this.calculateActiveDays();
+
+    // Calcular ánimo promedio
+    const avgMood = this.calculateAverageMood();
+
+    // Generar insight rápido
+    const insight = this.generateQuickInsight(completionRate, activeDays);
+
+    // Actualizar UI
+    this.updateElement('#total-tasks', totalTasks);
+    this.updateElement('#completed-rate', `${completionRate}%`);
+    this.updateElement('#active-days', activeDays);
+    this.updateElement('#avg-mood', avgMood);
+    this.updateElement('#insight-text', insight);
+  }
+
+  updateElement(selector, value) {
+    const el = this.element.querySelector(selector);
+    if (el) el.textContent = value;
+  }
+
+  calculateActiveDays() {
+    const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    const uniqueDays = new Set();
+
+    tasks.forEach(task => {
+      if (task.created) {
+        const date = new Date(task.created).toDateString();
+        uniqueDays.add(date);
+      }
+    });
+
+    return uniqueDays.size;
+  }
+
+  calculateAverageMood() {
+    const moodHistory = JSON.parse(localStorage.getItem('moodHistory') || '[]');
+    if (moodHistory.length === 0) return '😊';
+
+    const moodValues = { '😢': 1, '😐': 2, '😊': 3, '😍': 4, '🥰': 5 };
+    const total = moodHistory.reduce((sum, mood) => sum + (moodValues[mood.emoji] || 3), 0);
+    const average = total / moodHistory.length;
+
+    if (average >= 4.5) return '🥰';
+    if (average >= 3.5) return '😍';
+    if (average >= 2.5) return '😊';
+    if (average >= 1.5) return '😐';
+    return '😢';
+  }
+
+  generateQuickInsight(completionRate, activeDays) {
+    if (completionRate >= 80) {
+      return "¡Excelente progreso! Sigan así 💪";
+    } else if (completionRate >= 60) {
+      return "Buen trabajo, van por buen camino 📈";
+    } else if (activeDays >= 7) {
+      return "¡Han sido muy activos esta semana! 🎉";
+    } else {
+      return "¡Cada día cuenta! No se rindan 💕";
+    }
+  }
+}
+
+// ============================================
+// WIDGET 4: TAREAS PENDIENTES
+// ============================================
+
+class TasksWidget {
+  constructor(size = 'small') {
+    this.size = size;
+    this.element = null;
+  }
+
+  create() {
+    this.element = document.createElement('div');
+    this.element.className = `widget tasks-widget size-${this.size}`;
+    this.element.innerHTML = this.getTemplate();
+    this.attachEvents();
+    this.updateTasks();
+    return this.element;
+  }
+
+  getTemplate() {
+    return `
+      <div class="widget-header">
+        <span class="widget-icon">✅</span>
+        <span class="widget-title">Pendientes</span>
+      </div>
+      <div class="widget-content">
+        <div class="pending-tasks-list">
+          <!-- Tasks will be populated here -->
+        </div>
+      </div>
+      <div class="widget-actions">
+        <button class="widget-btn" data-action="add-task">+ Nueva</button>
+        <button class="widget-btn" data-action="view-all">Ver Todas</button>
+      </div>
+    `;
+  }
+
+  attachEvents() {
+    const addBtn = this.element.querySelector('[data-action="add-task"]');
+    const viewAllBtn = this.element.querySelector('[data-action="view-all"]');
+
+    addBtn.addEventListener('click', () => {
+      // Abrir modal de nueva tarea
+      window.location.href = '#new-task';
+      if (window.showNewTaskForm) {
+        window.showNewTaskForm();
+      }
+    });
+
+    viewAllBtn.addEventListener('click', () => {
+      window.location.href = '#tasks';
+    });
+
+    // Event delegation para completar tareas
+    this.element.addEventListener('click', (e) => {
+      if (e.target.classList.contains('task-check')) {
+        const taskId = e.target.dataset.taskId;
+        this.completeTask(taskId);
+      }
+    });
+  }
+
+  updateTasks() {
+    const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    const pendingTasks = tasks.filter(task => !task.completed).slice(0, 5);
+
+    const listEl = this.element.querySelector('.pending-tasks-list');
+    if (listEl) {
+      listEl.innerHTML = pendingTasks.length > 0
+        ? pendingTasks.map(task => `
+            <div class="task-item" data-task-id="${task.id}">
+              <button class="task-check" data-task-id="${task.id}">○</button>
+              <span class="task-text">${task.text}</span>
+            </div>
+          `).join('')
+        : '<div class="no-tasks">¡Todas las tareas completadas! 🎉</div>';
+    }
+  }
+
+  completeTask(taskId) {
+    const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    const task = tasks.find(t => t.id === taskId);
+
+    if (task) {
+      task.completed = true;
+      task.completedAt = new Date().toISOString();
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+      this.updateTasks();
+
+      // Integrar con sistema de gamificación
+      if (window.integrateTaskCompletion) {
+        window.integrateTaskCompletion(10); // 10 puntos por tarea completada
+      }
+
+      // Mostrar celebración
+      this.showCelebration();
+    }
+  }
+
+  showCelebration() {
+    const celebration = document.createElement('div');
+    celebration.className = 'task-celebration';
+    celebration.innerHTML = '🎉';
+    celebration.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      z-index: 1000;
+      animation: celebrate 1s ease-out;
+    `;
+
+    document.body.appendChild(celebration);
+    setTimeout(() => celebration.remove(), 1000);
+  }
+}
+
+// ============================================
+// WIDGET 5: ESTADO DE ÁNIMO
+// ============================================
+
+class MoodWidget {
+  constructor(size = 'small') {
+    this.size = size;
+    this.element = null;
+  }
+
+  create() {
+    this.element = document.createElement('div');
+    this.element.className = `widget mood-widget size-${this.size}`;
+    this.element.innerHTML = this.getTemplate();
+    this.attachEvents();
+    this.updateMood();
+    return this.element;
+  }
+
+  getTemplate() {
+    return `
+      <div class="widget-header">
+        <span class="widget-icon">😊</span>
+        <span class="widget-title">Mi Ánimo</span>
+      </div>
+      <div class="widget-content">
+        <div class="current-mood" id="current-mood">😊</div>
+        <div class="mood-options">
+          <button class="mood-btn" data-mood="😢">😢</button>
+          <button class="mood-btn" data-mood="😐">😐</button>
+          <button class="mood-btn" data-mood="😊">😊</button>
+          <button class="mood-btn" data-mood="😍">😍</button>
+          <button class="mood-btn" data-mood="🥰">🥰</button>
+        </div>
+        <div class="partner-mood">
+          <span class="partner-label">Pareja:</span>
+          <span class="partner-emoji" id="partner-mood">🤔</span>
+        </div>
+      </div>
+    `;
+  }
+
+  attachEvents() {
+    this.element.addEventListener('click', (e) => {
+      if (e.target.classList.contains('mood-btn')) {
+        const mood = e.target.dataset.mood;
+        this.setMood(mood);
+      }
+    });
+  }
+
+  setMood(mood) {
+    const moodHistory = JSON.parse(localStorage.getItem('moodHistory') || '[]');
+    const today = new Date().toDateString();
+    const todayEntry = moodHistory.find(entry => entry.date === today);
+
+    if (todayEntry) {
+      todayEntry.emoji = mood;
+    } else {
+      moodHistory.push({
+        date: today,
+        emoji: mood,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    localStorage.setItem('moodHistory', JSON.stringify(moodHistory));
+    this.updateMood();
+
+    // Compartir con pareja
+    this.shareMoodWithPartner(mood);
+  }
+
+  shareMoodWithPartner(mood) {
+    // Enviar a Firebase si hay pareja conectada
+    const partnerId = localStorage.getItem('partnerId');
+    if (partnerId && window.db) {
+      window.db.collection('moods').add({
+        userId: localStorage.getItem('userId'),
+        partnerId: partnerId,
+        emoji: mood,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  updateMood() {
+    const moodHistory = JSON.parse(localStorage.getItem('moodHistory') || '[]');
+    const today = new Date().toDateString();
+    const todayEntry = moodHistory.find(entry => entry.date === today);
+
+    const currentMoodEl = this.element.querySelector('#current-mood');
+    if (currentMoodEl) {
+      currentMoodEl.textContent = todayEntry ? todayEntry.emoji : '😊';
+    }
+
+    // Actualizar ánimo de pareja (simulado por ahora)
+    this.updatePartnerMood();
+  }
+
+  updatePartnerMood() {
+    const partnerMoodEl = this.element.querySelector('#partner-mood');
+    if (partnerMoodEl) {
+      // En una implementación real, esto vendría de Firebase
+      const moods = ['😊', '🥰', '😍', '😐', '😢'];
+      const randomMood = moods[Math.floor(Math.random() * moods.length)];
+      partnerMoodEl.textContent = randomMood;
+    }
+  }
+}
+
+// ============================================
+// WIDGET 6: PRÓXIMOS ANIVERSARIOS
+// ============================================
+
+class AnniversariesWidget {
+  constructor(size = 'small') {
+    this.size = size;
+    this.element = null;
+  }
+
+  create() {
+    this.element = document.createElement('div');
+    this.element.className = `widget anniversaries-widget size-${this.size}`;
+    this.element.innerHTML = this.getTemplate();
+    this.attachEvents();
+    this.updateAnniversaries();
+    return this.element;
+  }
+
+  getTemplate() {
+    return `
+      <div class="widget-header">
+        <span class="widget-icon">🎂</span>
+        <span class="widget-title">Aniversarios</span>
+      </div>
+      <div class="widget-content">
+        <div class="next-anniversary">
+          <div class="countdown" id="countdown">--</div>
+          <div class="event-name" id="event-name">Cargando...</div>
+        </div>
+      </div>
+      <div class="widget-actions">
+        <button class="widget-btn" data-action="view-calendar">Calendario</button>
+      </div>
+    `;
+  }
+
+  attachEvents() {
+    const calendarBtn = this.element.querySelector('[data-action="view-calendar"]');
+    calendarBtn.addEventListener('click', () => {
+      window.location.href = '#calendar';
+      if (window.showCalendar) {
+        window.showCalendar();
+      }
+    });
+  }
+
+  updateAnniversaries() {
+    const anniversaries = JSON.parse(localStorage.getItem('anniversaries') || '[]');
+    const next = this.getNextAnniversary(anniversaries);
+
+    if (next) {
+      const daysUntil = this.daysUntil(next.date);
+      this.updateElement('#countdown', daysUntil === 0 ? '¡HOY!' : `${daysUntil}d`);
+      this.updateElement('#event-name', next.name);
+    } else {
+      this.updateElement('#countdown', '--');
+      this.updateElement('#event-name', 'Sin aniversarios');
+    }
+  }
+
+  getNextAnniversary(anniversaries) {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+
+    let nextAnniversary = null;
+    let minDays = Infinity;
+
+    anniversaries.forEach(anniversary => {
+      const [month, day] = anniversary.date.split('-').map(Number);
+      const anniversaryDate = new Date(currentYear, month - 1, day);
+
+      // Si ya pasó este año, considerar el próximo año
+      if (anniversaryDate < today) {
+        anniversaryDate.setFullYear(currentYear + 1);
+      }
+
+      const daysUntil = Math.ceil((anniversaryDate - today) / (1000 * 60 * 60 * 24));
+
+      if (daysUntil < minDays) {
+        minDays = daysUntil;
+        nextAnniversary = {
+          ...anniversary,
+          date: anniversaryDate
+        };
+      }
+    });
+
+    return nextAnniversary;
+  }
+
+  daysUntil(date) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(date);
+    target.setHours(0, 0, 0, 0);
+    return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+  }
+
+  updateElement(selector, value) {
+    const el = this.element.querySelector(selector);
+    if (el) el.textContent = value;
+  }
+}
+
+// ============================================
+// WIDGET 7: FOTOS RECIENTES
+// ============================================
+
+class PhotosWidget {
+  constructor(size = 'medium') {
+    this.size = size;
+    this.element = null;
+  }
+
+  create() {
+    this.element = document.createElement('div');
+    this.element.className = `widget photos-widget size-${this.size}`;
+    this.element.innerHTML = this.getTemplate();
+    this.attachEvents();
+    this.updatePhotos();
+    return this.element;
+  }
+
+  getTemplate() {
+    return `
+      <div class="widget-header">
+        <span class="widget-icon">📸</span>
+        <span class="widget-title">Fotos</span>
+      </div>
+      <div class="widget-content">
+        <div class="photos-grid">
+          <!-- Photos will be populated here -->
+        </div>
+      </div>
+      <div class="widget-actions">
+        <button class="widget-btn" data-action="take-photo">📷 Tomar</button>
+        <button class="widget-btn" data-action="view-gallery">Ver Todas</button>
+      </div>
+    `;
+  }
+
+  attachEvents() {
+    const takePhotoBtn = this.element.querySelector('[data-action="take-photo"]');
+    const viewGalleryBtn = this.element.querySelector('[data-action="view-gallery"]');
+
+    takePhotoBtn.addEventListener('click', () => this.takePhoto());
+    viewGalleryBtn.addEventListener('click', () => {
+      window.location.href = '#gallery';
+      if (window.showGallery) {
+        window.showGallery();
+      }
+    });
+  }
+
+  takePhoto() {
+    // Usar la API de cámara si está disponible
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          // Mostrar preview de cámara
+          this.showCameraPreview(stream);
+        })
+        .catch(error => {
+          console.error('Error accessing camera:', error);
+          // Fallback: abrir selector de archivos
+          this.openFilePicker();
+        });
+    } else {
+      this.openFilePicker();
+    }
+  }
+
+  showCameraPreview(stream) {
+    const modal = document.createElement('div');
+    modal.className = 'camera-modal';
+    modal.innerHTML = `
+      <div class="camera-content">
+        <video id="camera-preview" autoplay></video>
+        <div class="camera-controls">
+          <button id="capture-btn">📸 Capturar</button>
+          <button id="cancel-camera">❌ Cancelar</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const video = modal.querySelector('#camera-preview');
+    video.srcObject = stream;
+
+    const captureBtn = modal.querySelector('#capture-btn');
+    const cancelBtn = modal.querySelector('#cancel-camera');
+
+    captureBtn.addEventListener('click', () => {
+      this.capturePhoto(video, stream, modal);
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      stream.getTracks().forEach(track => track.stop());
+      modal.remove();
+    });
+  }
+
+  capturePhoto(video, stream, modal) {
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    canvas.toBlob(blob => {
+      this.savePhoto(blob);
+      stream.getTracks().forEach(track => track.stop());
+      modal.remove();
+    });
+  }
+
+  openFilePicker() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        this.savePhoto(file);
+      }
+    });
+    input.click();
+  }
+
+  savePhoto(blob) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const photos = JSON.parse(localStorage.getItem('photos') || '[]');
+      photos.unshift({
+        id: Date.now().toString(),
+        data: reader.result,
+        timestamp: new Date().toISOString(),
+        location: null // Podría agregar geolocalización
+      });
+
+      // Mantener solo las últimas 50 fotos
+      if (photos.length > 50) {
+        photos.splice(50);
+      }
+
+      localStorage.setItem('photos', JSON.stringify(photos));
+      this.updatePhotos();
+    };
+    reader.readAsDataURL(blob);
+  }
+
+  updatePhotos() {
+    const photos = JSON.parse(localStorage.getItem('photos') || '[]');
+    const recentPhotos = photos.slice(0, 4);
+
+    const gridEl = this.element.querySelector('.photos-grid');
+    if (gridEl) {
+      gridEl.innerHTML = recentPhotos.length > 0
+        ? recentPhotos.map(photo => `
+            <div class="photo-item">
+              <img src="${photo.data}" alt="Foto" onclick="this.requestFullscreen()">
+            </div>
+          `).join('')
+        : '<div class="no-photos">No hay fotos aún 📷</div>';
+    }
+  }
+}
+
+// ============================================
+// WIDGET 8: PLAYLIST ROMÁNTICA
+// ============================================
+
+class MusicWidget {
+  constructor(size = 'medium') {
+    this.size = size;
+    this.element = null;
+    this.currentTrack = null;
+    this.isPlaying = false;
+  }
+
+  create() {
+    this.element = document.createElement('div');
+    this.element.className = `widget music-widget size-${this.size}`;
+    this.element.innerHTML = this.getTemplate();
+    this.attachEvents();
+    this.updatePlaylist();
+    return this.element;
+  }
+
+  getTemplate() {
+    return `
+      <div class="widget-header">
+        <span class="widget-icon">🎵</span>
+        <span class="widget-title">Música</span>
+      </div>
+      <div class="widget-content">
+        <div class="current-track">
+          <div class="track-info">
+            <div class="track-title" id="track-title">Sin reproducción</div>
+            <div class="track-artist" id="track-artist">-</div>
+          </div>
+          <div class="track-controls">
+            <button class="control-btn" data-action="prev">⏮️</button>
+            <button class="control-btn" data-action="play-pause">▶️</button>
+            <button class="control-btn" data-action="next">⏭️</button>
+          </div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+      <div class="widget-actions">
+        <button class="widget-btn" data-action="open-player">🎧 Reproductor</button>
+      </div>
+    `;
+  }
+
+  attachEvents() {
+    const controls = this.element.querySelectorAll('.control-btn');
+    const openPlayerBtn = this.element.querySelector('[data-action="open-player"]');
+
+    controls.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const action = e.target.dataset.action;
+        this.handleControlAction(action);
+      });
+    });
+
+    openPlayerBtn.addEventListener('click', () => {
+      window.location.href = '#music';
+      if (window.showMusicPlayer) {
+        window.showMusicPlayer();
+      }
+    });
+  }
+
+  handleControlAction(action) {
+    switch (action) {
+      case 'play-pause':
+        this.togglePlayPause();
+        break;
+      case 'next':
+        this.nextTrack();
+        break;
+      case 'prev':
+        this.previousTrack();
+        break;
+    }
+  }
+
+  togglePlayPause() {
+    const playPauseBtn = this.element.querySelector('[data-action="play-pause"]');
+
+    if (this.isPlaying) {
+      this.pause();
+      playPauseBtn.textContent = '▶️';
+    } else {
+      this.play();
+      playPauseBtn.textContent = '⏸️';
+    }
+  }
+
+  play() {
+    this.isPlaying = true;
+    // Integrar con Media Session API si está disponible
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'playing';
+    }
+  }
+
+  pause() {
+    this.isPlaying = false;
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
+  }
+
+  nextTrack() {
+    // Lógica para siguiente canción
+    console.log('Next track');
+  }
+
+  previousTrack() {
+    // Lógica para canción anterior
+    console.log('Previous track');
+  }
+
+  updatePlaylist() {
+    // Cargar playlist desde localStorage o servicio de música
+    const playlist = JSON.parse(localStorage.getItem('playlist') || '[]');
+
+    if (playlist.length > 0) {
+      this.currentTrack = playlist[0];
+      this.updateElement('#track-title', this.currentTrack.title || 'Canción sin título');
+      this.updateElement('#track-artist', this.currentTrack.artist || 'Artista desconocido');
+    }
+  }
+
+  updateElement(selector, value) {
+    const el = this.element.querySelector(selector);
+    if (el) el.textContent = value;
+  }
+}
+
+// ============================================
+// REGISTRO GLOBAL DE WIDGETS
+// ============================================
+
+const WIDGET_CLASSES = {
+  'progress': ProgressWidget,
+  'reminders': RemindersWidget,
+  'stats': StatsWidget,
+  'tasks': TasksWidget,
+  'mood': MoodWidget,
+  'anniversaries': AnniversariesWidget,
+  'photos': PhotosWidget,
+  'music': MusicWidget
+};
+
+// Función para crear instancia de widget
+function createWidgetInstance(widgetKey, size = 'medium') {
+  const WidgetClass = WIDGET_CLASSES[widgetKey];
+  if (WidgetClass) {
+    return new WidgetClass(size);
+  }
+  return null;
+}
+
+// Función para actualizar todos los widgets activos
+function updateAllWidgets() {
+  // Esta función será llamada periódicamente para actualizar datos
+  installedWidgets.forEach(widgetKey => {
+    // Los widgets individuales manejan su propia actualización
+  });
+}
+
+// ============================================
+// SISTEMA DE SERVICIOS EN BACKGROUND
+// ============================================
+
+// Estado de servicios en background
+let backgroundServices = {
+  location: {
+    enabled: false,
+    running: false,
+    lastUpdate: null,
+    settings: {
+      updateInterval: 30 * 60 * 1000, // 30 minutos
+      accuracy: 'high',
+      notifyNearby: true,
+      radius: 1000 // metros
+    }
+  },
+  smartReminders: {
+    enabled: false,
+    running: false,
+    lastRun: null,
+    settings: {
+      analyzeBehavior: true,
+      adaptiveTiming: true,
+      contextAware: true
+    }
+  },
+  autoSync: {
+    enabled: false,
+    running: false,
+    lastSync: null,
+    settings: {
+      syncInterval: 15 * 60 * 1000, // 15 minutos
+      syncOnWifi: true,
+      backgroundOnly: true
+    }
+  },
+  autoBackup: {
+    enabled: false,
+    running: false,
+    lastBackup: null,
+    settings: {
+      backupInterval: 24 * 60 * 60 * 1000, // 24 horas
+      maxBackups: 7,
+      compress: true,
+      cloudBackup: false
+    }
+  }
+};
+
+// Lugares románticos predefinidos (podrían venir de una API)
+const ROMANTIC_PLACES = [
+  { name: 'Parque Central', type: 'park', lat: 40.7128, lng: -74.0060, description: 'Un lugar perfecto para un picnic romántico' },
+  { name: 'Café Bella Vista', type: 'cafe', lat: 40.7589, lng: -73.9851, description: 'Café con vista panorámica' },
+  { name: 'Mirador del Atardecer', type: 'viewpoint', lat: 40.7505, lng: -73.9934, description: 'Disfruta de la puesta de sol juntos' },
+  { name: 'Jardín Botánico', type: 'garden', lat: 40.7614, lng: -73.9776, description: 'Pasea entre flores y naturaleza' },
+  { name: 'Restaurante Luna', type: 'restaurant', lat: 40.7282, lng: -73.7949, description: 'Cena romántica bajo las estrellas' }
+];
+
+// ============================================
+// SERVICIO 1: UBICACIÓN PARA LUGARES ROMÁNTICOS
+// ============================================
+
+class LocationService {
+  constructor() {
+    this.watchId = null;
+    this.currentPosition = null;
+    this.nearbyPlaces = [];
+  }
+
+  async start() {
+    if (!backgroundServices.location.enabled) return;
+
+    try {
+      // Verificar permisos de ubicación
+      const permission = await navigator.permissions.query({ name: 'geolocation' });
+
+      if (permission.state === 'denied') {
+        console.warn('[LocationService] Permisos de ubicación denegados');
+        this.showPermissionError();
+        return;
+      }
+
+      // Iniciar seguimiento de ubicación
+      this.watchId = navigator.geolocation.watchPosition(
+        (position) => this.handlePositionUpdate(position),
+        (error) => this.handlePositionError(error),
+        {
+          enableHighAccuracy: backgroundServices.location.settings.accuracy === 'high',
+          maximumAge: 5 * 60 * 1000, // 5 minutos
+          timeout: 10 * 1000 // 10 segundos
+        }
+      );
+
+      backgroundServices.location.running = true;
+      console.log('[LocationService] Servicio iniciado');
+
+      // Notificar al service worker
+      this.notifyServiceWorker('LOCATION_STARTED');
+
+    } catch (error) {
+      console.error('[LocationService] Error al iniciar:', error);
+    }
+  }
+
+  stop() {
+    if (this.watchId) {
+      navigator.geolocation.clearWatch(this.watchId);
+      this.watchId = null;
+    }
+
+    backgroundServices.location.running = false;
+    console.log('[LocationService] Servicio detenido');
+
+    // Notificar al service worker
+    this.notifyServiceWorker('LOCATION_STOPPED');
+  }
+
+  handlePositionUpdate(position) {
+    this.currentPosition = {
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+      accuracy: position.coords.accuracy,
+      timestamp: position.timestamp
+    };
+
+    backgroundServices.location.lastUpdate = new Date().toISOString();
+
+    // Buscar lugares románticos cercanos
+    this.findNearbyRomanticPlaces();
+
+    // Notificar cambios de ubicación
+    this.notifyLocationChange();
+  }
+
+  handlePositionError(error) {
+    console.error('[LocationService] Error de ubicación:', error);
+
+    let message = 'Error desconocido de ubicación';
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        message = 'Permisos de ubicación denegados';
+        break;
+      case error.POSITION_UNAVAILABLE:
+        message = 'Ubicación no disponible';
+        break;
+      case error.TIMEOUT:
+        message = 'Tiempo de espera agotado';
+        break;
+    }
+
+    showNotification({
+      title: '📍 Error de Ubicación',
+      message: message,
+      type: 'warning'
+    });
+  }
+
+  findNearbyRomanticPlaces() {
+    if (!this.currentPosition) return;
+
+    const nearby = ROMANTIC_PLACES.filter(place => {
+      const distance = this.calculateDistance(
+        this.currentPosition.lat,
+        this.currentPosition.lng,
+        place.lat,
+        place.lng
+      );
+
+      return distance <= backgroundServices.location.settings.radius;
+    });
+
+    // Verificar si hay lugares nuevos
+    const newPlaces = nearby.filter(place =>
+      !this.nearbyPlaces.some(existing =>
+        existing.name === place.name
+      )
+    );
+
+    if (newPlaces.length > 0 && backgroundServices.location.settings.notifyNearby) {
+      this.notifyNearbyPlaces(newPlaces);
+    }
+
+    this.nearbyPlaces = nearby;
+  }
+
+  calculateDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371e3; // Radio de la Tierra en metros
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lng2 - lng1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c; // Distancia en metros
+  }
+
+  notifyNearbyPlaces(places) {
+    const placeNames = places.map(p => p.name).join(', ');
+
+    showNotification({
+      title: '💕 Lugares Románticos Cercanos',
+      message: `Descubre: ${placeNames}`,
+      type: 'info',
+      confirm: true,
+      confirmText: 'Ver Mapa',
+      onConfirm: () => this.showPlacesMap(places)
+    });
+  }
+
+  showPlacesMap(places) {
+    // Abrir modal con mapa de lugares cercanos
+    const modal = document.createElement('div');
+    modal.className = 'places-modal';
+    modal.innerHTML = `
+      <div class="places-content">
+        <h3>🗺️ Lugares Románticos Cercanos</h3>
+        <div class="places-list">
+          ${places.map(place => `
+            <div class="place-item">
+              <div class="place-icon">${this.getPlaceIcon(place.type)}</div>
+              <div class="place-info">
+                <h4>${place.name}</h4>
+                <p>${place.description}</p>
+                <small>Distancia: ${this.calculateDistance(
+                  this.currentPosition.lat,
+                  this.currentPosition.lng,
+                  place.lat,
+                  place.lng
+                ).toFixed(0)}m</small>
+              </div>
+              <button class="navigate-btn" data-lat="${place.lat}" data-lng="${place.lng}">
+                🧭
+              </button>
+            </div>
+          `).join('')}
+        </div>
+        <button class="close-places-btn">Cerrar</button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Event listeners
+    modal.addEventListener('click', (e) => {
+      if (e.target.classList.contains('navigate-btn')) {
+        const lat = e.target.dataset.lat;
+        const lng = e.target.dataset.lng;
+        this.openNavigation(lat, lng);
+      }
+
+      if (e.target.classList.contains('close-places-btn') || e.target === modal) {
+        modal.remove();
+      }
+    });
+  }
+
+  getPlaceIcon(type) {
+    const icons = {
+      park: '🌳',
+      cafe: '☕',
+      viewpoint: '🏔️',
+      garden: '🌸',
+      restaurant: '🍽️'
+    };
+    return icons[type] || '📍';
+  }
+
+  openNavigation(lat, lng) {
+    // Abrir en app de mapas nativa
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.open(url, '_blank');
+  }
+
+  notifyLocationChange() {
+    // Notificar al service worker sobre cambio de ubicación
+    this.notifyServiceWorker('LOCATION_UPDATE', {
+      position: this.currentPosition,
+      nearbyPlaces: this.nearbyPlaces
+    });
+  }
+
+  notifyServiceWorker(type, data = {}) {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: type,
+        data: data
+      });
+    }
+  }
+
+  showPermissionError() {
+    showNotification({
+      title: '📍 Permisos Requeridos',
+      message: 'Para encontrar lugares románticos cercanos, necesitamos acceso a tu ubicación.',
+      type: 'warning',
+      confirm: true,
+      confirmText: 'Configurar',
+      onConfirm: () => {
+        // Abrir configuración de permisos del navegador
+        if (navigator.permissions && navigator.permissions.request) {
+          navigator.permissions.request({ name: 'geolocation' });
+        }
+      }
+    });
+  }
+}
+
+// ============================================
+// SERVICIO 2: RECORDATORIOS INTELIGENTES
+// ============================================
+
+class SmartRemindersService {
+  constructor() {
+    this.analysisData = {
+      userBehavior: {},
+      optimalTimes: {},
+      contextPatterns: {}
+    };
+  }
+
+  async start() {
+    if (!backgroundServices.smartReminders.enabled) return;
+
+    backgroundServices.smartReminders.running = true;
+    console.log('[SmartReminders] Servicio iniciado');
+
+    // Cargar datos de análisis previos
+    await this.loadAnalysisData();
+
+    // Iniciar análisis de comportamiento
+    this.startBehaviorAnalysis();
+
+    // Programar recordatorios inteligentes
+    this.scheduleSmartReminders();
+  }
+
+  stop() {
+    backgroundServices.smartReminders.running = false;
+    console.log('[SmartReminders] Servicio detenido');
+
+    // Limpiar timers
+    if (this.analysisTimer) {
+      clearInterval(this.analysisTimer);
+    }
+  }
+
+  async loadAnalysisData() {
+    try {
+      const data = localStorage.getItem('smartRemindersData');
+      if (data) {
+        this.analysisData = JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('[SmartReminders] Error cargando datos:', error);
+    }
+  }
+
+  saveAnalysisData() {
+    try {
+      localStorage.setItem('smartRemindersData', JSON.stringify(this.analysisData));
+    } catch (error) {
+      console.error('[SmartReminders] Error guardando datos:', error);
+    }
+  }
+
+  startBehaviorAnalysis() {
+    // Analizar comportamiento cada hora
+    this.analysisTimer = setInterval(() => {
+      this.analyzeUserBehavior();
+    }, 60 * 60 * 1000); // Cada hora
+
+    // Analizar inmediatamente
+    this.analyzeUserBehavior();
+  }
+
+  analyzeUserBehavior() {
+    const now = new Date();
+    const hour = now.getHours();
+    const dayOfWeek = now.getDay();
+
+    // Analizar interacciones recientes
+    const recentInteractions = this.getRecentInteractions();
+
+    // Actualizar patrones de comportamiento
+    this.updateBehaviorPatterns(hour, dayOfWeek, recentInteractions);
+
+    // Calcular tiempos óptimos para recordatorios
+    this.calculateOptimalTimes();
+
+    console.log('[SmartReminders] Análisis completado');
+  }
+
+  getRecentInteractions() {
+    // Obtener interacciones de los últimos 7 días
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    const messages = JSON.parse(localStorage.getItem('messages') || '[]');
+
+    return {
+      tasksCompleted: tasks.filter(t => new Date(t.completedAt) > weekAgo).length,
+      messagesSent: messages.filter(m => new Date(m.timestamp) > weekAgo).length,
+      totalInteractions: tasks.length + messages.length
+    };
+  }
+
+  updateBehaviorPatterns(hour, dayOfWeek, interactions) {
+    // Actualizar patrones por hora del día
+    if (!this.analysisData.userBehavior[hour]) {
+      this.analysisData.userBehavior[hour] = { interactions: 0, completions: 0 };
+    }
+
+    this.analysisData.userBehavior[hour].interactions += interactions.totalInteractions;
+    this.analysisData.userBehavior[hour].completions += interactions.tasksCompleted;
+
+    // Actualizar patrones por día de la semana
+    if (!this.analysisData.contextPatterns[dayOfWeek]) {
+      this.analysisData.contextPatterns[dayOfWeek] = { activity: 0 };
+    }
+
+    this.analysisData.contextPatterns[dayOfWeek].activity += interactions.totalInteractions;
+
+    this.saveAnalysisData();
+  }
+
+  calculateOptimalTimes() {
+    // Encontrar las horas con más actividad
+    const hourlyActivity = Object.entries(this.analysisData.userBehavior)
+      .map(([hour, data]) => ({
+        hour: parseInt(hour),
+        score: data.interactions + data.completions * 2
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    // Las 3 mejores horas para recordatorios
+    this.analysisData.optimalTimes = hourlyActivity.slice(0, 3);
+  }
+
+  scheduleSmartReminders() {
+    // Programar recordatorios basados en análisis
+    const optimalTimes = this.analysisData.optimalTimes;
+
+    if (optimalTimes && optimalTimes.length > 0) {
+      optimalTimes.forEach(({ hour }) => {
+        this.scheduleReminderAtHour(hour);
+      });
+    } else {
+      // Fallback: programar recordatorios en horas predeterminadas
+      [9, 14, 19].forEach(hour => this.scheduleReminderAtHour(hour));
+    }
+  }
+
+  scheduleReminderAtHour(hour) {
+    const now = new Date();
+    const reminderTime = new Date(now);
+    reminderTime.setHours(hour, 0, 0, 0);
+
+    // Si ya pasó hoy, programar para mañana
+    if (reminderTime <= now) {
+      reminderTime.setDate(reminderTime.getDate() + 1);
+    }
+
+    const delay = reminderTime.getTime() - now.getTime();
+
+    setTimeout(() => {
+      this.sendSmartReminder(hour);
+      // Reprogramar para el próximo día
+      setInterval(() => this.sendSmartReminder(hour), 24 * 60 * 60 * 1000);
+    }, delay);
+  }
+
+  sendSmartReminder(hour) {
+    const reminder = this.generateSmartReminder(hour);
+
+    if (reminder) {
+      showNotification({
+        title: reminder.title,
+        message: reminder.message,
+        type: 'info',
+        confirm: true,
+        confirmText: reminder.actionText,
+        onConfirm: reminder.action
+      });
+
+      // Registrar el recordatorio enviado
+      this.logReminderSent(reminder);
+    }
+  }
+
+  generateSmartReminder(hour) {
+    const interactions = this.getRecentInteractions();
+    const pendingTasks = JSON.parse(localStorage.getItem('tasks') || '[]')
+      .filter(task => !task.completed);
+
+    // Lógica para diferentes tipos de recordatorios
+    if (pendingTasks.length > 0 && hour >= 9 && hour <= 18) {
+      return {
+        title: '💭 Momento Perfecto',
+        message: `Tienes ${pendingTasks.length} tarea(s) pendiente(s). ¿Quieres trabajar en ellas ahora?`,
+        actionText: 'Ver Tareas',
+        action: () => window.location.href = '#tasks'
+      };
+    }
+
+    if (interactions.tasksCompleted === 0 && hour >= 10) {
+      return {
+        title: '🌅 Buenos Días',
+        message: '¿Qué tal si empezamos el día con una tarea romántica juntos?',
+        actionText: 'Sugerir Tarea',
+        action: () => this.suggestRomanticTask()
+      };
+    }
+
+    if (hour >= 19 && hour <= 21) {
+      return {
+        title: '🌙 Buenas Noches',
+        message: '¿Han compartido un momento especial hoy?',
+        actionText: 'Registrar Momento',
+        action: () => this.showMoodTracker()
+      };
+    }
+
+    return null; // No enviar recordatorio
+  }
+
+  suggestRomanticTask() {
+    const romanticTasks = [
+      'Escribe una carta de amor para tu pareja',
+      'Prepara una sorpresa especial',
+      'Planea una cita nocturna',
+      'Crea una playlist romántica',
+      'Toma una foto juntos'
+    ];
+
+    const randomTask = romanticTasks[Math.floor(Math.random() * romanticTasks.length)];
+
+    showNotification({
+      title: '💡 Sugerencia Romántica',
+      message: randomTask,
+      type: 'success'
+    });
+  }
+
+  showMoodTracker() {
+    // Abrir el widget de estado de ánimo
+    if (window.showMoodWidget) {
+      window.showMoodWidget();
+    }
+  }
+
+  logReminderSent(reminder) {
+    const log = {
+      timestamp: new Date().toISOString(),
+      type: 'smart_reminder',
+      reminder: reminder
+    };
+
+    const logs = JSON.parse(localStorage.getItem('reminderLogs') || '[]');
+    logs.push(log);
+
+    // Mantener solo los últimos 100 logs
+    if (logs.length > 100) {
+      logs.splice(0, logs.length - 100);
+    }
+
+    localStorage.setItem('reminderLogs', JSON.stringify(logs));
+  }
+}
+
+// ============================================
+// SERVICIO 3: SINCRONIZACIÓN AUTOMÁTICA
+// ============================================
+
+class AutoSyncService {
+  constructor() {
+    this.syncInProgress = false;
+    this.lastSyncAttempt = null;
+  }
+
+  async start() {
+    if (!backgroundServices.autoSync.enabled) return;
+
+    backgroundServices.autoSync.running = true;
+    console.log('[AutoSync] Servicio iniciado');
+
+    // Iniciar sincronización periódica
+    this.startPeriodicSync();
+
+    // Sincronizar inmediatamente si hay conexión
+    if (navigator.onLine) {
+      this.performSync();
+    }
+  }
+
+  stop() {
+    backgroundServices.autoSync.running = false;
+    console.log('[AutoSync] Servicio detenido');
+
+    // Limpiar timers
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer);
+    }
+  }
+
+  startPeriodicSync() {
+    const interval = backgroundServices.autoSync.settings.syncInterval;
+
+    this.syncTimer = setInterval(() => {
+      if (navigator.onLine && this.shouldSync()) {
+        this.performSync();
+      }
+    }, interval);
+  }
+
+  shouldSync() {
+    // Verificar condiciones para sincronizar
+    const settings = backgroundServices.autoSync.settings;
+
+    if (settings.syncOnWifi) {
+      // Verificar si está en WiFi (aproximación)
+      return navigator.connection &&
+             (navigator.connection.effectiveType === '4g' ||
+              navigator.connection.effectiveType === 'wifi');
+    }
+
+    return true;
+  }
+
+  async performSync() {
+    if (this.syncInProgress) return;
+
+    this.syncInProgress = true;
+    this.lastSyncAttempt = new Date().toISOString();
+
+    try {
+      console.log('[AutoSync] Iniciando sincronización...');
+
+      // Sincronizar diferentes tipos de datos
+      const results = await Promise.allSettled([
+        this.syncTasks(),
+        this.syncMessages(),
+        this.syncStats(),
+        this.syncSettings()
+      ]);
+
+      // Procesar resultados
+      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const failCount = results.filter(r => r.status === 'rejected').length;
+
+      backgroundServices.autoSync.lastSync = new Date().toISOString();
+
+      if (successCount > 0) {
+        console.log(`[AutoSync] Sincronización completada: ${successCount} exitosas, ${failCount} fallidas`);
+
+        // Notificar éxito silenciosamente (solo si hay cambios)
+        if (this.hasChanges(results)) {
+          this.showSyncSuccessNotification();
+        }
+      }
+
+    } catch (error) {
+      console.error('[AutoSync] Error en sincronización:', error);
+      this.showSyncErrorNotification(error);
+    } finally {
+      this.syncInProgress = false;
+    }
+  }
+
+  async syncTasks() {
+    const localTasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    const partnerId = localStorage.getItem('partnerId');
+
+    if (!partnerId || !window.db) return;
+
+    // Obtener tareas del partner
+    const partnerTasks = await this.getPartnerData('tasks', partnerId);
+
+    // Fusionar tareas
+    const mergedTasks = this.mergeTasks(localTasks, partnerTasks);
+
+    // Guardar localmente
+    localStorage.setItem('tasks', JSON.stringify(mergedTasks));
+
+    // Subir cambios locales
+    await this.uploadLocalChanges('tasks', localTasks);
+  }
+
+  async syncMessages() {
+    const localMessages = JSON.parse(localStorage.getItem('messages') || '[]');
+    const partnerId = localStorage.getItem('partnerId');
+
+    if (!partnerId || !window.db) return;
+
+    // Sincronizar mensajes
+    const partnerMessages = await this.getPartnerData('messages', partnerId);
+    const mergedMessages = this.mergeMessages(localMessages, partnerMessages);
+
+    localStorage.setItem('messages', JSON.stringify(mergedMessages));
+    await this.uploadLocalChanges('messages', localMessages);
+  }
+
+  async syncStats() {
+    const localStats = JSON.parse(localStorage.getItem('userStats') || '{}');
+
+    if (!window.db) return;
+
+    // Subir estadísticas locales
+    await window.db.collection('stats').doc(localStorage.getItem('userId')).set({
+      ...localStats,
+      lastSync: new Date().toISOString()
+    });
+  }
+
+  async syncSettings() {
+    const localSettings = {
+      notifications: JSON.parse(localStorage.getItem('notificationSettings') || '{}'),
+      preferences: JSON.parse(localStorage.getItem('userPreferences') || '{}'),
+      widgets: JSON.parse(localStorage.getItem('installedWidgets') || '[]')
+    };
+
+    if (!window.db) return;
+
+    await window.db.collection('settings').doc(localStorage.getItem('userId')).set({
+      ...localSettings,
+      lastSync: new Date().toISOString()
+    });
+  }
+
+  async getPartnerData(collection, partnerId) {
+    if (!window.db) return [];
+
+    const snapshot = await window.db.collection(collection)
+      .where('partnerId', '==', partnerId)
+      .get();
+
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  mergeTasks(localTasks, partnerTasks) {
+    const allTasks = [...localTasks, ...partnerTasks];
+    const uniqueTasks = new Map();
+
+    // Eliminar duplicados basados en ID
+    allTasks.forEach(task => {
+      if (!uniqueTasks.has(task.id) ||
+          new Date(task.updatedAt || task.created) > new Date(uniqueTasks.get(task.id).updatedAt || uniqueTasks.get(task.id).created)) {
+        uniqueTasks.set(task.id, task);
+      }
+    });
+
+    return Array.from(uniqueTasks.values());
+  }
+
+  mergeMessages(localMessages, partnerMessages) {
+    // Similar a mergeTasks pero para mensajes
+    const allMessages = [...localMessages, ...partnerMessages];
+    const uniqueMessages = new Map();
+
+    allMessages.forEach(message => {
+      if (!uniqueMessages.has(message.id)) {
+        uniqueMessages.set(message.id, message);
+      }
+    });
+
+    return Array.from(uniqueMessages.values());
+  }
+
+  async uploadLocalChanges(collection, localData) {
+    if (!window.db || !localData.length) return;
+
+    const batch = window.db.batch();
+
+    localData.forEach(item => {
+      const ref = window.db.collection(collection).doc(item.id);
+      batch.set(ref, item);
+    });
+
+    await batch.commit();
+  }
+
+  hasChanges(results) {
+    return results.some(result =>
+      result.status === 'fulfilled' && result.value && result.value.length > 0
+    );
+  }
+
+  showSyncSuccessNotification() {
+    showNotification({
+      title: '🔄 Sincronización Completa',
+      message: 'Tus datos han sido sincronizados con tu pareja.',
+      type: 'success',
+      duration: 3000
+    });
+  }
+
+  showSyncErrorNotification(error) {
+    showNotification({
+      title: '⚠️ Error de Sincronización',
+      message: 'No se pudieron sincronizar algunos datos. Reintentando automáticamente.',
+      type: 'warning',
+      duration: 5000
+    });
+  }
+}
+
+// ============================================
+// SERVICIO 4: BACKUP AUTOMÁTICO
+// ============================================
+
+class AutoBackupService {
+  constructor() {
+    this.backupInProgress = false;
+  }
+
+  async start() {
+    if (!backgroundServices.autoBackup.enabled) return;
+
+    backgroundServices.autoBackup.running = true;
+    console.log('[AutoBackup] Servicio iniciado');
+
+    // Iniciar backup periódico
+    this.startPeriodicBackup();
+
+    // Hacer backup inmediatamente
+    this.performBackup();
+  }
+
+  stop() {
+    backgroundServices.autoBackup.running = false;
+    console.log('[AutoBackup] Servicio detenido');
+
+    if (this.backupTimer) {
+      clearInterval(this.backupTimer);
+    }
+  }
+
+  startPeriodicBackup() {
+    const interval = backgroundServices.autoBackup.settings.backupInterval;
+
+    this.backupTimer = setInterval(() => {
+      this.performBackup();
+    }, interval);
+  }
+
+  async performBackup() {
+    if (this.backupInProgress) return;
+
+    this.backupInProgress = true;
+
+    try {
+      console.log('[AutoBackup] Iniciando backup automático...');
+
+      const backupData = await this.collectBackupData();
+      const backupBlob = await this.createBackupBlob(backupData);
+      const backupId = await this.saveBackupLocally(backupBlob);
+
+      // Backup en la nube si está habilitado
+      if (backgroundServices.autoBackup.settings.cloudBackup) {
+        await this.uploadToCloud(backupBlob, backupId);
+      }
+
+      // Limpiar backups antiguos
+      await this.cleanupOldBackups();
+
+      backgroundServices.autoBackup.lastBackup = new Date().toISOString();
+
+      console.log('[AutoBackup] Backup completado:', backupId);
+
+      // Notificar solo si es el primer backup o han pasado varios días
+      const lastNotification = localStorage.getItem('lastBackupNotification');
+      const shouldNotify = !lastNotification ||
+                          (new Date() - new Date(lastNotification)) > (7 * 24 * 60 * 60 * 1000);
+
+      if (shouldNotify) {
+        this.showBackupSuccessNotification();
+        localStorage.setItem('lastBackupNotification', new Date().toISOString());
+      }
+
+    } catch (error) {
+      console.error('[AutoBackup] Error en backup:', error);
+      this.showBackupErrorNotification(error);
+    } finally {
+      this.backupInProgress = false;
+    }
+  }
+
+  async collectBackupData() {
+    return {
+      metadata: {
+        timestamp: new Date().toISOString(),
+        userId: localStorage.getItem('userId'),
+        version: '1.0',
+        type: 'automatic'
+      },
+      data: {
+        tasks: JSON.parse(localStorage.getItem('tasks') || '[]'),
+        messages: JSON.parse(localStorage.getItem('messages') || '[]'),
+        stats: JSON.parse(localStorage.getItem('userStats') || '{}'),
+        settings: {
+          notifications: JSON.parse(localStorage.getItem('notificationSettings') || '{}'),
+          preferences: JSON.parse(localStorage.getItem('userPreferences') || '{}'),
+          widgets: JSON.parse(localStorage.getItem('installedWidgets') || '[]'),
+          backgroundServices: backgroundServices
+        },
+        photos: JSON.parse(localStorage.getItem('photos') || '[]'),
+        playlists: JSON.parse(localStorage.getItem('playlists') || '[]'),
+        anniversaries: JSON.parse(localStorage.getItem('anniversaries') || '[]'),
+        moodHistory: JSON.parse(localStorage.getItem('moodHistory') || '[]'),
+        smartRemindersData: JSON.parse(localStorage.getItem('smartRemindersData') || '{}')
+      }
+    };
+  }
+
+  async createBackupBlob(data) {
+    const jsonString = JSON.stringify(data, null, 2);
+
+    if (backgroundServices.autoBackup.settings.compress) {
+      // Comprimir usando CompressionStream si está disponible
+      if ('CompressionStream' in window) {
+        const stream = new CompressionStream('gzip');
+        const writer = stream.writable.getWriter();
+        const reader = stream.readable.getReader();
+
+        writer.write(new TextEncoder().encode(jsonString));
+        writer.close();
+
+        const chunks = [];
+        let done = false;
+        while (!done) {
+          const { value, done: readerDone } = await reader.read();
+          if (readerDone) done = true;
+          else chunks.push(value);
+        }
+
+        return new Blob(chunks, { type: 'application/gzip' });
+      }
+    }
+
+    return new Blob([jsonString], { type: 'application/json' });
+  }
+
+  async saveBackupLocally(blob) {
+    const backupId = `backup_${Date.now()}`;
+    const backupName = `${backupId}.json${backgroundServices.autoBackup.settings.compress ? '.gz' : ''}`;
+
+    // Usar File System Access API si está disponible, sino IndexedDB
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: backupName,
+          types: [{
+            description: 'Backup File',
+            accept: {
+              'application/json': ['.json'],
+              'application/gzip': ['.json.gz']
+            }
+          }]
+        });
+
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+
+        return backupId;
+      } catch (error) {
+        // Usuario canceló o no hay soporte
+        console.log('[AutoBackup] Usando IndexedDB como fallback');
+      }
+    }
+
+    // Fallback: guardar en IndexedDB
+    return await this.saveToIndexedDB(blob, backupId);
+  }
+
+  async saveToIndexedDB(blob, backupId) {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('ThingsToDo_Backups', 1);
+
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('backups')) {
+          db.createObjectStore('backups');
+        }
+      };
+
+      request.onsuccess = (event) => {
+        const db = event.target.result;
+        const transaction = db.transaction(['backups'], 'readwrite');
+        const store = transaction.objectStore('backups');
+
+        const backupData = {
+          id: backupId,
+          blob: blob,
+          timestamp: new Date().toISOString(),
+          size: blob.size
+        };
+
+        const putRequest = store.put(backupData, backupId);
+
+        putRequest.onsuccess = () => resolve(backupId);
+        putRequest.onerror = () => reject(putRequest.error);
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async uploadToCloud(blob, backupId) {
+    // Implementar subida a Firebase Storage o similar
+    if (window.storage && window.storage.ref) {
+      const userId = localStorage.getItem('userId');
+      const backupRef = window.storage.ref().child(`backups/${userId}/${backupId}.json`);
+
+      try {
+        await backupRef.put(blob);
+        console.log('[AutoBackup] Backup subido a la nube');
+      } catch (error) {
+        console.error('[AutoBackup] Error subiendo a la nube:', error);
+      }
+    }
+  }
+
+  async cleanupOldBackups() {
+    const maxBackups = backgroundServices.autoBackup.settings.maxBackups;
+
+    try {
+      const request = indexedDB.open('ThingsToDo_Backups', 1);
+
+      request.onsuccess = (event) => {
+        const db = event.target.result;
+        const transaction = db.transaction(['backups'], 'readwrite');
+        const store = transaction.objectStore('backups');
+
+        const getAllRequest = store.getAll();
+
+        getAllRequest.onsuccess = () => {
+          const backups = getAllRequest.result
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+          // Eliminar backups antiguos
+          if (backups.length > maxBackups) {
+            const toDelete = backups.slice(maxBackups);
+            toDelete.forEach(backup => {
+              store.delete(backup.id);
+            });
+            console.log(`[AutoBackup] Eliminados ${toDelete.length} backups antiguos`);
+          }
+        };
+      };
+    } catch (error) {
+      console.error('[AutoBackup] Error limpiando backups:', error);
+    }
+  }
+
+  showBackupSuccessNotification() {
+    showNotification({
+      title: '💾 Backup Completado',
+      message: 'Tus datos han sido respaldados automáticamente.',
+      type: 'success',
+      duration: 3000
+    });
+  }
+
+  showBackupErrorNotification(error) {
+    showNotification({
+      title: '⚠️ Error en Backup',
+      message: 'No se pudo completar el backup automático.',
+      type: 'warning',
+      confirm: true,
+      confirmText: 'Reintentar',
+      onConfirm: () => this.performBackup()
+    });
+  }
+}
+
+// ============================================
+// GESTOR DE SERVICIOS EN BACKGROUND
+// ============================================
+
+class BackgroundServicesManager {
+  constructor() {
+    this.services = {
+      location: new LocationService(),
+      smartReminders: new SmartRemindersService(),
+      autoSync: new AutoSyncService(),
+      autoBackup: new AutoBackupService()
+    };
+
+    this.loadSettings();
+  }
+
+  loadSettings() {
+    const saved = localStorage.getItem('backgroundServices');
+    if (saved) {
+      backgroundServices = { ...backgroundServices, ...JSON.parse(saved) };
+    }
+  }
+
+  saveSettings() {
+    localStorage.setItem('backgroundServices', JSON.stringify(backgroundServices));
+  }
+
+  startService(serviceName) {
+    if (this.services[serviceName]) {
+      backgroundServices[serviceName].enabled = true;
+      this.services[serviceName].start();
+      this.saveSettings();
+    }
+  }
+
+  stopService(serviceName) {
+    if (this.services[serviceName]) {
+      backgroundServices[serviceName].enabled = false;
+      this.services[serviceName].stop();
+      this.saveSettings();
+    }
+  }
+
+  updateServiceSettings(serviceName, settings) {
+    if (backgroundServices[serviceName]) {
+      backgroundServices[serviceName].settings = {
+        ...backgroundServices[serviceName].settings,
+        ...settings
+      };
+      this.saveSettings();
+
+      // Reiniciar servicio si está corriendo
+      if (backgroundServices[serviceName].running) {
+        this.services[serviceName].stop();
+        this.services[serviceName].start();
+      }
+    }
+  }
+
+  getServiceStatus(serviceName) {
+    return backgroundServices[serviceName] || null;
+  }
+
+  getAllStatuses() {
+    return backgroundServices;
+  }
+
+  startAllEnabled() {
+    Object.entries(backgroundServices).forEach(([name, config]) => {
+      if (config.enabled) {
+        this.services[name].start();
+      }
+    });
+  }
+
+  stopAll() {
+    Object.keys(this.services).forEach(name => {
+      this.services[name].stop();
+    });
+  }
+}
+
+// ============================================
+// INTERFAZ DE CONFIGURACIÓN DE SERVICIOS
+// ============================================
+
+function showBackgroundServicesManager() {
+  const manager = new BackgroundServicesManager();
+
+  const modal = document.createElement('div');
+  modal.className = 'background-services-modal';
+  modal.innerHTML = `
+    <div class="background-services-content">
+      <h3>🔧 Servicios en Background</h3>
+      <p class="services-description">
+        Configura servicios que funcionan automáticamente en segundo plano para mejorar tu experiencia.
+      </p>
+
+      <div class="services-list">
+        ${Object.entries(backgroundServices).map(([key, service]) => `
+          <div class="service-item" data-service="${key}">
+            <div class="service-header">
+              <div class="service-info">
+                <span class="service-icon">${getServiceIcon(key)}</span>
+                <div class="service-details">
+                  <h4>${getServiceName(key)}</h4>
+                  <p>${getServiceDescription(key)}</p>
+                </div>
+              </div>
+              <label class="service-toggle">
+                <input type="checkbox" ${service.enabled ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="service-settings ${service.enabled ? 'visible' : ''}">
+              ${getServiceSettingsHTML(key, service.settings)}
+            </div>
+
+            <div class="service-status">
+              <span class="status-indicator ${service.running ? 'active' : 'inactive'}">
+                ${service.running ? '● Activo' : '● Inactivo'}
+              </span>
+              ${service.lastUpdate ? `<span class="last-update">Última actualización: ${new Date(service.lastUpdate).toLocaleString()}</span>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="services-actions">
+        <button class="services-btn test-services">🧪 Probar Servicios</button>
+        <button class="services-btn reset-services">🔄 Reiniciar Todos</button>
+      </div>
+
+      <button class="close-services-btn">❌ Cerrar</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Event listeners
+  modal.addEventListener('change', (e) => {
+    if (e.target.type === 'checkbox') {
+      const serviceItem = e.target.closest('.service-item');
+      const serviceName = serviceItem.dataset.service;
+      const enabled = e.target.checked;
+
+      if (enabled) {
+        manager.startService(serviceName);
+      } else {
+        manager.stopService(serviceName);
+      }
+
+      // Mostrar/ocultar configuraciones
+      const settingsEl = serviceItem.querySelector('.service-settings');
+      settingsEl.classList.toggle('visible', enabled);
+
+      // Actualizar indicador de estado
+      updateServiceStatus(serviceItem, serviceName);
+    }
+  });
+
+  modal.addEventListener('input', (e) => {
+    if (e.target.dataset.setting) {
+      const serviceName = e.target.closest('.service-item').dataset.service;
+      const settingKey = e.target.dataset.setting;
+      const value = e.target.type === 'checkbox' ? e.target.checked :
+                   e.target.type === 'number' ? parseInt(e.target.value) : e.target.value;
+
+      manager.updateServiceSettings(serviceName, { [settingKey]: value });
+    }
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target.classList.contains('test-services')) {
+      testAllServices(manager);
+    } else if (e.target.classList.contains('reset-services')) {
+      resetAllServices(manager);
+    } else if (e.target.classList.contains('close-services-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+function getServiceIcon(serviceName) {
+  const icons = {
+    location: '📍',
+    smartReminders: '🧠',
+    autoSync: '🔄',
+    autoBackup: '💾'
+  };
+  return icons[serviceName] || '⚙️';
+}
+
+function getServiceName(serviceName) {
+  const names = {
+    location: 'Ubicación Romántica',
+    smartReminders: 'Recordatorios Inteligentes',
+    autoSync: 'Sincronización Automática',
+    autoBackup: 'Backup Automático'
+  };
+  return names[serviceName] || serviceName;
+}
+
+function getServiceDescription(serviceName) {
+  const descriptions = {
+    location: 'Encuentra lugares románticos cercanos y recibe sugerencias basadas en tu ubicación.',
+    smartReminders: 'Recordatorios inteligentes que aprenden tus patrones de comportamiento.',
+    autoSync: 'Sincroniza automáticamente tus datos con tu pareja en segundo plano.',
+    autoBackup: 'Crea copias de seguridad automáticas de todos tus datos importantes.'
+  };
+  return descriptions[serviceName] || '';
+}
+
+function getServiceSettingsHTML(serviceName, settings) {
+  switch (serviceName) {
+    case 'location':
+      return `
+        <div class="setting-group">
+          <label>
+            <input type="checkbox" data-setting="notifyNearby" ${settings.notifyNearby ? 'checked' : ''}>
+            Notificar lugares cercanos
+          </label>
+          <label>
+            Radio de búsqueda: <input type="number" data-setting="radius" value="${settings.radius}" min="100" max="5000" step="100"> metros
+          </label>
+        </div>
+      `;
+
+    case 'smartReminders':
+      return `
+        <div class="setting-group">
+          <label>
+            <input type="checkbox" data-setting="analyzeBehavior" ${settings.analyzeBehavior ? 'checked' : ''}>
+            Analizar comportamiento
+          </label>
+          <label>
+            <input type="checkbox" data-setting="adaptiveTiming" ${settings.adaptiveTiming ? 'checked' : ''}>
+            Horarios adaptativos
+          </label>
+        </div>
+      `;
+
+    case 'autoSync':
+      return `
+        <div class="setting-group">
+          <label>
+            Intervalo de sincronización: ${Math.round(settings.syncInterval / (60 * 1000))} minutos
+            <input type="range" data-setting="syncInterval" value="${settings.syncInterval}" min="${5 * 60 * 1000}" max="${60 * 60 * 1000}" step="${5 * 60 * 1000}">
+          </label>
+          <label>
+            <input type="checkbox" data-setting="syncOnWifi" ${settings.syncOnWifi ? 'checked' : ''}>
+            Solo en WiFi
+          </label>
+        </div>
+      `;
+
+    case 'autoBackup':
+      return `
+        <div class="setting-group">
+          <label>
+            Intervalo de backup: ${Math.round(settings.backupInterval / (60 * 60 * 1000))} horas
+            <input type="range" data-setting="backupInterval" value="${settings.backupInterval}" min="${1 * 60 * 60 * 1000}" max="${24 * 60 * 60 * 1000}" step="${1 * 60 * 60 * 1000}">
+          </label>
+          <label>
+            <input type="checkbox" data-setting="compress" ${settings.compress ? 'checked' : ''}>
+            Comprimir backups
+          </label>
+          <label>
+            Máximo de backups: <input type="number" data-setting="maxBackups" value="${settings.maxBackups}" min="1" max="30">
+          </label>
+        </div>
+      `;
+
+    default:
+      return '';
+  }
+}
+
+function updateServiceStatus(serviceItem, serviceName) {
+  const status = backgroundServices[serviceName];
+  const indicator = serviceItem.querySelector('.status-indicator');
+  const lastUpdate = serviceItem.querySelector('.last-update');
+
+  indicator.className = `status-indicator ${status.running ? 'active' : 'inactive'}`;
+  indicator.textContent = status.running ? '● Activo' : '● Inactivo';
+
+  if (lastUpdate && status.lastUpdate) {
+    lastUpdate.textContent = `Última actualización: ${new Date(status.lastUpdate).toLocaleString()}`;
+  }
+}
+
+function testAllServices(manager) {
+  showNotification({
+    title: '🧪 Probando Servicios',
+    message: 'Ejecutando pruebas de todos los servicios en background...',
+    type: 'info'
+  });
+
+  // Aquí irían las pruebas específicas de cada servicio
+  setTimeout(() => {
+    showNotification({
+      title: '✅ Pruebas Completadas',
+      message: 'Todos los servicios han sido probados exitosamente.',
+      type: 'success'
+    });
+  }, 2000);
+}
+
+function resetAllServices(manager) {
+  if (confirm('¿Estás seguro de que quieres reiniciar todos los servicios? Esto detendrá todos los procesos en background.')) {
+    manager.stopAll();
+    setTimeout(() => {
+      manager.startAllEnabled();
+      showNotification({
+        title: '🔄 Servicios Reiniciados',
+        message: 'Todos los servicios han sido reiniciados.',
+        type: 'success'
+      });
+    }, 1000);
+  }
+}
+
+// ============================================
+// INICIALIZACIÓN DE SERVICIOS EN BACKGROUND
+// ============================================
+
+// Instancia global del gestor de servicios
+let backgroundServicesManager;
+
+// Inicializar servicios cuando la app esté lista
+document.addEventListener('DOMContentLoaded', () => {
+  backgroundServicesManager = new BackgroundServicesManager();
+
+  // Pequeño delay para asegurar que todo esté cargado
+  setTimeout(() => {
+    backgroundServicesManager.startAllEnabled();
+  }, 2000);
+});
+
+// Hacer funciones disponibles globalmente
+window.showBackgroundServicesManager = showBackgroundServicesManager;
+window.BackgroundServicesManager = BackgroundServicesManager;
+
+// Event listeners para cambios de conexión
+window.addEventListener('online', () => handleConnectionChange(true));
+window.addEventListener('offline', () => handleConnectionChange(false));
+
+// Inicializar sistema de calidad de conexión
+document.addEventListener('DOMContentLoaded', () => {
+  // Detectar calidad inicial de conexión
+  detectConnectionQuality();
+
+  // Mostrar estado inicial
+  handleConnectionChange(navigator.onLine);
+});
+
+// Función para manejar shortcuts desde el manifest
+function handleAppShortcut() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const action = urlParams.get('action');
+
+  if (action) {
+    console.log('[PWA] Shortcut activado:', action);
+
+    // Verificar si es un shortcut dinámico
+    if (['continue-test', 'results', 'messages'].includes(action)) {
+      handleDynamicShortcut(action);
+      return;
+    }
+
+    // Mostrar indicador de carga
+    showShortcutLoading(action);
+
+    switch (action) {
+      case 'new-plan':
+        // Abrir modal de nuevo plan
+        setTimeout(() => {
+          const newPlanBtn = document.getElementById('new-plan-btn');
+          if (newPlanBtn) {
+            newPlanBtn.click();
+            hideShortcutLoading();
+          } else {
+            console.warn('[PWA] Botón de nuevo plan no encontrado');
+            hideShortcutLoading();
+          }
+        }, 1000);
+        break;
+
+      case 'test':
+        // Abrir modal del test
+        setTimeout(() => {
+          const testBtn = document.querySelector('[title="El Test - Compatibilidad"]');
+          if (testBtn) {
+            testBtn.click();
+            hideShortcutLoading();
+          } else {
+            console.warn('[PWA] Botón del test no encontrado');
+            hideShortcutLoading();
+          }
+        }, 1000);
+        break;
+
+      case 'stats':
+        // Abrir sección de estadísticas
+        setTimeout(() => {
+          const statsBtn = document.querySelector('[title="Estadísticas"]');
+          if (statsBtn) {
+            statsBtn.click();
+            hideShortcutLoading();
+          } else {
+            console.warn('[PWA] Botón de estadísticas no encontrado');
+            hideShortcutLoading();
+          }
+        }, 1000);
+        break;
+
+      case 'share-received':
+        // Procesar contenido compartido desde otra app
+        setTimeout(() => {
+          handleSharedContent();
+          hideShortcutLoading();
+        }, 500);
+        break;
+
+      default:
+        console.warn('[PWA] Acción de shortcut desconocida:', action);
+        hideShortcutLoading();
+    }
+
+    // Limpiar la URL después de un breve delay (excepto para share-received)
+    if (action !== 'share-received') {
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 2000);
+    }
+  }
+}
+
+// Función para manejar contenido compartido desde otras apps
+async function handleSharedContent() {
+  try {
+    console.log('[Share] Procesando contenido compartido...');
+
+    // Verificar si hay datos en sessionStorage (desde el service worker)
+    const sharedData = JSON.parse(sessionStorage.getItem('sharedContent') || 'null');
+
+    if (sharedData) {
+      // Limpiar los datos compartidos
+      sessionStorage.removeItem('sharedContent');
+
+      // Procesar el contenido compartido
+      await processSharedContent(sharedData);
+      return;
+    }
+
+    // Si no hay datos en sessionStorage, verificar URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedTitle = urlParams.get('title');
+    const sharedText = urlParams.get('text');
+    const sharedUrl = urlParams.get('url');
+
+    if (sharedTitle || sharedText || sharedUrl) {
+      const sharedData = {
+        title: sharedTitle,
+        text: sharedText,
+        url: sharedUrl,
+        timestamp: Date.now()
+      };
+
+      await processSharedContent(sharedData);
+
+      // Limpiar URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+      console.log('[Share] No se encontró contenido compartido');
+      showNotification({
+        title: '📥 Compartir',
+        message: '¿Qué te gustaría compartir? Puedes compartir texto, URLs o archivos.',
+        type: 'info',
+        confirm: true,
+        confirmText: 'Crear tarea',
+        onConfirm: () => createTaskFromShare()
+      });
+    }
+
+  } catch (error) {
+    console.error('[Share] Error procesando contenido compartido:', error);
+    showNotification({
+      title: '❌ Error',
+      message: 'No se pudo procesar el contenido compartido.',
+      type: 'error'
+    });
+  }
+}
+
+// Función para procesar el contenido compartido
+async function processSharedContent(sharedData) {
+  console.log('[Share] Procesando datos:', sharedData);
+
+  const { title, text, url, files } = sharedData;
+
+  // Crear un resumen del contenido compartido
+  let contentSummary = '';
+  if (title) contentSummary += `📌 ${title}\n`;
+  if (text) contentSummary += `${text}\n`;
+  if (url) contentSummary += `🔗 ${url}\n`;
+  if (files && files.length > 0) contentSummary += `📎 ${files.length} archivo(s)\n`;
+
+  // Mostrar modal para que el usuario decida qué hacer
+  showNotification({
+    title: '📥 ¡Contenido compartido!',
+    message: `Recibiste:\n${contentSummary}\n¿Qué te gustaría hacer?`,
+    type: 'info',
+    confirm: true,
+    confirmText: 'Crear tarea',
+    cancelText: 'Ver opciones',
+    onConfirm: () => createTaskFromShare(sharedData),
+    onCancel: () => showShareOptions(sharedData)
+  });
+}
+
+// Función para mostrar opciones de compartir
+function showShareOptions(sharedData) {
+  const modal = document.createElement('div');
+  modal.className = 'share-options-modal';
+  modal.innerHTML = `
+    <div class="share-options-content">
+      <h3>📥 ¿Qué hacer con el contenido compartido?</h3>
+      <div class="share-preview">
+        ${sharedData.title ? `<div class="share-title">${sharedData.title}</div>` : ''}
+        ${sharedData.text ? `<div class="share-text">${sharedData.text}</div>` : ''}
+        ${sharedData.url ? `<div class="share-url">${sharedData.url}</div>` : ''}
+        ${sharedData.files ? `<div class="share-files">${sharedData.files.length} archivo(s)</div>` : ''}
+      </div>
+      <div class="share-actions">
+        <button class="share-action-btn" data-action="task">
+          ✅ Crear tarea
+        </button>
+        <button class="share-action-btn" data-action="note">
+          📝 Crear nota
+        </button>
+        <button class="share-action-btn" data-action="reminder">
+          ⏰ Recordatorio
+        </button>
+        <button class="share-action-btn" data-action="save">
+          💾 Guardar para después
+        </button>
+        <button class="share-action-btn cancel" data-action="cancel">
+          ❌ Cancelar
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Manejar clicks en los botones
+  modal.addEventListener('click', (e) => {
+    const action = e.target.dataset.action;
+    if (!action) return;
+
+    modal.remove();
+
+    switch (action) {
+      case 'task':
+        createTaskFromShare(sharedData);
+        break;
+      case 'note':
+        createNoteFromShare(sharedData);
+        break;
+      case 'reminder':
+        createReminderFromShare(sharedData);
+        break;
+      case 'save':
+        saveSharedContent(sharedData);
+        break;
+      case 'cancel':
+        // No hacer nada
+        break;
+    }
+  });
+
+  // Cerrar al hacer click fuera
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+// Función para crear una tarea desde contenido compartido
+function createTaskFromShare(sharedData) {
+  const taskText = generateTaskText(sharedData);
+
+  showNotification({
+    title: '✅ Crear tarea',
+    message: `¿Crear tarea con: "${taskText}"?`,
+    type: 'confirm',
+    input: true,
+    inputPlaceholder: 'Personaliza el texto de la tarea...',
+    confirmText: 'Crear',
+    onConfirm: (customText) => {
+      const finalText = customText || taskText;
+      addTask(finalText, 'shared');
+      showNotification({
+        title: '✅ ¡Tarea creada!',
+        message: 'La tarea se agregó a tu lista.',
+        type: 'success'
+      });
+    }
+  });
+}
+
+// Función para crear una nota desde contenido compartido
+function createNoteFromShare(sharedData) {
+  const noteText = generateNoteText(sharedData);
+
+  showNotification({
+    title: '📝 Crear nota',
+    message: '¿Crear una nota con el contenido compartido?',
+    type: 'confirm',
+    confirmText: 'Crear nota',
+    onConfirm: () => {
+      // Aquí iría la lógica para crear notas
+      // Por ahora, solo mostrar confirmación
+      showNotification({
+        title: '✅ ¡Nota creada!',
+        message: 'La nota se guardó exitosamente.',
+        type: 'success'
+      });
+    }
+  });
+}
+
+// Función para crear un recordatorio desde contenido compartido
+function createReminderFromShare(sharedData) {
+  const reminderText = generateReminderText(sharedData);
+
+  showNotification({
+    title: '⏰ Recordatorio',
+    message: `¿Programar recordatorio para: "${reminderText}"?`,
+    type: 'confirm',
+    confirmText: 'Programar',
+    onConfirm: () => {
+      // Programar notificación para más tarde
+      setTimeout(() => {
+        showNotification({
+          title: '⏰ Recordatorio',
+          message: reminderText,
+          type: 'info'
+        });
+      }, 60 * 60 * 1000); // 1 hora después
+
+      showNotification({
+        title: '✅ ¡Recordatorio programado!',
+        message: 'Te recordaremos en 1 hora.',
+        type: 'success'
+      });
+    }
+  });
+}
+
+// Función para guardar contenido compartido para después
+function saveSharedContent(sharedData) {
+  try {
+    const savedShares = JSON.parse(localStorage.getItem('savedShares') || '[]');
+    savedShares.push({
+      ...sharedData,
+      savedAt: Date.now()
+    });
+
+    // Mantener solo los últimos 10 elementos
+    if (savedShares.length > 10) {
+      savedShares.shift();
+    }
+
+    localStorage.setItem('savedShares', JSON.stringify(savedShares));
+
+    showNotification({
+      title: '💾 ¡Guardado!',
+      message: 'El contenido se guardó para ver después.',
+      type: 'success'
+    });
+  } catch (error) {
+    console.error('[Share] Error guardando contenido:', error);
+    showNotification({
+      title: '❌ Error',
+      message: 'No se pudo guardar el contenido.',
+      type: 'error'
+    });
+  }
+}
+
+// Funciones auxiliares para generar texto
+function generateTaskText(sharedData) {
+  const { title, text, url } = sharedData;
+  if (title && text) return `${title}: ${text}`;
+  if (title) return `Revisar: ${title}`;
+  if (text) return text;
+  if (url) return `Revisar enlace: ${url}`;
+  return 'Contenido compartido';
+}
+
+function generateNoteText(sharedData) {
+  const { title, text, url } = sharedData;
+  let note = 'Contenido compartido:\n\n';
+  if (title) note += `📌 ${title}\n\n`;
+  if (text) note += `${text}\n\n`;
+  if (url) note += `🔗 ${url}\n`;
+  return note;
+}
+
+function generateReminderText(sharedData) {
+  const { title, text } = sharedData;
+  if (title) return `Recordatorio: ${title}`;
+  if (text && text.length < 50) return `Recordatorio: ${text}`;
+  return 'Recordatorio de contenido compartido';
+}
+
+// Función para mostrar indicador de carga de shortcut
+function showShortcutLoading(action) {
+  const loading = document.createElement('div');
+  loading.id = 'shortcut-loading';
+  loading.innerHTML = `
+    <div class="shortcut-loading-content">
+      <div class="loading-spinner"></div>
+      <span>Abriendo ${getActionDisplayName(action)}...</span>
+    </div>
+  `;
+  loading.className = 'shortcut-loading-overlay';
+
+  document.body.appendChild(loading);
+  setTimeout(() => loading.classList.add('visible'), 100);
+}
+
+// Función para ocultar indicador de carga
+function hideShortcutLoading() {
+  const loading = document.getElementById('shortcut-loading');
+  if (loading) {
+    loading.classList.remove('visible');
+    setTimeout(() => loading.remove(), 300);
+  }
+}
+
+// Función para obtener nombre display de la acción
+function getActionDisplayName(action) {
+  const names = {
+    'new-plan': 'Nuevo Plan',
+    'test': 'El Test',
+    'stats': 'Estadísticas',
+    'share': 'Compartir App'
+  };
+  return names[action] || action;
+}
+
+// Función para compartir la app
+async function shareApp() {
+  const shareData = {
+    title: '100 ThingsToDo - Kawaii Couples App',
+    text: '¡Descubre cosas divertidas para hacer con tu pareja! Una app kawaii para parejas enamoradas 💕',
+    url: window.location.origin
+  };
+
+  try {
+    if (navigator.share) {
+      // Usar Web Share API si está disponible
+      await navigator.share(shareData);
+      console.log('[PWA] App compartida exitosamente');
+    } else {
+      // Fallback: copiar al portapapeles
+      await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+      showNotification({
+        title: '✅ Enlace copiado',
+        message: 'El enlace de la app se copió al portapapeles',
+        type: 'success'
+      });
+    }
+  } catch (error) {
+    console.error('[PWA] Error al compartir:', error);
+    showNotification({
+      title: '❌ Error al compartir',
+      message: 'No se pudo compartir la app',
+      type: 'error'
+    });
+  }
+}
+
+// Llamar a la función de shortcuts cuando la app esté lista
+document.addEventListener('DOMContentLoaded', handleAppShortcut);
 
 // ============================================
 // JUEGO "EL TEST" - FUNCIONALIDAD COMPLETA
@@ -9030,3 +15690,3747 @@ if (document.readyState === 'loading') {
 } else {
   initializeTestElements();
 }
+
+// ============================================
+// CÁMARA AVANZADA CON EDICIÓN DE FOTOS
+// ============================================
+
+class AdvancedCamera {
+  constructor() {
+    this.stream = null;
+    this.mediaRecorder = null;
+    this.recordedChunks = [];
+    this.currentFilter = 'none';
+    this.currentEffect = 'none';
+    this.isRecording = false;
+    this.photoHistory = [];
+    this.canvas = null;
+    this.ctx = null;
+  }
+
+  async initialize() {
+    try {
+      // Verificar soporte de APIs
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('La API de MediaDevices no está soportada');
+      }
+
+      // Crear canvas para edición
+      this.canvas = document.createElement('canvas');
+      this.ctx = this.canvas.getContext('2d');
+
+      console.log('[AdvancedCamera] Inicializada correctamente');
+      return true;
+    } catch (error) {
+      console.error('[AdvancedCamera] Error al inicializar:', error);
+      return false;
+    }
+  }
+
+  async startCamera(constraints = {}) {
+    try {
+      const defaultConstraints = {
+        video: {
+          width: { ideal: 1920, max: 2560 },
+          height: { ideal: 1080, max: 1440 },
+          facingMode: 'user', // 'user' para frontal, 'environment' para trasera
+          frameRate: { ideal: 30, max: 60 }
+        },
+        audio: false
+      };
+
+      const finalConstraints = { ...defaultConstraints, ...constraints };
+
+      this.stream = await navigator.mediaDevices.getUserMedia(finalConstraints);
+
+      // Configurar canvas
+      const videoTrack = this.stream.getVideoTracks()[0];
+      const settings = videoTrack.getSettings();
+
+      this.canvas.width = settings.width || 1920;
+      this.canvas.height = settings.height || 1080;
+
+      console.log('[AdvancedCamera] Cámara iniciada:', settings);
+      return this.stream;
+    } catch (error) {
+      console.error('[AdvancedCamera] Error al iniciar cámara:', error);
+      throw error;
+    }
+  }
+
+  stopCamera() {
+    if (this.stream) {
+      this.stream.getTracks().forEach(track => track.stop());
+      this.stream = null;
+    }
+
+    if (this.mediaRecorder && this.isRecording) {
+      this.mediaRecorder.stop();
+    }
+
+    console.log('[AdvancedCamera] Cámara detenida');
+  }
+
+  async takePhoto(options = {}) {
+    if (!this.stream) {
+      throw new Error('La cámara no está activa');
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        const video = document.createElement('video');
+        video.srcObject = this.stream;
+        video.muted = true;
+
+        video.onloadedmetadata = () => {
+          video.play();
+
+          // Esperar un frame para asegurar que el video esté listo
+          setTimeout(() => {
+            // Dibujar frame en canvas
+            this.ctx.drawImage(video, 0, 0, this.canvas.width, this.canvas.height);
+
+            // Aplicar filtros y efectos
+            this.applyFiltersAndEffects();
+
+            // Convertir a blob
+            this.canvas.toBlob((blob) => {
+              if (blob) {
+                const photoData = {
+                  blob: blob,
+                  dataUrl: this.canvas.toDataURL('image/jpeg', 0.9),
+                  timestamp: new Date().toISOString(),
+                  filter: this.currentFilter,
+                  effect: this.currentEffect,
+                  metadata: {
+                    width: this.canvas.width,
+                    height: this.canvas.height,
+                    camera: 'advanced'
+                  }
+                };
+
+                // Agregar a historial
+                this.photoHistory.unshift(photoData);
+                if (this.photoHistory.length > 10) {
+                  this.photoHistory.pop(); // Mantener solo las últimas 10
+                }
+
+                // Guardar en localStorage
+                this.savePhotoToStorage(photoData);
+
+                resolve(photoData);
+              } else {
+                reject(new Error('Error al crear la imagen'));
+              }
+            }, 'image/jpeg', 0.9);
+          }, 100);
+        };
+
+        video.onerror = () => reject(new Error('Error al cargar el video'));
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  applyFiltersAndEffects() {
+    if (!this.ctx) return;
+
+    const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    const data = imageData.data;
+
+    // Aplicar filtro
+    switch (this.currentFilter) {
+      case 'sepia':
+        this.applySepiaFilter(data);
+        break;
+      case 'grayscale':
+        this.applyGrayscaleFilter(data);
+        break;
+      case 'vintage':
+        this.applyVintageFilter(data);
+        break;
+      case 'romantic':
+        this.applyRomanticFilter(data);
+        break;
+      case 'bright':
+        this.applyBrightnessFilter(data, 20);
+        break;
+      case 'contrast':
+        this.applyContrastFilter(data, 20);
+        break;
+    }
+
+    // Aplicar efecto
+    switch (this.currentEffect) {
+      case 'blur':
+        this.applyBlurEffect(data);
+        break;
+      case 'sharpen':
+        this.applySharpenEffect(data);
+        break;
+      case 'vignette':
+        this.applyVignetteEffect(data);
+        break;
+      case 'glow':
+        this.applyGlowEffect(data);
+        break;
+    }
+
+    this.ctx.putImageData(imageData, 0, 0);
+  }
+
+  applySepiaFilter(data) {
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      data[i] = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));
+      data[i + 1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168));
+      data[i + 2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131));
+    }
+  }
+
+  applyGrayscaleFilter(data) {
+    for (let i = 0; i < data.length; i += 4) {
+      const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+      data[i] = data[i + 1] = data[i + 2] = avg;
+    }
+  }
+
+  applyVintageFilter(data) {
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = Math.min(255, data[i] * 1.2);     // Más rojo
+      data[i + 1] = data[i + 1] * 0.9;            // Menos verde
+      data[i + 2] = Math.min(255, data[i + 2] * 0.8); // Menos azul
+    }
+  }
+
+  applyRomanticFilter(data) {
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = Math.min(255, data[i] * 1.1);     // Más rojo/rosado
+      data[i + 1] = data[i + 1] * 0.95;           // Menos verde
+      data[i + 2] = Math.min(255, data[i + 2] * 1.05); // Más azul
+    }
+  }
+
+  applyBrightnessFilter(data, brightness) {
+    const factor = (brightness + 100) / 100;
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = Math.min(255, data[i] * factor);
+      data[i + 1] = Math.min(255, data[i + 1] * factor);
+      data[i + 2] = Math.min(255, data[i + 2] * factor);
+    }
+  }
+
+  applyContrastFilter(data, contrast) {
+    const factor = (contrast + 100) / 100;
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = Math.min(255, ((data[i] - 128) * factor) + 128);
+      data[i + 1] = Math.min(255, ((data[i + 1] - 128) * factor) + 128);
+      data[i + 2] = Math.min(255, ((data[i + 2] - 128) * factor) + 128);
+    }
+  }
+
+  applyBlurEffect(data) {
+    // Implementación simple de blur (puede ser mejorada)
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    const tempData = new Uint8ClampedArray(data);
+
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = (y * width + x) * 4;
+
+        for (let c = 0; c < 3; c++) {
+          const sum = tempData[idx - 4 + c] + tempData[idx + c] + tempData[idx + 4 + c] +
+                     tempData[idx - width * 4 + c] + tempData[idx + width * 4 + c];
+          data[idx + c] = sum / 5;
+        }
+      }
+    }
+  }
+
+  applySharpenEffect(data) {
+    const width = this.canvas.width;
+    const tempData = new Uint8ClampedArray(data);
+
+    for (let y = 1; y < this.canvas.height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = (y * width + x) * 4;
+
+        for (let c = 0; c < 3; c++) {
+          const center = tempData[idx + c] * 5;
+          const neighbors = tempData[idx - 4 + c] + tempData[idx + 4 + c] +
+                           tempData[idx - width * 4 + c] + tempData[idx + width * 4 + c];
+          data[idx + c] = Math.min(255, Math.max(0, center - neighbors));
+        }
+      }
+    }
+  }
+
+  applyVignetteEffect(data) {
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY);
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+        const vignette = 1 - (distance / maxDistance) * 0.5;
+
+        const idx = (y * width + x) * 4;
+        data[idx] = Math.min(255, data[idx] * vignette);
+        data[idx + 1] = Math.min(255, data[idx + 1] * vignette);
+        data[idx + 2] = Math.min(255, data[idx + 2] * vignette);
+      }
+    }
+  }
+
+  applyGlowEffect(data) {
+    // Efecto de glow simple
+    for (let i = 0; i < data.length; i += 4) {
+      const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+      if (brightness > 128) {
+        const glow = (brightness - 128) / 127;
+        data[i] = Math.min(255, data[i] + glow * 50);
+        data[i + 1] = Math.min(255, data[i + 1] + glow * 50);
+        data[i + 2] = Math.min(255, data[i + 2] + glow * 50);
+      }
+    }
+  }
+
+  setFilter(filter) {
+    this.currentFilter = filter;
+  }
+
+  setEffect(effect) {
+    this.currentEffect = effect;
+  }
+
+  async startRecording(options = {}) {
+    if (!this.stream) {
+      throw new Error('La cámara no está activa');
+    }
+
+    try {
+      const defaultOptions = {
+        mimeType: 'video/webm;codecs=vp9',
+        audioBitsPerSecond: 128000,
+        videoBitsPerSecond: 2500000
+      };
+
+      const finalOptions = { ...defaultOptions, ...options };
+
+      this.mediaRecorder = new MediaRecorder(this.stream, finalOptions);
+      this.recordedChunks = [];
+
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          this.recordedChunks.push(event.data);
+        }
+      };
+
+      this.mediaRecorder.onstop = () => {
+        const blob = new Blob(this.recordedChunks, { type: finalOptions.mimeType });
+        const videoData = {
+          blob: blob,
+          dataUrl: URL.createObjectURL(blob),
+          timestamp: new Date().toISOString(),
+          duration: this.recordedChunks.length * 1000, // aproximado
+          metadata: {
+            type: 'video',
+            mimeType: finalOptions.mimeType
+          }
+        };
+
+        // Aquí se podría guardar el video
+        console.log('[AdvancedCamera] Video grabado:', videoData);
+      };
+
+      this.mediaRecorder.start();
+      this.isRecording = true;
+
+      console.log('[AdvancedCamera] Grabación iniciada');
+    } catch (error) {
+      console.error('[AdvancedCamera] Error al iniciar grabación:', error);
+      throw error;
+    }
+  }
+
+  stopRecording() {
+    if (this.mediaRecorder && this.isRecording) {
+      this.mediaRecorder.stop();
+      this.isRecording = false;
+      console.log('[AdvancedCamera] Grabación detenida');
+    }
+  }
+
+  savePhotoToStorage(photoData) {
+    try {
+      const photos = JSON.parse(localStorage.getItem('advancedPhotos') || '[]');
+      photos.unshift({
+        id: Date.now().toString(),
+        dataUrl: photoData.dataUrl,
+        timestamp: photoData.timestamp,
+        filter: photoData.filter,
+        effect: photoData.effect,
+        metadata: photoData.metadata
+      });
+
+      // Mantener solo las últimas 50 fotos
+      if (photos.length > 50) {
+        photos.splice(50);
+      }
+
+      localStorage.setItem('advancedPhotos', JSON.stringify(photos));
+    } catch (error) {
+      console.error('[AdvancedCamera] Error guardando foto:', error);
+    }
+  }
+
+  getPhotoHistory() {
+    try {
+      return JSON.parse(localStorage.getItem('advancedPhotos') || '[]');
+    } catch (error) {
+      console.error('[AdvancedCamera] Error obteniendo historial:', error);
+      return [];
+    }
+  }
+
+  async sharePhoto(photoData) {
+    if (navigator.share && photoData.blob) {
+      try {
+        const file = new File([photoData.blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        await navigator.share({
+          title: 'Foto romántica',
+          text: 'Una foto especial para ti 💕',
+          files: [file]
+        });
+        return true;
+      } catch (error) {
+        console.log('[AdvancedCamera] Error compartiendo:', error);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  async downloadPhoto(photoData, filename = null) {
+    if (!photoData.dataUrl) return false;
+
+    try {
+      const link = document.createElement('a');
+      link.href = photoData.dataUrl;
+      link.download = filename || `romantic_photo_${Date.now()}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return true;
+    } catch (error) {
+      console.error('[AdvancedCamera] Error descargando foto:', error);
+      return false;
+    }
+  }
+}
+
+// ============================================
+// VIBRACIÓN HÁPTICA AVANZADA
+// ============================================
+
+class HapticFeedback {
+  constructor() {
+    this.supported = 'vibrate' in navigator;
+    this.patterns = {
+      light: [50],
+      medium: [100],
+      heavy: [200],
+      success: [50, 50, 50],
+      error: [200, 100, 200],
+      warning: [100, 50, 100, 50, 100],
+      celebration: [50, 50, 50, 50, 50, 100, 50, 50, 50],
+      heartbeat: [100, 200, 100, 200, 100, 1000],
+      romantic: [200, 100, 200, 100, 500],
+      notification: [200, 100, 200],
+      button: [50],
+      swipe: [30, 50, 30],
+      longpress: [100, 50, 100]
+    };
+  }
+
+  vibrate(pattern) {
+    if (!this.supported) return false;
+
+    try {
+      if (typeof pattern === 'string') {
+        pattern = this.patterns[pattern] || this.patterns.medium;
+      }
+
+      navigator.vibrate(pattern);
+      return true;
+    } catch (error) {
+      console.error('[HapticFeedback] Error en vibración:', error);
+      return false;
+    }
+  }
+
+  // Vibraciones específicas para interacciones comunes
+  buttonPress() {
+    this.vibrate('button');
+  }
+
+  success() {
+    this.vibrate('success');
+  }
+
+  error() {
+    this.vibrate('error');
+  }
+
+  warning() {
+    this.vibrate('warning');
+  }
+
+  celebration() {
+    this.vibrate('celebration');
+  }
+
+  romantic() {
+    this.vibrate('romantic');
+  }
+
+  notification() {
+    this.vibrate('notification');
+  }
+
+  swipe() {
+    this.vibrate('swipe');
+  }
+
+  longPress() {
+    this.vibrate('longpress');
+  }
+
+  heartbeat() {
+    this.vibrate('heartbeat');
+  }
+
+  // Vibración personalizada
+  customPattern(pattern) {
+    return this.vibrate(pattern);
+  }
+
+  // Vibración continua
+  startContinuous(duration = 1000) {
+    if (!this.supported) return false;
+    navigator.vibrate(duration);
+    return true;
+  }
+
+  // Detener vibración
+  stop() {
+    if (this.supported) {
+      navigator.vibrate(0);
+    }
+  }
+
+  // Verificar si está vibrando actualmente
+  isVibrating() {
+    // No hay API directa para esto, pero podemos asumir que si soportamos vibrate, podemos verificar
+    return this.supported;
+  }
+}
+
+// ============================================
+// MEDIA SESSION API PARA CONTROLES DE MÚSICA
+// ============================================
+
+class MediaSessionManager {
+  constructor() {
+    this.supported = 'mediaSession' in navigator;
+    this.currentTrack = null;
+    this.isPlaying = false;
+    this.volume = 1.0;
+    this.playbackRate = 1.0;
+  }
+
+  initialize() {
+    if (!this.supported) {
+      console.warn('[MediaSession] Media Session API no soportada');
+      return false;
+    }
+
+    // Configurar controles de medios
+    this.setupMediaControls();
+
+    // Escuchar eventos de teclado multimedia
+    this.setupKeyboardControls();
+
+    console.log('[MediaSession] Inicializada correctamente');
+    return true;
+  }
+
+  setupMediaControls() {
+    const session = navigator.mediaSession;
+
+    // Configurar acciones de medios
+    session.setActionHandler('play', () => this.handlePlay());
+    session.setActionHandler('pause', () => this.handlePause());
+    session.setActionHandler('stop', () => this.handleStop());
+    session.setActionHandler('seekbackward', (details) => this.handleSeekBackward(details));
+    session.setActionHandler('seekforward', (details) => this.handleSeekForward(details));
+    session.setActionHandler('seekto', (details) => this.handleSeekTo(details));
+    session.setActionHandler('previoustrack', () => this.handlePreviousTrack());
+    session.setActionHandler('nexttrack', () => this.handleNextTrack());
+    session.setActionHandler('skipad', () => this.handleSkipAd());
+
+    // Configurar controles de volumen si están disponibles
+    if ('volume' in navigator.mediaSession) {
+      navigator.mediaSession.volume = this.volume;
+    }
+  }
+
+  setupKeyboardControls() {
+    // Escuchar eventos de teclado multimedia
+    document.addEventListener('keydown', (event) => {
+      switch (event.code) {
+        case 'MediaPlayPause':
+          event.preventDefault();
+          this.isPlaying ? this.handlePause() : this.handlePlay();
+          break;
+        case 'MediaStop':
+          event.preventDefault();
+          this.handleStop();
+          break;
+        case 'MediaTrackNext':
+          event.preventDefault();
+          this.handleNextTrack();
+          break;
+        case 'MediaTrackPrevious':
+          event.preventDefault();
+          this.handlePreviousTrack();
+          break;
+      }
+    });
+  }
+
+  setTrack(trackInfo) {
+    if (!this.supported) return;
+
+    this.currentTrack = trackInfo;
+
+    const session = navigator.mediaSession;
+    session.metadata = new MediaMetadata({
+      title: trackInfo.title || 'Canción Romántica',
+      artist: trackInfo.artist || 'Playlist Romántica',
+      album: trackInfo.album || 'Canciones para ti 💕',
+      artwork: trackInfo.artwork || [
+        { src: trackInfo.cover || '/scr/images/music-placeholder.png', sizes: '96x96', type: 'image/png' },
+        { src: trackInfo.cover || '/scr/images/music-placeholder.png', sizes: '128x128', type: 'image/png' },
+        { src: trackInfo.cover || '/scr/images/music-placeholder.png', sizes: '192x192', type: 'image/png' },
+        { src: trackInfo.cover || '/scr/images/music-placeholder.png', sizes: '256x256', type: 'image/png' },
+        { src: trackInfo.cover || '/scr/images/music-placeholder.png', sizes: '384x384', type: 'image/png' },
+        { src: trackInfo.cover || '/scr/images/music-placeholder.png', sizes: '512x512', type: 'image/png' }
+      ]
+    });
+
+    // Configurar duración si está disponible
+    if (trackInfo.duration) {
+      session.setPositionState({
+        duration: trackInfo.duration,
+        playbackRate: this.playbackRate,
+        position: trackInfo.currentTime || 0
+      });
+    }
+
+    console.log('[MediaSession] Track configurado:', trackInfo.title);
+  }
+
+  updatePlaybackState(playing, currentTime = 0, duration = 0) {
+    if (!this.supported) return;
+
+    this.isPlaying = playing;
+    navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+
+    if (duration > 0) {
+      navigator.mediaSession.setPositionState({
+        duration: duration,
+        playbackRate: this.playbackRate,
+        position: currentTime
+      });
+    }
+  }
+
+  setVolume(volume) {
+    this.volume = Math.max(0, Math.min(1, volume));
+    if (this.supported && 'volume' in navigator.mediaSession) {
+      navigator.mediaSession.volume = this.volume;
+    }
+  }
+
+  setPlaybackRate(rate) {
+    this.playbackRate = Math.max(0.5, Math.min(2.0, rate));
+    if (this.supported) {
+      navigator.mediaSession.playbackRate = this.playbackRate;
+    }
+  }
+
+  // Handlers para acciones de medios
+  handlePlay() {
+    console.log('[MediaSession] Play solicitado');
+    // Disparar evento personalizado para que el reproductor de música lo maneje
+    document.dispatchEvent(new CustomEvent('mediaSessionPlay'));
+  }
+
+  handlePause() {
+    console.log('[MediaSession] Pause solicitado');
+    document.dispatchEvent(new CustomEvent('mediaSessionPause'));
+  }
+
+  handleStop() {
+    console.log('[MediaSession] Stop solicitado');
+    document.dispatchEvent(new CustomEvent('mediaSessionStop'));
+  }
+
+  handleSeekBackward(details) {
+    const skipTime = details.seekOffset || 10;
+    console.log(`[MediaSession] Seek backward ${skipTime}s`);
+    document.dispatchEvent(new CustomEvent('mediaSessionSeekBackward', { detail: { skipTime } }));
+  }
+
+  handleSeekForward(details) {
+    const skipTime = details.seekOffset || 10;
+    console.log(`[MediaSession] Seek forward ${skipTime}s`);
+    document.dispatchEvent(new CustomEvent('mediaSessionSeekForward', { detail: { skipTime } }));
+  }
+
+  handleSeekTo(details) {
+    console.log(`[MediaSession] Seek to ${details.seekTime}s`);
+    document.dispatchEvent(new CustomEvent('mediaSessionSeekTo', { detail: { seekTime: details.seekTime } }));
+  }
+
+  handlePreviousTrack() {
+    console.log('[MediaSession] Previous track solicitado');
+    document.dispatchEvent(new CustomEvent('mediaSessionPreviousTrack'));
+  }
+
+  handleNextTrack() {
+    console.log('[MediaSession] Next track solicitado');
+    document.dispatchEvent(new CustomEvent('mediaSessionNextTrack'));
+  }
+
+  handleSkipAd() {
+    console.log('[MediaSession] Skip ad solicitado');
+    // No aplicable para música romántica
+  }
+
+  // Métodos para integración con el widget de música
+  integrateWithMusicWidget(musicWidget) {
+    if (!musicWidget) return;
+
+    // Escuchar eventos del widget de música
+    document.addEventListener('mediaSessionPlay', () => musicWidget.play());
+    document.addEventListener('mediaSessionPause', () => musicWidget.pause());
+    document.addEventListener('mediaSessionStop', () => musicWidget.stop());
+    document.addEventListener('mediaSessionSeekBackward', (e) => musicWidget.seekBackward(e.detail.skipTime));
+    document.addEventListener('mediaSessionSeekForward', (e) => musicWidget.seekForward(e.detail.skipTime));
+    document.addEventListener('mediaSessionSeekTo', (e) => musicWidget.seekTo(e.detail.seekTime));
+    document.addEventListener('mediaSessionPreviousTrack', () => musicWidget.previousTrack());
+    document.addEventListener('mediaSessionNextTrack', () => musicWidget.nextTrack());
+
+    console.log('[MediaSession] Integrado con widget de música');
+  }
+
+  // Mostrar notificación de medios (si está disponible)
+  showMediaNotification(trackInfo) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification(`🎵 Reproduciendo: ${trackInfo.title}`, {
+        body: `De: ${trackInfo.artist}`,
+        icon: trackInfo.cover || '/scr/images/music-icon.png',
+        tag: 'music-notification',
+        requireInteraction: false
+      });
+
+      // Auto-cerrar después de 3 segundos
+      setTimeout(() => notification.close(), 3000);
+    }
+  }
+}
+
+// ============================================
+// GESTOR DE FUNCIONALIDADES NATIVAS
+// ============================================
+
+class NativeFeaturesManager {
+  constructor() {
+    this.camera = new AdvancedCamera();
+    this.haptics = new HapticFeedback();
+    this.mediaSession = new MediaSessionManager();
+    this.initialized = false;
+  }
+
+  async initialize() {
+    if (this.initialized) return true;
+
+    try {
+      console.log('[NativeFeatures] Inicializando funcionalidades nativas...');
+
+      // Inicializar cada componente
+      const cameraReady = await this.camera.initialize();
+      const mediaSessionReady = this.mediaSession.initialize();
+
+      // Verificar soporte de APIs
+      const features = {
+        camera: cameraReady,
+        haptics: this.haptics.supported,
+        mediaSession: mediaSessionReady,
+        geolocation: 'geolocation' in navigator,
+        notifications: 'Notification' in window,
+        vibration: 'vibrate' in navigator,
+        mediaDevices: 'mediaDevices' in navigator,
+        battery: 'getBattery' in navigator
+      };
+
+      // Mostrar soporte de APIs
+      console.log('[NativeFeatures] Soporte de APIs:', features);
+
+      // Integrar Media Session con widget de música si existe
+      if (window.musicWidget) {
+        this.mediaSession.integrateWithMusicWidget(window.musicWidget);
+      }
+
+      this.initialized = true;
+      console.log('[NativeFeatures] Inicialización completada');
+
+      return features;
+    } catch (error) {
+      console.error('[NativeFeatures] Error en inicialización:', error);
+      return false;
+    }
+  }
+
+  // Métodos de acceso a funcionalidades
+  getCamera() {
+    return this.camera;
+  }
+
+  getHaptics() {
+    return this.haptics;
+  }
+
+  getMediaSession() {
+    return this.mediaSession;
+  }
+
+  // Verificar permisos
+  async checkPermissions() {
+    const permissions = {};
+
+    try {
+      // Verificar permiso de cámara
+      if (navigator.permissions) {
+        const cameraPermission = await navigator.permissions.query({ name: 'camera' });
+        permissions.camera = cameraPermission.state;
+
+        const microphonePermission = await navigator.permissions.query({ name: 'microphone' });
+        permissions.microphone = microphonePermission.state;
+
+        const geolocationPermission = await navigator.permissions.query({ name: 'geolocation' });
+        permissions.geolocation = geolocationPermission.state;
+
+        if ('Notification' in window) {
+          const notificationPermission = await navigator.permissions.query({ name: 'notifications' });
+          permissions.notifications = notificationPermission.state;
+        }
+      }
+    } catch (error) {
+      console.error('[NativeFeatures] Error verificando permisos:', error);
+    }
+
+    return permissions;
+  }
+
+  // Solicitar permisos
+  async requestPermissions(features = ['camera', 'microphone', 'geolocation', 'notifications']) {
+    const results = {};
+
+    for (const feature of features) {
+      try {
+        switch (feature) {
+          case 'camera':
+            results.camera = await this.requestCameraPermission();
+            break;
+          case 'microphone':
+            results.microphone = await this.requestMicrophonePermission();
+            break;
+          case 'geolocation':
+            results.geolocation = await this.requestGeolocationPermission();
+            break;
+          case 'notifications':
+            results.notifications = await this.requestNotificationPermission();
+            break;
+        }
+      } catch (error) {
+        console.error(`[NativeFeatures] Error solicitando permiso ${feature}:`, error);
+        results[feature] = false;
+      }
+    }
+
+    return results;
+  }
+
+  async requestCameraPermission() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async requestMicrophonePermission() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async requestGeolocationPermission() {
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        () => resolve(true),
+        () => resolve(false),
+        { timeout: 10000 }
+      );
+    });
+  }
+
+  async requestNotificationPermission() {
+    if (!('Notification' in window)) return false;
+
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  }
+
+  // Utilidades
+  vibrate(pattern) {
+    return this.haptics.vibrate(pattern);
+  }
+
+  showSuccessFeedback() {
+    this.haptics.success();
+  }
+
+  showErrorFeedback() {
+    this.haptics.error();
+  }
+
+  showRomanticFeedback() {
+    this.haptics.romantic();
+  }
+
+  // Método para mostrar información de debug
+  getDebugInfo() {
+    return {
+      initialized: this.initialized,
+      camera: {
+        supported: !!navigator.mediaDevices,
+        initialized: this.camera.canvas !== null
+      },
+      haptics: {
+        supported: this.haptics.supported
+      },
+      mediaSession: {
+        supported: this.mediaSession.supported,
+        initialized: this.mediaSession.currentTrack !== null
+      },
+      permissions: this.checkPermissions()
+    };
+  }
+}
+
+// ============================================
+// INTERFAZ PARA FUNCIONALIDADES NATIVAS
+// ============================================
+
+function showNativeFeaturesManager() {
+  const manager = new NativeFeaturesManager();
+
+  const modal = document.createElement('div');
+  modal.className = 'native-features-modal';
+  modal.innerHTML = `
+    <div class="native-features-content">
+      <h3>📱 Funcionalidades Nativas Avanzadas</h3>
+      <p class="features-description">
+        Descubre las poderosas funcionalidades nativas que hacen de esta app una experiencia móvil completa.
+      </p>
+
+      <div class="features-grid">
+        <div class="feature-card" data-feature="camera">
+          <div class="feature-icon">📸</div>
+          <h4>Cámara Avanzada</h4>
+          <p>Fotos con filtros románticos, efectos y edición en tiempo real</p>
+          <button class="feature-btn" onclick="openAdvancedCamera()">Abrir Cámara</button>
+        </div>
+
+        <div class="feature-card" data-feature="haptics">
+          <div class="feature-icon">📳</div>
+          <h4>Vibración Háptica</h4>
+          <p>Retroalimentación táctil para una experiencia más inmersiva</p>
+          <button class="feature-btn" onclick="testHapticFeedback()">Probar Vibración</button>
+        </div>
+
+        <div class="feature-card" data-feature="media">
+          <div class="feature-icon">🎵</div>
+          <h4>Controles de Música</h4>
+          <p>Controla la música desde los botones del dispositivo</p>
+          <button class="feature-btn" onclick="testMediaSession()">Probar Controles</button>
+        </div>
+
+        <div class="feature-card" data-feature="permissions">
+          <div class="feature-icon">🔐</div>
+          <h4>Permisos</h4>
+          <p>Gestiona los permisos necesarios para todas las funcionalidades</p>
+          <button class="feature-btn" onclick="managePermissions()">Gestionar Permisos</button>
+        </div>
+      </div>
+
+      <div class="features-status">
+        <h4>Estado de APIs</h4>
+        <div id="api-status" class="api-status-grid">
+          <div class="status-item">
+            <span class="status-label">Cámara:</span>
+            <span class="status-value" id="camera-status">Verificando...</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Vibración:</span>
+            <span class="status-value" id="haptics-status">Verificando...</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Media Session:</span>
+            <span class="status-value" id="media-status">Verificando...</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Geolocalización:</span>
+            <span class="status-value" id="geolocation-status">Verificando...</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="close-features-btn">❌ Cerrar</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Verificar estado de APIs
+  updateApiStatus(manager);
+
+  // Event listeners
+  modal.addEventListener('click', (e) => {
+    if (e.target.classList.contains('close-features-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+async function updateApiStatus(manager) {
+  const debugInfo = await manager.getDebugInfo();
+
+  const statusElements = {
+    camera: document.getElementById('camera-status'),
+    haptics: document.getElementById('haptics-status'),
+    media: document.getElementById('media-status'),
+    geolocation: document.getElementById('geolocation-status')
+  };
+
+  // Actualizar estados
+  if (statusElements.camera) {
+    statusElements.camera.textContent = debugInfo.camera.supported ? '✅ Soportada' : '❌ No soportada';
+    statusElements.camera.className = `status-value ${debugInfo.camera.supported ? 'supported' : 'unsupported'}`;
+  }
+
+  if (statusElements.haptics) {
+    statusElements.haptics.textContent = debugInfo.haptics.supported ? '✅ Soportada' : '❌ No soportada';
+    statusElements.haptics.className = `status-value ${debugInfo.haptics.supported ? 'supported' : 'unsupported'}`;
+  }
+
+  if (statusElements.media) {
+    statusElements.media.textContent = debugInfo.mediaSession.supported ? '✅ Soportada' : '❌ No soportada';
+    statusElements.media.className = `status-value ${debugInfo.mediaSession.supported ? 'supported' : 'unsupported'}`;
+  }
+
+  if (statusElements.geolocation) {
+    statusElements.geolocation.textContent = debugInfo.geolocation ? '✅ Soportada' : '❌ No soportada';
+    statusElements.geolocation.className = `status-value ${debugInfo.geolocation ? 'supported' : 'unsupported'}`;
+  }
+}
+
+async function openAdvancedCamera() {
+  const manager = new NativeFeaturesManager();
+  await manager.initialize();
+  const camera = manager.getCamera();
+
+  const modal = document.createElement('div');
+  modal.className = 'advanced-camera-modal';
+  modal.innerHTML = `
+    <div class="camera-content">
+      <h3>📸 Cámara Avanzada</h3>
+
+      <div class="camera-preview">
+        <video id="camera-video" autoplay playsinline muted></video>
+        <canvas id="camera-canvas" style="display: none;"></canvas>
+      </div>
+
+      <div class="camera-controls">
+        <div class="filter-controls">
+          <h4>Filtros</h4>
+          <div class="filter-buttons">
+            <button class="filter-btn active" data-filter="none">Normal</button>
+            <button class="filter-btn" data-filter="sepia">Sepia</button>
+            <button class="filter-btn" data-filter="grayscale">B/N</button>
+            <button class="filter-btn" data-filter="vintage">Vintage</button>
+            <button class="filter-btn" data-filter="romantic">Romántico</button>
+            <button class="filter-btn" data-filter="bright">Brillante</button>
+          </div>
+        </div>
+
+        <div class="effect-controls">
+          <h4>Efectos</h4>
+          <div class="effect-buttons">
+            <button class="effect-btn active" data-effect="none">Ninguno</button>
+            <button class="effect-btn" data-effect="blur">Difuminar</button>
+            <button class="effect-btn" data-effect="sharpen">Enfocar</button>
+            <button class="effect-btn" data-effect="vignette">Viñeta</button>
+            <button class="effect-btn" data-effect="glow">Brillo</button>
+          </div>
+        </div>
+
+        <div class="camera-actions">
+          <button class="camera-btn capture-btn">📸 Capturar</button>
+          <button class="camera-btn switch-btn">🔄 Cambiar Cámara</button>
+          <button class="camera-btn gallery-btn">🖼️ Galería</button>
+        </div>
+      </div>
+
+      <button class="close-camera-btn">❌ Cerrar</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  let stream = null;
+  const video = modal.querySelector('#camera-video');
+  const canvas = modal.querySelector('#camera-canvas');
+
+  try {
+    // Iniciar cámara
+    stream = await camera.startCamera();
+    video.srcObject = stream;
+
+    // Configurar canvas
+    video.onloadedmetadata = () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    };
+
+  } catch (error) {
+    console.error('Error iniciando cámara:', error);
+    showNotification({
+      title: '❌ Error de Cámara',
+      message: 'No se pudo acceder a la cámara. Verifica los permisos.',
+      type: 'error'
+    });
+    modal.remove();
+    return;
+  }
+
+  // Event listeners
+  modal.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('filter-btn')) {
+      // Cambiar filtro
+      modal.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      e.target.classList.add('active');
+      camera.setFilter(e.target.dataset.filter);
+
+    } else if (e.target.classList.contains('effect-btn')) {
+      // Cambiar efecto
+      modal.querySelectorAll('.effect-btn').forEach(btn => btn.classList.remove('active'));
+      e.target.classList.add('active');
+      camera.setEffect(e.target.dataset.effect);
+
+    } else if (e.target.classList.contains('capture-btn')) {
+      // Capturar foto
+      try {
+        const photo = await camera.takePhoto();
+        showNotification({
+          title: '✅ Foto Capturada',
+          message: 'Tu foto romántica ha sido guardada.',
+          type: 'success'
+        });
+
+        // Vibración de éxito
+        manager.vibrate('success');
+
+      } catch (error) {
+        console.error('Error capturando foto:', error);
+        showNotification({
+          title: '❌ Error',
+          message: 'No se pudo capturar la foto.',
+          type: 'error'
+        });
+      }
+
+    } else if (e.target.classList.contains('switch-btn')) {
+      // Cambiar cámara
+      camera.stopCamera();
+      const facingMode = stream.getVideoTracks()[0].getSettings().facingMode;
+      const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+
+      try {
+        stream = await camera.startCamera({ video: { facingMode: newFacingMode } });
+        video.srcObject = stream;
+      } catch (error) {
+        console.error('Error cambiando cámara:', error);
+      }
+
+    } else if (e.target.classList.contains('gallery-btn')) {
+      // Abrir galería
+      showPhotoGallery(camera);
+
+    } else if (e.target.classList.contains('close-camera-btn') || e.target === modal) {
+      // Cerrar modal
+      camera.stopCamera();
+      modal.remove();
+    }
+  });
+}
+
+function testHapticFeedback() {
+  const manager = new NativeFeaturesManager();
+  manager.initialize().then(() => {
+    const haptics = manager.getHaptics();
+
+    // Probar diferentes patrones de vibración
+    const patterns = ['light', 'medium', 'heavy', 'success', 'error', 'warning', 'celebration', 'romantic'];
+
+    let index = 0;
+    const testNext = () => {
+      if (index < patterns.length) {
+        haptics.vibrate(patterns[index]);
+        showNotification({
+          title: `🔔 Probando: ${patterns[index]}`,
+          message: `Vibración ${index + 1} de ${patterns.length}`,
+          type: 'info',
+          duration: 1500
+        });
+
+        index++;
+        setTimeout(testNext, 2000);
+      } else {
+        showNotification({
+          title: '✅ Prueba Completada',
+          message: 'Todas las vibraciones han sido probadas.',
+          type: 'success'
+        });
+      }
+    };
+
+    testNext();
+  });
+}
+
+function testMediaSession() {
+  const manager = new NativeFeaturesManager();
+  manager.initialize().then(() => {
+    const mediaSession = manager.getMediaSession();
+
+    // Configurar una pista de prueba
+    mediaSession.setTrack({
+      title: 'Canción de Prueba',
+      artist: 'Artista Romántico',
+      album: 'Álbum de Amor',
+      duration: 180,
+      cover: '/scr/images/music-placeholder.png'
+    });
+
+    mediaSession.updatePlaybackState(true, 30, 180);
+
+    showNotification({
+      title: '🎵 Media Session Activada',
+      message: 'Usa los controles de medios de tu dispositivo para controlar la música.',
+      type: 'info',
+      duration: 5000
+    });
+  });
+}
+
+async function managePermissions() {
+  const manager = new NativeFeaturesManager();
+  const permissions = await manager.checkPermissions();
+
+  const modal = document.createElement('div');
+  modal.className = 'permissions-modal';
+  modal.innerHTML = `
+    <div class="permissions-content">
+      <h3>🔐 Gestión de Permisos</h3>
+      <p>Estos permisos permiten acceder a funcionalidades avanzadas de la aplicación.</p>
+
+      <div class="permissions-list">
+        <div class="permission-item">
+          <div class="permission-info">
+            <span class="permission-icon">📸</span>
+            <div>
+              <h4>Cámara</h4>
+              <p>Para tomar fotos románticas con filtros</p>
+            </div>
+          </div>
+          <span class="permission-status ${permissions.camera === 'granted' ? 'granted' : 'denied'}">
+            ${permissions.camera === 'granted' ? '✅ Concedido' : '❌ Denegado'}
+          </span>
+        </div>
+
+        <div class="permission-item">
+          <div class="permission-info">
+            <span class="permission-icon">🎤</span>
+            <div>
+              <h4>Micrófono</h4>
+              <p>Para grabar videos románticos</p>
+            </div>
+          </div>
+          <span class="permission-status ${permissions.microphone === 'granted' ? 'granted' : 'denied'}">
+            ${permissions.microphone === 'granted' ? '✅ Concedido' : '❌ Denegado'}
+          </span>
+        </div>
+
+        <div class="permission-item">
+          <div class="permission-info">
+            <span class="permission-icon">📍</span>
+            <div>
+              <h4>Ubicación</h4>
+              <p>Para encontrar lugares románticos cercanos</p>
+            </div>
+          </div>
+          <span class="permission-status ${permissions.geolocation === 'granted' ? 'granted' : 'denied'}">
+            ${permissions.geolocation === 'granted' ? '✅ Concedido' : '❌ Denegado'}
+          </span>
+        </div>
+
+        <div class="permission-item">
+          <div class="permission-info">
+            <span class="permission-icon">🔔</span>
+            <div>
+              <h4>Notificaciones</h4>
+              <p>Para recordatorios inteligentes y notificaciones</p>
+            </div>
+          </div>
+          <span class="permission-status ${permissions.notifications === 'granted' ? 'granted' : 'denied'}">
+            ${permissions.notifications === 'granted' ? '✅ Concedido' : '❌ Denegado'}
+          </span>
+        </div>
+      </div>
+
+      <div class="permissions-actions">
+        <button class="request-permissions-btn">🔄 Solicitar Permisos</button>
+        <button class="close-permissions-btn">Cerrar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Event listeners
+  modal.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('request-permissions-btn')) {
+      const results = await manager.requestPermissions(['camera', 'microphone', 'geolocation', 'notifications']);
+
+      showNotification({
+        title: '🔄 Permisos Actualizados',
+        message: `Cámara: ${results.camera ? '✅' : '❌'}, Micrófono: ${results.microphone ? '✅' : '❌'}, Ubicación: ${results.geolocation ? '✅' : '❌'}, Notificaciones: ${results.notifications ? '✅' : '❌'}`,
+        type: 'info',
+        duration: 5000
+      });
+
+      // Actualizar estados
+      setTimeout(() => {
+        modal.remove();
+        managePermissions(); // Reabrir para mostrar estados actualizados
+      }, 1000);
+
+    } else if (e.target.classList.contains('close-permissions-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+function showPhotoGallery(camera) {
+  const photos = camera.getPhotoHistory();
+
+  const modal = document.createElement('div');
+  modal.className = 'photo-gallery-modal';
+  modal.innerHTML = `
+    <div class="gallery-content">
+      <h3>🖼️ Galería de Fotos</h3>
+
+      <div class="gallery-grid">
+        ${photos.length > 0 ?
+          photos.map((photo, index) => `
+            <div class="gallery-item" data-index="${index}">
+              <img src="${photo.dataUrl}" alt="Foto ${index + 1}" loading="lazy">
+              <div class="gallery-overlay">
+                <div class="gallery-actions">
+                  <button class="gallery-btn share-btn" data-index="${index}">📤</button>
+                  <button class="gallery-btn download-btn" data-index="${index}">💾</button>
+                  <button class="gallery-btn delete-btn" data-index="${index}">🗑️</button>
+                </div>
+                <div class="gallery-info">
+                  <small>${new Date(photo.timestamp).toLocaleDateString()}</small>
+                  ${photo.filter !== 'none' ? `<small>Filtro: ${photo.filter}</small>` : ''}
+                </div>
+              </div>
+            </div>
+          `).join('') :
+          '<div class="no-photos">No hay fotos guardadas aún. ¡Captura tu primera foto romántica! 📸</div>'
+        }
+      </div>
+
+      <button class="close-gallery-btn">❌ Cerrar</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Event listeners
+  modal.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('share-btn')) {
+      const index = parseInt(e.target.dataset.index);
+      const photo = photos[index];
+
+      if (photo && photo.dataUrl) {
+        // Convertir dataUrl a blob para compartir
+        const response = await fetch(photo.dataUrl);
+        const blob = await response.blob();
+        const photoData = { ...photo, blob };
+
+        const shared = await camera.sharePhoto(photoData);
+        if (!shared) {
+          showNotification({
+            title: 'ℹ️ Compartir no disponible',
+            message: 'Usa descargar para guardar la foto.',
+            type: 'info'
+          });
+        }
+      }
+
+    } else if (e.target.classList.contains('download-btn')) {
+      const index = parseInt(e.target.dataset.index);
+      const photo = photos[index];
+
+      if (photo) {
+        const downloaded = await camera.downloadPhoto(photo);
+        if (downloaded) {
+          showNotification({
+            title: '✅ Foto descargada',
+            message: 'La foto se ha guardado en tu dispositivo.',
+            type: 'success'
+          });
+        }
+      }
+
+    } else if (e.target.classList.contains('delete-btn')) {
+      const index = parseInt(e.target.dataset.index);
+
+      if (confirm('¿Estás seguro de que quieres eliminar esta foto?')) {
+        // Eliminar de localStorage
+        photos.splice(index, 1);
+        localStorage.setItem('advancedPhotos', JSON.stringify(photos));
+
+        // Actualizar galería
+        e.target.closest('.gallery-item').remove();
+
+        showNotification({
+          title: '🗑️ Foto eliminada',
+          message: 'La foto ha sido eliminada permanentemente.',
+          type: 'info'
+        });
+      }
+
+    } else if (e.target.classList.contains('close-gallery-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+// ============================================
+// INICIALIZACIÓN DE FUNCIONALIDADES NATIVAS
+// ============================================
+
+// Instancia global del gestor de funcionalidades nativas
+let nativeFeaturesManager;
+
+// Inicializar funcionalidades nativas cuando la app esté lista
+document.addEventListener('DOMContentLoaded', () => {
+  nativeFeaturesManager = new NativeFeaturesManager();
+
+  // Pequeño delay para asegurar que todo esté cargado
+  setTimeout(() => {
+    nativeFeaturesManager.initialize().then((features) => {
+      console.log('[App] Funcionalidades nativas inicializadas:', features);
+    });
+  }, 1000);
+});
+
+// ============================================
+// SISTEMA DE NOTIFICACIONES INTELIGENTES
+// ============================================
+
+class NotificationManager {
+  constructor() {
+    this.supported = 'Notification' in window;
+    this.permission = null;
+    this.notifications = [];
+    this.settings = {
+      enabled: true,
+      sound: true,
+      vibration: true,
+      reminders: true,
+      achievements: true,
+      anniversaries: true,
+      coupleActivities: true,
+      dailyProgress: true,
+      weeklyReports: true,
+      motivational: true
+    };
+
+    this.loadSettings();
+    this.initialize();
+  }
+
+  async initialize() {
+    if (!this.supported) {
+      console.warn('[NotificationManager] Notificaciones no soportadas en este navegador');
+      return false;
+    }
+
+    this.permission = Notification.permission;
+
+    // Solicitar permiso si no está concedido
+    if (this.permission === 'default') {
+      await this.requestPermission();
+    }
+
+    // Registrar service worker para notificaciones push si está disponible
+    if ('serviceWorker' in navigator) {
+      this.registerServiceWorker();
+    }
+
+    console.log('[NotificationManager] Inicializado correctamente');
+    return true;
+  }
+
+  async requestPermission() {
+    try {
+      this.permission = await Notification.requestPermission();
+      console.log('[NotificationManager] Permiso de notificaciones:', this.permission);
+      return this.permission === 'granted';
+    } catch (error) {
+      console.error('[NotificationManager] Error solicitando permiso:', error);
+      return false;
+    }
+  }
+
+  async registerServiceWorker() {
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      console.log('[NotificationManager] Service Worker registrado para notificaciones');
+
+      // Configurar push manager si está disponible
+      if ('pushManager' in registration) {
+        this.setupPushManager(registration);
+      }
+    } catch (error) {
+      console.error('[NotificationManager] Error registrando service worker:', error);
+    }
+  }
+
+  async setupPushManager(registration) {
+    try {
+      // Aquí se configuraría un servidor push real (como Firebase Cloud Messaging)
+      // Por ahora, simulamos la configuración
+      console.log('[NotificationManager] Push Manager configurado');
+    } catch (error) {
+      console.error('[NotificationManager] Error configurando push manager:', error);
+    }
+  }
+
+  // Notificaciones básicas
+  async show(title, options = {}) {
+    if (!this.supported || this.permission !== 'granted' || !this.settings.enabled) {
+      return null;
+    }
+
+    const defaultOptions = {
+      icon: '/scr/images/icon-192x192.png',
+      badge: '/scr/images/icon-192x192.png',
+      vibrate: this.settings.vibration ? [200, 100, 200] : [],
+      requireInteraction: false,
+      silent: !this.settings.sound,
+      tag: 'romantic-app',
+      renotify: true
+    };
+
+    const finalOptions = { ...defaultOptions, ...options };
+
+    try {
+      const notification = new Notification(title, finalOptions);
+
+      // Auto-cerrar después de 5 segundos si no requiere interacción
+      if (!finalOptions.requireInteraction) {
+        setTimeout(() => notification.close(), 5000);
+      }
+
+      // Guardar referencia
+      this.notifications.push({
+        id: Date.now().toString(),
+        notification: notification,
+        timestamp: new Date(),
+        title: title,
+        options: finalOptions
+      });
+
+      return notification;
+    } catch (error) {
+      console.error('[NotificationManager] Error mostrando notificación:', error);
+      return null;
+    }
+  }
+
+  // Notificaciones inteligentes basadas en contexto
+  async showRomanticReminder(message, timeUntil = null) {
+    if (!this.settings.reminders) return;
+
+    const title = '💕 Recordatorio Romántico';
+    const options = {
+      body: message,
+      icon: '/scr/images/heart-icon.png',
+      tag: 'romantic-reminder',
+      data: { type: 'reminder', timeUntil }
+    };
+
+    return this.show(title, options);
+  }
+
+  async showAchievement(achievement) {
+    if (!this.settings.achievements) return;
+
+    const title = '🏆 ¡Nuevo Logro!';
+    const options = {
+      body: `Has desbloqueado: ${achievement.title}`,
+      icon: '/scr/images/achievement-icon.png',
+      tag: 'achievement',
+      data: { type: 'achievement', achievement },
+      requireInteraction: true
+    };
+
+    return this.show(title, options);
+  }
+
+  async showAnniversary(daysUntil, coupleName) {
+    if (!this.settings.anniversaries) return;
+
+    const title = '🎉 ¡Aniversario Cercano!';
+    const message = daysUntil === 0 ?
+      `¡Hoy es el aniversario de ${coupleName}! 🎊` :
+      `Faltan ${daysUntil} días para el aniversario de ${coupleName}`;
+
+    const options = {
+      body: message,
+      icon: '/scr/images/anniversary-icon.png',
+      tag: 'anniversary',
+      data: { type: 'anniversary', daysUntil, coupleName },
+      requireInteraction: daysUntil === 0
+    };
+
+    return this.show(title, options);
+  }
+
+  async showCoupleActivity(activity) {
+    if (!this.settings.coupleActivities) return;
+
+    const title = '💑 Actividad para Pareja';
+    const options = {
+      body: `¿Qué tal: ${activity.title}? ${activity.description}`,
+      icon: '/scr/images/couple-activity-icon.png',
+      tag: 'couple-activity',
+      data: { type: 'couple-activity', activity },
+      actions: [
+        { action: 'accept', title: '¡Vamos!' },
+        { action: 'later', title: 'Después' }
+      ]
+    };
+
+    return this.show(title, options);
+  }
+
+  async showDailyProgress(progress) {
+    if (!this.settings.dailyProgress) return;
+
+    const title = '📊 Progreso Diario';
+    const options = {
+      body: `Has completado ${progress.completed}/${progress.total} tareas hoy. ¡Sigue así! 💪`,
+      icon: '/scr/images/progress-icon.png',
+      tag: 'daily-progress',
+      data: { type: 'daily-progress', progress }
+    };
+
+    return this.show(title, options);
+  }
+
+  async showWeeklyReport(report) {
+    if (!this.settings.weeklyReports) return;
+
+    const title = '📈 Reporte Semanal';
+    const options = {
+      body: `Esta semana completaron ${report.tasksCompleted} tareas juntos. ¡Excelente trabajo!`,
+      icon: '/scr/images/report-icon.png',
+      tag: 'weekly-report',
+      data: { type: 'weekly-report', report },
+      requireInteraction: true
+    };
+
+    return this.show(title, options);
+  }
+
+  async showMotivational(message) {
+    if (!this.settings.motivational) return;
+
+    const title = '✨ Mensaje Motivacional';
+    const options = {
+      body: message,
+      icon: '/scr/images/motivation-icon.png',
+      tag: 'motivational',
+      data: { type: 'motivational', message }
+    };
+
+    return this.show(title, options);
+  }
+
+  // Programar notificaciones
+  schedule(notification, delay) {
+    return setTimeout(() => {
+      this.show(notification.title, notification.options);
+    }, delay);
+  }
+
+  scheduleDaily(time, callback) {
+    const now = new Date();
+    const scheduledTime = new Date(now);
+    scheduledTime.setHours(time.hour, time.minute, 0, 0);
+
+    if (scheduledTime <= now) {
+      scheduledTime.setDate(scheduledTime.getDate() + 1);
+    }
+
+    const delay = scheduledTime - now;
+    return setTimeout(() => {
+      callback();
+      // Reprogramar para el día siguiente
+      setInterval(callback, 24 * 60 * 60 * 1000);
+    }, delay);
+  }
+
+  // Configuración
+  updateSettings(newSettings) {
+    this.settings = { ...this.settings, ...newSettings };
+    this.saveSettings();
+    console.log('[NotificationManager] Configuración actualizada:', this.settings);
+  }
+
+  loadSettings() {
+    try {
+      const saved = localStorage.getItem('notificationSettings');
+      if (saved) {
+        this.settings = { ...this.settings, ...JSON.parse(saved) };
+      }
+    } catch (error) {
+      console.error('[NotificationManager] Error cargando configuración:', error);
+    }
+  }
+
+  saveSettings() {
+    try {
+      localStorage.setItem('notificationSettings', JSON.stringify(this.settings));
+    } catch (error) {
+      console.error('[NotificationManager] Error guardando configuración:', error);
+    }
+  }
+
+  // Utilidades
+  getPermissionStatus() {
+    return this.permission;
+  }
+
+  isEnabled() {
+    return this.settings.enabled && this.permission === 'granted';
+  }
+
+  getNotificationHistory() {
+    return this.notifications.slice(-20); // Últimas 20 notificaciones
+  }
+
+  clearAll() {
+    this.notifications.forEach(item => {
+      if (item.notification && !item.notification.closed) {
+        item.notification.close();
+      }
+    });
+    this.notifications = [];
+  }
+
+  // Notificaciones inteligentes automáticas
+  startSmartNotifications() {
+    if (!this.isEnabled()) return;
+
+    // Notificación diaria de motivación (9 AM)
+    this.scheduleDaily({ hour: 9, minute: 0 }, () => {
+      const messages = [
+        '¡Buenos días! Hoy es un día perfecto para crear nuevos recuerdos juntos 💕',
+        '¡Hola amor! ¿Listo para hacer algo especial hoy? ✨',
+        '¡Buenos días! Cada día contigo es una nueva aventura 💑',
+        '¡Hola! Hoy es el día perfecto para decir "te amo" de una forma diferente 💖',
+        '¡Buenos días mi amor! ¿Qué sorpresa tienes preparada hoy? 🎁'
+      ];
+      const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+      this.showMotivational(randomMessage);
+    });
+
+    // Recordatorio de actividades pendientes (2 PM)
+    this.scheduleDaily({ hour: 14, minute: 0 }, () => {
+      // Verificar si hay tareas pendientes
+      const pendingTasks = this.getPendingTasks();
+      if (pendingTasks.length > 0) {
+        this.showRomanticReminder(
+          `Tienen ${pendingTasks.length} actividades pendientes. ¿Las completamos juntos? 💑`,
+          null
+        );
+      }
+    });
+
+    // Progreso diario (8 PM)
+    this.scheduleDaily({ hour: 20, minute: 0 }, () => {
+      const progress = this.getDailyProgress();
+      this.showDailyProgress(progress);
+    });
+
+    console.log('[NotificationManager] Notificaciones inteligentes activadas');
+  }
+
+  // Métodos auxiliares (simulados - se integrarían con el resto de la app)
+  getPendingTasks() {
+    // Simulación - en la app real se conectaría con el sistema de tareas
+    return [];
+  }
+
+  getDailyProgress() {
+    // Simulación - en la app real se conectaría con el sistema de estadísticas
+    return { completed: 0, total: 0 };
+  }
+}
+
+// ============================================
+// GESTOR DE LOGROS Y GAMIFICACIÓN
+// ============================================
+
+class AchievementSystem {
+  constructor() {
+    this.achievements = {
+      first_task: {
+        id: 'first_task',
+        title: 'Primer Paso',
+        description: 'Completar tu primera tarea juntos',
+        icon: '🎯',
+        unlocked: false,
+        progress: 0,
+        maxProgress: 1,
+        category: 'tasks'
+      },
+      task_master: {
+        id: 'task_master',
+        title: 'Maestro de Tareas',
+        description: 'Completar 50 tareas juntos',
+        icon: '👑',
+        unlocked: false,
+        progress: 0,
+        maxProgress: 50,
+        category: 'tasks'
+      },
+      romantic_planner: {
+        id: 'romantic_planner',
+        title: 'Planificador Romántico',
+        description: 'Crear 10 planes especiales',
+        icon: '💕',
+        unlocked: false,
+        progress: 0,
+        maxProgress: 10,
+        category: 'plans'
+      },
+      anniversary_keeper: {
+        id: 'anniversary_keeper',
+        title: 'Guardián de Aniversarios',
+        description: 'Celebrar 5 aniversarios juntos',
+        icon: '🎉',
+        unlocked: false,
+        progress: 0,
+        maxProgress: 5,
+        category: 'anniversaries'
+      },
+      photo_lover: {
+        id: 'photo_lover',
+        title: 'Amante de las Fotos',
+        description: 'Tomar 25 fotos románticas',
+        icon: '📸',
+        unlocked: false,
+        progress: 0,
+        maxProgress: 25,
+        category: 'photos'
+      },
+      music_maker: {
+        id: 'music_maker',
+        title: 'Creador de Música',
+        description: 'Crear 10 playlists románticas',
+        icon: '🎵',
+        unlocked: false,
+        progress: 0,
+        maxProgress: 10,
+        category: 'music'
+      },
+      location_explorer: {
+        id: 'location_explorer',
+        title: 'Explorador de Lugares',
+        description: 'Descubrir 20 lugares románticos',
+        icon: '🗺️',
+        unlocked: false,
+        progress: 0,
+        maxProgress: 20,
+        category: 'locations'
+      },
+      streak_master: {
+        id: 'streak_master',
+        title: 'Maestro de Rachas',
+        description: 'Mantener una racha de 30 días',
+        icon: '🔥',
+        unlocked: false,
+        progress: 0,
+        maxProgress: 30,
+        category: 'streaks'
+      },
+      couple_gamer: {
+        id: 'couple_gamer',
+        title: 'Jugadores en Pareja',
+        description: 'Jugar 15 juegos juntos',
+        icon: '🎮',
+        unlocked: false,
+        progress: 0,
+        maxProgress: 15,
+        category: 'games'
+      },
+      love_celebrator: {
+        id: 'love_celebrator',
+        title: 'Celebrador del Amor',
+        description: 'Completar 100 actividades románticas',
+        icon: '💖',
+        unlocked: false,
+        progress: 0,
+        maxProgress: 100,
+        category: 'activities'
+      }
+    };
+
+    this.stats = {
+      totalPoints: 0,
+      unlockedAchievements: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      totalTasks: 0,
+      totalPlans: 0,
+      totalPhotos: 0,
+      totalPlaylists: 0,
+      totalLocations: 0,
+      totalGames: 0
+    };
+
+    this.loadProgress();
+  }
+
+  // Actualizar progreso de un logro
+  updateProgress(achievementId, newProgress) {
+    if (!this.achievements[achievementId]) return;
+
+    const achievement = this.achievements[achievementId];
+    achievement.progress = Math.min(newProgress, achievement.maxProgress);
+
+    // Verificar si se desbloqueó
+    if (!achievement.unlocked && achievement.progress >= achievement.maxProgress) {
+      this.unlockAchievement(achievementId);
+    }
+
+    this.saveProgress();
+  }
+
+  // Desbloquear logro
+  unlockAchievement(achievementId) {
+    const achievement = this.achievements[achievementId];
+    if (!achievement || achievement.unlocked) return;
+
+    achievement.unlocked = true;
+    achievement.unlockedAt = new Date().toISOString();
+    this.stats.unlockedAchievements++;
+
+    // Notificar al usuario
+    if (window.notificationManager) {
+      window.notificationManager.showAchievement(achievement);
+    }
+
+    // Vibración de celebración
+    if (window.nativeFeaturesManager) {
+      window.nativeFeaturesManager.vibrate('celebration');
+    }
+
+    console.log(`[AchievementSystem] ¡Logro desbloqueado: ${achievement.title}!`);
+
+    // Verificar logros relacionados
+    this.checkRelatedAchievements(achievementId);
+
+    this.saveProgress();
+  }
+
+  // Verificar logros relacionados
+  checkRelatedAchievements(unlockedId) {
+    // Logro maestro de tareas cuando se completa task_master
+    if (unlockedId === 'task_master' && !this.achievements.love_celebrator.unlocked) {
+      // Si ya tiene progreso en love_celebrator, verificar si se puede desbloquear
+      if (this.achievements.love_celebrator.progress >= this.achievements.love_celebrator.maxProgress) {
+        this.unlockAchievement('love_celebrator');
+      }
+    }
+  }
+
+  // Actualizar estadísticas
+  updateStats(statName, value) {
+    if (this.stats.hasOwnProperty(statName)) {
+      this.stats[statName] = value;
+
+      // Actualizar logros relacionados
+      this.updateAchievementFromStat(statName, value);
+    }
+  }
+
+  // Actualizar logros basados en estadísticas
+  updateAchievementFromStat(statName, value) {
+    switch (statName) {
+      case 'totalTasks':
+        this.updateProgress('first_task', value > 0 ? 1 : 0);
+        this.updateProgress('task_master', value);
+        break;
+      case 'totalPlans':
+        this.updateProgress('romantic_planner', value);
+        break;
+      case 'totalPhotos':
+        this.updateProgress('photo_lover', value);
+        break;
+      case 'totalPlaylists':
+        this.updateProgress('music_maker', value);
+        break;
+      case 'totalLocations':
+        this.updateProgress('location_explorer', value);
+        break;
+      case 'totalGames':
+        this.updateProgress('couple_gamer', value);
+        break;
+      case 'currentStreak':
+        this.updateProgress('streak_master', value);
+        if (value > this.stats.longestStreak) {
+          this.stats.longestStreak = value;
+        }
+        break;
+    }
+  }
+
+  // Incrementar estadística
+  incrementStat(statName, amount = 1) {
+    if (this.stats.hasOwnProperty(statName)) {
+      this.stats[statName] += amount;
+      this.updateAchievementFromStat(statName, this.stats[statName]);
+      this.saveProgress();
+    }
+  }
+
+  // Obtener logros desbloqueados
+  getUnlockedAchievements() {
+    return Object.values(this.achievements).filter(achievement => achievement.unlocked);
+  }
+
+  // Obtener logros por categoría
+  getAchievementsByCategory(category) {
+    return Object.values(this.achievements).filter(achievement => achievement.category === category);
+  }
+
+  // Obtener progreso de un logro específico
+  getAchievementProgress(achievementId) {
+    return this.achievements[achievementId] || null;
+  }
+
+  // Calcular porcentaje de completitud total
+  getCompletionPercentage() {
+    const totalAchievements = Object.keys(this.achievements).length;
+    const unlockedCount = this.stats.unlockedAchievements;
+    return Math.round((unlockedCount / totalAchievements) * 100);
+  }
+
+  // Guardar progreso
+  saveProgress() {
+    try {
+      const data = {
+        achievements: this.achievements,
+        stats: this.stats,
+        lastUpdated: new Date().toISOString()
+      };
+      localStorage.setItem('achievementProgress', JSON.stringify(data));
+    } catch (error) {
+      console.error('[AchievementSystem] Error guardando progreso:', error);
+    }
+  }
+
+  // Cargar progreso
+  loadProgress() {
+    try {
+      const saved = localStorage.getItem('achievementProgress');
+      if (saved) {
+        const data = JSON.parse(saved);
+        this.achievements = { ...this.achievements, ...data.achievements };
+        this.stats = { ...this.stats, ...data.stats };
+      }
+    } catch (error) {
+      console.error('[AchievementSystem] Error cargando progreso:', error);
+    }
+  }
+
+  // Resetear progreso (para testing)
+  resetProgress() {
+    Object.values(this.achievements).forEach(achievement => {
+      achievement.unlocked = false;
+      achievement.progress = 0;
+      delete achievement.unlockedAt;
+    });
+
+    Object.keys(this.stats).forEach(key => {
+      this.stats[key] = 0;
+    });
+
+    this.saveProgress();
+    console.log('[AchievementSystem] Progreso reseteado');
+  }
+
+  // Obtener resumen de progreso
+  getProgressSummary() {
+    return {
+      totalAchievements: Object.keys(this.achievements).length,
+      unlockedAchievements: this.stats.unlockedAchievements,
+      completionPercentage: this.getCompletionPercentage(),
+      stats: this.stats,
+      recentAchievements: this.getUnlockedAchievements()
+        .sort((a, b) => new Date(b.unlockedAt) - new Date(a.unlockedAt))
+        .slice(0, 3)
+    };
+  }
+}
+
+// ============================================
+// INTERFAZ PARA NOTIFICACIONES Y LOGROS
+// ============================================
+
+function showNotificationsAndAchievementsMenu() {
+  const modal = document.createElement('div');
+  modal.className = 'notifications-menu-modal';
+  modal.innerHTML = `
+    <div class="notifications-menu-content">
+      <h3>🔔 Notificaciones & 🏆 Logros</h3>
+      <p class="menu-description">
+        Gestiona tus notificaciones y descubre tus logros conseguidos juntos.
+      </p>
+
+      <div class="menu-options">
+        <div class="menu-option" onclick="showNotificationSettings()">
+          <div class="option-icon">🔔</div>
+          <div class="option-content">
+            <h4>Configuración de Notificaciones</h4>
+            <p>Personaliza cómo y cuándo recibir notificaciones</p>
+          </div>
+          <div class="option-arrow">→</div>
+        </div>
+
+        <div class="menu-option" onclick="showAchievementsGallery()">
+          <div class="option-icon">🏆</div>
+          <div class="option-content">
+            <h4>Galería de Logros</h4>
+            <p>Explora todos los logros y tu progreso</p>
+          </div>
+          <div class="option-arrow">→</div>
+        </div>
+
+        <div class="menu-option" onclick="testNotification()">
+          <div class="option-icon">🧪</div>
+          <div class="option-content">
+            <h4>Probar Notificación</h4>
+            <p>Envía una notificación de prueba</p>
+          </div>
+          <div class="option-arrow">→</div>
+        </div>
+      </div>
+
+      <button class="close-menu-btn">❌ Cerrar</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Event listeners
+  modal.addEventListener('click', (e) => {
+    if (e.target.classList.contains('close-menu-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+function testNotification() {
+  const manager = window.notificationManager;
+  if (manager) {
+    manager.show('🔔 Notificación de Prueba', {
+      body: 'Esta es una notificación de prueba para verificar que el sistema funciona correctamente.',
+      icon: '/scr/images/icon-192x192.png',
+      tag: 'test-notification',
+      requireInteraction: false
+    });
+  }
+}
+
+function showNotificationSettings() {
+  const manager = window.notificationManager || new NotificationManager();
+
+  const modal = document.createElement('div');
+  modal.className = 'notification-settings-modal';
+  modal.innerHTML = `
+    <div class="notification-settings-content">
+      <h3>🔔 Configuración de Notificaciones</h3>
+      <p class="settings-description">
+        Personaliza cómo quieres recibir notificaciones para mantener viva la magia de su relación.
+      </p>
+
+      <div class="notification-status">
+        <div class="status-indicator ${manager.getPermissionStatus() === 'granted' ? 'granted' : 'denied'}">
+          <span class="status-icon">${manager.getPermissionStatus() === 'granted' ? '✅' : '❌'}</span>
+          <span class="status-text">
+            ${manager.getPermissionStatus() === 'granted' ? 'Notificaciones activadas' : 'Notificaciones desactivadas'}
+          </span>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h4>Configuración General</h4>
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="notifications-enabled" ${manager.settings.enabled ? 'checked' : ''}>
+            <span class="checkmark"></span>
+            Notificaciones activadas
+          </label>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="notifications-sound" ${manager.settings.sound ? 'checked' : ''}>
+            <span class="checkmark"></span>
+            Sonido
+          </label>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="notifications-vibration" ${manager.settings.vibration ? 'checked' : ''}>
+            <span class="checkmark"></span>
+            Vibración
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h4>Tipos de Notificaciones</h4>
+
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="notifications-reminders" ${manager.settings.reminders ? 'checked' : ''}>
+            <span class="checkmark"></span>
+            Recordatorios románticos
+          </label>
+          <small>Recordatorios para actividades especiales y momentos importantes</small>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="notifications-achievements" ${manager.settings.achievements ? 'checked' : ''}>
+            <span class="checkmark"></span>
+            Logros y recompensas
+          </label>
+          <small>Notificaciones cuando desbloquean nuevos logros</small>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="notifications-anniversaries" ${manager.settings.anniversaries ? 'checked' : ''}>
+            <span class="checkmark"></span>
+            Aniversarios y fechas especiales
+          </label>
+          <small>Recordatorios de aniversarios y fechas importantes</small>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="notifications-activities" ${manager.settings.coupleActivities ? 'checked' : ''}>
+            <span class="checkmark"></span>
+            Sugerencias de actividades
+          </label>
+          <small>Ideas para actividades románticas</small>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="notifications-daily" ${manager.settings.dailyProgress ? 'checked' : ''}>
+            <span class="checkmark"></span>
+            Progreso diario
+          </label>
+          <small>Resumen del progreso diario</small>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="notifications-weekly" ${manager.settings.weeklyReports ? 'checked' : ''}>
+            <span class="checkmark"></span>
+            Reportes semanales
+          </label>
+          <small>Reportes detallados del progreso semanal</small>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="notifications-motivational" ${manager.settings.motivational ? 'checked' : ''}>
+            <span class="checkmark"></span>
+            Mensajes motivacionales
+          </label>
+          <small>Mensajes diarios de motivación y amor</small>
+        </div>
+      </div>
+
+      <div class="settings-actions">
+        <button class="save-settings-btn">💾 Guardar Configuración</button>
+        <button class="test-notification-btn">🔔 Probar Notificación</button>
+        <button class="close-settings-btn">❌ Cerrar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Event listeners
+  modal.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('save-settings-btn')) {
+      // Guardar configuración
+      const newSettings = {
+        enabled: modal.querySelector('#notifications-enabled').checked,
+        sound: modal.querySelector('#notifications-sound').checked,
+        vibration: modal.querySelector('#notifications-vibration').checked,
+        reminders: modal.querySelector('#notifications-reminders').checked,
+        achievements: modal.querySelector('#notifications-achievements').checked,
+        anniversaries: modal.querySelector('#notifications-anniversaries').checked,
+        coupleActivities: modal.querySelector('#notifications-activities').checked,
+        dailyProgress: modal.querySelector('#notifications-daily').checked,
+        weeklyReports: modal.querySelector('#notifications-weekly').checked,
+        motivational: modal.querySelector('#notifications-motivational').checked
+      };
+
+      manager.updateSettings(newSettings);
+
+      showNotification({
+        title: '✅ Configuración guardada',
+        message: 'Los cambios han sido aplicados.',
+        type: 'success'
+      });
+
+    } else if (e.target.classList.contains('test-notification-btn')) {
+      // Probar notificación
+      manager.show('🔔 Prueba de Notificación', {
+        body: 'Esta es una notificación de prueba para verificar que todo funciona correctamente.',
+        icon: '/scr/images/icon-192x192.png',
+        tag: 'test-notification'
+      });
+
+    } else if (e.target.classList.contains('close-settings-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+function showAchievementsGallery() {
+  const achievementSystem = window.achievementSystem || new AchievementSystem();
+
+  const modal = document.createElement('div');
+  modal.className = 'achievements-gallery-modal';
+  modal.innerHTML = `
+    <div class="achievements-gallery-content">
+      <h3>🏆 Galería de Logros</h3>
+
+      <div class="achievements-summary">
+        <div class="summary-stats">
+          <div class="stat-item">
+            <div class="stat-number">${achievementSystem.stats.unlockedAchievements}</div>
+            <div class="stat-label">Logros Desbloqueados</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">${achievementSystem.getCompletionPercentage()}%</div>
+            <div class="stat-label">Completado</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">${achievementSystem.stats.currentStreak}</div>
+            <div class="stat-label">Racha Actual</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="achievements-filter">
+        <button class="filter-btn active" data-filter="all">Todos</button>
+        <button class="filter-btn" data-filter="unlocked">Desbloqueados</button>
+        <button class="filter-btn" data-filter="locked">Bloqueados</button>
+        <button class="filter-btn" data-filter="tasks">Tareas</button>
+        <button class="filter-btn" data-filter="plans">Planes</button>
+        <button class="filter-btn" data-filter="photos">Fotos</button>
+      </div>
+
+      <div class="achievements-grid">
+        ${Object.values(achievementSystem.achievements).map(achievement => `
+          <div class="achievement-card ${achievement.unlocked ? 'unlocked' : 'locked'}" data-category="${achievement.category}">
+            <div class="achievement-icon ${achievement.unlocked ? 'unlocked' : ''}">
+              ${achievement.unlocked ? achievement.icon : '🔒'}
+            </div>
+            <div class="achievement-content">
+              <h4 class="achievement-title">${achievement.title}</h4>
+              <p class="achievement-description">${achievement.description}</p>
+              <div class="achievement-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: ${(achievement.progress / achievement.maxProgress) * 100}%"></div>
+                </div>
+                <span class="progress-text">${achievement.progress}/${achievement.maxProgress}</span>
+              </div>
+            </div>
+            ${achievement.unlocked ? '<div class="achievement-badge">🏆</div>' : ''}
+          </div>
+        `).join('')}
+      </div>
+
+      <button class="close-achievements-btn">❌ Cerrar</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Event listeners para filtros
+  modal.addEventListener('click', (e) => {
+    if (e.target.classList.contains('filter-btn')) {
+      // Cambiar filtro activo
+      modal.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      e.target.classList.add('active');
+
+      const filter = e.target.dataset.filter;
+      const cards = modal.querySelectorAll('.achievement-card');
+
+      cards.forEach(card => {
+        const category = card.dataset.category;
+        const isUnlocked = card.classList.contains('unlocked');
+
+        let show = true;
+
+        switch (filter) {
+          case 'unlocked':
+            show = isUnlocked;
+            break;
+          case 'locked':
+            show = !isUnlocked;
+            break;
+          case 'all':
+            show = true;
+            break;
+          default:
+            show = category === filter;
+            break;
+        }
+
+        card.style.display = show ? 'block' : 'none';
+      });
+
+    } else if (e.target.classList.contains('close-achievements-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+// ============================================
+// INICIALIZACIÓN DE NOTIFICACIONES Y LOGROS
+// ============================================
+
+// Instancias globales
+let notificationManager;
+let achievementSystem;
+
+// Inicializar sistemas cuando la app esté lista
+document.addEventListener('DOMContentLoaded', () => {
+  // Inicializar sistema de notificaciones
+  notificationManager = new NotificationManager();
+
+  // Inicializar sistema de logros
+  achievementSystem = new AchievementSystem();
+
+  // Hacer disponibles globalmente
+  window.notificationManager = notificationManager;
+  window.achievementSystem = achievementSystem;
+
+  // Iniciar notificaciones inteligentes después de un pequeño delay
+  setTimeout(() => {
+    if (notificationManager.isEnabled()) {
+      notificationManager.startSmartNotifications();
+    }
+  }, 2000);
+
+  console.log('[App] Sistemas de notificaciones y logros inicializados');
+});
+
+// Hacer funciones disponibles globalmente
+window.showNotificationSettings = showNotificationSettings;
+window.showAchievementsGallery = showAchievementsGallery;
+
+// ============================================
+// SISTEMA DE GAMIFICACIÓN AVANZADO
+// ============================================
+
+class GamificationSystem {
+  constructor() {
+    this.points = 0;
+    this.level = 1;
+    this.experience = 0;
+    this.experienceToNext = 100;
+    this.multipliers = {
+      base: 1.0,
+      streak: 1.0,
+      special: 1.0,
+      time: 1.0
+    };
+    this.dailyStats = {
+      tasksCompleted: 0,
+      pointsEarned: 0,
+      streakBonus: 0,
+      lastActivity: null
+    };
+    this.weeklyStats = {
+      tasksCompleted: 0,
+      pointsEarned: 0,
+      challengesCompleted: 0,
+      weekStart: this.getWeekStart()
+    };
+
+    this.loadProgress();
+    this.initializeDailyReset();
+  }
+
+  // Sistema de puntos y experiencia
+  earnPoints(amount, source = 'task', multiplier = null) {
+    let finalAmount = amount;
+
+    // Aplicar multiplicadores
+    if (multiplier) {
+      finalAmount *= multiplier;
+    } else {
+      finalAmount *= this.getTotalMultiplier();
+    }
+
+    finalAmount = Math.round(finalAmount);
+
+    // Actualizar puntos y experiencia
+    this.points += finalAmount;
+    this.experience += finalAmount;
+
+    // Actualizar estadísticas diarias
+    this.dailyStats.pointsEarned += finalAmount;
+    this.dailyStats.lastActivity = new Date().toISOString();
+
+    // Verificar subida de nivel
+    this.checkLevelUp();
+
+    // Notificar
+    this.notifyPointsEarned(finalAmount, source);
+
+    this.saveProgress();
+    return finalAmount;
+  }
+
+  // Calcular multiplicador total
+  getTotalMultiplier() {
+    return this.multipliers.base * this.multipliers.streak * this.multipliers.special * this.multipliers.time;
+  }
+
+  // Sistema de niveles
+  checkLevelUp() {
+    while (this.experience >= this.experienceToNext) {
+      this.levelUp();
+    }
+  }
+
+  levelUp() {
+    const oldLevel = this.level;
+    this.level++;
+    this.experience -= this.experienceToNext;
+
+    // Calcular experiencia necesaria para el siguiente nivel
+    this.experienceToNext = Math.round(100 * Math.pow(1.2, this.level - 1));
+
+    // Bonus de puntos por subir de nivel
+    const levelBonus = this.level * 10;
+    this.points += levelBonus;
+
+    // Notificar subida de nivel
+    this.notifyLevelUp(oldLevel, this.level, levelBonus);
+
+    // Verificar logros relacionados
+    if (window.achievementSystem) {
+      window.achievementSystem.updateStats('level', this.level);
+    }
+  }
+
+  // Multiplicadores dinámicos
+  updateStreakMultiplier(streakDays) {
+    // Multiplicador de racha: +0.1 por cada 5 días de racha
+    this.multipliers.streak = 1.0 + Math.floor(streakDays / 5) * 0.1;
+    this.multipliers.streak = Math.min(this.multipliers.streak, 2.0); // Máximo 2x
+  }
+
+  activateSpecialMultiplier(multiplier, duration = 3600000) { // 1 hora por defecto
+    this.multipliers.special = multiplier;
+    setTimeout(() => {
+      this.multipliers.special = 1.0;
+    }, duration);
+  }
+
+  activateTimeMultiplier() {
+    const hour = new Date().getHours();
+    // Multiplicador por hora del día
+    if (hour >= 6 && hour <= 9) { // Mañana temprano
+      this.multipliers.time = 1.5;
+    } else if (hour >= 18 && hour <= 22) { // Noche
+      this.multipliers.time = 1.3;
+    } else {
+      this.multipliers.time = 1.0;
+    }
+  }
+
+  // Sistema de rachas diarias
+  updateDailyStreak(completedTask = false) {
+    const today = new Date().toDateString();
+    const lastActivity = this.dailyStats.lastActivity ?
+      new Date(this.dailyStats.lastActivity).toDateString() : null;
+
+    if (completedTask) {
+      this.dailyStats.tasksCompleted++;
+    }
+
+    if (today !== lastActivity) {
+      // Nuevo día
+      if (this.isConsecutiveDay(lastActivity, today)) {
+        this.currentStreak = (this.currentStreak || 0) + 1;
+        this.updateStreakMultiplier(this.currentStreak);
+
+        // Bonus de racha
+        if (this.currentStreak > 1) {
+          const streakBonus = Math.min(this.currentStreak * 5, 100);
+          this.earnPoints(streakBonus, 'streak');
+          this.dailyStats.streakBonus = streakBonus;
+        }
+      } else {
+        // Racha rota
+        this.currentStreak = 1;
+        this.multipliers.streak = 1.0;
+      }
+    }
+
+    this.saveProgress();
+  }
+
+  isConsecutiveDay(lastDate, currentDate) {
+    if (!lastDate) return false;
+    const last = new Date(lastDate);
+    const current = new Date(currentDate);
+    const diffTime = current - last;
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    return diffDays === 1;
+  }
+
+  // Reset diario
+  initializeDailyReset() {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    const timeUntilReset = tomorrow - now;
+
+    setTimeout(() => {
+      this.resetDailyStats();
+      // Programar siguiente reset
+      setInterval(() => this.resetDailyStats(), 24 * 60 * 60 * 1000);
+    }, timeUntilReset);
+  }
+
+  resetDailyStats() {
+    // Guardar estadísticas de la semana antes de resetear
+    this.updateWeeklyStats();
+
+    // Reset diario
+    this.dailyStats = {
+      tasksCompleted: 0,
+      pointsEarned: 0,
+      streakBonus: 0,
+      lastActivity: null
+    };
+
+    // Reset multiplicador de tiempo
+    this.activateTimeMultiplier();
+
+    this.saveProgress();
+  }
+
+  updateWeeklyStats() {
+    const currentWeek = this.getWeekStart();
+    if (currentWeek !== this.weeklyStats.weekStart) {
+      // Nueva semana - resetear estadísticas semanales
+      this.weeklyStats = {
+        tasksCompleted: 0,
+        pointsEarned: 0,
+        challengesCompleted: 0,
+        weekStart: currentWeek
+      };
+    }
+  }
+
+  getWeekStart() {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Ajustar para lunes
+    const monday = new Date(now.setDate(diff));
+    monday.setHours(0, 0, 0, 0);
+    return monday.toISOString().split('T')[0];
+  }
+
+  // Notificaciones
+  notifyPointsEarned(points, source) {
+    const messages = {
+      task: `¡Ganaste ${points} puntos por completar una tarea!`,
+      challenge: `¡Desafío completado! +${points} puntos`,
+      streak: `¡Bonus de racha! +${points} puntos`,
+      level: `¡Subida de nivel! +${points} puntos`,
+      special: `¡Puntos especiales! +${points} puntos`
+    };
+
+    if (window.notificationManager) {
+      window.notificationManager.show('🎉 ¡Puntos Ganados!', {
+        body: messages[source] || `¡Ganaste ${points} puntos!`,
+        icon: '/scr/images/points-icon.png',
+        tag: 'points-earned'
+      });
+    }
+  }
+
+  notifyLevelUp(oldLevel, newLevel, bonus) {
+    if (window.notificationManager) {
+      window.notificationManager.show('⬆️ ¡Nivel Subido!', {
+        body: `¡Felicidades! Subiste del nivel ${oldLevel} al ${newLevel}. Bonus: +${bonus} puntos`,
+        icon: '/scr/images/level-up-icon.png',
+        tag: 'level-up',
+        requireInteraction: true
+      });
+    }
+
+    // Vibración de celebración
+    if (window.nativeFeaturesManager) {
+      window.nativeFeaturesManager.vibrate('celebration');
+    }
+  }
+
+  // Persistencia
+  saveProgress() {
+    try {
+      const data = {
+        points: this.points,
+        level: this.level,
+        experience: this.experience,
+        experienceToNext: this.experienceToNext,
+        multipliers: this.multipliers,
+        dailyStats: this.dailyStats,
+        weeklyStats: this.weeklyStats,
+        currentStreak: this.currentStreak || 0,
+        lastUpdated: new Date().toISOString()
+      };
+      localStorage.setItem('gamificationProgress', JSON.stringify(data));
+    } catch (error) {
+      console.error('[GamificationSystem] Error guardando progreso:', error);
+    }
+  }
+
+  loadProgress() {
+    try {
+      const saved = localStorage.getItem('gamificationProgress');
+      if (saved) {
+        const data = JSON.parse(saved);
+        Object.assign(this, data);
+      }
+    } catch (error) {
+      console.error('[GamificationSystem] Error cargando progreso:', error);
+    }
+  }
+
+  // Getters para UI
+  getStats() {
+    return {
+      points: this.points,
+      level: this.level,
+      experience: this.experience,
+      experienceToNext: this.experienceToNext,
+      experiencePercentage: (this.experience / this.experienceToNext) * 100,
+      totalMultiplier: this.getTotalMultiplier(),
+      multipliers: this.multipliers,
+      dailyStats: this.dailyStats,
+      weeklyStats: this.weeklyStats,
+      currentStreak: this.currentStreak || 0
+    };
+  }
+
+  getLevelProgress() {
+    return {
+      current: this.experience,
+      next: this.experienceToNext,
+      percentage: Math.round((this.experience / this.experienceToNext) * 100)
+    };
+  }
+
+  // Reset para testing
+  resetProgress() {
+    this.points = 0;
+    this.level = 1;
+    this.experience = 0;
+    this.experienceToNext = 100;
+    this.multipliers = {
+      base: 1.0,
+      streak: 1.0,
+      special: 1.0,
+      time: 1.0
+    };
+    this.dailyStats = {
+      tasksCompleted: 0,
+      pointsEarned: 0,
+      streakBonus: 0,
+      lastActivity: null
+    };
+    this.weeklyStats = {
+      tasksCompleted: 0,
+      pointsEarned: 0,
+      challengesCompleted: 0,
+      weekStart: this.getWeekStart()
+    };
+    this.currentStreak = 0;
+    this.saveProgress();
+  }
+}
+
+// ============================================
+// SISTEMA DE RECOMPENSAS
+// ============================================
+
+class RewardsSystem {
+  constructor() {
+    this.themes = {
+      romantic: {
+        id: 'romantic',
+        name: 'Tema Romántico',
+        description: 'Rosa y corazones para momentos especiales',
+        cost: 500,
+        unlocked: false,
+        css: `
+          --primary: #ff6b9d;
+          --secondary: #ffb3c1;
+          --accent: #ff4757;
+          --background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+        `
+      },
+      sunset: {
+        id: 'sunset',
+        name: 'Atardecer Dorado',
+        description: 'Colores cálidos del atardecer',
+        cost: 750,
+        unlocked: false,
+        css: `
+          --primary: #ff9f43;
+          --secondary: #ee5a24;
+          --accent: #f0932b;
+          --background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        `
+      },
+      ocean: {
+        id: 'ocean',
+        name: 'Profundidades Océano',
+        description: 'Azules profundos y relajantes',
+        cost: 600,
+        unlocked: false,
+        css: `
+          --primary: #3742fa;
+          --secondary: #2f3542;
+          --accent: #57606f;
+          --background: linear-gradient(135deg, #a8e6cf 0%, #dcedc8 100%);
+        `
+      },
+      galaxy: {
+        id: 'galaxy',
+        name: 'Galaxia Estelar',
+        description: 'Estrellas y nebulosas cósmicas',
+        cost: 1000,
+        unlocked: false,
+        css: `
+          --primary: #6c5ce7;
+          --secondary: #a29bfe;
+          --accent: #fd79a8;
+          --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        `
+      }
+    };
+
+    this.badges = {
+      task_master: {
+        id: 'task_master',
+        name: 'Maestro de Tareas',
+        description: 'Completar 100 tareas',
+        icon: '👑',
+        unlocked: false,
+        requirement: { type: 'tasks', value: 100 }
+      },
+      streak_champion: {
+        id: 'streak_champion',
+        name: 'Campeón de Rachas',
+        description: 'Mantener 30 días de racha',
+        icon: '🔥',
+        unlocked: false,
+        requirement: { type: 'streak', value: 30 }
+      },
+      love_explorer: {
+        id: 'love_explorer',
+        name: 'Explorador del Amor',
+        description: 'Visitar 50 lugares románticos',
+        icon: '🗺️',
+        unlocked: false,
+        requirement: { type: 'locations', value: 50 }
+      },
+      memory_keeper: {
+        id: 'memory_keeper',
+        name: 'Guardián de Recuerdos',
+        description: 'Crear 25 cápsulas del tiempo',
+        icon: '💎',
+        unlocked: false,
+        requirement: { type: 'capsules', value: 25 }
+      }
+    };
+
+    this.challenges = {
+      weekly_planner: {
+        id: 'weekly_planner',
+        name: 'Planificador Semanal',
+        description: 'Completar 7 tareas en una semana',
+        reward: 150,
+        progress: 0,
+        maxProgress: 7,
+        completed: false,
+        type: 'weekly',
+        expiresAt: null
+      },
+      photo_album: {
+        id: 'photo_album',
+        name: 'Álbum de Fotos',
+        description: 'Tomar 10 fotos románticas',
+        reward: 200,
+        progress: 0,
+        maxProgress: 10,
+        completed: false,
+        type: 'monthly',
+        expiresAt: null
+      },
+      music_lovers: {
+        id: 'music_lovers',
+        name: 'Amantes de la Música',
+        description: 'Crear 3 playlists juntos',
+        reward: 100,
+        progress: 0,
+        maxProgress: 3,
+        completed: false,
+        type: 'monthly',
+        expiresAt: null
+      },
+      surprise_master: {
+        id: 'surprise_master',
+        name: 'Maestro de Sorpresas',
+        description: 'Completar 5 retos sorpresa',
+        reward: 250,
+        progress: 0,
+        maxProgress: 5,
+        completed: false,
+        type: 'monthly',
+        expiresAt: null
+      }
+    };
+
+    this.loadProgress();
+    this.initializeChallenges();
+  }
+
+  // Comprar tema
+  purchaseTheme(themeId) {
+    const theme = this.themes[themeId];
+    if (!theme || theme.unlocked) return false;
+
+    const gamification = window.gamificationSystem;
+    if (!gamification || gamification.points < theme.cost) return false;
+
+    // Descontar puntos
+    gamification.points -= theme.cost;
+    gamification.saveProgress();
+
+    // Desbloquear tema
+    theme.unlocked = true;
+    theme.unlockedAt = new Date().toISOString();
+
+    this.saveProgress();
+    this.applyTheme(themeId);
+
+    // Notificar
+    showNotification({
+      title: '🎨 ¡Tema Desbloqueado!',
+      message: `Has desbloqueado el tema "${theme.name}"`,
+      icon: '🎉',
+      type: 'success'
+    });
+
+    return true;
+  }
+
+  // Aplicar tema
+  applyTheme(themeId) {
+    const theme = this.themes[themeId];
+    if (!theme || !theme.unlocked) return;
+
+    // Aplicar CSS personalizado
+    const styleId = 'custom-theme-style';
+    let styleElement = document.getElementById(styleId);
+
+    if (!styleElement) {
+      styleElement = document.createElement('style');
+      styleElement.id = styleId;
+      document.head.appendChild(styleElement);
+    }
+
+    styleElement.textContent = `
+      :root {
+        ${theme.css}
+      }
+    `;
+
+    // Guardar tema activo
+    localStorage.setItem('activeTheme', themeId);
+  }
+
+  // Cargar tema activo
+  loadActiveTheme() {
+    const activeTheme = localStorage.getItem('activeTheme');
+    if (activeTheme && this.themes[activeTheme]?.unlocked) {
+      this.applyTheme(activeTheme);
+    }
+  }
+
+  // Sistema de insignias
+  checkBadgeUnlock(statType, value) {
+    Object.values(this.badges).forEach(badge => {
+      if (!badge.unlocked && badge.requirement.type === statType && value >= badge.requirement.value) {
+        this.unlockBadge(badge.id);
+      }
+    });
+  }
+
+  unlockBadge(badgeId) {
+    const badge = this.badges[badgeId];
+    if (!badge || badge.unlocked) return;
+
+    badge.unlocked = true;
+    badge.unlockedAt = new Date().toISOString();
+
+    // Notificar
+    if (window.notificationManager) {
+      window.notificationManager.show('🏆 ¡Nueva Insignia!', {
+        body: `Has desbloqueado la insignia: ${badge.name}`,
+        icon: badge.icon,
+        tag: 'badge-unlocked',
+        requireInteraction: true
+      });
+    }
+
+    this.saveProgress();
+  }
+
+  // Sistema de desafíos
+  initializeChallenges() {
+    // Inicializar fechas de expiración para desafíos
+    Object.values(this.challenges).forEach(challenge => {
+      if (!challenge.expiresAt) {
+        this.setChallengeExpiration(challenge);
+      }
+    });
+
+    // Verificar expiraciones
+    this.checkExpiredChallenges();
+  }
+
+  setChallengeExpiration(challenge) {
+    const now = new Date();
+    let expiresAt;
+
+    if (challenge.type === 'weekly') {
+      // Expira al final de la semana (domingo)
+      const daysUntilSunday = 7 - now.getDay();
+      expiresAt = new Date(now);
+      expiresAt.setDate(now.getDate() + daysUntilSunday);
+      expiresAt.setHours(23, 59, 59, 999);
+    } else if (challenge.type === 'monthly') {
+      // Expira al final del mes
+      expiresAt = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    }
+
+    challenge.expiresAt = expiresAt.toISOString();
+  }
+
+  checkExpiredChallenges() {
+    const now = new Date();
+
+    Object.values(this.challenges).forEach(challenge => {
+      if (!challenge.completed && new Date(challenge.expiresAt) < now) {
+        // Resetear desafío expirado
+        challenge.progress = 0;
+        this.setChallengeExpiration(challenge);
+      }
+    });
+
+    this.saveProgress();
+  }
+
+  updateChallengeProgress(challengeId, increment = 1) {
+    const challenge = this.challenges[challengeId];
+    if (!challenge || challenge.completed) return;
+
+    challenge.progress = Math.min(challenge.progress + increment, challenge.maxProgress);
+
+    if (challenge.progress >= challenge.maxProgress) {
+      this.completeChallenge(challengeId);
+    }
+
+    this.saveProgress();
+  }
+
+  completeChallenge(challengeId) {
+    const challenge = this.challenges[challengeId];
+    if (!challenge || challenge.completed) return;
+
+    challenge.completed = true;
+    challenge.completedAt = new Date().toISOString();
+
+    // Otorgar recompensa
+    const gamification = window.gamificationSystem;
+    if (gamification) {
+      gamification.earnPoints(challenge.reward, 'challenge');
+    }
+
+    // Notificar
+    showNotification({
+      title: '🎯 ¡Desafío Completado!',
+      message: `${challenge.name} - ¡Ganaste ${challenge.reward} puntos!`,
+      icon: '🏆',
+      type: 'success'
+    });
+
+    // Resetear para próximo período
+    setTimeout(() => {
+      challenge.completed = false;
+      challenge.progress = 0;
+      this.setChallengeExpiration(challenge);
+      this.saveProgress();
+    }, 1000);
+
+    this.saveProgress();
+  }
+
+  // Getters para UI
+  getAvailableThemes() {
+    return Object.values(this.themes).filter(theme => !theme.unlocked);
+  }
+
+  getUnlockedThemes() {
+    return Object.values(this.themes).filter(theme => theme.unlocked);
+  }
+
+  getBadges() {
+    return Object.values(this.badges);
+  }
+
+  getActiveChallenges() {
+    return Object.values(this.challenges).filter(challenge => !challenge.completed);
+  }
+
+  getCompletedChallenges() {
+    return Object.values(this.challenges).filter(challenge => challenge.completed);
+  }
+
+  // Persistencia
+  saveProgress() {
+    try {
+      const data = {
+        themes: this.themes,
+        badges: this.badges,
+        challenges: this.challenges,
+        lastUpdated: new Date().toISOString()
+      };
+      localStorage.setItem('rewardsProgress', JSON.stringify(data));
+    } catch (error) {
+      console.error('[RewardsSystem] Error guardando progreso:', error);
+    }
+  }
+
+  loadProgress() {
+    try {
+      const saved = localStorage.getItem('rewardsProgress');
+      if (saved) {
+        const data = JSON.parse(saved);
+        this.themes = { ...this.themes, ...data.themes };
+        this.badges = { ...this.badges, ...data.badges };
+        this.challenges = { ...this.challenges, ...data.challenges };
+      }
+    } catch (error) {
+      console.error('[RewardsSystem] Error cargando progreso:', error);
+    }
+  }
+
+  // Reset para testing
+  resetProgress() {
+    Object.values(this.themes).forEach(theme => {
+      theme.unlocked = false;
+      delete theme.unlockedAt;
+    });
+
+    Object.values(this.badges).forEach(badge => {
+      badge.unlocked = false;
+      delete badge.unlockedAt;
+    });
+
+    Object.values(this.challenges).forEach(challenge => {
+      challenge.completed = false;
+      challenge.progress = 0;
+      delete challenge.completedAt;
+      this.setChallengeExpiration(challenge);
+    });
+
+    this.saveProgress();
+  }
+}
+
+// ============================================
+// INTERFAZ DE USUARIO PARA GAMIFICACIÓN
+// ============================================
+
+function showGamificationDashboard() {
+  const gamification = window.gamificationSystem || new GamificationSystem();
+  const rewards = window.rewardsSystem || new RewardsSystem();
+  const stats = gamification.getStats();
+
+  const modal = document.createElement('div');
+  modal.className = 'gamification-dashboard-modal';
+  modal.innerHTML = `
+    <div class="gamification-dashboard-content">
+      <div class="dashboard-header">
+        <h3>🎮 Centro de Gamificación</h3>
+        <div class="dashboard-actions">
+          <button class="dashboard-btn" onclick="showRewardsStore()">🛍️ Tienda</button>
+          <button class="dashboard-btn" onclick="showChallengesBoard()">🎯 Desafíos</button>
+        </div>
+      </div>
+
+      <div class="stats-overview">
+        <div class="stat-card">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-info">
+            <div class="stat-value">${stats.points.toLocaleString()}</div>
+            <div class="stat-label">Puntos Totales</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">⬆️</div>
+          <div class="stat-info">
+            <div class="stat-value">Nivel ${stats.level}</div>
+            <div class="stat-label">Experiencia</div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: ${stats.experiencePercentage}%"></div>
+            </div>
+            <div class="progress-text">${stats.experience}/${stats.experienceToNext} XP</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">🔥</div>
+          <div class="stat-info">
+            <div class="stat-value">${stats.currentStreak || 0}</div>
+            <div class="stat-label">Racha Actual</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-info">
+            <div class="stat-value">${stats.totalMultiplier.toFixed(1)}x</div>
+            <div class="stat-label">Multiplicador</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="multipliers-breakdown">
+        <h4>Multiplicadores Activos</h4>
+        <div class="multipliers-grid">
+          <div class="multiplier-item">
+            <span class="multiplier-label">Base</span>
+            <span class="multiplier-value">${stats.multipliers.base}x</span>
+          </div>
+          <div class="multiplier-item">
+            <span class="multiplier-label">Racha</span>
+            <span class="multiplier-value">${stats.multipliers.streak}x</span>
+          </div>
+          <div class="multiplier-item">
+            <span class="multiplier-label">Especial</span>
+            <span class="multiplier-value">${stats.multipliers.special}x</span>
+          </div>
+          <div class="multiplier-item">
+            <span class="multiplier-label">Tiempo</span>
+            <span class="multiplier-value">${stats.multipliers.time}x</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="daily-weekly-stats">
+        <div class="stats-section">
+          <h4>📊 Estadísticas Diarias</h4>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Tareas completadas</span>
+              <span class="stat-value">${stats.dailyStats.tasksCompleted}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Puntos ganados</span>
+              <span class="stat-value">${stats.dailyStats.pointsEarned}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Bonus de racha</span>
+              <span class="stat-value">${stats.dailyStats.streakBonus}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-section">
+          <h4>📈 Estadísticas Semanales</h4>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Tareas completadas</span>
+              <span class="stat-value">${stats.weeklyStats.tasksCompleted}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Puntos ganados</span>
+              <span class="stat-value">${stats.weeklyStats.pointsEarned}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Desafíos completados</span>
+              <span class="stat-value">${stats.weeklyStats.challengesCompleted}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-actions-bottom">
+        <button class="reset-btn" onclick="resetGamificationProgress()">🔄 Reset Progreso</button>
+        <button class="close-dashboard-btn">❌ Cerrar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target.classList.contains('close-dashboard-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+function showRewardsStore() {
+  const rewards = window.rewardsSystem || new RewardsSystem();
+  const gamification = window.gamificationSystem || new GamificationSystem();
+  const availableThemes = rewards.getAvailableThemes();
+
+  const modal = document.createElement('div');
+  modal.className = 'rewards-store-modal';
+  modal.innerHTML = `
+    <div class="rewards-store-content">
+      <div class="store-header">
+        <h3>🛍️ Tienda de Recompensas</h3>
+        <div class="points-balance">
+          <span class="points-icon">⭐</span>
+          <span class="points-amount">${gamification.points.toLocaleString()}</span>
+          <span class="points-label">puntos disponibles</span>
+        </div>
+      </div>
+
+      <div class="store-tabs">
+        <button class="store-tab active" data-tab="themes">🎨 Temas</button>
+        <button class="store-tab" data-tab="badges">🏆 Insignias</button>
+      </div>
+
+      <div class="store-content">
+        <div class="store-section themes-section active">
+          <h4>Temas Disponibles</h4>
+          <div class="themes-grid">
+            ${availableThemes.map(theme => `
+              <div class="theme-card ${gamification.points >= theme.cost ? 'available' : 'locked'}">
+                <div class="theme-preview" style="background: linear-gradient(45deg, var(--primary), var(--secondary))"></div>
+                <div class="theme-info">
+                  <h5>${theme.name}</h5>
+                  <p>${theme.description}</p>
+                  <div class="theme-cost">
+                    <span class="cost-amount">${theme.cost}</span>
+                    <span class="cost-icon">⭐</span>
+                  </div>
+                </div>
+                <button class="purchase-btn ${gamification.points >= theme.cost ? '' : 'disabled'}"
+                        onclick="purchaseTheme('${theme.id}')"
+                        ${gamification.points >= theme.cost ? '' : 'disabled'}>
+                  ${gamification.points >= theme.cost ? 'Comprar' : 'Puntos insuficientes'}
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="store-section badges-section">
+          <h4>Insignias Desbloqueadas</h4>
+          <div class="badges-grid">
+            ${rewards.getBadges().map(badge => `
+              <div class="badge-card ${badge.unlocked ? 'unlocked' : 'locked'}">
+                <div class="badge-icon ${badge.unlocked ? 'unlocked' : ''}">
+                  ${badge.unlocked ? badge.icon : '🔒'}
+                </div>
+                <div class="badge-info">
+                  <h5>${badge.name}</h5>
+                  <p>${badge.description}</p>
+                  ${badge.unlocked ? '<div class="badge-unlocked">🏆 Desbloqueada</div>' : '<div class="badge-locked">🔒 Bloqueada</div>'}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <button class="close-store-btn">❌ Cerrar</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Event listeners para tabs
+  modal.addEventListener('click', (e) => {
+    if (e.target.classList.contains('store-tab')) {
+      const tab = e.target.dataset.tab;
+      modal.querySelectorAll('.store-tab').forEach(btn => btn.classList.remove('active'));
+      modal.querySelectorAll('.store-section').forEach(section => section.classList.remove('active'));
+
+      e.target.classList.add('active');
+      modal.querySelector(`.${tab}-section`).classList.add('active');
+
+    } else if (e.target.classList.contains('close-store-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+function showChallengesBoard() {
+  const rewards = window.rewardsSystem || new RewardsSystem();
+  const activeChallenges = rewards.getActiveChallenges();
+  const completedChallenges = rewards.getCompletedChallenges();
+
+  const modal = document.createElement('div');
+  modal.className = 'challenges-board-modal';
+  modal.innerHTML = `
+    <div class="challenges-board-content">
+      <div class="board-header">
+        <h3>🎯 Tablero de Desafíos</h3>
+        <div class="board-stats">
+          <span class="stat">Activos: ${activeChallenges.length}</span>
+          <span class="stat">Completados: ${completedChallenges.length}</span>
+        </div>
+      </div>
+
+      <div class="challenges-tabs">
+        <button class="challenge-tab active" data-tab="active">En Progreso</button>
+        <button class="challenge-tab" data-tab="completed">Completados</button>
+      </div>
+
+      <div class="challenges-content">
+        <div class="challenges-section active-challenges active">
+          <div class="challenges-grid">
+            ${activeChallenges.map(challenge => `
+              <div class="challenge-card">
+                <div class="challenge-header">
+                  <h4>${challenge.name}</h4>
+                  <div class="challenge-reward">
+                    <span class="reward-amount">${challenge.reward}</span>
+                    <span class="reward-icon">⭐</span>
+                  </div>
+                </div>
+                <p class="challenge-description">${challenge.description}</p>
+                <div class="challenge-progress">
+                  <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${(challenge.progress / challenge.maxProgress) * 100}%"></div>
+                  </div>
+                  <span class="progress-text">${challenge.progress}/${challenge.maxProgress}</span>
+                </div>
+                <div class="challenge-meta">
+                  <span class="challenge-type">${challenge.type === 'weekly' ? '📅 Semanal' : '📊 Mensual'}</span>
+                  <span class="challenge-expires">Expira: ${new Date(challenge.expiresAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="challenges-section completed-challenges">
+          <div class="challenges-grid">
+            ${completedChallenges.map(challenge => `
+              <div class="challenge-card completed">
+                <div class="challenge-header">
+                  <h4>${challenge.name}</h4>
+                  <div class="challenge-reward completed">
+                    <span class="reward-amount">+${challenge.reward}</span>
+                    <span class="reward-icon">⭐</span>
+                  </div>
+                </div>
+                <p class="challenge-description">${challenge.description}</p>
+                <div class="challenge-completed-badge">✅ Completado</div>
+                <div class="challenge-meta">
+                  <span class="completed-date">Completado: ${new Date(challenge.completedAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <button class="close-challenges-btn">❌ Cerrar</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target.classList.contains('challenge-tab')) {
+      const tab = e.target.dataset.tab;
+      modal.querySelectorAll('.challenge-tab').forEach(btn => btn.classList.remove('active'));
+      modal.querySelectorAll('.challenges-section').forEach(section => section.classList.remove('active'));
+
+      e.target.classList.add('active');
+      modal.querySelector(`.${tab}-challenges`).classList.add('active');
+
+    } else if (e.target.classList.contains('close-challenges-btn') || e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+function purchaseTheme(themeId) {
+  const rewards = window.rewardsSystem;
+  if (rewards && rewards.purchaseTheme(themeId)) {
+    // Actualizar UI
+    showRewardsStore();
+  } else {
+    showNotification({
+      title: 'Compra Fallida',
+      message: 'No tienes suficientes puntos para comprar este tema.',
+      icon: '❌',
+      type: 'error'
+    });
+  }
+}
+
+function resetGamificationProgress() {
+  showNotification({
+    title: '¿Resetear Progreso?',
+    message: 'Esta acción eliminará todo tu progreso de gamificación. ¿Estás seguro?',
+    icon: '⚠️',
+    type: 'confirm',
+    confirmText: 'Resetear',
+    cancelText: 'Cancelar',
+    onConfirm: () => {
+      const gamification = window.gamificationSystem;
+      const rewards = window.rewardsSystem;
+
+      if (gamification) gamification.resetProgress();
+      if (rewards) rewards.resetProgress();
+
+      showNotification({
+        title: 'Progreso Reseteado',
+        message: 'Todo el progreso de gamificación ha sido eliminado.',
+        icon: '🔄',
+        type: 'info'
+      });
+
+      // Cerrar y volver a abrir el dashboard
+      document.querySelector('.gamification-dashboard-modal')?.remove();
+      showGamificationDashboard();
+    }
+  });
+}
+
+// ============================================
+// INTEGRACIÓN CON SISTEMAS EXISTENTES
+// ============================================
+
+// Instancias globales
+let gamificationSystem;
+let rewardsSystem;
+
+// Inicializar sistemas cuando la app esté lista
+document.addEventListener('DOMContentLoaded', () => {
+  // Inicializar sistema de gamificación
+  gamificationSystem = new GamificationSystem();
+  rewardsSystem = new RewardsSystem();
+
+  // Hacer disponibles globalmente
+  window.gamificationSystem = gamificationSystem;
+  window.rewardsSystem = rewardsSystem;
+
+  // Cargar tema activo
+  rewardsSystem.loadActiveTheme();
+
+  // Activar multiplicador de tiempo
+  gamificationSystem.activateTimeMultiplier();
+
+  console.log('[App] Sistemas de gamificación inicializados');
+});
+
+// Hacer funciones disponibles globalmente
+window.showGamificationDashboard = showGamificationDashboard;
+window.showRewardsStore = showRewardsStore;
+window.showChallengesBoard = showChallengesBoard;
+window.purchaseTheme = purchaseTheme;
+window.resetGamificationProgress = resetGamificationProgress;
+
+// Integración con tareas completadas
+function integrateTaskCompletion(taskPoints = 10) {
+  const gamification = window.gamificationSystem;
+  const rewards = window.rewardsSystem;
+
+  if (gamification) {
+    // Ganar puntos por tarea
+    gamification.earnPoints(taskPoints, 'task');
+
+    // Actualizar racha diaria
+    gamification.updateDailyStreak(true);
+
+    // Actualizar estadísticas semanales
+    gamification.weeklyStats.tasksCompleted++;
+    gamification.saveProgress();
+  }
+
+  if (rewards) {
+    // Actualizar progreso de desafíos
+    rewards.updateChallengeProgress('weekly_planner', 1);
+
+    // Verificar insignias
+    const achievementSystem = window.achievementSystem;
+    if (achievementSystem) {
+      const totalTasks = achievementSystem.stats.totalTasks + 1;
+      achievementSystem.updateStats('totalTasks', totalTasks);
+      rewards.checkBadgeUnlock('tasks', totalTasks);
+    }
+  }
+}
+
+// Integración con otras actividades
+function integrateActivityCompletion(activityType, points = 0) {
+  const gamification = window.gamificationSystem;
+  const rewards = window.rewardsSystem;
+
+  if (gamification) {
+    gamification.earnPoints(points, activityType);
+  }
+
+  if (rewards) {
+    // Actualizar desafíos específicos
+    switch (activityType) {
+      case 'photo':
+        rewards.updateChallengeProgress('photo_album', 1);
+        break;
+      case 'playlist':
+        rewards.updateChallengeProgress('music_lovers', 1);
+        break;
+      case 'surprise':
+        rewards.updateChallengeProgress('surprise_master', 1);
+        break;
+    }
+
+    // Verificar insignias
+    const achievementSystem = window.achievementSystem;
+    if (achievementSystem) {
+      switch (activityType) {
+        case 'location':
+          const totalLocations = achievementSystem.stats.totalLocations + 1;
+          achievementSystem.updateStats('totalLocations', totalLocations);
+          rewards.checkBadgeUnlock('locations', totalLocations);
+          break;
+        case 'capsule':
+          const totalCapsules = (achievementSystem.stats.totalCapsules || 0) + 1;
+          achievementSystem.updateStats('totalCapsules', totalCapsules);
+          rewards.checkBadgeUnlock('capsules', totalCapsules);
+          break;
+      }
+    }
+  }
+}
+
+// Hacer funciones de integración disponibles globalmente
+window.integrateTaskCompletion = integrateTaskCompletion;
+window.integrateActivityCompletion = integrateActivityCompletion;

@@ -7,9 +7,11 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-
-  "background_color": "#FFFBF7",
   "theme_color": "#8B6F47",
+  "background_color": "#FFFBF7",
+
+  "categories": ["lifestyle", "productivity", "social"],
+  "lang": "es",
 
   "icons": [
     {
@@ -24,5 +26,53 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+
+  "shortcuts": [
+    {
+      "name": "Nuevo Plan",
+      "short_name": "Plan",
+      "description": "Crear un nuevo plan romántico",
+      "url": "/index.html?action=new-plan",
+      "icons": [{ "src": "/scr/images/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "El Test",
+      "short_name": "Test",
+      "description": "Jugar el test de compatibilidad",
+      "url": "/index.html?action=test",
+      "icons": [{ "src": "/scr/images/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Estadísticas",
+      "short_name": "Stats",
+      "description": "Ver estadísticas de pareja",
+      "url": "/index.html?action=stats",
+      "icons": [{ "src": "/scr/images/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Compartir App",
+      "short_name": "Compartir",
+      "description": "Compartir la app con amigos",
+      "url": "/index.html?action=share",
+      "icons": [{ "src": "/scr/images/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+
+  "share_target": {
+    "action": "/index.html?action=share-received",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": ["image/*", ".pdf", ".doc", ".docx", ".txt"]
+        }
+      ]
+    }
+  }
 }
