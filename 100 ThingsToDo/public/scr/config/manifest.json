@@ -2,8 +2,8 @@
   "name": "ThingsToDo Kawaii",
   "short_name": "ThingsToDo",
   "description": "Crea y gestiona listas de tareas románticas con tu pareja.",
-  
-  "start_url": "/",
+
+  "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

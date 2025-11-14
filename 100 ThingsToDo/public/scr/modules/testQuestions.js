@@ -37,7 +37,6 @@ import {
 export async function createTest(db, creatorId, targetId, creatorName, targetName) {
   try {
     const testData = {
-      id: `test_${Date.now()}_${creatorId}`,
       creatorId,
       targetId,
       creatorName,
@@ -50,7 +49,9 @@ export async function createTest(db, creatorId, targetId, creatorName, targetNam
       completedAt: null,
       currentQuestionIndex: 0,
       correctAnswers: 0,
-      skippedQuestions: 0
+      skippedQuestions: 0,
+      creatorConfirmed: false, // Si el creador ha visto los resultados
+      responderConfirmed: false // Si el respondedor ha visto los resultados
     };
 
     // Guardar en Firebase
@@ -76,7 +77,7 @@ export async function getAvailableTests(db, userId) {
     const tests = [];
 
     querySnapshot.forEach((doc) => {
-      tests.push({ id: doc.id, ...doc.data() });
+      tests.push({ ...doc.data(), id: doc.id });
     });
 
     return { success: true, tests };
@@ -99,7 +100,7 @@ export async function getCreatedTests(db, userId) {
     const tests = [];
 
     querySnapshot.forEach((doc) => {
-      tests.push({ id: doc.id, ...doc.data() });
+      tests.push({ ...doc.data(), id: doc.id });
     });
 
     return { success: true, tests };
@@ -135,12 +136,17 @@ export async function updateTestAnswers(db, testId, answers, currentQuestionInde
 // Función para actualizar un test con adivinanzas
 export async function updateTestGuesses(db, testId, guesses, correctAnswers, skippedQuestions) {
   try {
-    const status = guesses.length === 10 ? 'completed' : 'active';
+    // Validar parámetros
+    const validGuesses = guesses || [];
+    const validCorrectAnswers = correctAnswers || 0;
+    const validSkippedQuestions = skippedQuestions || 0;
+
+    const status = validGuesses.length === 10 ? 'completed' : 'active';
 
     await updateDoc(doc(db, 'tests', testId), {
-      guesses,
-      correctAnswers,
-      skippedQuestions,
+      guesses: validGuesses,
+      correctAnswers: validCorrectAnswers,
+      skippedQuestions: validSkippedQuestions,
       status,
       completedAt: status === 'completed' ? new Date() : null,
       updatedAt: new Date()
@@ -192,12 +198,42 @@ export async function getTest(db, testId) {
     const docSnap = await getDoc(doc(db, 'tests', testId));
 
     if (docSnap.exists()) {
-      return { success: true, test: { id: docSnap.id, ...docSnap.data() } };
+      return { success: true, test: { ...docSnap.data(), id: docSnap.id } };
     } else {
       return { success: false, error: 'Test not found' };
     }
   } catch (error) {
     console.error('Error getting test:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Función para confirmar que un usuario ha visto los resultados
+export async function confirmTestResults(db, testId, userId, isCreator) {
+  try {
+    const fieldToUpdate = isCreator ? 'creatorConfirmed' : 'responderConfirmed';
+    await updateDoc(doc(db, 'tests', testId), {
+      [fieldToUpdate]: true
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error confirming test results:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Función para verificar si ambos usuarios han confirmado
+export async function checkBothConfirmed(db, testId) {
+  try {
+    const testResult = await getTest(db, testId);
+    if (!testResult.success) return testResult;
+
+    const test = testResult.test;
+    const bothConfirmed = test.creatorConfirmed && test.responderConfirmed;
+
+    return { success: true, bothConfirmed, test };
+  } catch (error) {
+    console.error('Error checking confirmations:', error);
     return { success: false, error: error.message };
   }
 }

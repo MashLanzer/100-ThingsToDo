@@ -210,7 +210,8 @@ export async function linkWithPartner(db, userId, userName, partnerCode) {
       partnerId: userId,
       partnerName: userName,
       coupleId: coupleId,
-      linkedAt: now
+      linkedAt: now,
+      coupleCode: partnerData.coupleCode // <-- ¡LÍNEA CRÍTICA AÑADIDA!
     });
     
     // Crear documento de pareja si no existe

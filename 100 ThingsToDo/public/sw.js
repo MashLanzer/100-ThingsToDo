@@ -17,20 +17,23 @@ const URLS_TO_CACHE = [
   '/styles.css',
   '/app.js',
   '/scr/config/manifest.json',
-  
+
   // Módulos JS importantes
   '/scr/modules/couple.js',
   '/scr/modules/stats.js',
   '/scr/modules/surpriseTasks.js',
+  '/scr/modules/notifications.js',
+  '/scr/modules/testQuestions.js',
+
+  // Animaciones
+  '/scr/animations/animations.css',
   '/scr/animations/animations.js',
 
   // Iconos principales de la PWA
   '/scr/images/icon-192x192.png',
-  '/scr/images/icon-512x512.png',
+  '/scr/images/icon-512x512.png'
 
-  // Recursos externos que también quieres que funcionen offline
-  'https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&family=Fredoka:wght@300;400;500;600;700&display=swap',
-  'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js'
+  // NOTA: Los recursos externos (fuentes, CDN) se cachearán automáticamente cuando se soliciten
 ];
 
 // ============================================
@@ -50,6 +53,9 @@ self.addEventListener('install', event => {
         console.log('[Service Worker] ¡Instalación completa!');
         // Forzamos al nuevo SW a activarse inmediatamente.
         return self.skipWaiting();
+      })
+      .catch(error => {
+        console.error('[Service Worker] Error durante la instalación:', error);
       })
   );
 });
@@ -73,6 +79,9 @@ self.addEventListener('activate', event => {
       // Toma el control de todas las páginas abiertas.
       return self.clients.claim();
     })
+    .catch(error => {
+      console.error('[Service Worker] Error durante la activación:', error);
+    })
   );
 });
 
@@ -89,10 +98,18 @@ self.addEventListener('fetch', event => {
       .then(cachedResponse => {
         // Si encontramos el recurso en el caché, lo devolvemos. ¡Rápido!
         if (cachedResponse) {
+          console.log('[Service Worker] Sirviendo desde caché:', event.request.url);
           return cachedResponse;
         }
+
         // Si no, lo buscamos en la red.
+        console.log('[Service Worker] Buscando en red:', event.request.url);
         return fetch(event.request);
+      })
+      .catch(error => {
+        console.error('[Service Worker] Error al procesar petición:', event.request.url, error);
+        // Si hay error, podríamos devolver una página de fallback
+        // return caches.match('/offline.html');
       })
   );
 });

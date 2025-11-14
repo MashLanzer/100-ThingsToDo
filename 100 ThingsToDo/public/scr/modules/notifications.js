@@ -2,9 +2,6 @@
 // MÓDULO DE NOTIFICACIONES PUSH
 // ============================================
 
-
-/**
- * 
 import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // =======================================================================
@@ -13,12 +10,15 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
 const VAPID_KEY = 'BNbNtUbdQkOGikrsiXt9Q968eFJV-xh2Avzh-puVTmJiA36xWjFqc-_Ni8XuqbTodGZIY-wf7BAZXDZJvEvHqiY';
 // =======================================================================
 
-const db = getFirestore( );
+// Función para obtener la instancia de Firestore (lazy initialization)
+function getDb() {
+  return getFirestore();
+}
 
-
+/**
  * Inicializa el proceso de notificaciones.
  * Comprueba si son compatibles y si el usuario ya ha dado permiso.
- 
+ */
 export function initializeNotifications(userId) {
   if (!('PushManager' in window)) {
     console.warn('Las notificaciones push no son compatibles con este navegador.');
@@ -39,10 +39,10 @@ export function initializeNotifications(userId) {
   });
 }
 
-
+/**
  * Muestra un modal o un prompt para pedir permiso de notificaciones.
  * Esta función será llamada por un botón en la UI.
- 
+ */
 export function requestNotificationPermission(userId) {
   if (!('PushManager' in window)) {
     alert('Tu navegador no es compatible con las notificaciones push.');
@@ -62,9 +62,9 @@ export function requestNotificationPermission(userId) {
   });
 }
 
-
+/**
  * Suscribe al usuario a las notificaciones push y guarda la suscripción en Firestore.
- 
+ */
 async function subscribeUserToPush(userId, registration) {
   try {
     const subscription = await registration.pushManager.subscribe({
@@ -73,9 +73,9 @@ async function subscribeUserToPush(userId, registration) {
     });
 
     console.log('Usuario suscrito:', subscription);
-    
+
     // Guardar la suscripción en el perfil del usuario en Firestore
-    const userRef = doc(db, 'users', userId);
+    const userRef = doc(getDb(), 'users', userId);
     await setDoc(userRef, {
       pushSubscription: JSON.parse(JSON.stringify(subscription))
     }, { merge: true });
@@ -85,9 +85,9 @@ async function subscribeUserToPush(userId, registration) {
   }
 }
 
-
+/**
  * Función de utilidad para convertir la clave VAPID a un formato usable.
- 
+ */
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -98,4 +98,3 @@ function urlBase64ToUint8Array(base64String) {
   }
   return outputArray;
 }
-*/

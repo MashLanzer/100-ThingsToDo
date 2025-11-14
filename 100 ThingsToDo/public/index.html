@@ -1,18 +1,41 @@
 ﻿<!DOCTYPE html>
-            <!-- Globo terráqueo 3D fuera del modal -->
-        </div>
-    </div>
-</div>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThingsToDo Kawaii - Tu espacio romántico</title>
 
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/scr/config/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/scr/images/icon-192x192.png">
+
+    <!-- Meta tags para PWA -->
+    <meta name="theme-color" content="#8B6F47">
+    <meta name="description" content="Crea y gestiona listas de tareas románticas con tu pareja.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="ThingsToDo">
+
+    <!-- Fuentes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Estilos -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="scr/animations/animations.css">
+
+    <!-- Scripts externos -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    
+
     <!-- Globe.GL para el mapa 3D -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
     <script src="https://unpkg.com/globe.gl"></script>
 
 </head>
+<body>
 <body>
     <!-- Contenedor principal de la aplicación -->
     <div id="app">
@@ -158,6 +181,7 @@
                                 <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
                                 <line x1="12" y1="17" x2="12.01" y2="17"></line>
                             </svg>
+                            <span id="test-notification-badge" class="notification-badge" style="display: none;"></span>
                         </button>
 
                         <button id="open-phone-modal-btn" class="btn-icon" title="Centro de Actividades">
@@ -1969,36 +1993,27 @@ Hoy es un día especial porque..."
         <div class="modal-overlay"></div>
         <div class="modal-content test-game-modal">
             <div class="modal-header">
-                <h2>❓ El Test</h2>
+                <h2>🧠 El Test de Compatibilidad</h2>
                 <button class="close-modal-btn" id="close-test-game-modal">×</button>
             </div>
 
             <div class="test-game-content">
                 <!-- Pantalla de inicio -->
                 <div id="test-game-start" class="test-game-screen">
-                    <div class="test-welcome">
-                        <div class="test-icon">🤔</div>
-                        <h3>¿Cuánto nos conocemos?</h3>
-                        <p>Un juego de preguntas y respuestas para descubrir cuánto conocen el uno del otro.</p>
-
-                        <div class="test-instructions">
-                            <div class="instruction-step">
-                                <span class="step-number">1</span>
-                                <span>Uno crea un test respondiendo preguntas</span>
-                            </div>
-                            <div class="instruction-step">
-                                <span class="step-number">2</span>
-                                <span>El otro recibe el test y lo responde</span>
-                            </div>
-                            <div class="instruction-step">
-                                <span class="step-number">3</span>
-                                <span>¡Descubre tu porcentaje de compatibilidad!</span>
-                            </div>
+                    <div class="test-welcome-modern">
+                        <div class="test-header">
+                            <div class="test-icon-modern">🎯</div>
+                            <h2>El Test de Compatibilidad</h2>
+                            <button class="help-btn" id="test-help-btn" title="Ver instrucciones">?</button>
                         </div>
 
-                        <div class="test-actions">
+                        <div class="test-description">
+                            <p>Descubre cuánto conocen realmente de su pareja a través de este divertido juego de preguntas y respuestas.</p>
+                        </div>
+
+                        <div class="test-actions-modern">
                             <button class="btn btn-primary test-create-btn" id="create-test-btn">
-                                ✨ Crear Test
+                                ✨ Crear Nuevo Test
                             </button>
                             <button class="btn btn-secondary test-respond-btn" id="respond-test-btn" style="display: none;">
                                 🎯 Responder Test Disponible
@@ -2009,25 +2024,13 @@ Hoy es un día especial porque..."
                     </div>
                 </div>
 
-                <!-- Pantalla de selección de jugador -->
-                <div id="test-player-selection" class="test-game-screen hidden">
-                    <div class="player-selection">
-                        <h3>¿Quién va a responder primero?</h3>
-                        <div class="player-options">
-                            <button class="player-option" data-player="player1">
-                                <div class="player-avatar">👤</div>
-                                <div class="player-name" id="player1-name">Jugador 1</div>
-                            </button>
-                            <button class="player-option" data-player="player2">
-                                <div class="player-avatar">👤</div>
-                                <div class="player-name" id="player2-name">Jugador 2</div>
-                            </button>
-                        </div>
+                <!-- Pantalla de creación del test -->
+                <div id="test-creating" class="test-game-screen hidden">
+                    <div class="creating-header">
+                        <h3>📝 Creando tu Test</h3>
+                        <p>Responde estas preguntas con sinceridad. Tu pareja intentará adivinar tus respuestas.</p>
                     </div>
-                </div>
 
-                <!-- Pantalla de preguntas -->
-                <div id="test-questions" class="test-game-screen hidden">
                     <div class="question-header">
                         <div class="question-counter">
                             <span id="current-question">1</span> / <span id="total-questions">10</span>
@@ -2042,7 +2045,7 @@ Hoy es un día especial porque..."
                             <div class="question-icon">❓</div>
                             <h3 id="question-text">Cargando pregunta...</h3>
                             <div class="question-hint">
-                                <small>💡 Piensa bien tu respuesta antes de escribirla</small>
+                                <small>💡 Sé honesto, ¡tu pareja te conoce mejor de lo que crees!</small>
                             </div>
                         </div>
 
@@ -2067,9 +2070,8 @@ Hoy es un día especial porque..."
                 <!-- Pantalla de adivinación -->
                 <div id="test-guessing" class="test-game-screen hidden">
                     <div class="guessing-header">
-                        <h3>¡Ahora adivina!</h3>
-                        <p id="guessing-player-name">Jugador 2</p>
-                        <p>¿Cuál crees que fue la respuesta de <span id="answer-player-name">Jugador 1</span>?</p>
+                        <h3>🔍 ¡Hora de Adivinar!</h3>
+                        <p>¿Qué crees que respondió <span id="creator-name-display">tu pareja</span>?</p>
                     </div>
 
                     <div class="question-display">
@@ -2101,7 +2103,7 @@ Hoy es un día especial porque..."
                     </div>
                 </div>
 
-                <!-- Pantalla de resultado -->
+                <!-- Pantalla de resultado individual -->
                 <div id="test-result" class="test-game-screen hidden">
                     <div class="result-content">
                         <div class="result-reveal">
@@ -2111,7 +2113,7 @@ Hoy es un día especial porque..."
 
                             <div class="answers-comparison">
                                 <div class="answer-box correct">
-                                    <div class="answer-label">Respuesta correcta:</div>
+                                    <div class="answer-label">Respuesta real:</div>
                                     <div class="answer-text" id="correct-answer">...</div>
                                 </div>
 
@@ -2130,6 +2132,50 @@ Hoy es un día especial porque..."
                             <button class="btn btn-secondary" id="next-result-btn">
                                 ➡️ Siguiente
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pantalla de resultados compartidos -->
+                <div id="test-shared-results" class="test-game-screen hidden">
+                    <div class="shared-results-header">
+                        <h3>🎉 ¡Test Completado!</h3>
+                        <p>Aquí están todas las preguntas y respuestas. ¿Qué tan bien se conocen?</p>
+                    </div>
+
+                    <div class="compatibility-score">
+                        <div class="score-circle">
+                            <div class="score-number" id="shared-percentage">0%</div>
+                            <div class="score-label">Compatibilidad</div>
+                        </div>
+                        <div class="couple-title">
+                            <h4 id="shared-couple-title">Título de Pareja</h4>
+                            <div class="title-description" id="shared-title-description">Descripción</div>
+                        </div>
+                    </div>
+
+                    <div class="shared-questions-list" id="shared-questions-list">
+                        <!-- Las preguntas se cargarán aquí dinámicamente -->
+                    </div>
+
+                    <div class="shared-results-actions">
+                        <button class="btn btn-secondary" id="share-results-btn">
+                            📤 Compartir Resultados
+                        </button>
+                        <button class="btn btn-primary" id="confirm-results-btn">
+                            ✅ He visto los resultados
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pantalla de espera de confirmación -->
+                <div id="test-waiting-confirmation" class="test-game-screen hidden">
+                    <div class="waiting-content">
+                        <div class="waiting-icon">⏳</div>
+                        <h3>Esperando confirmación</h3>
+                        <p>Tu pareja también debe confirmar que ha visto los resultados antes de poder crear un nuevo test.</p>
+                        <div class="waiting-status" id="waiting-status">
+                            Esperando que ambos confirmen...
                         </div>
                     </div>
                 </div>
@@ -2172,6 +2218,42 @@ Hoy es un día especial porque..."
                                 📤 Compartir Resultados
                             </button>
                         </div>
+
+                        <div id="waiting-confirmation-message" class="waiting-message" style="display: none;">
+                            <div class="waiting-icon">⏳</div>
+                            <p>Esperando que tu pareja también confirme que ha visto los resultados...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de instrucciones del test -->
+    <div id="test-instructions-modal" class="modal" style="display: none;">
+        <div class="modal-content test-instructions-modal">
+            <button class="close-modal-btn spinning-close" id="close-test-instructions">×</button>
+            <h3>📖 Cómo Jugar</h3>
+            <div class="instructions-content">
+                <div class="instruction-step-modern">
+                    <div class="step-icon">1️⃣</div>
+                    <div class="step-content">
+                        <h4>Crear el Test</h4>
+                        <p>Uno de los dos crea el test respondiendo 10 preguntas personales sobre ustedes.</p>
+                    </div>
+                </div>
+                <div class="instruction-step-modern">
+                    <div class="step-icon">2️⃣</div>
+                    <div class="step-content">
+                        <h4>Adivinar Respuestas</h4>
+                        <p>La pareja recibe el test y trata de adivinar las respuestas que diste.</p>
+                    </div>
+                </div>
+                <div class="instruction-step-modern">
+                    <div class="step-icon">3️⃣</div>
+                    <div class="step-content">
+                        <h4>Ver Resultados</h4>
+                        <p>Ambos ven el porcentaje de compatibilidad y descubren cuánto se conocen realmente.</p>
                     </div>
                 </div>
             </div>

@@ -46,10 +46,11 @@ import {
 // ===> AÑADE ESTA LÍNEA <===
 import { calculateCoupleStats } from './scr/modules/stats.js';
 // import { initializeNotifications, requestNotificationPermission } from './scr/modules/notifications.js';
+import { initializeNotifications, requestNotificationPermission } from './scr/modules/notifications.js';
 import { getRandomTask } from './scr/modules/surpriseTasks.js';
 import { RANDOM_CHALLENGES } from './scr/modules/randomTasks.js';
 import { testQuestions } from './scr/modules/questions.js';
-import { coupleTitles, createTest, getAvailableTests, getCreatedTests, updateTestAnswers, updateTestGuesses, hasActiveTest, getTest } from './scr/modules/testQuestions.js';
+import { coupleTitles, createTest, getAvailableTests, getCreatedTests, updateTestAnswers, updateTestGuesses, hasActiveTest, getTest, confirmTestResults, checkBothConfirmed } from './scr/modules/testQuestions.js';
 // Canvas confetti para celebraciones avanzadas
 // Dynamic loader for canvas-confetti (UMD bundle). We load the browser UMD and use window.confetti.
 let confettiLib = null;
@@ -1296,7 +1297,7 @@ onAuthStateChanged(auth, async (user) => {
 
         // ===> AÑADE ESTA LÍNEA <===
     // Inicializa el sistema de notificaciones en segundo plano
-   // initializeNotifications(user.uid);
+   initializeNotifications(user.uid);
 
 
   } else {
@@ -7803,15 +7804,46 @@ function updateGlobeMarkers() {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    console.log('[PWA] Intentando registrar Service Worker...');
     navigator.serviceWorker.register('/sw.js')
       .then(registration => {
-        console.log('Service Worker registrado con éxito:', registration);
+        console.log('[PWA] Service Worker registrado con éxito:', registration);
+        console.log('[PWA] Estado del SW:', registration.active ? 'Activo' : 'Instalándose');
+
+        // Escuchar cambios en el estado del service worker
+        registration.addEventListener('updatefound', () => {
+          console.log('[PWA] Nuevo Service Worker encontrado');
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              console.log('[PWA] Estado del nuevo SW:', newWorker.state);
+            });
+          }
+        });
       })
       .catch(error => {
-        console.log('Error en el registro del Service Worker:', error);
+        console.error('[PWA] Error en el registro del Service Worker:', error);
       });
   });
+} else {
+  console.warn('[PWA] Service Worker no soportado en este navegador');
 }
+
+// Función para verificar el estado de la PWA
+function checkPWAStatus() {
+  const pwaStatus = {
+    serviceWorker: 'serviceWorker' in navigator,
+    isStandalone: window.matchMedia('(display-mode: standalone)').matches,
+    canInstall: 'onbeforeinstallprompt' in window,
+    manifest: !!document.querySelector('link[rel="manifest"]')
+  };
+
+  console.log('[PWA] Estado de la PWA:', pwaStatus);
+  return pwaStatus;
+}
+
+// Hacer la función disponible globalmente para debugging
+window.checkPWAStatus = checkPWAStatus;
 
 // ============================================
 // JUEGO "EL TEST" - FUNCIONALIDAD COMPLETA
@@ -7839,12 +7871,19 @@ let testGameState = {
 const testGameModal = document.getElementById('test-game-modal');
 const closeTestGameModal = document.getElementById('close-test-game-modal');
 
+// Modal de instrucciones
+const testInstructionsModal = document.getElementById('test-instructions-modal');
+const closeTestInstructions = document.getElementById('close-test-instructions');
+const testHelpBtn = document.getElementById('test-help-btn');
+
 // Pantallas del juego
 const testGameStart = document.getElementById('test-game-start');
 const testPlayerSelection = document.getElementById('test-player-selection');
-const testQuestionsScreen = document.getElementById('test-questions');
+const testCreating = document.getElementById('test-creating');
 const testGuessing = document.getElementById('test-guessing');
 const testResult = document.getElementById('test-result');
+const testSharedResults = document.getElementById('test-shared-results');
+const testWaitingConfirmation = document.getElementById('test-waiting-confirmation');
 const testFinal = document.getElementById('test-final');
 
 // Elementos de la pantalla de inicio
@@ -7890,8 +7929,27 @@ const skippedQuestionsEl = document.getElementById('skipped-questions');
 const playAgainBtn = document.getElementById('play-again-btn');
 const shareResultsBtn = document.getElementById('share-results-btn');
 
+// Elementos de resultados compartidos
+const sharedPercentage = document.getElementById('shared-percentage');
+const sharedCoupleTitle = document.getElementById('shared-couple-title');
+const sharedTitleDescription = document.getElementById('shared-title-description');
+const sharedQuestionsList = document.getElementById('shared-questions-list');
+const confirmResultsBtn = document.getElementById('confirm-results-btn');
+
+// Elementos de espera de confirmación
+const waitingStatus = document.getElementById('waiting-status');
+
+// Elementos adicionales
+const creatorNameDisplay = document.getElementById('creator-name-display');
+
 // Función para abrir el modal del juego
 async function openTestGameModal() {
+  // Verificar que el modal existe
+  if (!testGameModal) {
+    console.error('Modal del test no encontrado');
+    return;
+  }
+
   showModal(testGameModal, 'standard');
 
   // Verificar estado de pareja para debugging
@@ -7910,7 +7968,7 @@ async function checkTestStatus() {
   }
 
   try {
-    // Verificar si hay tests activos
+    // Verificar si hay tests activos en el sistema (creados por cualquiera de los usuarios)
     const activeResult = await hasActiveTest(db, currentUser.uid);
     if (!activeResult.success) {
       showTestStatus('Error al verificar tests activos', 'warning');
@@ -7925,27 +7983,42 @@ async function checkTestStatus() {
     }
 
     const hasAvailableTests = availableResult.tests.length > 0;
-    const hasActiveTestCreated = activeResult.createdActive;
+    const hasAnyActiveTest = activeResult.hasActiveTest;
 
     // Actualizar la interfaz
     const createBtn = document.getElementById('create-test-btn');
     const respondBtn = document.getElementById('respond-test-btn');
+    const notificationBadge = document.getElementById('test-notification-badge');
 
-    if (hasActiveTestCreated) {
-      // Usuario creó un test activo, no puede crear otro hasta que se responda
-      createBtn.style.display = 'none';
-      respondBtn.style.display = 'none';
-      showTestStatus('Ya tienes un test activo esperando respuesta. ¡Sé paciente! 💕', 'info');
-    } else if (hasAvailableTests) {
-      // Hay tests disponibles para responder (creados por la pareja)
-      createBtn.style.display = 'block'; // Puede crear uno nuevo mientras responde
-      respondBtn.style.display = 'block';
-      showTestStatus(`¡Tienes ${availableResult.tests.length} test(s) disponible(s) para responder! 🎉`, 'success');
+    if (hasAnyActiveTest) {
+      // Hay algún test activo en el sistema
+      if (hasAvailableTests) {
+        // El usuario actual tiene tests para responder (es el destinatario)
+        createBtn.style.display = 'none';
+        respondBtn.style.display = 'block';
+        if (notificationBadge) notificationBadge.style.display = 'none'; // No mostrar badge si puede responder
+        showTestStatus('¡Tienes un test disponible para responder! Completa primero este test antes de crear uno nuevo. 🎯', 'info');
+      } else {
+        // El usuario actual creó el test activo (es el creador)
+        createBtn.style.display = 'none';
+        respondBtn.style.display = 'none';
+        if (notificationBadge) notificationBadge.style.display = 'none'; // No mostrar badge si es el creador
+        showTestStatus('Ya tienes un test activo esperando respuesta. ¡Sé paciente! 💕', 'info');
+      }
     } else {
       // No hay tests activos, puede crear uno
       createBtn.style.display = 'block';
       respondBtn.style.display = 'none';
+      if (notificationBadge) notificationBadge.style.display = 'none';
       showTestStatus('¡Crea un test para que tu pareja lo responda! ✨', 'info');
+    }
+
+    // Mostrar badge si el usuario actual creó un test que está esperando respuesta
+    if (activeResult.createdActive && notificationBadge) {
+      notificationBadge.style.display = 'flex';
+      notificationBadge.textContent = '!';
+    } else if (notificationBadge) {
+      notificationBadge.style.display = 'none';
     }
 
   } catch (error) {
@@ -8023,29 +8096,48 @@ function resetTestGame() {
 // Función para mostrar una pantalla específica
 function showTestScreen(screenName) {
   // Ocultar todas las pantallas
-  const screens = [testGameStart, testPlayerSelection, testQuestionsScreen, testGuessing, testResult, testFinal];
-  screens.forEach(screen => screen.classList.add('hidden'));
+  const screens = [testGameStart, testPlayerSelection, testCreating, testGuessing, testResult, testSharedResults, testWaitingConfirmation, testFinal];
+  screens.forEach(screen => {
+    if (screen) { // Verificar que el elemento existe
+      screen.classList.add('hidden');
+    }
+  });
 
   // Mostrar la pantalla deseada
   testGameState.currentScreen = screenName;
   switch (screenName) {
     case 'start':
-      testGameStart.classList.remove('hidden');
+      if (testGameStart) testGameStart.classList.remove('hidden');
       break;
     case 'player-selection':
-      testPlayerSelection.classList.remove('hidden');
+      if (testPlayerSelection) testPlayerSelection.classList.remove('hidden');
       break;
-    case 'questions':
-      testQuestionsScreen.classList.remove('hidden');
+    case 'creating':
+      if (testCreating) {
+        testCreating.classList.remove('hidden');
+        loadCurrentQuestion(); // Cargar la pregunta actual
+      }
       break;
     case 'guessing':
-      testGuessing.classList.remove('hidden');
+      if (testGuessing) {
+        testGuessing.classList.remove('hidden');
+        loadGuessingQuestion(); // Cargar la pregunta de adivinación
+      }
       break;
     case 'result':
-      testResult.classList.remove('hidden');
+      if (testResult) testResult.classList.remove('hidden');
+      break;
+    case 'shared-results':
+      if (testSharedResults) {
+        testSharedResults.classList.remove('hidden');
+        loadSharedResults(); // Cargar resultados compartidos
+      }
+      break;
+    case 'waiting-confirmation':
+      if (testWaitingConfirmation) testWaitingConfirmation.classList.remove('hidden');
       break;
     case 'final':
-      testFinal.classList.remove('hidden');
+      if (testFinal) testFinal.classList.remove('hidden');
       break;
   }
 }
@@ -8157,8 +8249,10 @@ function nextQuestion() {
 // Función para finalizar la creación del test
 async function finishTestCreation() {
   try {
-    // Marcar el test como completado por el creador
+    // Marcar el test como completado por el creador (todas las respuestas guardadas)
     await updateTestAnswers(db, testGameState.testId, testGameState.answers, testGameState.questions.length - 1, true);
+
+    // El test sigue en estado 'active' hasta que el respondedor termine
 
     // Mostrar notificación global de éxito
     showNotification({
@@ -8172,7 +8266,6 @@ async function finishTestCreation() {
     closeTestGameModalFunc();
 
     // Actualizar la UI para mostrar que hay un test activo creado
-    // Recargar el estado de los tests para actualizar los botones
     await checkTestStatus();
 
   } catch (error) {
@@ -8373,33 +8466,267 @@ function nextResult() {
 }
 
 // Función para mostrar resultados finales
-function showFinalResults() {
+async function showFinalResults() {
   const totalQuestions = testGameState.questions.length;
   const percentage = Math.round((testGameState.correctAnswers / totalQuestions) * 100);
 
-  // Mostrar porcentaje
-  finalPercentage.textContent = `${percentage}%`;
+  // Actualizar el test en Firebase con los resultados finales
+  if (testGameState.testId) {
+    try {
+      await updateTestGuesses(
+        db,
+        testGameState.testId,
+        testGameState.guesses,
+        testGameState.correctAnswers,
+        testGameState.skippedQuestions
+      );
+
+      // Marcar el test como completado solo si estamos respondiendo (ambos han terminado)
+      if (testGameState.mode === 'responding') {
+        const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+        await updateDoc(doc(db, 'tests', testGameState.testId), {
+          status: 'completed',
+          completedAt: new Date(),
+          finalPercentage: percentage
+        });
+        console.log('Test completado y actualizado en Firebase');
+      }
+
+    } catch (error) {
+      console.error('Error actualizando test completado:', error);
+    }
+  }
+
+  // Mostrar pantalla final con resultados
+  showTestScreen('final');
+  loadFinalResults();
+}
+
+// Función para cargar resultados finales
+async function loadFinalResults() {
+  const totalQuestions = testGameState.questions.length;
+  const percentage = Math.round((testGameState.correctAnswers / totalQuestions) * 100);
+
+  // Actualizar elementos de la pantalla final
+  const finalPercentage = document.getElementById('final-percentage');
+  const coupleTitle = document.getElementById('couple-title');
+  const titleDescription = document.getElementById('title-description');
+  const correctAnswers = document.getElementById('correct-answers');
+  const totalQuestionsFinal = document.getElementById('total-questions-final');
+  const skippedQuestions = document.getElementById('skipped-questions');
+
+  if (finalPercentage) finalPercentage.textContent = `${percentage}%`;
+  if (correctAnswers) correctAnswers.textContent = testGameState.correctAnswers;
+  if (totalQuestionsFinal) totalQuestionsFinal.textContent = totalQuestions;
+  if (skippedQuestions) skippedQuestions.textContent = testGameState.skippedQuestions;
 
   // Encontrar título de pareja
   const coupleTitleData = coupleTitles.find(title =>
     percentage >= title.min && percentage <= title.max
   ) || coupleTitles[0];
 
-  coupleTitle.textContent = coupleTitleData.title;
-  titleDescription.textContent = coupleTitleData.description;
+  if (coupleTitle) coupleTitle.textContent = coupleTitleData.title;
+  if (titleDescription) titleDescription.textContent = coupleTitleData.description;
 
-  // Estadísticas
-  correctAnswersEl.textContent = testGameState.correctAnswers;
-  totalQuestionsFinal.textContent = totalQuestions;
-  skippedQuestionsEl.textContent = testGameState.skippedQuestions;
+  // Verificar estado de confirmación y mostrar mensaje apropiado
+  await checkAndShowConfirmationStatus();
+}
 
-  showTestScreen('final');
+// Función para cargar resultados compartidos (deprecated - usar loadFinalResults)
+async function loadSharedResults() {
+  // Limpiar lista anterior
+  const sharedQuestionsList = document.getElementById('shared-questions-list');
+  if (sharedQuestionsList) {
+    sharedQuestionsList.innerHTML = '';
+
+    // Mostrar cada pregunta con su resultado
+    testGameState.guesses.forEach((guess, index) => {
+      const questionItem = document.createElement('div');
+      questionItem.className = 'shared-question-item';
+
+      const isCorrect = guess.isCorrect;
+      const statusIcon = guess.skipped ? '⏭️' : (isCorrect ? '✅' : '❌');
+      const statusClass = guess.skipped ? 'skipped' : (isCorrect ? 'correct' : 'wrong');
+
+      questionItem.innerHTML = `
+        <div class="shared-question-header">
+          <h5>${index + 1}. ${guess.question}</h5>
+          <span class="question-status ${statusClass}">${statusIcon}</span>
+        </div>
+        <div class="shared-answers">
+          <div class="shared-answer">
+            <span class="answer-label">Respuesta real:</span>
+            <span class="answer-text">${guess.correctAnswer}</span>
+          </div>
+          <div class="shared-answer">
+            <span class="answer-label">Adivinanza:</span>
+            <span class="answer-text">${guess.userGuess || 'Saltada'}</span>
+          </div>
+        </div>
+      `;
+
+      sharedQuestionsList.appendChild(questionItem);
+    });
+  }
+
+  // Esta función está deprecated, usar loadFinalResults en su lugar
+  return loadFinalResults();
+}
+async function confirmResults() {
+  if (!currentUser || !testGameState.testId) return;
+
+  try {
+    // Determinar si el usuario actual es el creador
+    const isCreator = testGameState.creatorId === currentUser.uid;
+
+    // Confirmar que este usuario ha visto los resultados
+    const confirmResult = await confirmTestResults(db, testGameState.testId, currentUser.uid, isCreator);
+    if (!confirmResult.success) {
+      alert('Error al confirmar resultados: ' + confirmResult.error);
+      return;
+    }
+
+    // Verificar si ambos han confirmado
+    const checkResult = await checkBothConfirmed(db, testGameState.testId);
+    if (!checkResult.success) {
+      alert('Error al verificar confirmaciones: ' + checkResult.error);
+      return;
+    }
+
+    if (checkResult.bothConfirmed) {
+      // Ambos han confirmado - eliminar el test y permitir crear uno nuevo
+      try {
+        const { deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+        await deleteDoc(doc(db, 'tests', testGameState.testId));
+        console.log('Test completado eliminado de Firebase');
+
+        // Mostrar notificación de éxito
+        showNotification({
+          title: '¡Test Completado! 🎉',
+          message: 'Ambos han visto los resultados. Ya puedes crear un nuevo test.',
+          type: 'success',
+          confirm: false
+        });
+
+        // Cerrar modal y actualizar estado
+        closeTestGameModalFunc();
+        await checkTestStatus();
+
+      } catch (error) {
+        console.error('Error eliminando test:', error);
+        alert('Error al completar el test');
+      }
+    } else {
+      // Solo este usuario ha confirmado - mostrar mensaje de espera pero mantener resultados visibles
+      const waitingMessage = document.getElementById('waiting-confirmation-message');
+      if (waitingMessage) {
+        waitingMessage.textContent = 'Esperando que tu pareja también confirme que ha visto los resultados...';
+        waitingMessage.style.display = 'block';
+      }
+
+      // Mantener la pantalla de resultados visible
+      showTestScreen('final'); // Asegurar que estamos en la pantalla final
+
+      // Iniciar verificación periódica para cuando el otro usuario confirme
+      checkConfirmationStatus();
+    }
+
+  } catch (error) {
+    console.error('Error confirming results:', error);
+    alert('Error al confirmar resultados');
+  }
+}
+
+// Función para verificar y mostrar el estado de confirmación
+async function checkAndShowConfirmationStatus() {
+  if (!testGameState.testId) return;
+
+  try {
+    const checkResult = await checkBothConfirmed(db, testGameState.testId);
+    if (!checkResult.success) return;
+
+    const test = checkResult.test;
+    const isCreator = testGameState.creatorId === currentUser.uid;
+    const userConfirmed = isCreator ? test.creatorConfirmed : test.responderConfirmed;
+    const partnerConfirmed = isCreator ? test.responderConfirmed : test.creatorConfirmed;
+
+    const waitingMessage = document.getElementById('waiting-confirmation-message');
+
+    if (checkResult.bothConfirmed) {
+      // Ambos han confirmado - el test debería eliminarse pronto
+      if (waitingMessage) {
+        waitingMessage.style.display = 'none';
+      }
+    } else if (userConfirmed) {
+      // Usuario actual ya confirmó, esperando al otro
+      if (waitingMessage) {
+        waitingMessage.textContent = 'Esperando que tu pareja también confirme que ha visto los resultados...';
+        waitingMessage.style.display = 'block';
+      }
+      // Iniciar verificación periódica
+      checkConfirmationStatus();
+    } else {
+      // Usuario actual no ha confirmado aún - mostrar mensaje para confirmar
+      if (waitingMessage) {
+        waitingMessage.textContent = 'Confirma que has visto los resultados para completar el test.';
+        waitingMessage.style.display = 'block';
+      }
+    }
+  } catch (error) {
+    console.error('Error checking confirmation status:', error);
+  }
+}
+
+// Función para verificar periódicamente el estado de confirmación
+async function checkConfirmationStatus() {
+  const checkInterval = setInterval(async () => {
+    try {
+      const checkResult = await checkBothConfirmed(db, testGameState.testId);
+      if (checkResult.success && checkResult.bothConfirmed) {
+        clearInterval(checkInterval);
+
+        // Ambos han confirmado - proceder como arriba
+        try {
+          const { deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+          await deleteDoc(doc(db, 'tests', testGameState.testId));
+
+          showNotification({
+            title: '¡Test Completado! 🎉',
+            message: 'Tu pareja también ha confirmado. Ya puedes crear un nuevo test.',
+            type: 'success',
+            confirm: false
+          });
+
+          closeTestGameModalFunc();
+          await checkTestStatus();
+
+        } catch (error) {
+          console.error('Error eliminando test:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking confirmation status:', error);
+    }
+  }, 3000); // Verificar cada 3 segundos
+
+  // Detener después de 5 minutos
+  setTimeout(() => {
+    clearInterval(checkInterval);
+    const waitingStatus = document.getElementById('waiting-confirmation-message');
+    if (waitingStatus) {
+      waitingStatus.textContent = 'Esperando confirmación de tu pareja... (Puedes cerrar esta ventana y volver más tarde)';
+    }
+  }, 300000);
 }
 
 // Función para compartir resultados
 function shareResults() {
-  const percentage = finalPercentage.textContent;
-  const title = coupleTitle.textContent;
+  // Usar elementos de resultados compartidos si existen, sino usar finales
+  const percentageElement = sharedPercentage || finalPercentage;
+  const titleElement = sharedCoupleTitle || coupleTitle;
+
+  const percentage = percentageElement ? percentageElement.textContent : '0%';
+  const title = titleElement ? titleElement.textContent : 'Pareja';
 
   const shareText = `¡Hicimos "El Test" y tenemos ${percentage} de compatibilidad! Somos "${title}" 💕 #ElTest #Pareja`;
 
@@ -8458,7 +8785,7 @@ async function createNewTest() {
         answers: []
       };
 
-      showTestScreen('questions');
+      showTestScreen('creating');
     } else {
       alert('Error al crear el test: ' + result.error);
     }
@@ -8485,18 +8812,59 @@ async function respondToAvailableTest() {
     // Tomar el test más reciente
     const test = result.tests[0];
 
-    // Cambiar al modo de responder
+    // Verificar si el test ya está completado
+    if (test.status === 'completed') {
+      // Cargar test completado y mostrar resultados
+      testGameState = {
+        ...testGameState,
+        mode: 'responding',
+        testId: test.id,
+        creatorId: test.creatorId,
+        creatorName: test.creatorName,
+        targetId: test.targetId,
+        targetName: test.targetName,
+        questions: test.questions,
+        answers: test.questions.map((question, index) => ({
+          question: question,
+          answer: test.answers[index] || ''
+        })),
+        guesses: test.guesses || [],
+        correctAnswers: test.correctAnswers || 0,
+        skippedQuestions: test.skippedQuestions || 0
+      };
+
+      // Mostrar resultados compartidos
+      showTestScreen('shared-results');
+      loadSharedResults();
+
+      // Verificar estado de confirmación y mostrar mensaje apropiado
+      await checkAndShowConfirmationStatus();
+
+      return;
+    }
+
+    // Cambiar al modo de responder para test activo
     testGameState = {
       ...testGameState,
       mode: 'responding',
       testId: test.id,
+      creatorId: test.creatorId,
+      creatorName: test.creatorName,
       questions: test.questions,
-      answers: test.answers, // Respuestas del creador
+      answers: test.questions.map((question, index) => ({
+        question: question,
+        answer: test.answers[index] || ''
+      })), // Combinar preguntas con respuestas del creador
       currentQuestionIndex: 0,
       guesses: [],
       correctAnswers: 0,
       skippedQuestions: 0
     };
+
+    // Mostrar nombre del creador en la interfaz
+    if (creatorNameDisplay) {
+      creatorNameDisplay.textContent = test.creatorName;
+    }
 
     showTestScreen('guessing');
   } catch (error) {
@@ -8592,6 +8960,7 @@ submitAnswerBtn.addEventListener('click', submitAnswer);
 submitGuessBtn.addEventListener('click', submitGuess);
 skipGuessBtn.addEventListener('click', skipGuess);
 nextResultBtn.addEventListener('click', nextResult);
+confirmResultsBtn.addEventListener('click', confirmResults);
 playAgainBtn.addEventListener('click', () => {
   resetTestGame();
   showTestScreen('start');
@@ -8606,9 +8975,58 @@ testGameModal.addEventListener('click', (e) => {
   }
 });
 
-// ============================================
-// INICIALIZACIÓN DE COMPONENTES
-// ============================================
+// Event listeners para modal de instrucciones
+if (testHelpBtn) {
+  testHelpBtn.addEventListener('click', () => {
+    if (testInstructionsModal) {
+      showModal(testInstructionsModal, 'standard');
+    }
+  });
+}
 
-// Inicializar cápsulas del tiempo
-initTimeCapsules();
+if (closeTestInstructions) {
+  closeTestInstructions.addEventListener('click', () => {
+    if (testInstructionsModal) {
+      hideModal(testInstructionsModal, 'standard');
+    }
+  });
+}
+
+if (testInstructionsModal) {
+  testInstructionsModal.addEventListener('click', (e) => {
+    if (e.target === testInstructionsModal) {
+      hideModal(testInstructionsModal, 'standard');
+    }
+  });
+}
+
+// Función para inicializar elementos del test cuando el DOM esté listo
+function initializeTestElements() {
+  // Verificar que los elementos críticos existen
+  const criticalElements = [
+    'test-game-modal',
+    'test-game-start',
+    'test-creating',
+    'test-guessing',
+    'test-result',
+    'test-shared-results',
+    'test-waiting-confirmation',
+    'test-final'
+  ];
+
+  const missingElements = criticalElements.filter(id => !document.getElementById(id));
+
+  if (missingElements.length > 0) {
+    console.error('Elementos del DOM faltantes:', missingElements);
+    return;
+  }
+
+  console.log('✅ Todos los elementos del test inicializados correctamente');
+}
+
+// Llamar a la inicialización cuando el DOM esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeTestElements);
+} else {
+  initializeTestElements();
+}
