@@ -1,0 +1,2187 @@
+﻿<!DOCTYPE html>
+            <!-- Globo terráqueo 3D fuera del modal -->
+        </div>
+    </div>
+</div>
+
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="scr/animations/animations.css">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    
+    <!-- Globe.GL para el mapa 3D -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/globe.gl"></script>
+
+</head>
+<body>
+    <!-- Contenedor principal de la aplicación -->
+    <div id="app">
+        <!-- Pantalla de carga -->
+        <div id="loading-screen" class="loading-screen">
+            <div class="loading-spinner">
+                <svg class="heart-icon animate-heart-beat" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Página de inicio (Login) -->
+        <div id="home-page" class="page" style="display: none;">
+            <div class="home-container">
+                <div class="login-background-decoration">
+                    <div class="floating-shape shape-1"></div>
+                    <div class="floating-shape shape-2"></div>
+                    <div class="floating-shape shape-3"></div>
+                    
+                    <!-- Círculos decorativos esquina inferior izquierda -->
+                    <div class="bottom-circle circle-1"></div>
+                    <div class="bottom-circle circle-2"></div>
+                </div>
+                
+                <div class="home-content">
+                    <div class="login-card">
+                        <!-- Logo y Branding -->
+                        <div class="login-brand">
+                            <div class="brand-icon-heart">
+                                <svg class="heart-icon" width="56" height="56" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                            </div>
+                            <h1 class="brand-title">ThingsToDo</h1>
+                            <div class="brand-badge">Kawaii Edition 💕</div>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="login-description">
+                            <h2 class="description-title">Tu espacio romántico ✨</h2>
+                            <p class="description-text">
+                                Crea listas de tareas adorables, comparte planes especiales y vive momentos únicos con tu pareja
+                            </p>
+                        </div>
+
+                        <!-- Botón de Login -->
+                        <button id="login-btn" class="btn-google-signin">
+                            <svg class="google-icon" viewBox="0 0 24 24" width="22" height="22">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            <span>Continuar con Google</span>
+                        </button>
+
+                        <!-- Features -->
+                        <div class="login-features">
+                            <div class="feature-item">
+                                <div class="feature-icon-circle">💕</div>
+                                <div class="feature-content">
+                                    <h4>Planes en pareja</h4>
+                                    <p>Organiza citas románticas</p>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon-circle">✨</div>
+                                <div class="feature-content">
+                                    <h4>Diseño Kawaii</h4>
+                                    <p>Interfaz adorable y única</p>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon-circle">🎯</div>
+                                <div class="feature-content">
+                                    <h4>Desafíos divertidos</h4>
+                                    <p>Completa retos juntos</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard-page" class="page" style="display: none;">
+            <header class="header">
+                <div class="header-content">
+                    <div class="header-left">
+                        <svg class="heart-icon-header" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        </svg>
+                        <h1 class="header-title">ThingsToDo</h1>
+                    </div>
+                    <div class="header-right">
+                        <span id="user-name" class="user-name"></span>
+
+
+                                                <!-- ===> AÑADE ESTE BOTÓN <=== -->
+<button id="stats-btn" class="btn-icon" title="Ver Estadísticas" style="display: none;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 20V10M18 20V4M6 20V16"/>
+    </svg>
+</button>
+
+
+
+
+<!-- ===> AÑADE ESTE BOTÓN <=== 
+<button id="open-notifications-modal-btn" class="btn-icon" title="Configurar Notificaciones">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+    </svg>
+</button> -->
+                        <button id="couple-btn" class="btn-icon" title="Gestionar Pareja">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                        </button>
+
+                        <button id="open-map-modal-btn" class="btn-icon" title="Mapa de Aventuras">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+                                <line x1="8" y1="2" x2="8" y2="18"></line>
+                                <line x1="16" y1="6" x2="16" y2="22"></line>
+                            </svg>
+                        </button>
+
+                        <button id="open-favors-modal-btn" class="btn-icon" title="Favores & Desafíos">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                            </svg>
+                        </button>
+
+                        <button id="open-new-features-btn" class="btn-icon" title="El Test - Compatibilidad">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                        </button>
+
+                        <button id="open-phone-modal-btn" class="btn-icon" title="Centro de Actividades">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                            </svg>
+                        </button>
+
+                        <button id="logout-btn" class="btn-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                <polyline points="16 17 21 12 16 7"></polyline>
+                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <div class="dashboard-actions">
+                    <button id="new-plan-btn" class="btn btn-primary" disabled title="Vincula una pareja para crear planes compartidos">
+
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Crear Nuevo Plan
+                    </button>
+
+
+
+                </div>
+
+
+
+
+                    <!-- ============================================ -->
+    <!-- ======> AÑADE ESTE BLOQUE DE CÓDIGO <======= -->
+    <!-- ============================================ -->
+    <div id="link-partner-banner" class="link-partner-banner" style="display: none;">
+        <div class="banner-icon">💌</div>
+        <div class="banner-text">
+            <h3>¡Conecta con tu pareja!</h3>
+            <p>Comparte tu código o ingresa el de tu pareja para empezar a crear planes juntos.</p>
+        </div>
+        <button id="go-to-couple-modal-btn" class="btn btn-primary">Vincular ahora</button>
+    </div>
+    <!-- ============================================ -->
+
+                <!-- Formulario de nuevo plan -->
+                <div id="new-plan-form" class="form-card" style="display: none;">
+                    <h2 class="form-title">Nuevo Plan</h2>
+                    <input type="text" id="plan-title-input" class="input" placeholder="Título del plan">
+                    <textarea id="plan-desc-input" class="textarea" placeholder="Descripción (opcional)" rows="3"></textarea>
+                    <div class="form-actions">
+                        <button id="create-plan-btn" class="btn btn-primary">Crear</button>
+                        <button id="cancel-plan-btn" class="btn btn-outline">Cancelar</button>
+                    </div>
+                </div>
+
+                <!-- Lista de planes -->
+                <div id="plans-container" class="plans-grid">
+                    <!-- Los planes se cargarán dinámicamente aquí -->
+                </div>
+
+                <!-- Estado vacío -->
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    <div class="empty-icon">📝</div>
+                    <h2 class="empty-title">No hay planes aún</h2>
+                    <p class="empty-text">
+                        Crea tu primer plan romántico haciendo clic en el botón de arriba
+                    </p>
+                </div>
+            </main>
+        </div>
+
+        <!-- Detalle del Plan -->
+        <div id="plan-detail-page" class="page" style="display: none;">
+            <header class="header">
+                <div class="header-content">
+                    <button id="back-btn" class="btn-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                    </button>
+                    <div class="header-plan-info">
+                        <h1 id="plan-detail-title" class="header-title"></h1>
+                        <p id="plan-detail-desc" class="header-subtitle"></p>
+                    </div>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <!-- Barra de progreso -->
+                <div class="progress-section">
+                    <div class="progress-info">
+                        <span id="progress-text" class="progress-text">0/0</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="progress-fill" class="progress-fill"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-actions">
+                    <button id="new-task-btn" class="btn btn-primary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Agregar Tarea
+                    </button>
+                </div>
+
+                <!-- Formulario de nueva tarea -->
+                <div id="new-task-form" class="form-card" style="display: none;">
+                    <h2 class="form-title">Nueva Tarea</h2>
+                    <input type="text" id="task-title-input" class="input" placeholder="Título de la tarea">
+                    <div class="icon-selector">
+                        <label class="icon-selector-label">Ícono personalizado</label>
+                        <div id="icon-grid" class="icon-grid">
+                            <!-- Los iconos se cargarán dinámicamente -->
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="create-task-btn" class="btn btn-primary">Crear</button>
+                        <button id="cancel-task-btn" class="btn btn-outline">Cancelar</button>
+                    </div>
+                </div>
+
+                <!-- Lista de tareas -->
+                <div id="tasks-container" class="tasks-list">
+                    <!-- Las tareas se cargarán dinámicamente aquí -->
+                </div>
+
+                <!-- Estado vacío -->
+                <div id="tasks-empty-state" class="empty-state" style="display: none;">
+                    <div class="empty-icon">✨</div>
+                    <h2 class="empty-title">Sin tareas aún</h2>
+                    <p class="empty-text">
+                        Agrega tu primera tarea haciendo clic en el botón de arriba
+                    </p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+
+    <!-- Modal de Pareja -->
+<div id="couple-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">💕 Gestionar Pareja</h2>
+            <button id="close-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- Vista: Sin pareja vinculada -->
+            <div id="couple-unlinked-view" style="display: none;">
+                <div class="couple-section">
+                    <h3 class="couple-section-title">Tu Código Único</h3>
+                    <p class="couple-section-desc">Comparte este código con tu pareja para vincular sus cuentas</p>
+                    <div class="couple-code-display">
+                        <span id="user-couple-code" class="couple-code">------</span>
+                        <button id="copy-code-btn" class="btn-icon-small" title="Copiar código">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="couple-divider">
+                    <span>o</span>
+                </div>
+                
+                <div class="couple-section">
+                    <h3 class="couple-section-title">Vincular con Pareja</h3>
+                    <p class="couple-section-desc">Ingresa el código de tu pareja para compartir planes</p>
+                    <div class="couple-input-group">
+                        <input type="text" id="partner-code-input" class="input couple-input" placeholder="Ej: AB12CD" maxlength="6">
+                        <button id="link-partner-btn" class="btn btn-primary">Vincular</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Vista: Pareja vinculada -->
+            <div id="couple-linked-view" style="display: none;">
+                <div class="couple-linked-card">
+                    <div class="couple-linked-icon">💏</div>
+                    <h3 class="couple-linked-title">Vinculado con</h3>
+                    <p id="partner-name-display" class="couple-linked-name">---</p>
+                    <p id="linked-date-display" class="couple-linked-date">---</p>
+                    
+                    <div class="couple-linked-info">
+                        <p class="couple-info-text">
+                            ✨ Ahora pueden compartir planes y tareas juntos
+                        </p>
+                    </div>
+                    
+                    <button id="unlink-partner-btn" class="btn btn-outline btn-danger">
+                        Desvincular Pareja
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Vista: Cargando -->
+            <div id="couple-loading-view" style="display: block;">
+                <div class="couple-loading">
+                    <svg class="heart-icon animate-heart-beat" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                    <p class="couple-loading-text">Cargando...</p>
+                </div>
+            </div>
+
+                    <!-- ============================================ -->
+        <!-- ======> AÑADE ESTA NUEVA VISTA AQUÍ <======= -->
+        <!-- ============================================ -->
+        <div id="couple-about-view" style="display: none;">
+            <div class="about-section">
+                <div class="about-icon heart-icon">💖</div>
+                <h3 class="about-title">ThingsToDo Kawaii</h3>
+                <p class="about-version">Versión 1.0</p>
+                <p class="about-description">
+                    Creada con amor para ayudar a las parejas a organizar sus sueños y metas juntos.
+                </p>
+                
+                <div class="credits-section">
+                    <h4>Hecho por:</h4>
+                    <p>[¡MashLanzer!]</p>
+                    
+                    <h4>Agradecimientos:</h4>
+                    <ul>
+                        <li>------</li>
+                    </ul>
+                </div>
+                
+                <button id="back-to-couple-view-btn" class="btn btn-outline">Volver</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- ======> AÑADE ESTE PIE DE MODAL AQUÍ <======= -->
+    <!-- ============================================ -->
+    <div class="modal-footer">
+        <button id="open-about-view-btn" class="btn-link">Acerca de esta App</button>
+    </div>
+</div>
+
+</div>
+
+
+
+    <!-- index.html -->
+
+<!-- ============================================ -->
+<!-- ======> MODAL MAPA DE AVENTURAS <======= -->
+<!-- ============================================ -->
+<div id="map-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h2 class="modal-title">🗺️ Mapa de Aventuras</h2>
+            <button id="close-map-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="modal-body map-modal-body">
+            <!-- Globo terráqueo 3D -->
+            <div class="globe-container">
+                <div id="globe-viz"></div>
+                
+                <!-- Controles del globo -->
+                <div class="globe-controls">
+                    <button id="zoom-in-btn" class="btn-icon-small globe-control-btn" title="Acercar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            <line x1="11" y1="8" x2="11" y2="14"></line>
+                            <line x1="8" y1="11" x2="14" y2="11"></line>
+                        </svg>
+                    </button>
+                    <button id="zoom-out-btn" class="btn-icon-small globe-control-btn" title="Alejar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            <line x1="8" y1="11" x2="14" y2="11"></line>
+                        </svg>
+                    </button>
+                    <button id="rotate-globe-btn" class="btn-icon-small globe-control-btn" title="Rotar automático">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                        </svg>
+                    </button>
+                    <button id="reset-globe-btn" class="btn-icon-small globe-control-btn" title="Resetear vista">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Panel de lugares -->
+            <div class="places-panel">
+                <div class="places-header">
+                    <h3 class="places-title">Nuestros Lugares 💝</h3>
+                    <button id="add-place-btn" class="btn btn-primary btn-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Agregar Lugar
+                    </button>
+                </div>
+                
+                <div class="places-tabs">
+                    <button class="places-tab active" data-tab="visited">
+                        <span class="tab-icon">📍</span>
+                        <span>Visitados</span>
+                        <span class="tab-badge" id="visited-count">0</span>
+                    </button>
+                    <button class="places-tab" data-tab="wishlist">
+                        <span class="tab-icon">✈️</span>
+                        <span>Por Visitar</span>
+                        <span class="tab-badge" id="wishlist-count">0</span>
+                    </button>
+                </div>
+                
+                <div id="places-list" class="places-list">
+                    <!-- Las tarjetas de lugares se agregarán aquí -->
+                    <div class="places-empty">
+                        <div class="empty-icon">🌍</div>
+                        <p>Aún no han marcado lugares</p>
+                        <p class="empty-subtitle">¡Empiecen a crear sus recuerdos!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para agregar/editar lugar -->
+<div id="place-form-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 class="modal-title">
+                <span id="place-form-title">✨ Agregar Lugar</span>
+            </h2>
+            <button id="close-place-form-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Buscar Ubicación 🔍</label>
+                <input type="text" id="place-search-input" class="input" placeholder="Ej: París, Francia o Torre Eiffel, París">
+                <button type="button" id="search-location-btn" class="btn btn-secondary" style="margin-top: 0.5rem; width: 100%;">
+                    Buscar Coordenadas
+                </button>
+                <div id="search-results" class="search-results" style="display: none;"></div>
+            </div>
+            
+            <div class="form-divider">
+                <span>o ingresa manualmente</span>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Nombre del Lugar</label>
+                <input type="text" id="place-name-input" class="input" placeholder="Ej: Torre Eiffel" maxlength="100">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">País</label>
+                <input type="text" id="place-country-input" class="input" placeholder="Ej: Francia" maxlength="50">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Latitud</label>
+                    <input type="number" id="place-lat-input" class="input" placeholder="48.8584" step="0.0001" readonly style="background: #f5f5f5;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Longitud</label>
+                    <input type="number" id="place-lng-input" class="input" placeholder="2.2945" step="0.0001" readonly style="background: #f5f5f5;">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Estado</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="place-status" value="visited" checked>
+                        <span class="radio-custom"></span>
+                        <span>Ya visitado 📍</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="place-status" value="wishlist">
+                        <span class="radio-custom"></span>
+                        <span>Queremos ir ✈️</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Campo de fotos (solo para lugares visitados) -->
+            <div class="form-group" id="photos-group" style="display: none;">
+                <label class="form-label">Fotos del Lugar 📸</label>
+                <input type="file" id="place-photos-input" class="input" accept="image/*" multiple style="display: none;">
+                <button type="button" id="add-photo-btn" class="btn-add-photo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Agregar Fotos</span>
+                </button>
+                <div id="photos-preview" class="photos-preview"></div>
+                <p class="form-help-text">Puedes subir varias fotos de tu visita</p>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Recuerdo o Nota (opcional)</label>
+                <textarea id="place-note-input" class="textarea" placeholder="Escribe un recuerdo especial de este lugar..." maxlength="500" rows="4"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Fecha (opcional)</label>
+                <input type="date" id="place-date-input" class="input">
+            </div>
+            
+            <div class="modal-actions-row">
+                <button id="cancel-place-btn" class="btn btn-outline">Cancelar</button>
+                <button id="save-place-btn" class="btn btn-primary">Guardar Lugar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- ======> MODAL RESULTADO DE LA RULETA <======= -->
+<!-- ============================================ -->
+<div id="wheel-result-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 class="modal-title">¡Decisión Tomada!</h2>
+            <button id="close-wheel-result-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+            <div class="confirm-icon" id="wheel-result-icon">🎉</div>
+            <p class="confirm-text">La opción elegida es:</p>
+            <h3 id="wheel-result-text" style="color: var(--primary); font-size: 1.5rem; margin-bottom: 1.5rem;"></h3>
+            <button id="ok-wheel-result-btn" class="btn btn-primary">¡Entendido!</button>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- ============================================ -->
+<!-- ======> AÑADE ESTE MODAL DE EDICIÓN <======= -->
+<!-- ============================================ -->
+<div id="edit-plan-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">✏️ Editar Plan</h2>
+            <button id="close-edit-modal-btn" class="btn-icon">
+                <!-- SVG de cierre (X) -->
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="edit-plan-id-input">
+            <input type="text" id="edit-plan-title-input" class="input" placeholder="Título del plan">
+            <textarea id="edit-plan-desc-input" class="textarea" placeholder="Descripción (opcional)" rows="3"></textarea>
+            <div class="form-actions">
+                <button id="update-plan-btn" class="btn btn-primary">Guardar Cambios</button>
+                <button id="delete-plan-btn" class="btn btn-outline btn-danger">Eliminar Plan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- ======> AÑADE ESTE MODAL DE ESTADÍSTICAS <== -->
+<!-- ============================================ -->
+<div id="stats-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title"><span class="stats-icon">📊</span> Estadísticas de Pareja <span class="stats-heart">💕</span></h2>
+            <button id="close-stats-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div id="stats-modal-body" class="modal-body">
+            <!-- Vista de Carga -->
+            <div id="stats-loading-view">
+                <div class="couple-loading">
+                    <svg class="heart-icon animate-heart-beat" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                    <p class="couple-loading-text">Calculando logros...</p>
+                </div>
+            </div>
+            <!-- Contenido de Estadísticas -->
+            <div id="stats-content-view" style="display: none;">
+                <!-- Estadísticas Generales -->
+                <div class="stats-section">
+                    <h3 class="stats-section-title">Resumen General</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card stat-card-animated">
+                            <div class="stat-value" id="stat-total-plans">0</div>
+                            <div class="stat-label">Planes Creados</div>
+                        </div>
+                        <div class="stat-card stat-card-animated">
+                            <div class="stat-value" id="stat-completed-plans">0</div>
+                            <div class="stat-label">Planes Completados</div>
+                        </div>
+                        <div class="stat-card stat-card-animated">
+                            <div class="stat-value" id="stat-total-tasks">0</div>
+                            <div class="stat-label">Tareas Totales</div>
+                        </div>
+                        <div class="stat-card stat-card-animated">
+                            <div class="stat-value" id="stat-completion-percentage">0%</div>
+                            <div class="stat-label">Completado</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Estadísticas Individuales -->
+                <div class="stats-section">
+                    <h3 class="stats-section-title">Aportación Individual</h3>
+                    <div class="stats-comparison">
+                        <div class="stat-person stat-person-animated">
+                            <div class="stat-person-name" id="stat-user-name">Tú</div>
+                            <div class="stat-person-value" id="stat-user-tasks">0</div>
+                            <div class="stat-person-label">Tareas completadas</div>
+                        </div>
+                        <div class="stat-divider heart-icon">💕</div>
+                        <div class="stat-person stat-person-animated">
+                            <div class="stat-person-name" id="stat-partner-name">Pareja</div>
+                            <div class="stat-person-value" id="stat-partner-tasks">0</div>
+                            <div class="stat-person-label">Tareas completadas</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- ============================================ -->
+<!-- ======> MODAL DE CONFIRMACIÓN DE SALIDA <======= -->
+<!-- ============================================ -->
+<div id="logout-confirm-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 class="modal-title">¿Ya te vas?</h2>
+            <button id="close-logout-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+            <div class="confirm-icon wave-icon">👋</div>
+            <p class="confirm-text">
+                ¿Estás seguro de que quieres cerrar sesión?
+            </p>
+            <div class="form-actions confirm-actions">
+                <button id="cancel-logout-btn" class="btn btn-outline">Cancelar</button>
+                <button id="confirm-logout-btn" class="btn btn-danger">Sí, salir</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ============================================ -->
+
+
+
+<!-- ============================================ -->
+<!-- ====> MODAL PARA ACTIVAR NOTIFICACIONES <==== -->
+<!-- ============================================ -->
+<div id="notifications-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">🔔 Activar Notificaciones</h2>
+            <button id="close-notifications-modal-btn" class="btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+            <p class="about-description">
+                ¿Quieres recibir un aviso cuando tu pareja complete una tarea o cree un nuevo plan?
+            </p>
+            <button id="enable-notifications-btn" class="btn btn-primary">Sí, activar notificaciones</button>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- ============================================ -->
+<!-- ======> MODAL DE TAREA SORPRESA - ELIMINADO (HUÉRFANO) <======= -->
+<!-- Este modal no se usa - las tareas sorpresa funcionan dentro del teléfono -->
+
+
+
+
+<!-- ============================================ -->
+<!-- ======> MODAL DEL TELÉFONO KAWAII <======= -->
+<!-- ============================================ -->
+<div id="phone-modal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="phone-container">
+
+            <!-- ============================================ -->
+    <!-- ======> NUEVO BOTÓN DE SWITCH MODO TABLET <======= -->
+    <!-- ============================================ 
+    <button id="device-switch-btn" class="device-switch-btn" title="Cambiar a modo Tablet">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="18" rx="2"></rect>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+        </svg>
+    </button> -->
+
+        <div class="phone-notch"></div>
+<!-- ... dentro de <div id="phone-modal"> ... -->
+<div class="phone-screen">
+    <!-- ============================================ -->
+    <!-- ======> ESTRUCTURA HTML CORREGIDA <======= -->
+    <!-- ============================================ -->
+    <div class="phone-app-container">
+        <!-- Pantalla de inicio del teléfono (AHORA ES UNA VISTA MÁS) -->
+        <div id="phone-view-homescreen" class="phone-app-view active">
+            <div class="phone-header">
+                    <span id="phone-time-display" class="time">10:30</span>
+                <span class="icons">📶 🔋</span>
+            </div>
+            <div class="app-grid">
+                     <!-- App 0: Diario -->
+                    <div class="app-icon phone-app-icon" data-app="journal">
+        <div class="app-icon-bg app-icon-journal" style="background: #c3e6cb;">🗓️</div>
+        <span class="app-name">Diario</span>
+    </div>
+
+        <!-- App : Musica -->
+        <div class="app-icon phone-app-icon" data-app="soundtrack">
+        <div class="app-icon-bg app-icon-music" style="background: #a2d2ff;">🎧</div>
+        <span class="app-name">Musica</span>
+    </div>
+
+                <!-- App 1: Tarea Sorpresa -->
+                <div class="app-icon phone-app-icon" data-app="surprise">
+                    <div class="app-icon-bg app-icon-gift" style="background: #ffdeeb;">🎁</div>
+                    <span class="app-name">Reto Diario</span>
+                </div>
+                      <!-- App 2: Cápsulas del Tiempo -->
+                    <div class="app-icon phone-app-icon" data-app="timecapsule">
+        <div class="app-icon-bg app-icon-time" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">⏳</div>
+        <span class="app-name">Cápsulas</span>
+    </div>
+          <!-- App 3: Metas -->
+        <div class="app-icon phone-app-icon" data-app="budget">
+        <div class="app-icon-bg app-icon-money" style="background: #d4edda;">💰</div>
+        <span class="app-name">Metas Futuras</span>
+    </div>
+            </div>
+        </div>
+
+<!-- Vista de la app "Reto Diario" -->
+<div id="phone-view-surprise" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-home-btn">‹</button>
+        <span>🎲 Reto Diario</span>
+    </div>
+    <div class="app-content-body surprise-app-body">
+        
+        <!-- Estadísticas de retos -->
+        <div class="challenge-stats">
+            <div class="challenge-stat-card">
+                <div class="stat-icon">🔥</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="challenges-today">0</div>
+                    <div class="stat-label">Hoy</div>
+                </div>
+            </div>
+            <div class="challenge-stat-card">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="challenges-total">0</div>
+                    <div class="stat-label">Total</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros de categoría -->
+        <div class="challenge-categories">
+            <button class="category-chip active" data-category="all">
+                <span>✨ Todos</span>
+            </button>
+            <button class="category-chip" data-category="romantic">
+                <span>💕 Romántico</span>
+            </button>
+            <button class="category-chip" data-category="adventure">
+                <span>🗺️ Aventura</span>
+            </button>
+            <button class="category-chip" data-category="chill">
+                <span>😌 Relax</span>
+            </button>
+            <button class="category-chip" data-category="creative">
+                <span>🎨 Creativo</span>
+            </button>
+        </div>
+
+        <!-- Contenedor del reto con altura fija -->
+        <div class="challenge-display-area">
+            <!-- Vista: Pregunta inicial -->
+            <div id="challenge-question-view" class="challenge-view active">
+                <div class="challenge-question-card">
+                    <div class="question-icon">❓</div>
+                    <h3>¿Listos para un nuevo reto?</h3>
+                    <button id="reveal-challenge-btn" class="btn btn-primary">
+                        <span>🎲 Descubrir Reto</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vista: Reto revelado -->
+            <div id="challenge-revealed-view" class="challenge-view">
+                <div class="challenge-content-card">
+                    <div class="challenge-badges">
+                        <span class="challenge-category-badge"></span>
+                        <span class="difficulty-label"></span>
+                    </div>
+                    <div class="challenge-emoji-large surprise-emoji"></div>
+                    <p class="challenge-text surprise-text"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acciones del reto -->
+        <div class="surprise-actions">
+            <button id="reroll-surprise-task-btn" class="btn btn-outline">
+                <span>Otro Reto</span>
+            </button>
+            <button id="accept-surprise-task-btn" class="btn btn-primary">
+                <span>¡Aceptar!</span>
+            </button>
+        </div>
+
+        <!-- Historial de retos recientes -->
+        <div class="challenge-history">
+            <div class="history-header">
+                <h3>📜 Retos Recientes</h3>
+                <button id="toggle-history-btn" class="toggle-history-btn collapsed">▼</button>
+            </div>
+            <div id="history-list" class="history-list collapsed">
+                <!-- Se llenará dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>
+    
+    <!-- ============================================ -->
+
+<!-- Vista Principal de la Cápsula del Tiempo (Lista de cápsulas) -->
+<!-- ============================================ -->
+
+
+<!-- Vista de Cápsulas del Tiempo Rediseñada -->
+<div id="phone-view-timecapsule" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-home-btn">‹</button>
+        <span>💎 Cápsulas del Tiempo</span>
+    </div>
+    <div class="app-content-body">
+        <!-- Hero Section -->
+        <div class="capsule-hero">
+            <div class="hero-icon">⏳</div>
+            <h2 class="hero-title">Mensajes del Futuro</h2>
+            <p class="hero-subtitle">Guarda recuerdos, sueños y mensajes para ti mismo en el futuro</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="capsule-stats">
+            <div class="stat-item">
+                <div class="stat-number" id="total-capsules">0</div>
+                <div class="stat-label">Cápsulas</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="pending-capsules">0</div>
+                <div class="stat-label">Pendientes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="opened-capsules">0</div>
+                <div class="stat-label">Abiertas</div>
+            </div>
+        </div>
+
+        <!-- Capsules List -->
+        <div class="capsules-container">
+            <div id="capsules-list" class="capsules-grid">
+                <!-- Las cápsulas se cargarán aquí dinámicamente -->
+            </div>
+
+            <!-- Create Button - Sticky dentro del contenedor -->
+            <button id="create-capsule-fab" class="btn btn-primary">
+                ✨ Crear Cápsula
+            </button>
+
+            <!-- Empty State -->
+            <div id="capsules-empty-state" class="capsules-empty">
+                <div class="empty-visual">
+                    <div class="empty-crystal">💎</div>
+                    <div class="empty-sparkles">✨ ✨ ✨</div>
+                </div>
+                <h3 class="empty-title">Tu primera cápsula te espera</h3>
+                <p class="empty-text">Crea un mensaje especial para tu yo del futuro</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Capsule View -->
+<div id="phone-view-createcapsule" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-capsule-list-btn">‹</button>
+        <span>✨ Nueva Cápsula</span>
+    </div>
+    <div class="app-content-body">
+        <div class="create-capsule-form">
+            <!-- Step 1: Message -->
+            <div class="capsule-step active" id="step-message">
+                <div class="step-header">
+                    <div class="step-icon">💌</div>
+                    <h3 class="step-title">Tu Mensaje</h3>
+                    <p class="step-description">Escribe algo especial para tu futuro</p>
+                </div>
+                <div class="step-content">
+                    <textarea
+                        id="capsule-message-input"
+                        class="capsule-textarea"
+                        placeholder="Querido yo del futuro...
+
+Hoy es un día especial porque..."
+                        maxlength="2000"
+                        rows="8"></textarea>
+                    <div class="char-counter">
+                        <span id="char-count">0</span>/2000
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Type & Theme -->
+            <div class="capsule-step" id="step-type">
+                <div class="step-header">
+                    <div class="step-icon">🎨</div>
+                    <h3 class="step-title">Tipo de Cápsula</h3>
+                    <p class="step-description">Elige el tema que mejor represente tu mensaje</p>
+                </div>
+                <div class="step-content">
+                    <div class="capsule-types-grid">
+                        <div class="capsule-type-card active" data-type="memory">
+                            <div class="type-visual">
+                                <div class="type-icon">💙</div>
+                                <div class="type-sparkle">✨</div>
+                            </div>
+                            <div class="type-info">
+                                <h4 class="type-name">Recuerdo</h4>
+                                <p class="type-desc">Momentos especiales</p>
+                            </div>
+                        </div>
+                        <div class="capsule-type-card" data-type="dream">
+                            <div class="type-visual">
+                                <div class="type-icon">💜</div>
+                                <div class="type-sparkle">🌟</div>
+                            </div>
+                            <div class="type-info">
+                                <h4 class="type-name">Sueño</h4>
+                                <p class="type-desc">Metas y aspiraciones</p>
+                            </div>
+                        </div>
+                        <div class="capsule-type-card" data-type="love">
+                            <div class="type-visual">
+                                <div class="type-icon">💕</div>
+                                <div class="type-sparkle">💖</div>
+                            </div>
+                            <div class="type-info">
+                                <h4 class="type-name">Amor</h4>
+                                <p class="type-desc">Mensajes de corazón</p>
+                            </div>
+                        </div>
+                        <div class="capsule-type-card" data-type="achievement">
+                            <div class="type-visual">
+                                <div class="type-icon">🏆</div>
+                                <div class="type-sparkle">🎉</div>
+                            </div>
+                            <div class="type-info">
+                                <h4 class="type-name">Logro</h4>
+                                <p class="type-desc">Éxitos personales</p>
+                            </div>
+                        </div>
+                        <div class="capsule-type-card" data-type="mystery">
+                            <div class="type-visual">
+                                <div class="type-icon">🔮</div>
+                                <div class="type-sparkle">✨</div>
+                            </div>
+                            <div class="type-info">
+                                <h4 class="type-name">Misterio</h4>
+                                <p class="type-desc">Sorpresas ocultas</p>
+                            </div>
+                        </div>
+                        <div class="capsule-type-card" data-type="reflection">
+                            <div class="type-visual">
+                                <div class="type-icon">🤔</div>
+                                <div class="type-sparkle">💭</div>
+                            </div>
+                            <div class="type-info">
+                                <h4 class="type-name">Reflexión</h4>
+                                <p class="type-desc">Pensamientos profundos</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Unlock Date -->
+            <div class="capsule-step" id="step-date">
+                <div class="step-header">
+                    <div class="step-icon">📅</div>
+                    <h3 class="step-title">Fecha de Apertura</h3>
+                    <p class="step-description">¿Cuándo quieres que se abra esta cápsula?</p>
+                </div>
+                <div class="step-content">
+                    <div class="date-options">
+                        <div class="date-option-card" data-days="30">
+                            <div class="date-icon">📅</div>
+                            <div class="date-text">1 Mes</div>
+                        </div>
+                        <div class="date-option-card" data-days="90">
+                            <div class="date-icon">🗓️</div>
+                            <div class="date-text">3 Meses</div>
+                        </div>
+                        <div class="date-option-card" data-days="180">
+                            <div class="date-icon">📆</div>
+                            <div class="date-text">6 Meses</div>
+                        </div>
+                        <div class="date-option-card" data-days="365">
+                            <div class="date-icon">🎂</div>
+                            <div class="date-text">1 Año</div>
+                        </div>
+                        <div class="date-option-card custom" id="custom-date-option">
+                            <div class="date-icon">🎯</div>
+                            <div class="date-text">Personalizada</div>
+                        </div>
+                    </div>
+                    <div class="custom-date-picker" id="custom-date-container" style="display: none;">
+                        <input type="date" id="capsule-unlock-date-input" class="capsule-date-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Attachments (Optional) -->
+            <div class="capsule-step" id="step-attachments">
+                <div class="step-header">
+                    <div class="step-icon">📎</div>
+                    <h3 class="step-title">Adjuntos Especiales</h3>
+                    <p class="step-description">Agrega fotos, videos o audios (opcional)</p>
+                </div>
+                <div class="step-content">
+                    <div class="attachments-grid">
+                        <button type="button" class="attachment-btn" data-type="photo">
+                            <div class="attachment-icon">📸</div>
+                            <div class="attachment-label">Foto</div>
+                        </button>
+                        <button type="button" class="attachment-btn" data-type="video">
+                            <div class="attachment-icon">🎥</div>
+                            <div class="attachment-label">Video</div>
+                        </button>
+                        <button type="button" class="attachment-btn" data-type="audio">
+                            <div class="attachment-icon">🎵</div>
+                            <div class="attachment-label">Audio</div>
+                        </button>
+                    </div>
+                    <div id="attachments-preview" class="attachments-preview">
+                        <!-- Los adjuntos se mostrarán aquí -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="capsule-navigation">
+            <button id="capsule-prev-btn" class="nav-btn secondary" disabled>
+                <span>‹ Anterior</span>
+            </button>
+            <div class="step-indicators">
+                <div class="step-dot active" data-step="1"></div>
+                <div class="step-dot" data-step="2"></div>
+                <div class="step-dot" data-step="3"></div>
+                <div class="step-dot" data-step="4"></div>
+            </div>
+            <button id="capsule-next-btn" class="nav-btn primary">
+                <span>Siguiente ›</span>
+            </button>
+        </div>
+
+        <!-- Hidden file inputs -->
+        <input type="file" id="photo-input" accept="image/*" multiple style="display: none;">
+        <input type="file" id="video-input" accept="video/*" multiple style="display: none;">
+        <input type="file" id="audio-input" accept="audio/*" multiple style="display: none;">
+    </div>
+</div>
+
+<!-- ============================================ -->
+
+
+<!-- Vista Principal de Metas (Lista de presupuestos) -->
+<div id="phone-view-budget" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-home-btn">‹</button>
+        <span>💰 Metas Futuras</span>
+    </div>
+    <div class="app-content-body">
+        <!-- Hero Section -->
+        <div class="budget-hero">
+            <div class="hero-icon">💰</div>
+            <h2 class="hero-title">Metas Futuras</h2>
+            <p class="hero-subtitle">Construye tu futuro financiero juntos, un ahorro a la vez</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="budget-stats">
+            <div class="stat-item">
+                <div class="stat-number" id="total-goals">0</div>
+                <div class="stat-label">Metas</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="total-saved">0$</div>
+                <div class="stat-label">Ahorrado</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="total-target">0$</div>
+                <div class="stat-label">Objetivo</div>
+            </div>
+        </div>
+
+        <!-- Goals Container -->
+        <div class="goals-container">
+            <div id="goals-list" class="goals-grid">
+                <!-- Las metas se cargarán aquí dinámicamente -->
+            </div>
+
+            <!-- Create Button - Sticky dentro del contenedor -->
+            <button id="go-to-create-goal-btn" class="btn btn-primary">
+                💰 Crear Nueva Meta
+            </button>
+
+            <!-- Empty State -->
+            <div id="goals-empty-state" class="goals-empty">
+                <div class="empty-visual">
+                    <div class="empty-crystal">🎯</div>
+                    <div class="empty-sparkles">✨ ✨ ✨</div>
+                </div>
+                <h3 class="empty-title">¡Tu primera meta te espera!</h3>
+                <p class="empty-text">Empieza a construir tu futuro financiero con una nueva meta de ahorro</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vista para Crear/Ver una Meta -->
+<div id="phone-view-goaldetail" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-budget-list-btn">‹</button>
+        <span id="goal-detail-title">Detalle de la Meta</span>
+    </div>
+    <div class="app-content-body goal-detail-body">
+        <!-- Contenedor para crear una nueva meta -->
+        <div id="create-goal-container">
+            <input type="text" id="goal-name-input" class="input" placeholder="Nombre de la meta (ej: Viaje a Japón)">
+            <input type="number" id="goal-total-input" class="input" placeholder="Cantidad total ($)"> 
+            <button id="save-goal-btn" class="btn btn-primary">Empezar a Ahorrar</button>
+        </div>
+
+        <!-- Contenedor para ver una meta existente -->
+        <div id="view-goal-container" style="display: none;">
+            <div class="piggy-bank-progress">
+                <div class="piggy-bank-icon">🐖</div>
+                <div class="piggy-bank-bar">
+                    <div id="piggy-bank-fill" class="piggy-bank-fill"></div>
+                </div>
+            </div>
+            <div class="goal-summary">
+                <p>Ahorrado: <strong id="goal-current-amount">0$</strong></p>
+                <p>Objetivo: <strong id="goal-total-amount">0$</strong></p>
+            </div>
+            <div class="contribution-form">
+                <input type="number" id="contribution-amount-input" class="input" placeholder="Añadir aportación ($)"> 
+                <button id="add-contribution-btn" class="btn btn-primary">Aportar</button>
+            </div>
+            <div id="goal-contributions-list" class="contributions-list">
+                <!-- Las aportaciones se listarán aquí -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+
+<!-- Vista de la app "Favores & Desafíos" -->
+<div id="phone-view-coupons" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-home-btn">‹</button>
+        <span>Desafíos �</span>
+    </div>
+    <div class="app-content-body">
+        <!-- Balance de puntos -->
+        <div class="points-balance">
+            <div class="user-points">
+                <div class="points-label">Tus puntos</div>
+                <div id="my-points" class="points-value">0</div>
+            </div>
+            <div class="points-divider">⚡</div>
+            <div class="user-points">
+                <div class="points-label">Su pareja</div>
+                <div id="partner-points" class="points-value">0</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="favors-tabs">
+            <button id="tab-active" class="favor-tab active">Activos</button>
+            <button id="tab-completed" class="favor-tab">Completados</button>
+            <button id="tab-random" class="favor-tab">🎲 Random</button>
+        </div>
+
+        <!-- Lista de favores activos -->
+        <div id="active-favors-list" class="favors-list">
+            <div id="favors-empty-state" class="capsules-empty-state">
+                <div class="empty-icon">�</div>
+                <p>No hay favores activos. ¡Crea el primero o prueba uno random!</p>
+            </div>
+        </div>
+
+        <!-- Lista de completados (oculta por defecto) -->
+        <div id="completed-favors-list" class="favors-list" style="display: none;">
+        </div>
+
+        <!-- Vista de desafío random (oculta por defecto) -->
+        <div id="random-challenge-view" class="random-challenge-view" style="display: none;">
+            <div class="challenge-card">
+                <div class="challenge-icon">🎲</div>
+                <h3 id="challenge-title" class="challenge-title">Cargando desafío...</h3>
+                <p id="challenge-description" class="challenge-description"></p>
+                <div class="challenge-difficulty">
+                    <span id="challenge-difficulty-badge" class="difficulty-badge">⭐ Fácil</span>
+                    <span id="challenge-points" class="challenge-points">+10 puntos</span>
+                </div>
+                <div class="challenge-actions">
+                    <button id="accept-challenge-btn" class="btn btn-primary">¡Aceptar!</button>
+                    <button id="reroll-challenge-btn" class="btn btn-secondary">Otro desafío</button>
+                </div>
+            </div>
+        </div>
+
+        <button id="add-favor-btn" class="btn btn-primary" style="margin-top: auto;">
+            + Crear Desafío
+        </button>
+    </div>
+</div>
+
+<!-- Vista de creación de favor -->
+<div id="phone-view-create-coupon" class="phone-app-view">
+    <div class="app-content-header">
+        <button id="back-to-coupons-btn" class="back-to-home-btn">‹</button>
+        <span>Nuevo Favor</span>
+    </div>
+    <div class="app-content-body">
+        <input type="text" id="coupon-title-input" class="input" placeholder="Título del favor (ej: Masaje de 30 min)" maxlength="60">
+        <textarea id="coupon-description-input" class="textarea" placeholder="Descripción detallada..." rows="4" maxlength="200"></textarea>
+        
+        <label>Dificultad & Puntos:</label>
+        <div class="difficulty-picker">
+            <button class="difficulty-option" data-difficulty="easy" data-points="10">
+                <span class="diff-emoji">⭐</span>
+                <span class="diff-label">Fácil</span>
+                <span class="diff-points">10 pts</span>
+            </button>
+            <button class="difficulty-option selected" data-difficulty="medium" data-points="25">
+                <span class="diff-emoji">⭐⭐</span>
+                <span class="diff-label">Medio</span>
+                <span class="diff-points">25 pts</span>
+            </button>
+            <button class="difficulty-option" data-difficulty="hard" data-points="50">
+                <span class="diff-emoji">⭐⭐⭐</span>
+                <span class="diff-label">Difícil</span>
+                <span class="diff-points">50 pts</span>
+            </button>
+        </div>
+
+        <label>Categoría:</label>
+        <div class="category-picker">
+            <button class="category-option selected" data-category="romantic">💕 Romántico</button>
+            <button class="category-option" data-category="fun">🎉 Divertido</button>
+            <button class="category-option" data-category="help">🤝 Ayuda</button>
+            <button class="category-option" data-category="surprise">🎁 Sorpresa</button>
+        </div>
+
+        <button id="save-coupon-btn" class="btn btn-primary">Crear Favor �</button>
+    </div>
+</div>
+<!-- ============================================ -->
+
+
+<!-- Vista Principal del Diario (Calendario) -->
+<div id="phone-view-journal" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-home-btn">‹</button>
+        <span>Nuestro Diario 💕</span>
+    </div>
+    <div class="app-content-body journal-calendar-body">
+        <!-- Barra de búsqueda y filtros -->
+        <div class="journal-search-bar">
+            <input type="text" id="journal-search-input" class="journal-search-input" placeholder="🔍 Buscar recuerdos...">
+            <button id="journal-mood-filter-btn" class="mood-filter-btn" title="Filtrar por estado de ánimo">
+                <span>😊</span>
+            </button>
+        </div>
+        
+        <div class="calendar-header">
+            <button id="journal-prev-month-btn">‹</button>
+            <h3 id="journal-month-year"></h3>
+            <button id="journal-next-month-btn">›</button>
+        </div>
+        
+        <!-- Nombres de días de la semana -->
+        <div class="calendar-weekdays">
+            <div>Dom</div>
+            <div>Lun</div>
+            <div>Mar</div>
+            <div>Mié</div>
+            <div>Jue</div>
+            <div>Vie</div>
+            <div>Sáb</div>
+        </div>
+        
+        <div id="journal-calendar-grid" class="calendar-grid">
+            <!-- Los días del calendario se generarán aquí -->
+        </div>
+        
+        <!-- Widget de estadísticas emocionales -->
+        <div id="journal-mood-stats" class="journal-mood-stats">
+            <h4>Estados de Ánimo del Mes</h4>
+            <div class="mood-stats-grid">
+                <div class="mood-stat" data-mood="happy">
+                    <span class="mood-emoji">😊</span>
+                    <span class="mood-count">0</span>
+                </div>
+                <div class="mood-stat" data-mood="love">
+                    <span class="mood-emoji">🥰</span>
+                    <span class="mood-count">0</span>
+                </div>
+                <div class="mood-stat" data-mood="fun">
+                    <span class="mood-emoji">😄</span>
+                    <span class="mood-count">0</span>
+                </div>
+                <div class="mood-stat" data-mood="romantic">
+                    <span class="mood-emoji">💕</span>
+                    <span class="mood-count">0</span>
+                </div>
+                <div class="mood-stat" data-mood="chill">
+                    <span class="mood-emoji">😌</span>
+                    <span class="mood-count">0</span>
+                </div>
+                <div class="mood-stat" data-mood="sad">
+                    <span class="mood-emoji">😢</span>
+                    <span class="mood-count">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Widget de último recuerdo -->
+        <div id="journal-last-memory" class="journal-last-memory" style="display: none;">
+            <h4>✨ Último Recuerdo</h4>
+            <div class="last-memory-content">
+                <div class="last-memory-image">
+                    <img id="last-memory-image" src="" alt="Recuerdo">
+                </div>
+                <div class="last-memory-text">
+                    <p class="last-memory-date" id="last-memory-date"></p>
+                    <p class="last-memory-snippet" id="last-memory-snippet"></p>
+                </div>
+                <div class="last-memory-mood" id="last-memory-mood"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div id="phone-view-journalread" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-journal-btn">‹</button>
+        <span id="journal-read-date"></span>
+    </div>
+    <div class="app-content-body journal-read-body">
+        
+        <!-- Información del día con emoción -->
+        <div class="journal-read-info">
+            <div class="journal-read-mood">
+                <div class="journal-read-mood-emoji" id="journal-read-mood-emoji">💭</div>
+                <div class="journal-read-mood-text">
+                    <div class="journal-read-mood-label">Estado de ánimo</div>
+                    <div class="journal-read-mood-name" id="journal-read-mood-name">Sin definir</div>
+                </div>
+            </div>
+            <div class="journal-read-date-full" id="journal-read-date-full"></div>
+        </div>
+        
+        <!-- ============================================ -->
+        <!-- ======> CARRUSEL DE FOTOS <======= -->
+        <!-- ============================================ -->
+        <div id="journal-carousel-container" class="carousel-container">
+            <div id="journal-carousel-track" class="carousel-track">
+                <!-- Las imágenes se cargarán aquí con JS -->
+            </div>
+            <button id="carousel-prev-btn" class="carousel-button prev">‹</button>
+            <button id="carousel-next-btn" class="carousel-button next">›</button>
+            <div id="carousel-dots" class="carousel-dots">
+                <!-- Los puntos indicadores se cargarán aquí -->
+            </div>
+        </div>
+        <!-- ============================================ -->
+
+        <div id="journal-read-text" class="journal-text-display">
+            <!-- El texto del diario se mostrará aquí -->
+        </div>
+        <button id="go-to-edit-entry-btn" class="btn btn-outline" style="margin-top: auto;">
+            ✏️ Editar Recuerdo
+        </button>
+    </div>
+</div>
+<!-- ============================================ -->
+
+
+<!-- Vista para Ver/Editar la Entrada de un Día -->
+<div id="phone-view-journalentry" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="back-to-journal-btn">‹</button>
+        <span id="journal-entry-date"></span>
+    </div>
+    <div class="app-content-body journal-entry-body">
+        <!-- Selector de estado de ánimo -->
+        <div class="mood-selector">
+            <label class="mood-label">¿Cómo estuvo este día?</label>
+            <div class="mood-options">
+                <button class="mood-option" data-mood="happy" title="Feliz">😊</button>
+                <button class="mood-option" data-mood="love" title="Enamorado">🥰</button>
+                <button class="mood-option" data-mood="fun" title="Divertido">😄</button>
+                <button class="mood-option" data-mood="romantic" title="Romántico">💕</button>
+                <button class="mood-option" data-mood="chill" title="Relajado">😌</button>
+                <button class="mood-option" data-mood="sad" title="Triste">😢</button>
+            </div>
+        </div>
+        
+        <div id="journal-gallery-container" class="journal-gallery">
+            <!-- Las imágenes se añadirán aquí con JS -->
+            <div id="journal-add-photo-btn" class="add-photo-button">
+                <p>+</p>
+                <span>Añadir foto</span>
+            </div>
+            <input type="file" id="journal-image-input" accept="image/*" multiple style="display: none;">
+        </div>
+        
+        <textarea id="journal-entry-text" class="textarea journal-textarea" placeholder="Escribe aquí los detalles de este día especial... 💭" rows="6"></textarea>
+        
+        <button id="save-journal-entry-btn" class="btn btn-primary">
+            <span>💾 Guardar Recuerdo</span>
+        </button>
+    </div>
+</div>
+<!-- ============================================ -->
+
+
+
+<!-- Vista Principal (Lista de Playlists) -->
+<div id="phone-view-soundtrack" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="homescreen">‹</button>
+        <span>🎵 Nuestra Banda Sonora</span>
+    </div>
+    <div class="app-content-body soundtrack-body">
+        <!-- Estadísticas de música -->
+        <div class="music-stats">
+            <div class="music-stat-card">
+                <div class="stat-icon">🎸</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="total-playlists">0</div>
+                    <div class="stat-label">Playlists</div>
+                </div>
+            </div>
+            <div class="music-stat-card">
+                <div class="stat-icon">🎵</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="total-songs">0</div>
+                    <div class="stat-label">Canciones</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="playlists-section">
+            <h3 class="section-title">Tus Playlists</h3>
+            <div id="playlists-list" class="playlists-list">
+                <!-- Las playlists se cargarán aquí -->
+            </div>
+        </div>
+        
+        <div class="create-playlist-section">
+            <input type="text" id="new-playlist-name-input" class="input music-input" placeholder="✨ Nueva playlist...">
+            <button id="create-playlist-btn" class="btn btn-primary music-create-btn">
+                <span>+ Crear Playlist</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Vista de una Playlist (El Casete MEJORADO) -->
+<div id="phone-view-playlistdetail" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="soundtrack">‹</button>
+        <span id="playlist-detail-title"></span>
+    </div>
+    <div class="app-content-body playlist-detail-body">
+        <!-- Casete mejorado -->
+        <div class="cassette-player">
+            <div class="cassette-screw top-left"></div>
+            <div class="cassette-screw top-right"></div>
+            <div class="cassette-label">
+                <div class="label-lines"></div>
+                <p id="cassette-label-title"></p>
+                <div class="label-lines"></div>
+            </div>
+            <div class="cassette-windows">
+                <div class="cassette-window">
+                    <div class="cassette-spool left">
+                        <div class="spool-teeth"></div>
+                    </div>
+                </div>
+                <div class="cassette-window">
+                    <div class="cassette-spool right">
+                        <div class="spool-teeth"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="cassette-screw bottom-left"></div>
+            <div class="cassette-screw bottom-right"></div>
+        </div>
+        
+        <!-- Info de la playlist -->
+        <div class="playlist-info">
+            <div class="playlist-song-count">
+                <span class="count-number" id="playlist-song-count">0</span>
+                <span class="count-label">canciones</span>
+            </div>
+        </div>
+        
+        <!-- Lista de canciones mejorada -->
+        <div class="songs-section">
+            <div id="song-list" class="song-list">
+                <!-- Las canciones se cargarán aquí -->
+            </div>
+        </div>
+        
+        <button id="go-to-add-song-btn" class="btn btn-primary add-song-btn">
+            <span>🎤 Añadir Canción</span>
+        </button>
+    </div>
+</div>
+
+<!-- Vista para Añadir una Canción -->
+<div id="phone-view-addsong" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="playlistdetail">‹</button>
+        <span>🎵 Añadir Canción</span>
+    </div>
+    <div class="app-content-body add-song-body">
+        <div class="add-song-section">
+            <label class="input-label">🎤 Nombre de la canción</label>
+            <input type="text" id="song-name-input" class="music-input" placeholder="Ej: Strawberry Fields Forever">
+        </div>
+        <div class="add-song-section">
+            <label class="input-label">🎬 Enlace de YouTube</label>
+            <input type="text" id="youtube-link-input" class="music-input" placeholder="https://youtube.com/watch?v=...">
+            <div class="input-hint">💡 Pega el enlace completo del video</div>
+        </div>
+        <button id="save-song-btn" class="btn btn-primary">💾 Guardar Canción</button>
+    </div>
+</div>
+
+<!-- Modales de edición para música -->
+<div id="edit-playlist-modal" class="music-edit-modal">
+    <div class="music-modal-content">
+        <div class="music-modal-header">Editar Playlist</div>
+        <div class="music-modal-body">
+            <input type="text" id="edit-playlist-name-input" class="music-modal-input" placeholder="Nombre de la playlist">
+            <div class="music-modal-actions">
+                <button id="cancel-edit-playlist-btn" class="btn btn-secondary">Cancelar</button>
+                <button id="save-edit-playlist-btn" class="btn btn-primary">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="edit-song-modal" class="music-edit-modal">
+    <div class="music-modal-content">
+        <div class="music-modal-header">Editar Canción</div>
+        <div class="music-modal-body">
+            <input type="text" id="edit-song-name-input" class="music-modal-input" placeholder="Nombre de la canción">
+            <input type="text" id="edit-song-url-input" class="music-modal-input" placeholder="URL de YouTube">
+            <div class="music-modal-actions">
+                <button id="cancel-edit-song-btn" class="btn btn-secondary">Cancelar</button>
+                <button id="save-edit-song-btn" class="btn btn-primary">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vista para Tocar la Canción (ESTRUCTURA CORRECTA) -->
+<div id="phone-view-player" class="phone-app-view">
+    <div class="app-content-header">
+        <button class="phone-back-btn" data-target="playlistdetail">‹</button>
+        <span>Reproduciendo...</span>
+    </div>
+    <div class="app-content-body player-body">
+        <div id="youtube-player-container" class="youtube-player-container">
+            <!-- El iframe se insertará aquí -->
+        </div>
+        <div class="turntable-container">
+            <div class="turntable-base"></div>
+            <div class="turntable-arm">
+                <div class="arm-pivot"></div>
+                <div class="arm-needle"></div>
+            </div>
+            <div class="turntable-disc">
+                <div class="disc-reflection"></div>
+                <div class="disc-label"></div>
+            </div>
+        </div>
+        <div class="now-playing-info">
+            <p id="player-song-title">Cargando canción...</p>
+            <span id="player-added-by"></span>
+        </div>
+    </div>
+
+
+<!-- ============================================ -->
+
+
+
+</div> <!-- <=========== PEGA AQUÍ EL </div> QUE CORRESPONDE A .phone-app-container =========== -->
+
+ 
+        </div>
+        <button id="close-phone-modal-btn" class="phone-home-button"></button>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- MODAL FULLSCREEN PARA FAVORES & DESAFÍOS    -->
+<!-- ============================================ -->
+<div id="favors-fullscreen-modal" class="favors-fullscreen-modal hidden">
+    <div class="favors-modal-overlay"></div>
+    <div class="favors-modal-container">
+        <div class="favors-modal-header">
+            <h2>🎯 Desafíos</h2>
+            <button id="close-favors-modal-btn" class="favors-close-btn">✕</button>
+        </div>
+        
+        <div class="favors-modal-content">
+            <!-- Balance de puntos -->
+            <div class="points-balance-large">
+                <div class="user-points-large">
+                    <div class="points-label">Tus puntos</div>
+                    <div id="my-points-large" class="points-value-large">0</div>
+                </div>
+                <div class="points-divider-large">⚡</div>
+                <div class="user-points-large">
+                    <div class="points-label">Tu pareja</div>
+                    <div id="partner-points-large" class="points-value-large">0</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="favors-tabs-large">
+                <button id="tab-active-large" class="favor-tab-large active">Activos</button>
+                <button id="tab-completed-large" class="favor-tab-large">Completados</button>
+                <button id="tab-random-large" class="favor-tab-large">🎲 Random</button>
+            </div>
+
+            <!-- Lista de favores activos -->
+            <div id="active-favors-list-large" class="favors-list-large">
+                <div id="favors-empty-state-large" class="favors-empty-state-large">
+                    <div class="empty-icon-large">🎁</div>
+                    <p>No hay favores activos. ¡Crea el primero o prueba uno random!</p>
+                </div>
+            </div>
+
+            <!-- Lista de completados -->
+            <div id="completed-favors-list-large" class="favors-list-large hidden">
+            </div>
+
+            <!-- Vista de desafío random -->
+            <div id="random-challenge-view-large" class="random-challenge-view-large hidden">
+                <div class="challenge-card-large">
+                    <div class="challenge-icon-large">🎲</div>
+                    <h3 id="challenge-title-large" class="challenge-title-large">Cargando desafío...</h3>
+                    <p id="challenge-description-large" class="challenge-description-large"></p>
+                    <div class="challenge-difficulty-large">
+                        <span id="challenge-difficulty-badge-large" class="difficulty-badge-large">⭐ Fácil</span>
+                        <span id="challenge-points-large" class="challenge-points-large">+10 puntos</span>
+                    </div>
+                    <div class="challenge-actions-large">
+                        <button id="accept-challenge-btn-large" class="btn btn-primary btn-large">¡Aceptar!</button>
+                        <button id="reroll-challenge-btn-large" class="btn btn-secondary btn-large">Otro desafío</button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="add-favor-btn-large" class="btn btn-primary btn-large" style="margin-top: 2rem;">
+                + Crear Desafío
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de creación de favor -->
+<div id="create-favor-modal" class="favors-fullscreen-modal hidden">
+    <div class="favors-modal-overlay"></div>
+    <div class="favors-modal-container favors-modal-small">
+        <div class="favors-modal-header">
+            <h2>✨ Crear Desafío</h2>
+            <button id="close-create-favor-modal-btn" class="favors-close-btn">✕</button>
+        </div>
+        
+        <div class="favors-modal-content">
+            <input type="text" id="coupon-title-input-large" class="input-large" placeholder="Título del desafío (ej: Masaje de 30 min)" maxlength="60">
+            <textarea id="coupon-description-input-large" class="textarea-large" placeholder="Descripción detallada..." rows="4" maxlength="200"></textarea>
+            
+            <label class="label-large">Dificultad & Puntos:</label>
+            <div class="difficulty-picker-large">
+                <button class="difficulty-option-large" data-difficulty="easy" data-points="10">
+                    <span class="diff-emoji-large">⭐</span>
+                    <span class="diff-label-large">Fácil</span>
+                    <span class="diff-points-large">10 pts</span>
+                </button>
+                <button class="difficulty-option-large selected" data-difficulty="medium" data-points="25">
+                    <span class="diff-emoji-large">⭐⭐</span>
+                    <span class="diff-label-large">Medio</span>
+                    <span class="diff-points-large">25 pts</span>
+                </button>
+                <button class="difficulty-option-large" data-difficulty="hard" data-points="50">
+                    <span class="diff-emoji-large">⭐⭐⭐</span>
+                    <span class="diff-label-large">Difícil</span>
+                    <span class="diff-points-large">50 pts</span>
+                </button>
+            </div>
+
+            <label class="label-large">Categoría:</label>
+            <div class="category-picker-large">
+                <button class="category-option-large selected" data-category="romantic">💕 Romántico</button>
+                <button class="category-option-large" data-category="fun">🎉 Divertido</button>
+                <button class="category-option-large" data-category="help">🤝 Ayuda</button>
+                <button class="category-option-large" data-category="surprise">🎁 Sorpresa</button>
+            </div>
+
+            <button id="save-coupon-btn-large" class="btn btn-primary btn-block btn-large">✨ Crear Desafío</button>
+        </div>
+    </div>
+</div>
+
+
+    <!-- ============================================ -->
+    <!-- =====> ELEMENTOS PARA INSTALACIÓN PWA <======= -->
+    <!-- ============================================ -->
+
+    <!-- 7. Botón de Instalación (para Chrome/Edge) -->
+    <!--    Lo colocamos fuera del div#app para que no se vea afectado por la navegación -->
+    <!--    y lo controlaremos con JavaScript. Inicialmente estará oculto. -->
+    <button id="install-pwa-btn" class="btn btn-primary btn-install" style="display: none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Instalar App
+    </button>
+
+    <!-- 8. Banner de Instrucciones para iOS -->
+    <!--    También estará oculto por defecto y se mostrará solo en dispositivos iOS. -->
+    <div id="ios-install-banner" class="ios-install-banner" style="display: none;">
+        <p>Para instalar la app, pulsa el botón "Compartir" <img src="https://img.icons8.com/ios/20/000000/share-rounded.png" alt="Icono Compartir"> y luego "Añadir a pantalla de inicio".</p>
+        <button id="close-ios-banner-btn" class="close-banner-btn">&times;</button>
+    </div>
+
+    <!-- Modal de Notificación Universal -->
+    <div id="notification-modal" class="notification-modal">
+        <div class="notification-content">
+            <div class="notification-icon" id="notification-icon">💬</div>
+            <h3 id="notification-title">Notificación</h3>
+            <p id="notification-message">Mensaje de la notificación</p>
+            <input type="text" id="notification-input" class="notification-input" style="display: none; width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid #ddd; border-radius: 4px; text-align: center;" placeholder="Ingresa el nombre...">
+            <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                <button class="btn btn-primary" id="notification-btn">Aceptar</button>
+                <button class="btn btn-outline" id="notification-cancel-btn" style="display: none;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación personalizado -->
+    <div id="confirm-modal" class="modal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2 class="modal-title" id="confirm-modal-title">⚠️ Confirmar</h2>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-modal-message" style="text-align: center; font-size: 1.0625rem; color: rgba(139, 111, 71, 0.8);"></p>
+            </div>
+            <div class="modal-actions-row">
+                <button id="confirm-modal-cancel" class="btn btn-outline">Cancelar</button>
+                <button id="confirm-modal-confirm" class="btn btn-danger">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de información de lugar -->
+    <div id="place-info-modal" class="modal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h2 class="modal-title" id="place-info-title">📍 Lugar</h2>
+                <button id="close-place-info-btn" class="btn-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="place-info-body">
+                <!-- El contenido se llenará dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox para ver fotos en grande -->
+    <div id="photo-lightbox" class="photo-lightbox">
+        <div class="lightbox-content">
+            <button class="lightbox-close" id="lightbox-close">×</button>
+            <button class="lightbox-nav lightbox-prev" id="lightbox-prev">‹</button>
+            <img id="lightbox-image" class="lightbox-image" src="" alt="Foto en grande">
+            <button class="lightbox-nav lightbox-next" id="lightbox-next">›</button>
+            <div class="lightbox-counter" id="lightbox-counter">1 / 1</div>
+        </div>
+    </div>
+
+    <!-- MODAL DEL JUEGO "EL TEST" -->
+    <div id="test-game-modal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content test-game-modal">
+            <div class="modal-header">
+                <h2>❓ El Test</h2>
+                <button class="close-modal-btn" id="close-test-game-modal">×</button>
+            </div>
+
+            <div class="test-game-content">
+                <!-- Pantalla de inicio -->
+                <div id="test-game-start" class="test-game-screen">
+                    <div class="test-welcome">
+                        <div class="test-icon">🤔</div>
+                        <h3>¿Cuánto nos conocemos?</h3>
+                        <p>Un juego de preguntas y respuestas para descubrir cuánto conocen el uno del otro.</p>
+
+                        <div class="test-instructions">
+                            <div class="instruction-step">
+                                <span class="step-number">1</span>
+                                <span>Uno crea un test respondiendo preguntas</span>
+                            </div>
+                            <div class="instruction-step">
+                                <span class="step-number">2</span>
+                                <span>El otro recibe el test y lo responde</span>
+                            </div>
+                            <div class="instruction-step">
+                                <span class="step-number">3</span>
+                                <span>¡Descubre tu porcentaje de compatibilidad!</span>
+                            </div>
+                        </div>
+
+                        <div class="test-actions">
+                            <button class="btn btn-primary test-create-btn" id="create-test-btn">
+                                ✨ Crear Test
+                            </button>
+                            <button class="btn btn-secondary test-respond-btn" id="respond-test-btn" style="display: none;">
+                                🎯 Responder Test Disponible
+                            </button>
+                        </div>
+
+                        <div id="test-status-message" class="test-status-message" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- Pantalla de selección de jugador -->
+                <div id="test-player-selection" class="test-game-screen hidden">
+                    <div class="player-selection">
+                        <h3>¿Quién va a responder primero?</h3>
+                        <div class="player-options">
+                            <button class="player-option" data-player="player1">
+                                <div class="player-avatar">👤</div>
+                                <div class="player-name" id="player1-name">Jugador 1</div>
+                            </button>
+                            <button class="player-option" data-player="player2">
+                                <div class="player-avatar">👤</div>
+                                <div class="player-name" id="player2-name">Jugador 2</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pantalla de preguntas -->
+                <div id="test-questions" class="test-game-screen hidden">
+                    <div class="question-header">
+                        <div class="question-counter">
+                            <span id="current-question">1</span> / <span id="total-questions">10</span>
+                        </div>
+                        <div class="question-timer">
+                            <div class="timer-bar" id="question-timer-bar"></div>
+                        </div>
+                    </div>
+
+                    <div class="question-content">
+                        <div class="question-card">
+                            <div class="question-icon">❓</div>
+                            <h3 id="question-text">Cargando pregunta...</h3>
+                            <div class="question-hint">
+                                <small>💡 Piensa bien tu respuesta antes de escribirla</small>
+                            </div>
+                        </div>
+
+                        <div class="answer-input-section">
+                            <textarea
+                                id="answer-input"
+                                class="answer-input"
+                                placeholder="Escribe tu respuesta aquí..."
+                                maxlength="200"
+                            ></textarea>
+                            <div class="char-counter">
+                                <span id="char-count">0</span>/200
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary" id="submit-answer-btn" disabled>
+                            ✅ Confirmar Respuesta
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pantalla de adivinación -->
+                <div id="test-guessing" class="test-game-screen hidden">
+                    <div class="guessing-header">
+                        <h3>¡Ahora adivina!</h3>
+                        <p id="guessing-player-name">Jugador 2</p>
+                        <p>¿Cuál crees que fue la respuesta de <span id="answer-player-name">Jugador 1</span>?</p>
+                    </div>
+
+                    <div class="question-display">
+                        <div class="question-card small">
+                            <div class="question-icon">❓</div>
+                            <h4 id="guessing-question-text">Pregunta...</h4>
+                        </div>
+                    </div>
+
+                    <div class="guess-input-section">
+                        <textarea
+                            id="guess-input"
+                            class="answer-input"
+                            placeholder="Escribe tu adivinanza aquí..."
+                            maxlength="200"
+                        ></textarea>
+                        <div class="char-counter">
+                            <span id="guess-char-count">0</span>/200
+                        </div>
+                    </div>
+
+                    <div class="guess-actions">
+                        <button class="btn btn-secondary" id="skip-guess-btn">
+                            ⏭️ Saltar
+                        </button>
+                        <button class="btn btn-primary" id="submit-guess-btn" disabled>
+                            🎯 Adivinar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pantalla de resultado -->
+                <div id="test-result" class="test-game-screen hidden">
+                    <div class="result-content">
+                        <div class="result-reveal">
+                            <div class="result-question">
+                                <h4 id="result-question-text">Pregunta...</h4>
+                            </div>
+
+                            <div class="answers-comparison">
+                                <div class="answer-box correct">
+                                    <div class="answer-label">Respuesta correcta:</div>
+                                    <div class="answer-text" id="correct-answer">...</div>
+                                </div>
+
+                                <div class="answer-box guess">
+                                    <div class="answer-label">Tu adivinanza:</div>
+                                    <div class="answer-text" id="user-guess">...</div>
+                                </div>
+                            </div>
+
+                            <div class="result-feedback" id="result-feedback">
+                                <!-- Aquí irá el feedback -->
+                            </div>
+                        </div>
+
+                        <div class="result-actions">
+                            <button class="btn btn-secondary" id="next-result-btn">
+                                ➡️ Siguiente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pantalla final -->
+                <div id="test-final" class="test-game-screen hidden">
+                    <div class="final-results">
+                        <div class="final-score">
+                            <div class="score-circle">
+                                <div class="score-number" id="final-percentage">0%</div>
+                                <div class="score-label">Compatibilidad</div>
+                            </div>
+                        </div>
+
+                        <div class="couple-title">
+                            <h3 id="couple-title">Título de Pareja</h3>
+                            <div class="title-description" id="title-description">Descripción del título</div>
+                        </div>
+
+                        <div class="final-stats">
+                            <div class="stat-item">
+                                <div class="stat-number" id="correct-answers">0</div>
+                                <div class="stat-label">Aciertos</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="total-questions-final">10</div>
+                                <div class="stat-label">Preguntas</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="skipped-questions">0</div>
+                                <div class="stat-label">Saltadas</div>
+                            </div>
+                        </div>
+
+                        <div class="final-actions">
+                            <button class="btn btn-secondary" id="play-again-btn">
+                                🔄 Jugar de Nuevo
+                            </button>
+                            <button class="btn btn-primary" id="share-results-btn">
+                                📤 Compartir Resultados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sistema de Animaciones -->
+    <script src="scr/animations/animations.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
