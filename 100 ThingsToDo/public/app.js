@@ -683,8 +683,8 @@ function createGamificationDashboardModal() {
         <!-- Barra de progreso de nivel -->
         <div class="progress-container">
           <div class="progress-label">
-            <span>Nivel ${gamificationSystem.level}</span>
-            <span>${gamificationSystem.experience}/${gamificationSystem.level * 100} XP</span>
+            <span id="dashboard-level-label">Nivel ${gamificationSystem.level}</span>
+            <span id="dashboard-exp">${gamificationSystem.experience}/${gamificationSystem.level * 100} XP</span>
           </div>
           <div class="progress-bar">
             <div id="level-progress-fill" class="progress-fill"></div>
@@ -695,43 +695,32 @@ function createGamificationDashboardModal() {
         <div class="stats-section">
           <h3>📊 Tus Estadísticas</h3>
           <div class="stats-detailed">
-            <div class="stat-item">
-              <span class="stat-icon">✅</span>
-              <span class="stat-text">Tareas completadas: <strong id="tasks-completed">0</strong></span>
+            <div class="stat-item stat-item-enhanced">
+              <div class="stat-item-header">
+                <span class="stat-icon">✅</span>
+                <span class="stat-label">Tareas completadas</span>
+              </div>
+              <div class="stat-value" id="tasks-completed">0</div>
             </div>
-            <div class="stat-item">
-              <span class="stat-icon">🏆</span>
-              <span class="stat-text">Desafíos completados: <strong id="challenges-completed">0</strong></span>
+            <div class="stat-item stat-item-enhanced">
+              <div class="stat-item-header">
+                <span class="stat-icon">🏆</span>
+                <span class="stat-label">Desafíos completados</span>
+              </div>
+              <div class="stat-value" id="challenges-completed">0</div>
             </div>
-            <div class="stat-item">
-              <span class="stat-icon">🎁</span>
-              <span class="stat-text">Recompensas compradas: <strong id="rewards-purchased">0</strong></span>
+            <div class="stat-item stat-item-enhanced">
+              <div class="stat-item-header">
+                <span class="stat-icon">⭐</span>
+                <span class="stat-label">Puntos totales ganados</span>
+              </div>
+              <div class="stat-value" id="total-points-earned">0</div>
             </div>
-            <div class="stat-item">
-              <span class="stat-icon">⭐</span>
-              <span class="stat-text">Puntos totales ganados: <strong id="total-points-earned">0</strong></span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Badges recientes -->
-        <div class="recent-badges">
-          <h4 class="recent-badges-title">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-            Tus Últimos Logros
-          </h4>
-          <div id="recent-badges-container" class="recent-badges-list">
-            <!-- Los badges se cargarán aquí -->
           </div>
         </div>
 
         <!-- Accesos directos -->
         <div class="gamification-actions">
-          <button id="open-rewards-store-btn" class="btn btn-primary btn-large">
-            🛍️ Tienda de Recompensas
-          </button>
           <button id="open-challenges-board-btn" class="btn btn-secondary btn-large">
             🎯 Tablero de Desafíos
           </button>
@@ -743,11 +732,6 @@ function createGamificationDashboardModal() {
   // Event listeners
   modal.querySelector('#close-gamification-modal-btn').onclick = () => {
     modal.classList.add('hidden');
-  };
-
-  modal.querySelector('#open-rewards-store-btn').onclick = () => {
-    modal.classList.add('hidden');
-    showRewardsStore();
   };
 
   modal.querySelector('#open-challenges-board-btn').onclick = () => {
@@ -794,7 +778,7 @@ function createRewardsStoreModal() {
 
   // Event listeners
   modal.querySelector('#close-rewards-modal-btn').onclick = () => {
-    modal.style.display = 'none';
+    modal.classList.remove('is-open');
   };
 
   return modal;
@@ -829,7 +813,7 @@ function createChallengesBoardModal() {
 
   // Event listeners
   modal.querySelector('#close-challenges-modal-btn').onclick = () => {
-    modal.style.display = 'none';
+    modal.classList.remove('is-open');
   };
 
   return modal;
@@ -850,7 +834,8 @@ function initializeGamificationFunctions() {
       document.body.appendChild(createGamificationDashboardModal());
     }
     updateGamificationDashboard();
-    document.getElementById('gamification-dashboard-modal').style.display = 'block';
+    const modal = document.getElementById('gamification-dashboard-modal');
+    modal.classList.remove('hidden');
   };
 
   window.showRewardsStore = function() {
@@ -859,7 +844,8 @@ function initializeGamificationFunctions() {
       document.body.appendChild(createRewardsStoreModal());
     }
     updateRewardsStore();
-    document.getElementById('rewards-store-modal').style.display = 'block';
+    const modal = document.getElementById('rewards-store-modal');
+    modal.classList.add('is-open');
   };
 
   window.showChallengesBoard = function() {
@@ -868,7 +854,8 @@ function initializeGamificationFunctions() {
       document.body.appendChild(createChallengesBoardModal());
     }
     updateChallengesBoard();
-    document.getElementById('challenges-board-modal').style.display = 'block';
+    const modal = document.getElementById('challenges-board-modal');
+    modal.classList.add('is-open');
   };
 
   // Configurar event listener para el botón de gamificación
@@ -901,7 +888,8 @@ function updateGamificationDashboard() {
   // Actualizar estadísticas principales
   modal.querySelector('#dashboard-points').textContent = gamificationSystem.totalPoints;
   modal.querySelector('#dashboard-level').textContent = gamificationSystem.level;
-  modal.querySelector('#dashboard-exp').textContent = `${gamificationSystem.experience}/${gamificationSystem.level * 100}`;
+  modal.querySelector('#dashboard-exp').textContent = `${gamificationSystem.experience}/${gamificationSystem.level * 100} XP`;
+  modal.querySelector('#dashboard-level-label').textContent = `Nivel ${gamificationSystem.level}`;
   modal.querySelector('#dashboard-multiplier').textContent = `${gamificationSystem.getTotalMultiplier()}x`;
 
   // Actualizar barra de progreso
@@ -912,11 +900,7 @@ function updateGamificationDashboard() {
   // Actualizar estadísticas detalladas
   modal.querySelector('#tasks-completed').textContent = gamificationSystem.stats.tasksCompleted || 0;
   modal.querySelector('#challenges-completed').textContent = gamificationSystem.stats.challengesCompleted || 0;
-  modal.querySelector('#rewards-purchased').textContent = gamificationSystem.stats.rewardsPurchased || 0;
   modal.querySelector('#total-points-earned').textContent = gamificationSystem.stats.totalPointsEarned || 0;
-
-  // Actualizar badges recientes
-  updateRecentBadges();
 }
 
 /**
