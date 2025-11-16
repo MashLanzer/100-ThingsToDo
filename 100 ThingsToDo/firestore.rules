@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // FUNCIONES AUXILIARES
+    // ============================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isCoupleMember(coupleId) {
+      let coupleDoc = get(/databases/$(database)/documents/couples/$(coupleId));
+      return coupleId == 'couple-' + request.auth.uid ||
+             coupleId.matches('^' + request.auth.uid + '_.*') ||
+             coupleId.matches('.*_' + request.auth.uid + '$') ||
+             (coupleDoc.data.keys().hasAny(['members']) && coupleDoc.data.members.hasAny([request.auth.uid]));
+    }
+
+    function isSelf(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isLinking(targetUserId) {
+      let dataSent = request.resource.data;
+      let partnerDataInDB = get(/databases/$(database)/documents/users/$(targetUserId)).data;
+      return dataSent.partnerId == request.auth.uid &&
+             dataSent.coupleCode == partnerDataInDB.coupleCode;
+    }
+
+    function isUnlinking(exPartnerId) {
+      return resource.data.partnerId == request.auth.uid &&
+             request.resource.data.partnerId == null;
+    }
+
+    // ============================================
+    // REGLAS PARA 'users'
+    // ============================================
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (
+        isSelf(userId) ||
+        isLinking(userId) ||
+        isUnlinking(userId)
+      );
+    }
+
+    // ============================================
+    // REGLAS PARA 'couples'
+    // ============================================
+    match /couples/{coupleId} {
+      allow read, create, update: if isAuthenticated() && isCoupleMember(coupleId);
+    }
+
+    match /couples/{coupleId}/{subcollection}/{docId} {
+      allow read, write: if isAuthenticated() && isCoupleMember(coupleId);
+    }
+
+    match /couples/{coupleId}/{subcollection}/{docId}/{nestedCollection}/{nestedDocId} {
+      allow read, write: if isAuthenticated() && isCoupleMember(coupleId);
+    }
+
+    // ============================================
+    // REGLAS PARA 'tests' - VERSION ROBUSTA
+    // ============================================
+    match /tests/{testId} {
+      // Crear: solo el creador puede crear su propio test
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.creatorId;
+
+      // Leer: creador o target pueden leer (comprobando datos existentes y nuevos)
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.creatorId ||
+        request.auth.uid == resource.data.targetId ||
+        request.auth.uid == request.resource.data.creatorId ||
+        request.auth.uid == request.resource.data.targetId
+      );
+
+      // Actualizar: creador o target pueden actualizar (comprobando datos existentes y nuevos)
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.creatorId ||
+        request.auth.uid == resource.data.targetId ||
+        request.auth.uid == request.resource.data.creatorId ||
+        request.auth.uid == request.resource.data.targetId
+      );
+    }
+  }
+}
