@@ -141,6 +141,916 @@ const KAWAII_ICONS = {
 };
 
 // ============================================
+// SISTEMA DE GAMIFICACIÓN
+// ============================================
+
+class GamificationSystem {
+  constructor() {
+    this.totalPoints = 0;
+    this.level = 1;
+    this.experience = 0;
+    this.multipliers = {
+      streak: 1.0,
+      timeBonus: 1.0,
+      specialEvent: 1.0
+    };
+    this.badges = this.initializeBadges();
+    this.challenges = this.initializeChallenges();
+    this.stats = {
+      tasksCompleted: 0,
+      challengesCompleted: 0,
+      rewardsPurchased: 0,
+      totalPointsEarned: 0
+    };
+    this.loadProgress();
+  }
+
+  /**
+   * Inicializa los badges disponibles
+   */
+  initializeBadges() {
+    return [
+      {
+        id: 'first_task',
+        name: 'Primer Paso',
+        description: 'Completa tu primera tarea',
+        icon: '🎯',
+        requirement: { type: 'tasks_completed', value: 1 },
+        unlocked: false
+      },
+      {
+        id: 'task_master',
+        name: 'Maestro de Tareas',
+        description: 'Completa 10 tareas',
+        icon: '⚡',
+        requirement: { type: 'tasks_completed', value: 10 },
+        unlocked: false
+      },
+      {
+        id: 'level_up',
+        name: 'Subiendo de Nivel',
+        description: 'Alcanza el nivel 5',
+        icon: '⬆️',
+        requirement: { type: 'level', value: 5 },
+        unlocked: false
+      },
+      {
+        id: 'challenge_accepted',
+        name: 'Desafío Aceptado',
+        description: 'Completa tu primer desafío',
+        icon: '🏆',
+        requirement: { type: 'challenges_completed', value: 1 },
+        unlocked: false
+      },
+      {
+        id: 'point_collector',
+        name: 'Coleccionista de Puntos',
+        description: 'Acumula 500 puntos',
+        icon: '💰',
+        requirement: { type: 'total_points', value: 500 },
+        unlocked: false
+      }
+    ];
+  }
+
+  /**
+   * Inicializa los desafíos disponibles
+   */
+  initializeChallenges() {
+    return [
+      {
+        id: 'complete_5_tasks',
+        name: 'Productividad Inicial',
+        description: 'Completa 5 tareas en una semana',
+        icon: '📝',
+        target: 5,
+        progress: 0,
+        rewardPoints: 50,
+        rewardBadge: null,
+        accepted: false,
+        completed: false
+      },
+      {
+        id: 'reach_level_3',
+        name: 'Crecimiento Personal',
+        description: 'Alcanza el nivel 3',
+        icon: '🌟',
+        target: 1,
+        progress: 0,
+        rewardPoints: 100,
+        rewardBadge: { id: 'level_up', name: 'Subiendo de Nivel', icon: '⬆️' },
+        accepted: false,
+        completed: false
+      },
+      {
+        id: 'streak_challenge',
+        name: 'Racha Perfecta',
+        description: 'Completa tareas 7 días seguidos',
+        icon: '🔥',
+        target: 7,
+        progress: 0,
+        rewardPoints: 150,
+        rewardBadge: null,
+        accepted: false,
+        completed: false
+      }
+    ];
+  }
+
+  /**
+   * Otorga puntos al usuario
+   */
+  earnPoints(basePoints, reason = 'task_completion') {
+    const multiplier = this.getTotalMultiplier();
+    const pointsEarned = Math.round(basePoints * multiplier);
+    
+    this.totalPoints += pointsEarned;
+    this.experience += pointsEarned;
+    
+    // Actualizar estadísticas
+    this.stats.totalPointsEarned += pointsEarned;
+    if (reason === 'task_completion') {
+      this.stats.tasksCompleted += 1;
+    }
+    
+    // Verificar subida de nivel
+    this.checkLevelUp();
+    
+    // Verificar desbloqueo de badges
+    this.checkBadgeUnlock();
+    
+    // Actualizar progreso de desafíos
+    this.updateChallengeProgress(reason);
+    
+    this.saveProgress();
+    
+    return pointsEarned;
+  }
+
+  /**
+   * Verifica si el usuario sube de nivel
+   */
+  checkLevelUp() {
+    const expNeeded = this.level * 100;
+    if (this.experience >= expNeeded) {
+      this.level += 1;
+      this.experience = this.experience - expNeeded;
+      // Celebración de subida de nivel
+      this.showLevelUpCelebration();
+    }
+  }
+
+  /**
+   * Calcula el multiplicador total
+   */
+  getTotalMultiplier() {
+    return this.multipliers.streak * this.multipliers.timeBonus * this.multipliers.specialEvent;
+  }
+
+  /**
+   * Verifica desbloqueo de badges
+   */
+  checkBadgeUnlock() {
+    this.badges.forEach(badge => {
+      if (!badge.unlocked && this.checkBadgeRequirement(badge)) {
+        badge.unlocked = true;
+        badge.unlockedAt = Date.now();
+        this.showBadgeUnlockCelebration(badge);
+      }
+    });
+  }
+
+  /**
+   * Verifica si se cumple el requisito de un badge
+   */
+  checkBadgeRequirement(badge) {
+    switch (badge.requirement.type) {
+      case 'tasks_completed':
+        return this.stats.tasksCompleted >= badge.requirement.value;
+      case 'level':
+        return this.level >= badge.requirement.value;
+      case 'challenges_completed':
+        return this.stats.challengesCompleted >= badge.requirement.value;
+      case 'total_points':
+        return this.totalPoints >= badge.requirement.value;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Actualiza el progreso de desafíos automáticos
+   */
+  updateChallengeProgress(reason) {
+    if (reason === 'task_completion') {
+      // Desafío de completar 5 tareas
+      const challenge = this.challenges.find(c => c.id === 'complete_5_tasks');
+      if (challenge && !challenge.completed) {
+        challenge.progress = Math.min(challenge.progress + 1, challenge.target);
+        if (challenge.progress >= challenge.target) {
+          this.completeChallenge('complete_5_tasks');
+        }
+      }
+    } else if (reason === 'level_up') {
+      // Desafío de alcanzar nivel 3
+      const challenge = this.challenges.find(c => c.id === 'reach_level_3');
+      if (challenge && !challenge.completed && this.level >= 3) {
+        this.completeChallenge('reach_level_3');
+      }
+    }
+  }
+
+  /**
+   * Guarda el progreso en localStorage
+   */
+  saveProgress() {
+    const progress = {
+      totalPoints: this.totalPoints,
+      level: this.level,
+      experience: this.experience,
+      multipliers: this.multipliers,
+      badges: this.badges,
+      challenges: this.challenges,
+      stats: this.stats
+    };
+    localStorage.setItem('gamification_progress', JSON.stringify(progress));
+  }
+
+  /**
+   * Carga el progreso desde localStorage
+   */
+  loadProgress() {
+    try {
+      const saved = localStorage.getItem('gamification_progress');
+      if (saved) {
+        const progress = JSON.parse(saved);
+        this.totalPoints = progress.totalPoints || 0;
+        this.level = progress.level || 1;
+        this.experience = progress.experience || 0;
+        this.multipliers = progress.multipliers || this.multipliers;
+        this.badges = progress.badges || this.initializeBadges();
+        this.challenges = progress.challenges || this.initializeChallenges();
+        this.stats = progress.stats || this.stats;
+      }
+    } catch (error) {
+      console.error('Error loading gamification progress:', error);
+    }
+  }
+
+  /**
+   * Acepta un desafío
+   */
+  acceptChallenge(challengeId) {
+    const challenge = this.challenges.find(c => c.id === challengeId);
+    if (!challenge || challenge.accepted || challenge.completed) return false;
+
+    challenge.accepted = true;
+    challenge.progress = 0;
+    this.saveProgress();
+    return true;
+  }
+
+  /**
+   * Actualiza el progreso de un desafío
+   */
+  updateChallengeProgress(challengeId, progress) {
+    const challenge = this.challenges.find(c => c.id === challengeId);
+    if (!challenge || !challenge.accepted || challenge.completed) return false;
+
+    challenge.progress = Math.min(progress, challenge.target);
+
+    if (challenge.progress >= challenge.target) {
+      this.completeChallenge(challengeId);
+    }
+
+    this.saveProgress();
+    return true;
+  }
+
+  /**
+   * Completa un desafío
+   */
+  completeChallenge(challengeId) {
+    const challenge = this.challenges.find(c => c.id === challengeId);
+    if (!challenge || challenge.completed) return false;
+
+    challenge.completed = true;
+    challenge.accepted = false;
+
+    // Otorgar recompensas
+    this.earnPoints(challenge.rewardPoints, 'challenge_completion');
+    this.stats.challengesCompleted = (this.stats.challengesCompleted || 0) + 1;
+
+    // Otorgar badge si corresponde
+    if (challenge.rewardBadge) {
+      this.unlockBadge(challenge.rewardBadge.id);
+    }
+
+    this.saveProgress();
+    return true;
+  }
+
+  /**
+   * Desbloquea un badge específico
+   */
+  unlockBadge(badgeId) {
+    const badge = this.badges.find(b => b.id === badgeId);
+    if (!badge || badge.unlocked) return false;
+
+    badge.unlocked = true;
+    this.saveProgress();
+    return true;
+  }
+
+  /**
+   * Celebración de subida de nivel
+   */
+  showLevelUpCelebration() {
+    showNotification({
+      title: '¡Nivel Subido! 🎉',
+      message: `¡Felicidades! Has alcanzado el nivel ${this.level}`,
+      icon: '⬆️',
+      type: 'success'
+    });
+  }
+
+  /**
+   * Celebración de desbloqueo de badge
+   */
+  showBadgeUnlockCelebration(badge) {
+    showNotification({
+      title: '¡Nuevo Logro! 🏆',
+      message: `Has desbloqueado el badge "${badge.name}"`,
+      icon: badge.icon,
+      type: 'success'
+    });
+  }
+}
+
+class RewardsSystem {
+  constructor() {
+    this.rewards = this.initializeRewards();
+  }
+
+  /**
+   * Inicializa las recompensas disponibles
+   */
+  initializeRewards() {
+    return [
+      {
+        id: 'theme_pink',
+        name: 'Tema Rosa Kawaii',
+        description: 'Cambia el tema de la app a rosa kawaii',
+        icon: '🌸',
+        price: 100,
+        purchased: false,
+        type: 'theme'
+      },
+      {
+        id: 'icon_pack_animals',
+        name: 'Paquete de Iconos Animales',
+        description: 'Desbloquea iconos de animales kawaii',
+        icon: '🐾',
+        price: 75,
+        purchased: false,
+        type: 'icon_pack'
+      },
+      {
+        id: 'streak_multiplier',
+        name: 'Multiplicador de Racha',
+        description: 'Aumenta tus multiplicadores de puntos',
+        icon: '🔥',
+        price: 150,
+        purchased: false,
+        type: 'booster'
+      },
+      {
+        id: 'special_notification',
+        name: 'Notificación Especial',
+        description: 'Recibe notificaciones motivacionales',
+        icon: '💌',
+        price: 50,
+        purchased: false,
+        type: 'feature'
+      }
+    ];
+  }
+
+  /**
+   * Compra una recompensa
+   */
+  purchaseReward(rewardId) {
+    const reward = this.rewards.find(r => r.id === rewardId);
+    if (!reward || reward.purchased) return false;
+
+    if (gamificationSystem.totalPoints >= reward.price) {
+      gamificationSystem.totalPoints -= reward.price;
+      reward.purchased = true;
+      gamificationSystem.stats.rewardsPurchased += 1;
+      
+      // Aplicar la recompensa
+      this.applyReward(reward);
+      
+      gamificationSystem.saveProgress();
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Aplica el efecto de una recompensa
+   */
+  applyReward(reward) {
+    switch (reward.type) {
+      case 'theme':
+        this.applyTheme(reward.id);
+        break;
+      case 'icon_pack':
+        this.unlockIconPack(reward.id);
+        break;
+      case 'booster':
+        this.applyBooster(reward.id);
+        break;
+      case 'feature':
+        this.enableFeature(reward.id);
+        break;
+    }
+  }
+
+  /**
+   * Aplica un tema
+   */
+  applyTheme(themeId) {
+    document.documentElement.setAttribute('data-theme', themeId);
+    localStorage.setItem('selected_theme', themeId);
+  }
+
+  /**
+   * Desbloquea un paquete de iconos
+   */
+  unlockIconPack(packId) {
+    // Lógica para desbloquear iconos
+    console.log(`Icon pack ${packId} unlocked`);
+  }
+
+  /**
+   * Aplica un booster
+   */
+  applyBooster(boosterId) {
+    if (boosterId === 'streak_multiplier') {
+      gamificationSystem.multipliers.streak *= 1.5;
+    }
+  }
+
+  /**
+   * Habilita una característica
+   */
+  enableFeature(featureId) {
+    if (featureId === 'special_notification') {
+      // Habilitar notificaciones especiales
+      console.log('Special notifications enabled');
+    }
+  }
+}
+
+// Instancias globales
+const gamificationSystem = new GamificationSystem();
+const rewardsSystem = new RewardsSystem();
+
+// =============================
+// CREACIÓN DE MODALES HTML
+// =============================
+
+/**
+ * Crea el modal del dashboard de gamificación
+ */
+function createGamificationDashboardModal() {
+  const modal = document.createElement('div');
+  modal.id = 'gamification-dashboard-modal';
+  modal.className = 'gamification-modal hidden';
+  modal.innerHTML = `
+    <div class="gamification-modal-content">
+      <div class="gamification-modal-header">
+        <h2 class="gamification-modal-title">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+          Sistema de Gamificación
+        </h2>
+        <button id="close-gamification-modal-btn" class="gamification-modal-close">×</button>
+      </div>
+
+      <div class="gamification-modal-body">
+        <!-- Estadísticas rápidas -->
+        <div class="gamification-stats-quick">
+          <div class="stat-quick">
+            <div class="stat-quick-value" id="quick-points">0</div>
+            <div class="stat-quick-label">Puntos</div>
+          </div>
+          <div class="stat-quick">
+            <div class="stat-quick-value" id="quick-level">1</div>
+            <div class="stat-quick-label">Nivel</div>
+          </div>
+          <div class="stat-quick">
+            <div class="stat-quick-value" id="quick-multiplier">1.0x</div>
+            <div class="stat-quick-label">Multiplicador</div>
+          </div>
+        </div>
+
+        <!-- Estadísticas principales -->
+        <div class="gamification-stats">
+          <div class="stat-card">
+            <div class="stat-card-icon">⭐</div>
+            <div class="stat-card-value" id="dashboard-points">0</div>
+            <div class="stat-card-title">Puntos Totales</div>
+            <div class="stat-card-subtitle">Acumulados</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">📊</div>
+            <div class="stat-card-value" id="dashboard-level">1</div>
+            <div class="stat-card-title">Nivel</div>
+            <div class="stat-card-subtitle">Actual</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">⚡</div>
+            <div class="stat-card-value" id="dashboard-multiplier">1.0x</div>
+            <div class="stat-card-title">Multiplicador</div>
+            <div class="stat-card-subtitle">Activo</div>
+          </div>
+        </div>
+
+        <!-- Barra de progreso de nivel -->
+        <div class="progress-container">
+          <div class="progress-label">
+            <span>Nivel ${gamificationSystem.level}</span>
+            <span>${gamificationSystem.experience}/${gamificationSystem.level * 100} XP</span>
+          </div>
+          <div class="progress-bar">
+            <div id="level-progress-fill" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <!-- Estadísticas detalladas -->
+        <div class="stats-section">
+          <h3>📊 Tus Estadísticas</h3>
+          <div class="stats-detailed">
+            <div class="stat-item">
+              <span class="stat-icon">✅</span>
+              <span class="stat-text">Tareas completadas: <strong id="tasks-completed">0</strong></span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-icon">🏆</span>
+              <span class="stat-text">Desafíos completados: <strong id="challenges-completed">0</strong></span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-icon">🎁</span>
+              <span class="stat-text">Recompensas compradas: <strong id="rewards-purchased">0</strong></span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-icon">⭐</span>
+              <span class="stat-text">Puntos totales ganados: <strong id="total-points-earned">0</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Badges recientes -->
+        <div class="recent-badges">
+          <h4 class="recent-badges-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            Tus Últimos Logros
+          </h4>
+          <div id="recent-badges-container" class="recent-badges-list">
+            <!-- Los badges se cargarán aquí -->
+          </div>
+        </div>
+
+        <!-- Accesos directos -->
+        <div class="gamification-actions">
+          <button id="open-rewards-store-btn" class="btn btn-primary btn-large">
+            🛍️ Tienda de Recompensas
+          </button>
+          <button id="open-challenges-board-btn" class="btn btn-secondary btn-large">
+            🎯 Tablero de Desafíos
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Event listeners
+  modal.querySelector('#close-gamification-modal-btn').onclick = () => {
+    modal.classList.add('hidden');
+  };
+
+  modal.querySelector('#open-rewards-store-btn').onclick = () => {
+    modal.classList.add('hidden');
+    showRewardsStore();
+  };
+
+  modal.querySelector('#open-challenges-board-btn').onclick = () => {
+    modal.classList.add('hidden');
+    showChallengesBoard();
+  };
+
+  return modal;
+}
+
+/**
+ * Crea el modal de la tienda de recompensas
+ */
+function createRewardsStoreModal() {
+  const modal = document.createElement('div');
+  modal.id = 'rewards-store-modal';
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">🛍️ Tienda de Recompensas</h2>
+        <button id="close-rewards-modal-btn" class="btn-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Puntos disponibles -->
+        <div class="points-display">
+          <span class="points-icon">💰</span>
+          <span class="points-text">Tus puntos: <strong id="store-points">0</strong></span>
+        </div>
+
+        <!-- Lista de recompensas -->
+        <div id="rewards-list" class="rewards-list">
+          <!-- Las recompensas se cargarán aquí -->
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Event listeners
+  modal.querySelector('#close-rewards-modal-btn').onclick = () => {
+    modal.style.display = 'none';
+  };
+
+  return modal;
+}
+
+/**
+ * Crea el modal del tablero de desafíos
+ */
+function createChallengesBoardModal() {
+  const modal = document.createElement('div');
+  modal.id = 'challenges-board-modal';
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">🎯 Desafíos Disponibles</h2>
+        <button id="close-challenges-modal-btn" class="btn-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="challenges-list" class="challenges-list">
+          <!-- Los desafíos se cargarán aquí -->
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Event listeners
+  modal.querySelector('#close-challenges-modal-btn').onclick = () => {
+    modal.style.display = 'none';
+  };
+
+  return modal;
+}
+
+// =============================
+// INICIALIZACIÓN DE FUNCIONES DE GAMIFICACIÓN
+// =============================
+
+/**
+ * Inicializa las funciones de gamificación (se llama durante la carga)
+ */
+function initializeGamificationFunctions() {
+  // Definir las funciones globales para que estén disponibles
+  window.showGamificationDashboard = function() {
+    // Crear modal si no existe
+    if (!document.getElementById('gamification-dashboard-modal')) {
+      document.body.appendChild(createGamificationDashboardModal());
+    }
+    updateGamificationDashboard();
+    document.getElementById('gamification-dashboard-modal').style.display = 'block';
+  };
+
+  window.showRewardsStore = function() {
+    // Crear modal si no existe
+    if (!document.getElementById('rewards-store-modal')) {
+      document.body.appendChild(createRewardsStoreModal());
+    }
+    updateRewardsStore();
+    document.getElementById('rewards-store-modal').style.display = 'block';
+  };
+
+  window.showChallengesBoard = function() {
+    // Crear modal si no existe
+    if (!document.getElementById('challenges-board-modal')) {
+      document.body.appendChild(createChallengesBoardModal());
+    }
+    updateChallengesBoard();
+    document.getElementById('challenges-board-modal').style.display = 'block';
+  };
+
+  // Configurar event listener para el botón de gamificación
+  const gamificationBtn = document.getElementById('gamification-btn');
+  if (gamificationBtn) {
+    gamificationBtn.addEventListener('click', showGamificationDashboard);
+  }
+}
+
+/**
+ * Inicializa los modales de gamificación cuando el DOM esté listo
+ */
+function initializeGamificationModals() {
+  // Esta función se puede llamar después de que el DOM esté listo
+  // por ahora no hace nada ya que los modales se crean bajo demanda
+}
+
+/**
+ * Actualiza el contenido del dashboard de gamificación
+ */
+function updateGamificationDashboard() {
+  const modal = document.getElementById('gamification-dashboard-modal');
+  if (!modal) return;
+
+  // Actualizar estadísticas rápidas
+  modal.querySelector('#quick-points').textContent = gamificationSystem.totalPoints;
+  modal.querySelector('#quick-level').textContent = gamificationSystem.level;
+  modal.querySelector('#quick-multiplier').textContent = `${gamificationSystem.getTotalMultiplier()}x`;
+
+  // Actualizar estadísticas principales
+  modal.querySelector('#dashboard-points').textContent = gamificationSystem.totalPoints;
+  modal.querySelector('#dashboard-level').textContent = gamificationSystem.level;
+  modal.querySelector('#dashboard-exp').textContent = `${gamificationSystem.experience}/${gamificationSystem.level * 100}`;
+  modal.querySelector('#dashboard-multiplier').textContent = `${gamificationSystem.getTotalMultiplier()}x`;
+
+  // Actualizar barra de progreso
+  const progressFill = modal.querySelector('#level-progress-fill');
+  const progressPercent = (gamificationSystem.experience / (gamificationSystem.level * 100)) * 100;
+  progressFill.style.width = `${Math.min(progressPercent, 100)}%`;
+
+  // Actualizar estadísticas detalladas
+  modal.querySelector('#tasks-completed').textContent = gamificationSystem.stats.tasksCompleted || 0;
+  modal.querySelector('#challenges-completed').textContent = gamificationSystem.stats.challengesCompleted || 0;
+  modal.querySelector('#rewards-purchased').textContent = gamificationSystem.stats.rewardsPurchased || 0;
+  modal.querySelector('#total-points-earned').textContent = gamificationSystem.stats.totalPointsEarned || 0;
+
+  // Actualizar badges recientes
+  updateRecentBadges();
+}
+
+/**
+ * Actualiza la visualización de badges
+ */
+function updateBadgesDisplay() {
+  const badgesContainer = document.getElementById('badges-container');
+  if (!badgesContainer) return;
+
+  badgesContainer.innerHTML = '';
+
+  gamificationSystem.badges.forEach(badge => {
+    const badgeElement = document.createElement('div');
+    badgeElement.className = `badge ${badge.unlocked ? 'unlocked' : 'locked'}`;
+    badgeElement.innerHTML = `
+      <div class="badge-icon">${badge.icon}</div>
+      <div class="badge-info">
+        <div class="badge-name">${badge.name}</div>
+        <div class="badge-description">${badge.description}</div>
+      </div>
+    `;
+    badgesContainer.appendChild(badgeElement);
+  });
+}
+
+/**
+ * Actualiza el contenido de la tienda de recompensas
+ */
+function updateRewardsStore() {
+  const modal = document.getElementById('rewards-store-modal');
+  if (!modal) return;
+
+  // Actualizar puntos disponibles
+  modal.querySelector('#store-points').textContent = gamificationSystem.totalPoints;
+
+  // Actualizar lista de recompensas
+  const rewardsList = modal.querySelector('#rewards-list');
+  rewardsList.innerHTML = '';
+
+  rewardsSystem.rewards.forEach(reward => {
+    const rewardElement = document.createElement('div');
+    rewardElement.className = `reward-item ${reward.purchased ? 'purchased' : ''}`;
+    rewardElement.innerHTML = `
+      <div class="reward-header">
+        <div class="reward-icon">${reward.icon}</div>
+        <div class="reward-info">
+          <div class="reward-name">${reward.name}</div>
+          <div class="reward-description">${reward.description}</div>
+        </div>
+        <div class="reward-price">${reward.price} pts</div>
+      </div>
+      ${!reward.purchased ? `
+        <button class="btn btn-primary buy-reward-btn" data-reward-id="${reward.id}">
+          Comprar
+        </button>
+      ` : `
+        <div class="purchased-badge">Comprado ✓</div>
+      `}
+    `;
+
+    // Event listener para comprar recompensa
+    if (!reward.purchased) {
+      rewardElement.querySelector('.buy-reward-btn').onclick = () => {
+        if (rewardsSystem.purchaseReward(reward.id)) {
+          updateRewardsStore();
+          updateGamificationDashboard();
+          showNotification('¡Recompensa comprada exitosamente!', 'success');
+        } else {
+          showNotification('No tienes suficientes puntos para esta recompensa.', 'error');
+        }
+      };
+    }
+
+    rewardsList.appendChild(rewardElement);
+  });
+}
+
+/**
+ * Actualiza el contenido del tablero de desafíos
+ */
+function updateChallengesBoard() {
+  const modal = document.getElementById('challenges-board-modal');
+  if (!modal) return;
+
+  const challengesList = modal.querySelector('#challenges-list');
+  challengesList.innerHTML = '';
+
+  gamificationSystem.challenges.forEach(challenge => {
+    const challengeElement = document.createElement('div');
+    challengeElement.className = `challenge-item ${challenge.completed ? 'completed' : challenge.accepted ? 'accepted' : 'available'}`;
+    challengeElement.innerHTML = `
+      <div class="challenge-header">
+        <div class="challenge-icon">${challenge.icon}</div>
+        <div class="challenge-info">
+          <div class="challenge-name">${challenge.name}</div>
+          <div class="challenge-description">${challenge.description}</div>
+          <div class="challenge-rewards">
+            <span class="reward-points">+${challenge.rewardPoints} pts</span>
+            ${challenge.rewardBadge ? `<span class="reward-badge">${challenge.rewardBadge.icon} ${challenge.rewardBadge.name}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="challenge-actions">
+        ${!challenge.accepted && !challenge.completed ? `
+          <button class="btn btn-primary accept-challenge-btn" data-challenge-id="${challenge.id}">
+            Aceptar Desafío
+          </button>
+        ` : challenge.accepted && !challenge.completed ? `
+          <div class="challenge-progress">
+            <div class="progress-text">Progreso: ${challenge.progress}/${challenge.target}</div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: ${(challenge.progress / challenge.target) * 100}%"></div>
+            </div>
+          </div>
+        ` : `
+          <div class="completed-badge">Completado ✓</div>
+        `}
+      </div>
+    `;
+
+    // Event listener para aceptar desafío
+    if (!challenge.accepted && !challenge.completed) {
+      challengeElement.querySelector('.accept-challenge-btn').onclick = () => {
+        gamificationSystem.acceptChallenge(challenge.id);
+        updateChallengesBoard();
+        showNotification(`¡Desafío "${challenge.name}" aceptado!`, 'info');
+      };
+    }
+
+    challengesList.appendChild(challengeElement);
+  });
+}
+
+// ============================================
 // ESTADO DE LA APLICACIÓN
 // ============================================
 
@@ -694,6 +1604,9 @@ const statsModal = document.getElementById('stats-modal');
 const closeStatsModalBtn = document.getElementById('close-stats-modal-btn');
 const statsLoadingView = document.getElementById('stats-loading-view');
 const statsContentView = document.getElementById('stats-content-view');
+
+// Referencia al botón de gamificación
+const gamificationBtn = document.getElementById('gamification-btn');
 
 // ... al final de la sección de elementos del DOM ...
 const coupleAboutView = document.getElementById('couple-about-view');
@@ -1882,6 +2795,11 @@ async function handleToggleTask(taskId, currentCompleted) {
     await toggleTask(currentPlanId, taskId, !currentCompleted);
     await loadPlanDetail(currentPlanId);
 
+    // Integrar gamificación: otorgar puntos cuando se completa una tarea
+    if (!currentCompleted) { // Si se está completando la tarea
+      integrateTaskCompletion();
+    }
+
     // Si ahora todas las tareas están completadas, mostrar celebración
     const allItems = tasksContainer.querySelectorAll('.task-item');
     const completedItems = tasksContainer.querySelectorAll('.task-item.completed');
@@ -2267,6 +3185,7 @@ editPlanModal.addEventListener('click', (e) => {
 // ... al final de la sección de listeners ...
 statsBtn.addEventListener('click', openStatsModal);
 closeStatsModalBtn.addEventListener('click', closeStatsModal);
+
 statsModal.addEventListener('click', (e) => {
   if (e.target === statsModal) {
     closeStatsModal();
@@ -3204,10 +4123,95 @@ function setupFavorsPhoneListeners() {
   console.log('=== Favors phone listeners setup COMPLETE ===');
 }
 
+// =============================
+// FUNCIONES DE UI DE GAMIFICACIÓN
+// =============================
+
+/**
+ * Actualiza la vista de gamificación en el modal de favors
+ */
+/**
+ * Actualiza la visualización de badges recientes
+ */
+function updateRecentBadges() {
+  const container = document.getElementById('recent-badges-container');
+  if (!container) return;
+
+  // Obtener badges desbloqueados, ordenados por fecha de desbloqueo (más recientes primero)
+  const unlockedBadges = gamificationSystem.badges
+    .filter(badge => badge.unlocked)
+    .sort((a, b) => (b.unlockedAt || 0) - (a.unlockedAt || 0))
+    .slice(0, 6); // Solo mostrar los 6 más recientes
+
+  container.innerHTML = '';
+
+  if (unlockedBadges.length === 0) {
+    container.innerHTML = '<div class="gamification-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><h3>¡Aún no tienes logros!</h3><p>Completa tareas y desafíos para ganar tus primeras insignias.</p></div>';
+    return;
+  }
+
+  unlockedBadges.forEach(badge => {
+    const badgeElement = document.createElement('div');
+    badgeElement.className = 'recent-badge-item';
+    badgeElement.innerHTML = `
+      <div class="badge-icon">${badge.icon}</div>
+    `;
+    badgeElement.title = `${badge.name}: ${badge.description}`;
+    container.appendChild(badgeElement);
+  });
+}
+
+/**
+ * Integra la finalización de tareas con el sistema de gamificación
+ */
+function integrateTaskCompletion(taskPoints = 10) {
+  const pointsEarned = gamificationSystem.earnPoints(taskPoints, 'task_completion');
+
+  // Mostrar notificación de puntos ganados
+  showNotification({
+    title: '¡Tarea completada!',
+    message: `Ganaste ${pointsEarned} puntos`,
+    icon: '⭐',
+    type: 'success'
+  });
+
+  // Actualizar UI si está abierta
+  updateGamificationUI();
+}
+
+/**
+ * Actualiza toda la UI de gamificación
+ */
+function updateGamificationUI() {
+  // Actualizar puntos en el header si existe
+  const pointsDisplay = document.getElementById('gamification-points');
+  if (pointsDisplay) {
+    pointsDisplay.textContent = gamificationSystem.points;
+  }
+
+  // Actualizar dashboard si está abierto
+  const dashboard = document.getElementById('gamification-dashboard-modal');
+  if (dashboard && !dashboard.classList.contains('hidden')) {
+    updateGamificationDashboard();
+  }
+
+  // Actualizar tienda si está abierta
+  const store = document.getElementById('rewards-store-modal');
+  if (store && !store.classList.contains('hidden')) {
+    updateRewardsStore();
+  }
+
+  // Actualizar tablero de desafíos si está abierto
+  const challenges = document.getElementById('challenges-board-modal');
+  if (challenges && !challenges.classList.contains('hidden')) {
+    updateChallengesBoard();
+  }
+}
+
 // Cambiar entre tabs
 function switchFavorsTab(tab) {
   console.log('=== switchFavorsTab called with:', tab);
-  
+
   const tabs = ['active', 'completed', 'random'];
   const tabButtons = {
     active: document.getElementById('tab-active-large'),
@@ -8613,5 +9617,11 @@ testGameModal.addEventListener('click', (e) => {
 // INICIALIZACIÓN DE COMPONENTES
 // ============================================
 
-// Inicializar cápsulas del tiempo
-initTimeCapsules();
+// Esperar a que el DOM esté listo antes de inicializar
+document.addEventListener('DOMContentLoaded', function() {
+  // Inicializar cápsulas del tiempo
+  initTimeCapsules();
+
+  // Inicializar funciones de gamificación
+  initializeGamificationFunctions();
+});

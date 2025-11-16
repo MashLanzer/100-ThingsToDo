@@ -1,0 +1,9 @@
+{
+  "name": "100-thingstodo",
+  "version": "1.0.0",
+  "description": "100 Things To Do App",
+  "main": "app.js",
+  "scripts": {
+    "serve": "npx http-server . -p 8000 -c-1"
+  }
+}
