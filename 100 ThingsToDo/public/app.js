@@ -149,6 +149,8 @@ class GamificationSystem {
     this.totalPoints = 0;
     this.level = 1;
     this.experience = 0;
+    this.currentStreak = 0;
+    this.lastActivityDate = null;
     this.multipliers = {
       streak: 1.0,
       timeBonus: 1.0,
@@ -163,6 +165,13 @@ class GamificationSystem {
       totalPointsEarned: 0
     };
     this.loadProgress();
+  }
+
+  /**
+   * Getter para mantener compatibilidad con código existente
+   */
+  get points() {
+    return this.totalPoints;
   }
 
   /**
@@ -217,44 +226,13 @@ class GamificationSystem {
    * Inicializa los desafíos disponibles
    */
   initializeChallenges() {
-    return [
-      {
-        id: 'complete_5_tasks',
-        name: 'Productividad Inicial',
-        description: 'Completa 5 tareas en una semana',
-        icon: '📝',
-        target: 5,
-        progress: 0,
-        rewardPoints: 50,
-        rewardBadge: null,
-        accepted: false,
-        completed: false
-      },
-      {
-        id: 'reach_level_3',
-        name: 'Crecimiento Personal',
-        description: 'Alcanza el nivel 3',
-        icon: '🌟',
-        target: 1,
-        progress: 0,
-        rewardPoints: 100,
-        rewardBadge: { id: 'level_up', name: 'Subiendo de Nivel', icon: '⬆️' },
-        accepted: false,
-        completed: false
-      },
-      {
-        id: 'streak_challenge',
-        name: 'Racha Perfecta',
-        description: 'Completa tareas 7 días seguidos',
-        icon: '🔥',
-        target: 7,
-        progress: 0,
-        rewardPoints: 150,
-        rewardBadge: null,
-        accepted: false,
-        completed: false
-      }
-    ];
+    // Usar los desafíos del archivo challenges.js
+    return CHALLENGES_DATA.map(challenge => ({
+      ...challenge,
+      progress: 0, // Reset progress on initialization
+      accepted: false,
+      completed: false
+    }));
   }
 
   /**
@@ -297,7 +275,34 @@ class GamificationSystem {
       this.experience = this.experience - expNeeded;
       // Celebración de subida de nivel
       this.showLevelUpCelebration();
+      
+      // Actualizar progreso de desafíos relacionados con niveles
+      this.updateChallengeProgress('level_up', { level: this.level });
     }
+  }
+
+  /**
+   * Actualiza la racha diaria del usuario
+   */
+  updateStreak() {
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
+    
+    if (this.lastActivityDate === yesterday) {
+      // Día consecutivo - incrementar racha
+      this.currentStreak += 1;
+    } else if (this.lastActivityDate !== today) {
+      // Primer día o racha rota - reiniciar a 1
+      this.currentStreak = 1;
+    }
+    
+    // Actualizar última fecha de actividad
+    this.lastActivityDate = today;
+    
+    // Actualizar progreso de desafíos relacionados con rachas
+    this.updateChallengeProgress('streak_update', { streak: this.currentStreak });
+    
+    this.saveProgress();
   }
 
   /**
@@ -341,23 +346,188 @@ class GamificationSystem {
   /**
    * Actualiza el progreso de desafíos automáticos
    */
-  updateChallengeProgress(reason) {
-    if (reason === 'task_completion') {
-      // Desafío de completar 5 tareas
-      const challenge = this.challenges.find(c => c.id === 'complete_5_tasks');
-      if (challenge && !challenge.completed) {
-        challenge.progress = Math.min(challenge.progress + 1, challenge.target);
-        if (challenge.progress >= challenge.target) {
-          this.completeChallenge('complete_5_tasks');
+  updateChallengeProgress(reason, extraData = {}) {
+    // Actualizar progreso basado en la acción realizada
+    this.challenges.forEach(challenge => {
+      if (challenge.completed) return; // Saltar desafíos ya completados
+
+      // Desafíos automáticos que se activan con la primera acción relevante
+      const autoActivateChallenges = [
+        'complete_5_tasks', 'complete_10_tasks', 'complete_25_tasks', // Productividad básica
+        'reach_level_3', 'reach_level_5', // Crecimiento básico
+        'streak_challenge', 'streak_14_days', // Consistencia básica
+        'earn_500_points' // Puntos básicos
+      ];
+
+      // Activar automáticamente desafíos básicos si no están aceptados
+      if (!challenge.accepted && autoActivateChallenges.includes(challenge.id)) {
+        // Verificar si la acción es relevante para este desafío o si ya cumple la condición
+        let shouldActivate = false;
+        switch (challenge.id) {
+          case 'complete_5_tasks':
+          case 'complete_10_tasks':
+          case 'complete_25_tasks':
+            shouldActivate = (reason === 'task_completion') || (this.stats.tasksCompleted > 0);
+            break;
+          case 'reach_level_3':
+            shouldActivate = (reason === 'level_up') || (this.level >= 3);
+            break;
+          case 'reach_level_5':
+            shouldActivate = (reason === 'level_up') || (this.level >= 5);
+            break;
+          case 'streak_challenge':
+          case 'streak_14_days':
+            shouldActivate = (reason === 'streak_update') || (this.currentStreak > 0);
+            break;
+          case 'earn_500_points':
+            shouldActivate = (reason === 'points_earned') || (this.totalPoints >= 100); // Activar cuando tenga algunos puntos
+            break;
+        }
+
+        if (shouldActivate) {
+          challenge.accepted = true;
+          console.log(`🔓 Desafío ${challenge.id} activado automáticamente`);
+          
+          // Para desafíos de nivel, verificar si ya se cumplió la condición
+          if (challenge.id === 'reach_level_3' && this.level >= 3) {
+            challenge.progress = Math.min(challenge.progress + 1, challenge.target);
+            if (challenge.progress >= challenge.target) {
+              this.completeChallenge(challenge.id);
+            }
+          } else if (challenge.id === 'reach_level_5' && this.level >= 5) {
+            challenge.progress = Math.min(challenge.progress + 1, challenge.target);
+            if (challenge.progress >= challenge.target) {
+              this.completeChallenge(challenge.id);
+            }
+          }
         }
       }
-    } else if (reason === 'level_up') {
-      // Desafío de alcanzar nivel 3
-      const challenge = this.challenges.find(c => c.id === 'reach_level_3');
-      if (challenge && !challenge.completed && this.level >= 3) {
-        this.completeChallenge('reach_level_3');
+
+      if (!challenge.accepted) return; // Saltar desafíos no aceptados
+
+      let shouldIncrement = false;
+
+      switch (challenge.id) {
+        // === DESAFÍOS DE PRODUCTIVIDAD ===
+        case 'complete_5_tasks':
+        case 'complete_10_tasks':
+        case 'complete_25_tasks':
+          if (reason === 'task_completion') {
+            shouldIncrement = true;
+          }
+          break;
+
+        // === DESAFÍOS DE CRECIMIENTO ===
+        case 'reach_level_3':
+          if (reason === 'level_up' && this.level >= 3) {
+            shouldIncrement = true;
+          }
+          break;
+        case 'reach_level_5':
+          if (reason === 'level_up' && this.level >= 5) {
+            shouldIncrement = true;
+          }
+          break;
+        case 'earn_500_points':
+          if (reason === 'points_earned' && this.totalPoints >= 500) {
+            shouldIncrement = true;
+          }
+          break;
+
+        // === DESAFÍOS DE CONSISTENCIA ===
+        case 'streak_challenge':
+          if (reason === 'streak_update' && extraData.streak >= 7) {
+            shouldIncrement = true;
+          }
+          break;
+        case 'streak_14_days':
+          if (reason === 'streak_update' && extraData.streak >= 14) {
+            shouldIncrement = true;
+          }
+          break;
+        case 'weekly_warrior':
+          if (reason === 'weekly_completion' && extraData.weeks >= 4) {
+            shouldIncrement = true;
+          }
+          break;
+
+        // === DESAFÍOS DE PAREJA ===
+        case 'couple_tasks_5':
+          if (reason === 'couple_task_completion') {
+            shouldIncrement = true;
+          }
+          break;
+        case 'romantic_date':
+          if (reason === 'romantic_date_completed') {
+            shouldIncrement = true;
+          }
+          break;
+        case 'memory_lane':
+          if (reason === 'memory_shared') {
+            shouldIncrement = true;
+          }
+          break;
+        case 'support_system':
+          if (reason === 'support_given') {
+            shouldIncrement = true;
+          }
+          break;
+
+        // === DESAFÍOS DE ORGANIZACIÓN ===
+        case 'organize_week':
+          if (reason === 'week_organized') {
+            shouldIncrement = true;
+          }
+          break;
+        case 'category_master':
+          if (reason === 'category_completed' && extraData.categories >= 5) {
+            shouldIncrement = true;
+          }
+          break;
+        case 'priority_expert':
+          if (reason === 'priority_task_completed') {
+            shouldIncrement = true;
+          }
+          break;
+
+        // === DESAFÍOS DE MOTIVACIÓN ===
+        case 'motivation_booster':
+          if (reason === 'motivation_given') {
+            shouldIncrement = true;
+          }
+          break;
+        case 'celebration_master':
+          if (reason === 'celebration_done') {
+            shouldIncrement = true;
+          }
+          break;
+        case 'goal_achiever':
+          if (reason === 'major_goal_achieved') {
+            shouldIncrement = true;
+          }
+          break;
+
+        // === DESAFÍOS DE CREATIVIDAD ===
+        case 'creative_tasks':
+          if (reason === 'creative_task_completed') {
+            shouldIncrement = true;
+          }
+          break;
+        case 'new_experience':
+          if (reason === 'new_experience_tried') {
+            shouldIncrement = true;
+          }
+          break;
       }
-    }
+
+      // Actualizar progreso si corresponde
+      if (shouldIncrement) {
+        challenge.progress = Math.min(challenge.progress + 1, challenge.target);
+        if (challenge.progress >= challenge.target) {
+          this.completeChallenge(challenge.id);
+        }
+      }
+    });
   }
 
   /**
@@ -368,6 +538,8 @@ class GamificationSystem {
       totalPoints: this.totalPoints,
       level: this.level,
       experience: this.experience,
+      currentStreak: this.currentStreak,
+      lastActivityDate: this.lastActivityDate,
       multipliers: this.multipliers,
       badges: this.badges,
       challenges: this.challenges,
@@ -387,6 +559,8 @@ class GamificationSystem {
         this.totalPoints = progress.totalPoints || 0;
         this.level = progress.level || 1;
         this.experience = progress.experience || 0;
+        this.currentStreak = progress.currentStreak || 0;
+        this.lastActivityDate = progress.lastActivityDate || null;
         this.multipliers = progress.multipliers || this.multipliers;
         this.badges = progress.badges || this.initializeBadges();
         this.challenges = progress.challenges || this.initializeChallenges();
@@ -4150,6 +4324,9 @@ function updateRecentBadges() {
  */
 function integrateTaskCompletion(taskPoints = 10) {
   const pointsEarned = gamificationSystem.earnPoints(taskPoints, 'task_completion');
+  
+  // Actualizar racha diaria
+  gamificationSystem.updateStreak();
 
   // Mostrar notificación de puntos ganados
   showNotification({
