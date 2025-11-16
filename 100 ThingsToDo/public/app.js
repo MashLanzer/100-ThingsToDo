@@ -8089,8 +8089,10 @@ function loadCurrentQuestion() {
   charCount.textContent = '0';
   submitAnswerBtn.disabled = true;
 
-  // Iniciar timer
-  startQuestionTimer();
+  // Iniciar timer solo en modo juego, no en modo test
+  if (!testGameState.mode || testGameState.mode === 'game') {
+    startQuestionTimer();
+  }
 }
 
 // Función para el timer de preguntas
@@ -8459,6 +8461,7 @@ async function createNewTest() {
       };
 
       showTestScreen('questions');
+      loadCurrentQuestion();
     } else {
       alert('Error al crear el test: ' + result.error);
     }
