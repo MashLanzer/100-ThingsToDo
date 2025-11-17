@@ -556,6 +556,12 @@ function createGamificationDashboardModal() {
             <div class="stat-card-subtitle">Acumulados</div>
           </div>
           <div class="stat-card">
+            <div class="stat-card-icon">✅</div>
+            <div class="stat-card-value" id="dashboard-tasks">0</div>
+            <div class="stat-card-title">Tareas Completadas</div>
+            <div class="stat-card-subtitle">Total</div>
+          </div>
+          <div class="stat-card">
             <div class="stat-card-icon">📊</div>
             <div class="stat-card-value" id="dashboard-level">1</div>
             <div class="stat-card-title">Nivel</div>
@@ -577,27 +583,6 @@ function createGamificationDashboardModal() {
           </div>
           <div class="progress-bar">
             <div id="level-progress-fill" class="progress-fill"></div>
-          </div>
-        </div>
-
-        <!-- Estadísticas detalladas -->
-        <div class="stats-section">
-          <h3>📊 Tus Estadísticas</h3>
-          <div class="stats-detailed">
-            <div class="stat-item stat-item-enhanced">
-              <div class="stat-item-header">
-                <span class="stat-icon">✅</span>
-                <span class="stat-label">Tareas completadas</span>
-              </div>
-              <div class="stat-value" id="tasks-completed">0</div>
-            </div>
-            <div class="stat-item stat-item-enhanced">
-              <div class="stat-item-header">
-                <span class="stat-icon">⭐</span>
-                <span class="stat-label">Puntos totales ganados</span>
-              </div>
-              <div class="stat-value" id="total-points-earned">0</div>
-            </div>
           </div>
         </div>
 
@@ -769,6 +754,7 @@ function updateGamificationDashboard() {
 
   // Actualizar estadísticas principales
   modal.querySelector('#dashboard-points').textContent = gamificationSystem.totalPoints;
+  modal.querySelector('#dashboard-tasks').textContent = gamificationSystem.stats.tasksCompleted;
   modal.querySelector('#dashboard-level').textContent = gamificationSystem.level;
   modal.querySelector('#dashboard-exp').textContent = `${gamificationSystem.experience}/${gamificationSystem.level * 100} XP`;
   modal.querySelector('#dashboard-level-label').textContent = `Nivel ${gamificationSystem.level}`;
@@ -778,10 +764,6 @@ function updateGamificationDashboard() {
   const progressFill = modal.querySelector('#level-progress-fill');
   const progressPercent = (gamificationSystem.experience / (gamificationSystem.level * 100)) * 100;
   progressFill.style.width = `${Math.min(progressPercent, 100)}%`;
-
-  // Actualizar estadísticas detalladas
-  modal.querySelector('#tasks-completed').textContent = gamificationSystem.stats.tasksCompleted || 0;
-  modal.querySelector('#total-points-earned').textContent = gamificationSystem.stats.totalPointsEarned || 0;
 }
 
 /**
@@ -2231,6 +2213,7 @@ async function createTask(planId, title, icon) {
       completed: false,
       order,
       createdAt: Timestamp.now(),
+      pointsAwarded: false, // Indica si ya se otorgaron puntos por completar esta tarea
     });
 
     return newDoc.id;
@@ -2665,12 +2648,22 @@ async function handleCreateTask() {
 
 async function handleToggleTask(taskId, currentCompleted) {
   try {
+    // Obtener información de la tarea antes de actualizarla
+    const taskRef = doc(db, 'couples', currentCoupleId, 'plans', currentPlanId, 'tasks', taskId);
+    const taskSnap = await getDoc(taskRef);
+    const taskData = taskSnap.data();
+
     await toggleTask(currentPlanId, taskId, !currentCompleted);
     await loadPlanDetail(currentPlanId);
 
-    // Integrar gamificación: otorgar puntos cuando se completa una tarea
-    if (!currentCompleted) { // Si se está completando la tarea
+    // Integrar gamificación: otorgar puntos SOLO la primera vez que se completa una tarea
+    if (!currentCompleted && !(taskData.pointsAwarded === true)) { // Si se está completando la tarea Y no se dieron puntos antes (o campo no existe)
       await integrateTaskCompletion();
+
+      // Marcar que ya se otorgaron puntos por esta tarea
+      await updateDoc(taskRef, {
+        pointsAwarded: true
+      });
     }
 
     // Si ahora todas las tareas están completadas, mostrar celebración
