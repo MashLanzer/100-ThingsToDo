@@ -145,8 +145,38 @@ const KAWAII_ICONS = {
 // ============================================
 
 class GamificationSystem {
-  constructor() {
+  constructor(userId = null) {
     console.log('🚀 Inicializando GamificationSystem...');
+    this.userId = userId;
+    this.totalPoints = 0; // Inicializar puntos
+    this.level = 1;
+    this.experience = 0;
+    this.currentStreak = 0;
+    this.lastActivityDate = null;
+    this.multipliers = {
+      streak: 1.0,
+      timeBonus: 1.0,
+      specialEvent: 1.0
+    };
+    
+    this.stats = {
+      tasksCompleted: 0,
+      rewardsPurchased: 0,
+      totalPointsEarned: 0
+    };
+    this.loadProgress();
+    console.log('🎯 GamificationSystem inicializado:', {
+      points: this.points,
+      level: this.level,
+      experience: this.experience
+    });
+  }
+
+  /**
+   * Resetea el estado del sistema de gamificación para un nuevo usuario
+   */
+  resetForNewUser() {
+    console.log('🔄 Reseteando gamification system para nuevo usuario...');
     this.totalPoints = 0;
     this.level = 1;
     this.experience = 0;
@@ -157,20 +187,12 @@ class GamificationSystem {
       timeBonus: 1.0,
       specialEvent: 1.0
     };
-    this.badges = this.initializeBadges();
-    this.challenges = this.initializeChallenges();
     this.stats = {
       tasksCompleted: 0,
-      challengesCompleted: 0,
       rewardsPurchased: 0,
       totalPointsEarned: 0
     };
-    this.loadProgress();
-    console.log('🎯 GamificationSystem inicializado:', {
-      points: this.points,
-      challenges: this.challenges.length,
-      firstChallenge: this.challenges[0]
-    });
+    console.log('✅ Gamification system reseteado');
   }
 
   /**
@@ -180,71 +202,13 @@ class GamificationSystem {
     return this.totalPoints;
   }
 
-  /**
-   * Inicializa los badges disponibles
-   */
-  initializeBadges() {
-    return [
-      {
-        id: 'first_task',
-        name: 'Primer Paso',
-        description: 'Completa tu primera tarea',
-        icon: '🎯',
-        requirement: { type: 'tasks_completed', value: 1 },
-        unlocked: false
-      },
-      {
-        id: 'task_master',
-        name: 'Maestro de Tareas',
-        description: 'Completa 10 tareas',
-        icon: '⚡',
-        requirement: { type: 'tasks_completed', value: 10 },
-        unlocked: false
-      },
-      {
-        id: 'level_up',
-        name: 'Subiendo de Nivel',
-        description: 'Alcanza el nivel 5',
-        icon: '⬆️',
-        requirement: { type: 'level', value: 5 },
-        unlocked: false
-      },
-      {
-        id: 'challenge_accepted',
-        name: 'Desafío Aceptado',
-        description: 'Completa tu primer desafío',
-        icon: '🏆',
-        requirement: { type: 'challenges_completed', value: 1 },
-        unlocked: false
-      },
-      {
-        id: 'point_collector',
-        name: 'Coleccionista de Puntos',
-        description: 'Acumula 500 puntos',
-        icon: '💰',
-        requirement: { type: 'total_points', value: 500 },
-        unlocked: false
-      }
-    ];
-  }
-
-  /**
-   * Inicializa los desafíos disponibles
-   */
-  initializeChallenges() {
-    // Usar los desafíos del archivo challenges.js
-    return CHALLENGES_DATA.map(challenge => ({
-      ...challenge,
-      progress: 0, // Reset progress on initialization
-      accepted: false,
-      completed: false
-    }));
-  }
+ 
+ 
 
   /**
    * Otorga puntos al usuario
    */
-  earnPoints(basePoints, reason = 'task_completion') {
+  async earnPoints(basePoints, reason = 'task_completion') {
     console.log(`💰 earnPoints llamada: ${basePoints} puntos por ${reason}`);
     const multiplier = this.getTotalMultiplier();
     const pointsEarned = Math.round(basePoints * multiplier);
@@ -260,27 +224,18 @@ class GamificationSystem {
     
     // Verificar subida de nivel
     try {
-      this.checkLevelUp();
+      await this.checkLevelUp();
     } catch (error) {
       console.error('❌ Error en checkLevelUp:', error);
     }
     
-    // Verificar desbloqueo de badges
+    // Guardar progreso
     try {
-      this.checkBadgeUnlock();
+      await this.saveProgress();
     } catch (error) {
-      console.error('❌ Error en checkBadgeUnlock:', error);
+      console.error('❌ Error guardando progreso:', error);
+      // No fallback, solo loggear el error
     }
-    
-    // Actualizar progreso de desafíos
-    console.log('🔄 Llamando updateChallengeProgress desde earnPoints');
-    try {
-      this.updateChallengeProgress(reason);
-    } catch (error) {
-      console.error('❌ Error en updateChallengeProgress:', error);
-    }
-    
-    this.saveProgress();
     
     return pointsEarned;
   }
@@ -288,7 +243,7 @@ class GamificationSystem {
   /**
    * Verifica si el usuario sube de nivel
    */
-  checkLevelUp() {
+  async checkLevelUp() {
     console.log('🔍 checkLevelUp ejecutándose, level:', this.level, 'experience:', this.experience);
     const expNeeded = this.level * 100;
     if (this.experience >= expNeeded) {
@@ -300,16 +255,13 @@ class GamificationSystem {
       } catch (error) {
         console.error('❌ Error en showLevelUpCelebration:', error);
       }
-      
-      // Actualizar progreso de desafíos relacionados con niveles
-      this.updateChallengeProgress('level_up', { level: this.level });
     }
   }
 
   /**
    * Actualiza la racha diaria del usuario
    */
-  updateStreak() {
+  async updateStreak() {
     const today = new Date().toDateString();
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
     
@@ -324,10 +276,7 @@ class GamificationSystem {
     // Actualizar última fecha de actividad
     this.lastActivityDate = today;
     
-    // Actualizar progreso de desafíos relacionados con rachas
-    this.updateChallengeProgress('streak_update', { streak: this.currentStreak });
-    
-    this.saveProgress();
+    await this.saveProgress();
   }
 
   /**
@@ -338,358 +287,80 @@ class GamificationSystem {
   }
 
   /**
-   * Verifica desbloqueo de badges
+   * Guarda el progreso en Firebase
    */
-  checkBadgeUnlock() {
-    console.log('🔍 checkBadgeUnlock ejecutándose, badges:', this.badges.length);
+  async saveProgress() {
+    if (!this.userId || !currentUser || currentUser.uid !== this.userId) {
+      console.warn('⚠️ Usuario no autenticado, no se puede guardar progreso');
+      return;
+    }
+
     try {
-      this.badges.forEach(badge => {
-        console.log('🔍 Verificando badge:', badge.id, 'unlocked:', badge.unlocked);
-        if (!badge.unlocked && this.checkBadgeRequirement(badge)) {
-          console.log('🏆 Badge desbloqueado:', badge.id);
-          badge.unlocked = true;
-          badge.unlockedAt = Date.now();
-          try {
-            this.showBadgeUnlockCelebration(badge);
-          } catch (error) {
-            console.error('❌ Error en showBadgeUnlockCelebration:', error);
-          }
-        }
-      });
-      console.log('✅ checkBadgeUnlock completado');
+      const progress = {
+        totalPoints: this.totalPoints,
+        level: this.level,
+        experience: this.experience,
+        currentStreak: this.currentStreak,
+        lastActivityDate: this.lastActivityDate,
+        multipliers: this.multipliers,
+        stats: this.stats,
+        lastUpdated: new Date()
+      };
+
+      const userGamificationRef = doc(db, 'users', this.userId, 'gamification', 'data');
+      await setDoc(userGamificationRef, progress);
+
+      console.log('💾 Progreso guardado en Firebase');
     } catch (error) {
-      console.error('❌ Error en checkBadgeUnlock:', error);
+      console.error('❌ Error saving gamification progress to Firebase:', error);
+      throw error; // Re-throw para que se maneje en el caller
     }
   }
 
   /**
-   * Verifica si se cumple el requisito de un badge
+   * Carga el progreso desde Firebase
    */
-  checkBadgeRequirement(badge) {
-    console.log('🔍 checkBadgeRequirement para badge:', badge.id, 'requirement:', badge.requirement);
-    switch (badge.requirement.type) {
-      case 'tasks_completed':
-        return this.stats.tasksCompleted >= badge.requirement.value;
-      case 'level':
-        return this.level >= badge.requirement.value;
-      case 'challenges_completed':
-        return this.stats.challengesCompleted >= badge.requirement.value;
-      case 'total_points':
-        return this.totalPoints >= badge.requirement.value;
-      default:
-        return false;
+  async loadProgress() {
+    if (!this.userId || !currentUser || currentUser.uid !== this.userId) {
+      console.warn('⚠️ Usuario no autenticado, no se puede cargar progreso');
+      return;
     }
-  }
 
-  /**
-   * Actualiza el progreso de desafíos automáticos
-   */
-  updateChallengeProgress(reason, extraData = {}) {
     try {
-      console.log(`🔄 updateChallengeProgress llamado con reason: ${reason}, extraData:`, extraData);
+      const userGamificationRef = doc(db, 'users', this.userId, 'gamification', 'data');
+      const gamificationDoc = await getDoc(userGamificationRef);
 
-      // Actualizar progreso basado en la acción realizada
-      this.challenges.forEach(challenge => {
-      if (challenge.completed) return; // Saltar desafíos ya completados
-
-      // Desafíos automáticos que se activan con la primera acción relevante
-      const autoActivateChallenges = [
-        'complete_5_tasks', 'complete_10_tasks', 'complete_25_tasks', // Productividad básica
-        'reach_level_3', 'reach_level_5', // Crecimiento básico
-        'streak_challenge', 'streak_14_days', // Consistencia básica
-        'earn_500_points' // Puntos básicos
-      ];
-
-      // Activar automáticamente desafíos básicos si no están aceptados
-      if (!challenge.accepted && autoActivateChallenges.includes(challenge.id)) {
-        // Verificar si la acción es relevante para este desafío o si ya cumple la condición
-        let shouldActivate = false;
-        switch (challenge.id) {
-          case 'complete_5_tasks':
-          case 'complete_10_tasks':
-          case 'complete_25_tasks':
-            shouldActivate = (reason === 'task_completion') || (this.stats.tasksCompleted > 0);
-            break;
-          case 'reach_level_3':
-            shouldActivate = (reason === 'level_up') || (this.level >= 3);
-            break;
-          case 'reach_level_5':
-            shouldActivate = (reason === 'level_up') || (this.level >= 5);
-            break;
-          case 'streak_challenge':
-          case 'streak_14_days':
-            shouldActivate = (reason === 'streak_update') || (this.currentStreak > 0);
-            break;
-          case 'earn_500_points':
-            shouldActivate = (reason === 'points_earned') || (this.totalPoints >= 100); // Activar cuando tenga algunos puntos
-            break;
-        }
-
-        if (shouldActivate) {
-          challenge.accepted = true;
-          console.log(`🔓 Desafío ${challenge.id} activado automáticamente`);
-          
-          // Para desafíos de nivel, verificar si ya se cumplió la condición
-          if (challenge.id === 'reach_level_3' && this.level >= 3) {
-            challenge.progress = Math.min(challenge.progress + 1, challenge.target);
-            if (challenge.progress >= challenge.target) {
-              this.completeChallenge(challenge.id);
-            }
-          } else if (challenge.id === 'reach_level_5' && this.level >= 5) {
-            challenge.progress = Math.min(challenge.progress + 1, challenge.target);
-            if (challenge.progress >= challenge.target) {
-              this.completeChallenge(challenge.id);
-            }
-          }
-        }
-      }
-
-      if (!challenge.accepted) return; // Saltar desafíos no aceptados
-
-      let shouldIncrement = false;
-
-      switch (challenge.id) {
-        // === DESAFÍOS DE PRODUCTIVIDAD ===
-        case 'complete_5_tasks':
-        case 'complete_10_tasks':
-        case 'complete_25_tasks':
-          if (reason === 'task_completion') {
-            shouldIncrement = true;
-          }
-          break;
-
-        // === DESAFÍOS DE CRECIMIENTO ===
-        case 'reach_level_3':
-          if (reason === 'level_up' && this.level >= 3) {
-            shouldIncrement = true;
-          }
-          break;
-        case 'reach_level_5':
-          if (reason === 'level_up' && this.level >= 5) {
-            shouldIncrement = true;
-          }
-          break;
-        case 'earn_500_points':
-          if (reason === 'points_earned' && this.totalPoints >= 500) {
-            shouldIncrement = true;
-          }
-          break;
-
-        // === DESAFÍOS DE CONSISTENCIA ===
-        case 'streak_challenge':
-          if (reason === 'streak_update' && extraData.streak >= 7) {
-            shouldIncrement = true;
-          }
-          break;
-        case 'streak_14_days':
-          if (reason === 'streak_update' && extraData.streak >= 14) {
-            shouldIncrement = true;
-          }
-          break;
-        case 'weekly_warrior':
-          if (reason === 'weekly_completion' && extraData.weeks >= 4) {
-            shouldIncrement = true;
-          }
-          break;
-
-        // === DESAFÍOS DE PAREJA ===
-        case 'couple_tasks_5':
-          if (reason === 'couple_task_completion') {
-            shouldIncrement = true;
-          }
-          break;
-        case 'romantic_date':
-          if (reason === 'romantic_date_completed') {
-            shouldIncrement = true;
-          }
-          break;
-        case 'memory_lane':
-          if (reason === 'memory_shared') {
-            shouldIncrement = true;
-          }
-          break;
-        case 'support_system':
-          if (reason === 'support_given') {
-            shouldIncrement = true;
-          }
-          break;
-
-        // === DESAFÍOS DE ORGANIZACIÓN ===
-        case 'organize_week':
-          if (reason === 'week_organized') {
-            shouldIncrement = true;
-          }
-          break;
-        case 'category_master':
-          if (reason === 'category_completed' && extraData.categories >= 5) {
-            shouldIncrement = true;
-          }
-          break;
-        case 'priority_expert':
-          if (reason === 'priority_task_completed') {
-            shouldIncrement = true;
-          }
-          break;
-
-        // === DESAFÍOS DE MOTIVACIÓN ===
-        case 'motivation_booster':
-          if (reason === 'motivation_given') {
-            shouldIncrement = true;
-          }
-          break;
-        case 'celebration_master':
-          if (reason === 'celebration_done') {
-            shouldIncrement = true;
-          }
-          break;
-        case 'goal_achiever':
-          if (reason === 'major_goal_achieved') {
-            shouldIncrement = true;
-          }
-          break;
-
-        // === DESAFÍOS DE CREATIVIDAD ===
-        case 'creative_tasks':
-          if (reason === 'creative_task_completed') {
-            shouldIncrement = true;
-          }
-          break;
-        case 'new_experience':
-          if (reason === 'new_experience_tried') {
-            shouldIncrement = true;
-          }
-          break;
-      }
-
-      // Actualizar progreso si corresponde
-      if (shouldIncrement) {
-        const oldProgress = challenge.progress;
-        challenge.progress = Math.min(challenge.progress + 1, challenge.target);
-        console.log(`✅ ${challenge.id}: progreso ${oldProgress} → ${challenge.progress}/${challenge.target}`);
-        if (challenge.progress >= challenge.target) {
-          this.completeChallenge(challenge.id);
-        }
-      }
-    });
-    } catch (error) {
-      console.error('❌ Error en updateChallengeProgress:', error);
-    }
-  }
-
-  /**
-   * Guarda el progreso en localStorage
-   */
-  saveProgress() {
-    const progress = {
-      totalPoints: this.totalPoints,
-      level: this.level,
-      experience: this.experience,
-      currentStreak: this.currentStreak,
-      lastActivityDate: this.lastActivityDate,
-      multipliers: this.multipliers,
-      badges: this.badges,
-      challenges: this.challenges,
-      stats: this.stats
-    };
-    localStorage.setItem('gamification_progress', JSON.stringify(progress));
-    console.log('💾 Progreso guardado:', {
-      challenges: this.challenges.map(c => ({ id: c.id, progress: c.progress, accepted: c.accepted, completed: c.completed }))
-    });
-  }
-
-  /**
-   * Carga el progreso desde localStorage
-   */
-  loadProgress() {
-    try {
-      const saved = localStorage.getItem('gamification_progress');
-      if (saved) {
-        const progress = JSON.parse(saved);
+      if (gamificationDoc.exists()) {
+        const progress = gamificationDoc.data();
         this.totalPoints = progress.totalPoints || 0;
         this.level = progress.level || 1;
         this.experience = progress.experience || 0;
         this.currentStreak = progress.currentStreak || 0;
         this.lastActivityDate = progress.lastActivityDate || null;
         this.multipliers = progress.multipliers || this.multipliers;
-        this.badges = progress.badges || this.initializeBadges();
-        this.challenges = progress.challenges || this.initializeChallenges();
         this.stats = progress.stats || this.stats;
-        console.log('📂 Progreso cargado:', {
-          challenges: this.challenges.map(c => ({ id: c.id, progress: c.progress, accepted: c.accepted, completed: c.completed }))
-        });
+        console.log('📂 Progreso cargado desde Firebase');
       } else {
-        console.log('📂 No hay progreso guardado, usando valores por defecto');
+        console.log('📂 No hay progreso guardado en Firebase, creando documento inicial...');
+        // Crear documento inicial con puntos = 0 para primera vez
+        const initialProgress = {
+          totalPoints: 0,
+          level: 1,
+          experience: 0,
+          currentStreak: 0,
+          lastActivityDate: null,
+          multipliers: this.multipliers,
+          stats: this.stats,
+          lastUpdated: new Date()
+        };
+
+        await setDoc(userGamificationRef, initialProgress);
+        console.log('✅ Documento de gamificación inicial creado con puntos = 0');
       }
     } catch (error) {
-      console.error('❌ Error loading gamification progress:', error);
-      // Si hay error, usar valores por defecto
-      this.challenges = this.initializeChallenges();
+      console.error('❌ Error loading gamification progress from Firebase:', error);
+      // No throw, continue with default values
     }
-  }
-
-  /**
-   * Acepta un desafío
-   */
-  acceptChallenge(challengeId) {
-    const challenge = this.challenges.find(c => c.id === challengeId);
-    if (!challenge || challenge.accepted || challenge.completed) return false;
-
-    challenge.accepted = true;
-    challenge.progress = 0;
-    this.saveProgress();
-    return true;
-  }
-
-  /**
-   * Actualiza el progreso de un desafío
-   */
-  updateChallengeProgress(challengeId, progress) {
-    const challenge = this.challenges.find(c => c.id === challengeId);
-    if (!challenge || !challenge.accepted || challenge.completed) return false;
-
-    challenge.progress = Math.min(progress, challenge.target);
-
-    if (challenge.progress >= challenge.target) {
-      this.completeChallenge(challengeId);
-    }
-
-    this.saveProgress();
-    return true;
-  }
-
-  /**
-   * Completa un desafío
-   */
-  completeChallenge(challengeId) {
-    const challenge = this.challenges.find(c => c.id === challengeId);
-    if (!challenge || challenge.completed) return false;
-
-    challenge.completed = true;
-    challenge.accepted = false;
-
-    // Otorgar recompensas
-    this.earnPoints(challenge.rewardPoints, 'challenge_completion');
-    this.stats.challengesCompleted = (this.stats.challengesCompleted || 0) + 1;
-
-    // Otorgar badge si corresponde
-    if (challenge.rewardBadge) {
-      this.unlockBadge(challenge.rewardBadge.id);
-    }
-
-    this.saveProgress();
-    return true;
-  }
-
-  /**
-   * Desbloquea un badge específico
-   */
-  unlockBadge(badgeId) {
-    const badge = this.badges.find(b => b.id === badgeId);
-    if (!badge || badge.unlocked) return false;
-
-    badge.unlocked = true;
-    this.saveProgress();
-    return true;
   }
 
   /**
@@ -700,18 +371,6 @@ class GamificationSystem {
       title: '¡Nivel Subido! 🎉',
       message: `¡Felicidades! Has alcanzado el nivel ${this.level}`,
       icon: '⬆️',
-      type: 'success'
-    });
-  }
-
-  /**
-   * Celebración de desbloqueo de badge
-   */
-  showBadgeUnlockCelebration(badge) {
-    showNotification({
-      title: '¡Nuevo Logro! 🏆',
-      message: `Has desbloqueado el badge "${badge.name}"`,
-      icon: badge.icon,
       type: 'success'
     });
   }
@@ -934,13 +593,6 @@ function createGamificationDashboardModal() {
             </div>
             <div class="stat-item stat-item-enhanced">
               <div class="stat-item-header">
-                <span class="stat-icon">🏆</span>
-                <span class="stat-label">Desafíos completados</span>
-              </div>
-              <div class="stat-value" id="challenges-completed">0</div>
-            </div>
-            <div class="stat-item stat-item-enhanced">
-              <div class="stat-item-header">
                 <span class="stat-icon">⭐</span>
                 <span class="stat-label">Puntos totales ganados</span>
               </div>
@@ -951,7 +603,7 @@ function createGamificationDashboardModal() {
 
         <!-- Accesos directos -->
         <div class="gamification-actions">
-          <button id="open-challenges-board-btn" class="btn btn-secondary btn-large">
+          <button id="open-challenges-board-btn" class="btn btn-secondary btn-large" style="display: none;">
             🎯 Tablero de Desafíos
           </button>
         </div>
@@ -1129,7 +781,6 @@ function updateGamificationDashboard() {
 
   // Actualizar estadísticas detalladas
   modal.querySelector('#tasks-completed').textContent = gamificationSystem.stats.tasksCompleted || 0;
-  modal.querySelector('#challenges-completed').textContent = gamificationSystem.stats.challengesCompleted || 0;
   modal.querySelector('#total-points-earned').textContent = gamificationSystem.stats.totalPointsEarned || 0;
 }
 
@@ -1255,7 +906,7 @@ function updateChallengesBoard() {
     // Event listener para aceptar desafío
     if (!challenge.accepted && !challenge.completed) {
       challengeElement.querySelector('.accept-challenge-btn').onclick = () => {
-        gamificationSystem.acceptChallenge(challenge.id);
+        // gamificationSystem.acceptChallenge(challenge.id);
         updateChallengesBoard();
         showNotification(`¡Desafío "${challenge.name}" aceptado!`, 'info');
       };
@@ -2412,6 +2063,10 @@ onAuthStateChanged(auth, async (user) => {
     updateLinkPartnerBanner(!!coupleInfo.partnerId); // <== AÑADIR
     updateStatsButtonVisibility(!!coupleInfo.partnerId);
 
+    // Resetear y actualizar el sistema de gamificación con el ID del nuevo usuario
+    gamificationSystem.resetForNewUser();
+    gamificationSystem.userId = user.uid;
+    await gamificationSystem.loadProgress(); // Recargar progreso desde Firebase
     
     // Si tiene pareja vinculada, usar coupleId compartido
     if (coupleInfo.partnerId) {
@@ -2430,6 +2085,9 @@ onAuthStateChanged(auth, async (user) => {
   } else {
     currentUser = null;
     currentCoupleId = null;
+    // Limpiar el ID de usuario del sistema de gamificación
+    gamificationSystem.resetForNewUser();
+    gamificationSystem.userId = null;
     navigateToHome();
   }
 });
@@ -3012,7 +2670,7 @@ async function handleToggleTask(taskId, currentCompleted) {
 
     // Integrar gamificación: otorgar puntos cuando se completa una tarea
     if (!currentCompleted) { // Si se está completando la tarea
-      integrateTaskCompletion();
+      await integrateTaskCompletion();
     }
 
     // Si ahora todas las tareas están completadas, mostrar celebración
@@ -4379,12 +4037,12 @@ function updateRecentBadges() {
 /**
  * Integra la finalización de tareas con el sistema de gamificación
  */
-function integrateTaskCompletion(taskPoints = 10) {
+async function integrateTaskCompletion(taskPoints = 10) {
   console.log('🎯 integrateTaskCompletion llamada con', taskPoints, 'puntos');
-  const pointsEarned = gamificationSystem.earnPoints(taskPoints, 'task_completion');
+  const pointsEarned = await gamificationSystem.earnPoints(taskPoints, 'task_completion');
   
   // Actualizar racha diaria
-  gamificationSystem.updateStreak();
+  await gamificationSystem.updateStreak();
 
   // Mostrar notificación de puntos ganados
   showNotification({
@@ -9843,4 +9501,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Inicializar funciones de gamificación
   initializeGamificationFunctions();
+});
+
+// Guardar progreso de gamificación antes de que el usuario salga
+window.addEventListener('beforeunload', function() {
+  if (gamificationSystem && gamificationSystem.userId) {
+    // Guardar de forma síncrona si es posible, o al menos intentar
+    gamificationSystem.saveProgress();
+  }
 });

@@ -35,15 +35,20 @@ service cloud.firestore {
     }
 
     // ============================================
-    // REGLAS PARA 'users'
+    // REGLAS PARA 'users' - TEMPORALMENTE PERMISIVAS PARA DEBUG
     // ============================================
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && (
-        isSelf(userId) ||
-        isLinking(userId) ||
-        isUnlinking(userId)
-      );
+      allow read, write: if isAuthenticated();
+    }
+
+    // Subcolecciones de users (como gamification)
+    match /users/{userId}/{subcollection}/{docId} {
+      allow read, write: if isAuthenticated() && isSelf(userId);
+    }
+
+    // Regla específica para gamification
+    match /users/{userId}/gamification/{docId} {
+      allow read, write: if isAuthenticated() && isSelf(userId);
     }
 
     // ============================================
