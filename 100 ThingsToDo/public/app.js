@@ -7667,6 +7667,24 @@ function showPlaceInfo(place) {
     console.error('Modal elements not found:', { placeInfoModal, placeInfoTitle, placeInfoBody });
     return;
   }
+
+  // Verificar si el modal ya está abierto para evitar duplicados
+  if (placeInfoModal.style.display === 'flex' && placeInfoModal.classList.contains('is-open')) {
+    console.log('Modal ya está abierto, ignorando apertura duplicada');
+    return;
+  }
+
+  // Prevenir llamadas múltiples rápidas (debounce)
+  if (showPlaceInfo.isOpening) {
+    console.log('Modal se está abriendo, ignorando llamada duplicada');
+    return;
+  }
+  showPlaceInfo.isOpening = true;
+
+  // Limpiar el flag después de un breve delay
+  setTimeout(() => {
+    showPlaceInfo.isOpening = false;
+  }, 300);
   // Solo mostrar el modal de detalles si el globo está visible
   var globeContainer = document.querySelector('.globe-container');
   var mapModal = document.getElementById('map-modal');
@@ -7806,14 +7824,15 @@ function showPlaceInfo(place) {
 
 function closePlaceInfoModal() {
   console.log('Cerrando modal de detalles de lugar');
-  
+
   const mapModal = document.getElementById('map-modal');
   const isInsideMap = mapModal && mapModal.contains(placeInfoModal);
-  
+
   if (isInsideMap) {
     // Si está dentro del modal del mapa, solo ocultar este modal
     console.log('Modal está dentro del mapa, ocultando solo el modal de detalles');
     placeInfoModal.style.display = 'none';
+    placeInfoModal.classList.remove('is-open'); // Remover la clase para permitir reaperturas
     // Devolver el modal a su posición original en el DOM
     document.body.appendChild(placeInfoModal);
   } else {
