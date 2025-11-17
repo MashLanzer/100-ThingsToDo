@@ -4759,13 +4759,13 @@ async function acceptRandomChallengePhone() {
 // Abrir modal de crear desafío
 function openCreateFavorModal() {
   console.log('openCreateFavorModal called');
-  
+
   let modal = document.getElementById('create-favor-modal');
-  
+
   // Si no existe, crearlo dinámicamente
   if (!modal) {
     console.log('Creating create-favor-modal dynamically...');
-    
+
     const modalHTML = `
       <div id="create-favor-modal" class="favors-fullscreen-modal hidden">
         <div class="favors-modal-overlay"></div>
@@ -4774,11 +4774,11 @@ function openCreateFavorModal() {
             <h2>✨ Crear Desafío</h2>
             <button id="close-create-favor-modal-btn" class="favors-close-btn">✕</button>
           </div>
-          
+
           <div class="favors-modal-content">
             <input type="text" id="coupon-title-input-large" class="input-large" placeholder="Título del desafío (ej: Masaje de 30 min)" maxlength="60">
             <textarea id="coupon-description-input-large" class="textarea-large" placeholder="Descripción detallada..." rows="4" maxlength="200"></textarea>
-            
+
             <label class="label-large">Dificultad & Puntos:</label>
             <div class="difficulty-picker-large">
               <button class="difficulty-option-large" data-difficulty="easy" data-points="10">
@@ -4811,21 +4811,41 @@ function openCreateFavorModal() {
         </div>
       </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     modal = document.getElementById('create-favor-modal');
     console.log('Modal created, setting up listeners...');
   }
-  
+
   console.log('Opening create favor modal...');
   console.log('Create favor modal exists:', !!modal);
   console.log('Create favor modal classes before:', modal.className);
-  
-  // Usar la función de modales anidados para favores
-  showModal(modal, 'standard');
-  
+
+  // Verificar si estamos dentro del modal de favores para mostrar como modal anidado
+  const favorsModal = document.getElementById('favors-fullscreen-modal');
+  const isInsideFavors = favorsModal && !favorsModal.classList.contains('hidden');
+
+  if (isInsideFavors) {
+    // Mostrar como modal hijo dentro del modal de favores
+    console.log('Showing create favor modal inside favors modal');
+    favorsModal.appendChild(modal);
+    modal.style.position = 'absolute';
+    modal.style.inset = '0';
+    modal.style.zIndex = '76000'; // MODAL HIJO DE FAVORES - MÁS ALTO QUE EL PADRE
+    modal.style.pointerEvents = 'auto';
+    modal.style.display = 'flex';
+    modal.style.visibility = 'visible';
+    modal.style.opacity = '1';
+    modal.classList.add('is-open');
+    modal.classList.remove('hidden');
+  } else {
+    // Mostrar como modal independiente
+    console.log('Showing create favor modal as standalone');
+    showModal(modal, 'standard');
+  }
+
   console.log('Create favor modal should now be visible');
-  
+
   // Configurar click outside para cerrar el modal
   const closeCreateFavorOnClickOutside = (e) => {
     if (e.target === modal) {
@@ -4833,18 +4853,38 @@ function openCreateFavorModal() {
     }
   };
   modal.addEventListener('click', closeCreateFavorOnClickOutside);
-  
+
   // Configurar listeners cada vez que se abre (para asegurar que funcione)
   setupCreateFavorModalListeners();
 }
 
 // Cerrar modal de crear desafío
 function closeCreateFavorModal() {
-  hideModal(document.getElementById('create-favor-modal'), 'favors');
-  
+  const modal = document.getElementById('create-favor-modal');
+  if (!modal) return;
+
+  const favorsModal = document.getElementById('favors-fullscreen-modal');
+  const isInsideFavors = favorsModal && favorsModal.contains(modal);
+
+  if (isInsideFavors) {
+    // Si está dentro del modal de favores, solo ocultar este modal
+    console.log('Closing create favor modal inside favors modal');
+    modal.style.display = 'none';
+    modal.classList.remove('is-open');
+    modal.classList.add('hidden');
+    // Devolver el modal a su posición original en el DOM
+    document.body.appendChild(modal);
+  } else {
+    // Si está standalone, usar hideModal
+    console.log('Closing create favor modal as standalone');
+    hideModal(modal, 'favors');
+  }
+
   // Limpiar formulario
-  document.getElementById('coupon-title-input-large').value = '';
-  document.getElementById('coupon-description-input-large').value = '';
+  const titleInput = document.getElementById('coupon-title-input-large');
+  const descInput = document.getElementById('coupon-description-input-large');
+  if (titleInput) titleInput.value = '';
+  if (descInput) descInput.value = '';
 }
 
 // Variables para el modal de crear desafío
