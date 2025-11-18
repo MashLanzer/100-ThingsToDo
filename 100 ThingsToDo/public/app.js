@@ -9051,8 +9051,16 @@ async function submitAnswer() {
   const answer = answerInput.value.trim();
   if (!answer) return;
 
+  // Verificar que el índice de pregunta sea válido
+  if (testGameState.currentQuestionIndex >= testGameState.questions.length) {
+    console.error('ERROR: currentQuestionIndex out of bounds:', testGameState.currentQuestionIndex, 'questions length:', testGameState.questions.length);
+    return;
+  }
+
   // Guardar tanto la pregunta como la respuesta
   const currentQuestion = testGameState.questions[testGameState.currentQuestionIndex];
+  console.log('DEBUG: submitAnswer - currentQuestion:', currentQuestion, 'currentQuestionIndex:', testGameState.currentQuestionIndex, 'questions length:', testGameState.questions ? testGameState.questions.length : 'undefined');
+  
   testGameState.answers[testGameState.currentQuestionIndex] = {
     question: currentQuestion,
     answer: answer
@@ -9070,12 +9078,18 @@ async function submitAnswer() {
 function nextQuestion() {
   testGameState.currentQuestionIndex++;
 
+  // Asegurar que el índice no exceda el límite
+  if (testGameState.currentQuestionIndex > testGameState.questions.length) {
+    console.error('ERROR: currentQuestionIndex exceeded maximum:', testGameState.currentQuestionIndex, 'resetting to max');
+    testGameState.currentQuestionIndex = testGameState.questions.length;
+  }
+
   if (testGameState.currentQuestionIndex < testGameState.questions.length) {
     loadCurrentQuestion();
   } else {
     // Verificar que todas las preguntas estén respondidas antes de pasar a adivinación
     const totalQuestions = testGameState.questions.length;
-    const answeredQuestions = testGameState.answers.filter(answer => answer && answer.trim() !== '').length;
+    const answeredQuestions = testGameState.answers.filter(answer => answer && answer.answer && answer.answer.trim() !== '').length;
 
     if (answeredQuestions < totalQuestions) {
       // No todas las preguntas están respondidas, mostrar mensaje de error
@@ -9098,6 +9112,9 @@ function nextQuestion() {
 // Función para finalizar la creación del test
 async function finishTestCreation() {
   try {
+    console.log('DEBUG: finishTestCreation - questions length:', testGameState.questions ? testGameState.questions.length : 'undefined');
+    console.log('DEBUG: finishTestCreation - currentQuestionIndex will be:', testGameState.questions ? testGameState.questions.length - 1 : 'undefined');
+    
     // Marcar el test como completado por el creador
     await updateTestAnswers(db, testGameState.testId, testGameState.answers, testGameState.questions.length - 1, true);
 
@@ -9364,7 +9381,7 @@ function populateAllQuestionsList() {
         ${guessData ? `
           <div class="answer-item guess">
             <div class="answer-label">Tu adivinanza:</div>
-            <div class="answer-text">"${guessData.guess}"</div>
+            <div class="answer-text">"${guessData.userGuess || '(Saltada)'}"</div>
           </div>
         ` : ''}
       </div>
@@ -9492,6 +9509,9 @@ async function respondToAvailableTest() {
       correctAnswers: 0,
       skippedQuestions: 0
     };
+
+    console.log('DEBUG: testGameState.testId set to:', testGameState.testId);
+    console.log('DEBUG: test.id was:', test.id);
 
     showTestScreen('guessing');
     loadGuessingQuestion(); // Cargar la primera pregunta

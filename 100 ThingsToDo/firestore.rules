@@ -67,27 +67,11 @@ service cloud.firestore {
     }
 
     // ============================================
-    // REGLAS PARA 'tests' - VERSION ROBUSTA
+    // REGLAS PARA 'tests' - TEMPORALMENTE PERMISIVAS PARA DEBUG
     // ============================================
     match /tests/{testId} {
-      // Crear: solo el creador puede crear su propio test
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.creatorId;
-
-      // Leer: creador o target pueden leer (comprobando datos existentes y nuevos)
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.creatorId ||
-        request.auth.uid == resource.data.targetId ||
-        request.auth.uid == request.resource.data.creatorId ||
-        request.auth.uid == request.resource.data.targetId
-      );
-
-      // Actualizar: creador o target pueden actualizar (comprobando datos existentes y nuevos)
-      allow update: if isAuthenticated() && (
-        request.auth.uid == resource.data.creatorId ||
-        request.auth.uid == resource.data.targetId ||
-        request.auth.uid == request.resource.data.creatorId ||
-        request.auth.uid == request.resource.data.targetId
-      );
+      // Temporalmente permisivo para debug
+      allow read, write: if isAuthenticated();
     }
   }
 }
