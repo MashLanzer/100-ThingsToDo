@@ -8820,6 +8820,7 @@ const titleDescription = document.getElementById('title-description');
 const correctAnswersEl = document.getElementById('correct-answers');
 const totalQuestionsFinal = document.getElementById('total-questions-final');
 const skippedQuestionsEl = document.getElementById('skipped-questions');
+const allQuestionsList = document.getElementById('all-questions-list');
 const playAgainBtn = document.getElementById('play-again-btn');
 const shareResultsBtn = document.getElementById('share-results-btn');
 
@@ -9050,7 +9051,12 @@ async function submitAnswer() {
   const answer = answerInput.value.trim();
   if (!answer) return;
 
-  testGameState.answers[testGameState.currentQuestionIndex] = answer;
+  // Guardar tanto la pregunta como la respuesta
+  const currentQuestion = testGameState.questions[testGameState.currentQuestionIndex];
+  testGameState.answers[testGameState.currentQuestionIndex] = {
+    question: currentQuestion,
+    answer: answer
+  };
 
   // Si estamos creando un test, guardar en Firebase
   if (testGameState.mode === 'creating' && testGameState.testId) {
@@ -9328,7 +9334,44 @@ function showFinalResults() {
   totalQuestionsFinal.textContent = totalQuestions;
   skippedQuestionsEl.textContent = testGameState.skippedQuestions;
 
+  // Mostrar todas las preguntas y respuestas
+  populateAllQuestionsList();
+
   showTestScreen('final');
+}
+
+// Función para poblar la lista de todas las preguntas
+function populateAllQuestionsList() {
+  const questionsList = document.getElementById('all-questions-list');
+  questionsList.innerHTML = '';
+
+  testGameState.questions.forEach((question, index) => {
+    const questionItem = document.createElement('div');
+    questionItem.className = 'question-item';
+
+    const answerData = testGameState.answers[index];
+    const guessData = testGameState.guesses[index];
+
+    questionItem.innerHTML = `
+      <h5>${index + 1}. ${question}</h5>
+      <div class="question-answers">
+        ${answerData ? `
+          <div class="answer-item correct">
+            <div class="answer-label">Respuesta correcta:</div>
+            <div class="answer-text">"${answerData.answer}"</div>
+          </div>
+        ` : ''}
+        ${guessData ? `
+          <div class="answer-item guess">
+            <div class="answer-label">Tu adivinanza:</div>
+            <div class="answer-text">"${guessData.guess}"</div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    questionsList.appendChild(questionItem);
+  });
 }
 
 // Función para compartir resultados
@@ -9421,13 +9464,29 @@ async function respondToAvailableTest() {
     // Tomar el test más reciente
     const test = result.tests[0];
 
+    // Convertir respuestas al nuevo formato si es necesario (compatibilidad con tests antiguos)
+    let formattedAnswers = test.answers;
+    if (test.answers && test.answers.length > 0) {
+      formattedAnswers = test.answers.map((answer, index) => {
+        // Si ya es un objeto con question y answer, mantenerlo
+        if (typeof answer === 'object' && answer.question && answer.answer) {
+          return answer;
+        }
+        // Si es solo texto, convertirlo al nuevo formato
+        return {
+          question: test.questions[index] || `Pregunta ${index + 1}`,
+          answer: answer
+        };
+      });
+    }
+
     // Cambiar al modo de responder
     testGameState = {
       ...testGameState,
       mode: 'responding',
       testId: test.id,
       questions: test.questions,
-      answers: test.answers, // Respuestas del creador
+      answers: formattedAnswers, // Respuestas del creador en formato correcto
       currentQuestionIndex: 0,
       guesses: [],
       correctAnswers: 0,
@@ -9435,6 +9494,7 @@ async function respondToAvailableTest() {
     };
 
     showTestScreen('guessing');
+    loadGuessingQuestion(); // Cargar la primera pregunta
   } catch (error) {
     console.error('Error responding to test:', error);
     alert('Error al cargar el test');

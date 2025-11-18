@@ -11129,25 +11129,65 @@ flex: 1;
 }
 
 #test-game-modal .test-create-btn {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white;
+  background: transparent;
+  border: 2px solid var(--primary);
+  color: var(--primary);
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
+#test-game-modal .test-create-btn::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark, #7C3AED));
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: -1;
+}
+
+#test-game-modal .test-create-btn:hover::before {
+  transform: translateY(0);
+}
+
 #test-game-modal .test-create-btn:hover {
-  transform: translateY(-2px);
+  color: white;
+  border-color: var(--primary);
   box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+  transform: translateY(-2px);
 }
 
 #test-game-modal .test-respond-btn {
-  background: linear-gradient(135deg, var(--success), var(--success-dark));
-  color: white;
+  background: transparent;
+  border: 2px solid var(--success);
+  color: var(--success);
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
+#test-game-modal .test-respond-btn::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--success), var(--success-dark, #16A34A));
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: -1;
+}
+
+#test-game-modal .test-respond-btn:hover::before {
+  transform: translateY(0);
+}
+
 #test-game-modal .test-respond-btn:hover {
-  transform: translateY(-2px);
+  color: white;
+  border-color: var(--success);
   box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+  transform: translateY(-2px);
 }
 
 /* Mensaje de estado */
@@ -11338,22 +11378,34 @@ flex: 1;
 }
 
 #test-game-modal .btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white;
-  border: none;
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  font-family: 'Fredoka', sans-serif;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  width: 100%;
+  background: transparent;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
-#test-game-modal .btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
+#test-game-modal .btn-primary::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark, #7C3AED));
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: -1;
+}
+
+#test-game-modal .btn-primary:hover::before {
+  transform: translateY(0);
+}
+
+#test-game-modal .btn-primary:hover {
+  color: white;
+  border-color: var(--primary);
   box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+  transform: translateY(-2px);
 }
 
 #test-game-modal .btn-primary:disabled {
@@ -11393,6 +11445,10 @@ flex: 1;
 #test-game-modal .question-card.small h4 {
   font-size: 1rem;
   margin: 0;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
 }
 
 #test-game-modal .guess-input-section {
@@ -11443,28 +11499,28 @@ flex: 1;
   margin: 0 0 1rem;
 }
 
-#test-game-modal .result-answers {
+#test-game-modal .answers-comparison {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   margin-bottom: 2rem;
 }
 
-#test-game-modal .answer-reveal {
+#test-game-modal .answer-box {
   background: var(--surface);
   border-radius: 12px;
   padding: 1rem;
   border: 1px solid var(--border);
 }
 
-#test-game-modal .answer-reveal.correct {
+#test-game-modal .answer-box.correct {
   border-color: var(--success);
   background: rgba(34, 197, 94, 0.05);
 }
 
-#test-game-modal .answer-reveal.incorrect {
-  border-color: var(--danger);
-  background: rgba(239, 68, 68, 0.05);
+#test-game-modal .answer-box.guess {
+  border-color: var(--primary);
+  background: rgba(139, 92, 246, 0.05);
 }
 
 #test-game-modal .answer-label {
@@ -11478,6 +11534,33 @@ flex: 1;
   font-size: 1rem;
   color: var(--text-primary);
   line-height: 1.4;
+}
+
+#test-game-modal .result-feedback {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+#test-game-modal .result-feedback.correct {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+#test-game-modal .result-feedback.incorrect {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+#test-game-modal .result-feedback.partial {
+  background: rgba(251, 191, 36, 0.1);
+  color: var(--warning);
+  border: 1px solid rgba(251, 191, 36, 0.2);
 }
 
 #test-game-modal .compatibility-result {
@@ -11510,6 +11593,159 @@ flex: 1;
 /* Pantalla final */
 #test-game-modal .final-content {
   text-align: center;
+}
+
+#test-game-modal .final-score {
+  margin-bottom: 2rem;
+}
+
+#test-game-modal .score-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--success));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+}
+
+#test-game-modal .score-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.25rem;
+}
+
+#test-game-modal .score-label {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+#test-game-modal .couple-title h3 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 1.5rem 0 0.5rem;
+}
+
+#test-game-modal .title-description {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 2rem;
+}
+
+#test-game-modal .final-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+#test-game-modal .stat-item {
+  text-align: center;
+}
+
+#test-game-modal .stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+}
+
+#test-game-modal .stat-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+#test-game-modal .all-questions-summary {
+  margin: 2rem 0;
+  text-align: left;
+}
+
+#test-game-modal .all-questions-summary h4 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+#test-game-modal .questions-list {
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--surface-secondary);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+#test-game-modal .question-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+#test-game-modal .question-item:last-child {
+  margin-bottom: 0;
+}
+
+#test-game-modal .question-item h5 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
+}
+
+#test-game-modal .question-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+#test-game-modal .answer-item {
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+#test-game-modal .answer-item.correct {
+  background: rgba(34, 197, 94, 0.1);
+  border-left: 3px solid var(--success);
+}
+
+#test-game-modal .answer-item.guess {
+  background: rgba(139, 92, 246, 0.1);
+  border-left: 3px solid var(--primary);
+}
+
+#test-game-modal .answer-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+}
+
+#test-game-modal .answer-text {
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+#test-game-modal .final-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2rem;
 }
 
 #test-game-modal .final-content h3 {
