@@ -10992,6 +10992,574 @@ flex: 1;
   }
 }
 
+/* ============================================ */
+/* ======> MODAL DEL TEST DE PAREJA <======= */
+/* ============================================ */
+
+#test-game-modal .modal-content {
+  max-width: 500px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}
+
+#test-game-modal .modal-header {
+  padding: 1.5rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--border-light);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(255, 107, 157, 0.05));
+  border-radius: 20px 20px 0 0;
+}
+
+#test-game-modal .modal-header h2 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  text-align: center;
+}
+
+#test-game-modal .close-modal-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+#test-game-modal .close-modal-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+#test-game-modal .test-game-content {
+  padding: 1.5rem;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Pantalla de bienvenida */
+#test-game-modal .test-welcome {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+#test-game-modal .test-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+#test-game-modal .test-welcome h3 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 1rem 0 0.5rem;
+}
+
+#test-game-modal .test-welcome p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 1.5rem;
+}
+
+/* Instrucciones */
+#test-game-modal .test-instructions {
+  background: var(--surface-secondary);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 1.5rem 0;
+}
+
+#test-game-modal .instruction-step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+#test-game-modal .instruction-step:last-child {
+  margin-bottom: 0;
+}
+
+#test-game-modal .step-number {
+  background: var(--primary);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+/* Botones de acción */
+#test-game-modal .test-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+#test-game-modal .test-create-btn,
+#test-game-modal .test-respond-btn {
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  text-align: center;
+}
+
+#test-game-modal .test-create-btn {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+#test-game-modal .test-create-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+}
+
+#test-game-modal .test-respond-btn {
+  background: linear-gradient(135deg, var(--success), var(--success-dark));
+  color: white;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+#test-game-modal .test-respond-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+}
+
+/* Mensaje de estado */
+#test-game-modal .test-status-message {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+#test-game-modal .test-status-message.info {
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--primary);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+#test-game-modal .test-status-message.success {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+#test-game-modal .test-status-message.warning {
+  background: rgba(251, 191, 36, 0.1);
+  color: var(--warning);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+/* Pantalla de selección de jugador */
+#test-game-modal .player-selection {
+  text-align: center;
+}
+
+#test-game-modal .player-selection h3 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 1rem 0 2rem;
+}
+
+#test-game-modal .player-options {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+#test-game-modal .player-option {
+  background: var(--surface-secondary);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  max-width: 120px;
+}
+
+#test-game-modal .player-option:hover {
+  border-color: var(--primary);
+  background: rgba(139, 92, 246, 0.05);
+  transform: translateY(-2px);
+}
+
+#test-game-modal .player-option.selected {
+  border-color: var(--primary);
+  background: rgba(139, 92, 246, 0.1);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+}
+
+#test-game-modal .player-avatar {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+#test-game-modal .player-name {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+/* Pantalla de preguntas */
+#test-game-modal .question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--surface-secondary);
+  border-radius: 12px;
+}
+
+#test-game-modal .question-counter {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+#test-game-modal .question-timer {
+  flex: 1;
+  margin: 0 1rem;
+}
+
+#test-game-modal .timer-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+#test-game-modal .timer-bar::after {
+  content: '';
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--success), var(--warning), var(--danger));
+  border-radius: 3px;
+  animation: timerCountdown 30s linear;
+}
+
+@keyframes timerCountdown {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+#test-game-modal .question-content {
+  text-align: center;
+}
+
+#test-game-modal .question-card {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(255, 107, 157, 0.1));
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+#test-game-modal .question-card .question-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+#test-game-modal .question-card h3 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem;
+  line-height: 1.3;
+}
+
+#test-game-modal .question-hint {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+#test-game-modal .answer-input-section {
+  margin-bottom: 1.5rem;
+}
+
+#test-game-modal .answer-input {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.2s ease;
+}
+
+#test-game-modal .answer-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+#test-game-modal .char-counter {
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+#test-game-modal .btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+#test-game-modal .btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+}
+
+#test-game-modal .btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Pantalla de adivinación */
+#test-game-modal .guessing-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+#test-game-modal .guessing-header h3 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 1rem 0 0.5rem;
+}
+
+#test-game-modal .guessing-header p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+#test-game-modal .question-display {
+  margin: 2rem 0;
+}
+
+#test-game-modal .question-card.small {
+  padding: 1.5rem 1rem;
+}
+
+#test-game-modal .question-card.small h4 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+#test-game-modal .guess-input-section {
+  margin-bottom: 1.5rem;
+}
+
+#test-game-modal .guess-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+#test-game-modal .btn-secondary {
+  background: var(--surface-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+#test-game-modal .btn-secondary:hover {
+  background: var(--surface-hover);
+  transform: translateY(-1px);
+}
+
+/* Pantalla de resultado */
+#test-game-modal .result-content {
+  text-align: center;
+}
+
+#test-game-modal .result-reveal {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(139, 92, 246, 0.1));
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  margin-bottom: 2rem;
+}
+
+#test-game-modal .result-question h4 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 1rem;
+}
+
+#test-game-modal .result-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+#test-game-modal .answer-reveal {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid var(--border);
+}
+
+#test-game-modal .answer-reveal.correct {
+  border-color: var(--success);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+#test-game-modal .answer-reveal.incorrect {
+  border-color: var(--danger);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+#test-game-modal .answer-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+#test-game-modal .answer-text {
+  font-size: 1rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+#test-game-modal .compatibility-result {
+  background: linear-gradient(135deg, var(--primary), var(--success));
+  color: white;
+  padding: 2rem 1.5rem;
+  border-radius: 16px;
+  margin-bottom: 2rem;
+}
+
+#test-game-modal .compatibility-score {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+#test-game-modal .compatibility-title {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+#test-game-modal .compatibility-description {
+  font-size: 0.95rem;
+  opacity: 0.9;
+  line-height: 1.4;
+}
+
+/* Pantalla final */
+#test-game-modal .final-content {
+  text-align: center;
+}
+
+#test-game-modal .final-content h3 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 2rem 0 1rem;
+}
+
+#test-game-modal .final-content p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin: 0 0 2rem;
+}
+
+#test-game-modal .final-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #test-game-modal .modal-content {
+    margin: 1rem;
+    max-width: none;
+    width: calc(100vw - 2rem);
+  }
+
+  #test-game-modal .player-options {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  #test-game-modal .player-option {
+    max-width: none;
+  }
+
+  #test-game-modal .question-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  #test-game-modal .guess-actions {
+    flex-direction: column;
+  }
+}
+
 
 
 
