@@ -2,14 +2,16 @@
   "name": "ThingsToDo Kawaii",
   "short_name": "ThingsToDo",
   "description": "Crea y gestiona listas de tareas románticas con tu pareja.",
-  
+  "lang": "es",
+
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-
-  "background_color": "#FFFBF7",
   "theme_color": "#8B6F47",
+  "background_color": "#FFFBF7",
+
+  "categories": ["lifestyle", "productivity", "social"],
 
   "icons": [
     {
@@ -23,6 +25,16 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+
+  "shortcuts": [
+    {
+      "name": "Nueva Tarea",
+      "short_name": "Nueva Tarea",
+      "description": "Crear una nueva tarea romántica",
+      "url": "/?action=new-task",
+      "icons": [{ "src": "/scr/images/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

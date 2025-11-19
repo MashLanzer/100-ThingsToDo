@@ -9628,6 +9628,17 @@ testGameModal.addEventListener('click', (e) => {
 
 // Esperar a que el DOM esté listo antes de inicializar
 document.addEventListener('DOMContentLoaded', function() {
+  // Registrar Service Worker para PWA
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(function(registration) {
+        console.log('Service Worker registrado correctamente:', registration.scope);
+      })
+      .catch(function(error) {
+        console.log('Error al registrar Service Worker:', error);
+      });
+  }
+
   // Inicializar cápsulas del tiempo
   initTimeCapsules();
 
