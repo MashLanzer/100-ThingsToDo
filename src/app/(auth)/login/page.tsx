@@ -1,11 +1,24 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth"
+import {
+  signInWithPopup,
+  signInWithCredential,
+  GoogleAuthProvider,
+} from "firebase/auth"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
+
+async function isCapacitorNative(): Promise<boolean> {
+  try {
+    const { Capacitor } = await import("@capacitor/core")
+    return Capacitor.isNativePlatform()
+  } catch {
+    return false
+  }
+}
 
 export default function LoginPage() {
   const { user, loading } = useAuth()
@@ -22,23 +35,50 @@ export default function LoginPage() {
     setSigning(true)
     try {
       const auth = getFirebaseAuth()
-      const provider = new GoogleAuthProvider()
-      const result = await signInWithPopup(auth, provider)
+      let idToken: string
 
-      // Sync user to Supabase
-      const idToken = await result.user.getIdToken()
-      await fetch("/api/auth/sync", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: result.user.displayName,
-          email: result.user.email,
-          avatar_url: result.user.photoURL,
-        }),
-      })
+      if (await isCapacitorNative()) {
+        // Native Android — uses system Google account picker
+        const { FirebaseAuthentication } = await import(
+          "@capacitor-firebase/authentication"
+        )
+        const result = await FirebaseAuthentication.signInWithGoogle()
+        if (!result.credential?.idToken) throw new Error("No se obtuvo token de Google")
+        const credential = GoogleAuthProvider.credential(result.credential.idToken)
+        const firebaseResult = await signInWithCredential(auth, credential)
+        idToken = await firebaseResult.user.getIdToken()
+
+        await fetch("/api/auth/sync", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: firebaseResult.user.displayName,
+            email: firebaseResult.user.email,
+            avatar_url: firebaseResult.user.photoURL,
+          }),
+        })
+      } else {
+        // Web browser — popup normal
+        const provider = new GoogleAuthProvider()
+        const result = await signInWithPopup(auth, provider)
+        idToken = await result.user.getIdToken()
+
+        await fetch("/api/auth/sync", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: result.user.displayName,
+            email: result.user.email,
+            avatar_url: result.user.photoURL,
+          }),
+        })
+      }
 
       router.replace("/dashboard")
     } catch (err: unknown) {
@@ -72,7 +112,6 @@ export default function LoginPage() {
         overflow: "hidden",
       }}
     >
-      {/* Decorative blobs */}
       <div
         style={{
           position: "absolute",
@@ -110,7 +149,6 @@ export default function LoginPage() {
           animation: "fadeIn 0.4s ease forwards",
         }}
       >
-        {/* Brand */}
         <div style={{ marginBottom: "1.5rem" }}>
           <div
             style={{
@@ -155,7 +193,6 @@ export default function LoginPage() {
           </span>
         </div>
 
-        {/* Description */}
         <div style={{ marginBottom: "2rem" }}>
           <h2
             style={{
@@ -172,7 +209,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Google Sign In */}
         <button
           onClick={handleGoogleLogin}
           disabled={signing}
@@ -211,7 +247,6 @@ export default function LoginPage() {
           )}
         </button>
 
-        {/* Features */}
         <div style={{ marginTop: "2rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {[
             { icon: "💕", title: "Planes en pareja", desc: "Organiza citas y actividades románticas" },
