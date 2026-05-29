@@ -105,11 +105,11 @@ export function MapModal() {
       globe.globeImageUrl("//unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
       const pointData = places.map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, status: p.status }))
       globe.pointsData(pointData)
-        .pointLat((d) => (d as { lat: number }).lat)
-        .pointLng((d) => (d as { lng: number }).lng)
-        .pointColor((d) => (d as { status: string }).status === "visited" ? "#EC4899" : "#8B5CF6")
+        .pointLat((d: unknown) => (d as { lat: number }).lat)
+        .pointLng((d: unknown) => (d as { lng: number }).lng)
+        .pointColor((d: unknown) => (d as { status: string }).status === "visited" ? "#EC4899" : "#8B5CF6")
         .pointAltitude(0.02).pointRadius(0.5)
-        .pointLabel((d) => (d as { name: string }).name)
+        .pointLabel((d: unknown) => (d as { name: string }).name)
       globe.controls().autoRotate = true
       globe.controls().autoRotateSpeed = 0.5
       globeInstanceRef.current = globe
