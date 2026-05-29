@@ -445,31 +445,29 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
                 key={t.id}
                 onClick={() => goTo(i)}
                 style={{
-                  display: "flex", alignItems: "center", gap: "0.5rem",
-                  padding: "0.375rem 0.4rem", cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: "0.625rem",
+                  padding: "0.5rem 0.5rem", cursor: "pointer",
                   background: trackIdx === i ? "var(--primary-lighter)" : "transparent",
                   borderRadius: "var(--radius-sm)",
                 }}
               >
                 {/* Mini vinyl */}
                 <div style={{
-                  width: "28px", height: "28px", borderRadius: "50%", flexShrink: 0,
+                  width: "34px", height: "34px", borderRadius: "50%", flexShrink: 0,
                   background: `radial-gradient(circle, #111 0%, #111 18%, ${t.color} 19%, ${t.color} 44%, #1a1a1a 45%)`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
                 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "0.75rem", fontWeight: 600, color: trackIdx === i ? "var(--primary)" : "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: trackIdx === i ? "var(--primary)" : "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {t.title}
                   </div>
-                  <div style={{ fontSize: "0.5625rem", color: "var(--foreground-muted)" }}>{t.artist}</div>
+                  <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{t.artist}{t.url ? (isYouTube(t.url) ? " · YT" : " · Audio") : ""}</div>
                 </div>
-                {t.url && <span style={{ fontSize: "0.5rem", color: "var(--primary)", flexShrink: 0, fontWeight: 700 }}>▶</span>}
-                <span
+                <button
                   onClick={(e) => { e.stopPropagation(); deleteTrack(t.id) }}
-                  style={{ cursor: "pointer", color: "var(--foreground-muted)", padding: "2px", flexShrink: 0 }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "6px", flexShrink: 0, display: "flex", alignItems: "center", borderRadius: "6px" }}
                 >
-                  <Trash2 size={11} />
-                </span>
+                  <Trash2 size={15} />
+                </button>
               </div>
             ))}
           </div>

@@ -3,12 +3,9 @@
 import { useState, useMemo } from "react"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { toast } from "sonner"
+import { RefreshCw, CheckCircle, Trophy } from "lucide-react"
 
-// ─── Static challenge data (from surpriseTasks.js) ───────────────────────────
-interface ChallengeTask {
-  emoji: string
-  text: string
-}
+interface ChallengeTask { emoji: string; text: string }
 
 const CHALLENGES: ChallengeTask[] = [
   { emoji: "🍿", text: "Maratón de vuestra saga de películas favorita." },
@@ -28,11 +25,11 @@ const CHALLENGES: ChallengeTask[] = [
   { emoji: "🍰", text: "Hacer una cata a ciegas de chocolates o postres." },
   { emoji: "🌍", text: "Cocinar una cena temática de un país que queráis visitar." },
   { emoji: "🌲", text: "Hacer una ruta de senderismo fácil en un parque natural cercano." },
-  { emoji: "🧺", text: "Preparar un picnic elaborado y buscar un lugar bonito para comer." },
+  { emoji: "🧺", text: "Preparar un picnic elaborado y buscar un lugar bonito." },
   { emoji: "⭐", text: "Noche de observar las estrellas lejos de la ciudad." },
-  { emoji: "🚲", text: "Alquilar bicicletas y recorrer un carril bici o un paseo marítimo." },
-  { emoji: "🛶", text: "Alquilar un kayak o una barca de pedales en un lago o en el mar." },
-  { emoji: "🏛️", text: "Visitar un museo o una exposición de arte que no conozcáis." },
+  { emoji: "🚲", text: "Alquilar bicicletas y recorrer un carril bici o paseo marítimo." },
+  { emoji: "🛶", text: "Alquilar un kayak o barca de pedales en un lago." },
+  { emoji: "🏛️", text: "Visitar un museo o exposición que no conozcáis." },
   { emoji: "📚", text: "Ir a una librería y elegir un libro para el otro." },
   { emoji: "🗣️", text: "Aprender 10 frases básicas de un idioma nuevo juntos." },
   { emoji: "🗺️", text: "Planificar unas vacaciones de ensueño, aunque no las hagáis pronto." },
@@ -45,122 +42,131 @@ const CHALLENGES: ChallengeTask[] = [
   { emoji: "💆", text: "Tarde de spa en casa: masajes y mascarillas." },
   { emoji: "🧘", text: "Hacer una sesión de yoga o meditación guiada para parejas." },
   { emoji: "🛁", text: "Preparar un baño relajante con espuma y velas." },
-  { emoji: "📵", text: "Tener una tarde 'sin tecnología': móviles apagados." },
+  { emoji: "📵", text: "Tarde 'sin tecnología': móviles apagados." },
   { emoji: "💤", text: "Día de pereza total: desayuno en la cama y películas." },
   { emoji: "🎞️", text: "Ver vuestros vídeos antiguos juntos." },
   { emoji: "💌", text: "Leer cartas o mensajes antiguos que os hayáis enviado." },
   { emoji: "🎶", text: "Escuchar la música que oíais cuando empezasteis a salir." },
   { emoji: "🖼️", text: "Crear un álbum de fotos digital del último año." },
   { emoji: "📍", text: "Visitar el lugar de vuestra primera cita." },
-  { emoji: "🪴", text: "Plantar algo juntos: una planta, hierbas aromáticas o un pequeño huerto." },
-  { emoji: "🔨", text: "Montar un mueble de IKEA (o similar) juntos." },
-  { emoji: "📦", text: "Hacer limpieza profunda de una habitación y donar lo que no usáis." },
+  { emoji: "🪴", text: "Plantar algo juntos: una planta o hierbas aromáticas." },
+  { emoji: "🔨", text: "Montar un mueble de IKEA juntos." },
+  { emoji: "📦", text: "Hacer limpieza profunda y donar lo que no usáis." },
   { emoji: "🎨", text: "Pintar una pared de la casa de un color nuevo y atrevido." },
-  { emoji: "🖼️", text: "Crear una pared de galería con vuestras fotos y cuadros favoritos." },
-  { emoji: "❓", text: "Hacer un test de '36 preguntas para enamorarse'." },
+  { emoji: "🖼️", text: "Crear una pared de galería con vuestras fotos favoritas." },
+  { emoji: "❓", text: "Hacer el test de '36 preguntas para enamorarse'." },
   { emoji: "❤️‍🔥", text: "Hablar sobre vuestros 'lenguajes del amor'." },
-  { emoji: "📜", text: "Crear una 'Constitución de la Pareja' con vuestras reglas y valores." },
+  { emoji: "📜", text: "Crear una 'Constitución de la Pareja' con vuestras reglas." },
   { emoji: "💭", text: "Jugar a '¿Qué prefieres?' con preguntas profundas o graciosas." },
   { emoji: "🏆", text: "Crear los 'Premios Anuales de la Pareja'." },
   { emoji: "🐕", text: "Ser voluntario por un día en un refugio de animales." },
-  { emoji: "🌳", text: "Participar en una jornada de limpieza de un parque o una playa." },
+  { emoji: "🌳", text: "Participar en una jornada de limpieza de un parque o playa." },
   { emoji: "🥫", text: "Hacer una compra solidaria para un banco de alimentos." },
   { emoji: "🩸", text: "Ir a donar sangre juntos." },
   { emoji: "🕺", text: "Aprender una coreografía de baile de TikTok o YouTube." },
   { emoji: "🧗", text: "Probar una sesión de iniciación en un rocódromo." },
   { emoji: "🃏", text: "Aprender un truco de magia con cartas." },
   { emoji: "💰", text: "Hacer un curso online gratuito sobre finanzas personales." },
-  { emoji: "🗺️", text: "Hacer un tour por vuestra propia ciudad como si fuerais turistas." },
+  { emoji: "🗺️", text: "Hacer un tour por vuestra ciudad como si fuerais turistas." },
   { emoji: "🍇", text: "Visitar un mercado de agricultores y comprar productos locales." },
   { emoji: "👻", text: "Hacer un 'tour de misterios y leyendas' por vuestra ciudad." },
-  { emoji: "🌳", text: "Descubrir un parque o jardín botánico en el que nunca hayáis estado." },
+  { emoji: "🌳", text: "Descubrir un parque botánico en el que nunca hayáis estado." },
   { emoji: "🏘️", text: "Explorar un barrio diferente de vuestra ciudad." },
-  { emoji: "🎬", text: "Noche de cine de un director específico (ej: Tarantino, Miyazaki)." },
+  { emoji: "🎬", text: "Noche de cine de un director específico (Tarantino, Miyazaki…)." },
   { emoji: "🌮", text: "Noche mexicana: tacos, guacamole y margaritas." },
   { emoji: "🇬🇧", text: "Tarde de té inglesa." },
-  { emoji: "📼", text: "Noche de los 90: ver una película de esa década y comer snacks de entonces." },
+  { emoji: "📼", text: "Noche de los 90: película de esa época y snacks de entonces." },
   { emoji: "🕯️", text: "Cena a la luz de las velas sin electricidad." },
   { emoji: "🥐", text: "Desayunar en una pastelería o cafetería bonita." },
   { emoji: "🍾", text: "Comprar champán/cava solo para celebrar un día normal." },
   { emoji: "👕", text: "Ir de compras y elegir un conjunto de ropa para el otro." },
-  { emoji: "💐", text: "Regalarse flores mutuamente el mismo día sin un motivo especial." },
+  { emoji: "💐", text: "Regalarse flores mutuamente sin un motivo especial." },
   { emoji: "🍦", text: "Hacer una ruta por las mejores heladerías de la ciudad." },
   { emoji: "👶", text: "Intentar recrear una foto de vuestra infancia." },
-  { emoji: "🏡", text: "Buscar casas de ensueño en Idealista/Fotocasa, solo por diversión." },
+  { emoji: "🏡", text: "Buscar casas de ensueño en Idealista, solo por diversión." },
   { emoji: "🐶", text: "Crear un plan para adoptar una mascota en el futuro." },
   { emoji: "✈️", text: "Planificar un viaje por carretera (road trip)." },
-  { emoji: "🎯", text: "Definir 3 metas personales y 3 metas de pareja para el próximo año." },
+  { emoji: "🎯", text: "Definir 3 metas personales y 3 de pareja para el próximo año." },
 ]
 
-function determineCategory(text: string): string {
+function getCategory(text: string) {
   const t = text.toLowerCase()
-  if (t.includes("amor") || t.includes("cartas") || t.includes("primera cita") || t.includes("lenguajes del amor"))
+  if (t.includes("amor") || t.includes("cartas") || t.includes("primera cita") || t.includes("lenguajes"))
     return "romantic"
-  if (t.includes("senderismo") || t.includes("kayak") || t.includes("bicicleta") || t.includes("viaje") || t.includes("ruta"))
+  if (t.includes("senderismo") || t.includes("kayak") || t.includes("bicicleta") || t.includes("viaje") || t.includes("ruta") || t.includes("turistas"))
     return "adventure"
   if (t.includes("spa") || t.includes("yoga") || t.includes("meditación") || t.includes("baño") || t.includes("masaje") || t.includes("pereza"))
     return "chill"
-  if (t.includes("pintar") || t.includes("dibujar") || t.includes("crear") || t.includes("escribir") || t.includes("canción") || t.includes("cerámica") || t.includes("fotos"))
+  if (t.includes("pintar") || t.includes("escribir") || t.includes("canción") || t.includes("cerámica") || t.includes("fotos") || t.includes("collage"))
     return "creative"
   return "all"
 }
 
-const CATEGORIES = [
-  { id: "all",      label: "✨ Todos" },
-  { id: "romantic", label: "💕 Romántico" },
-  { id: "adventure",label: "🗺️ Aventura" },
-  { id: "chill",    label: "😌 Relax" },
-  { id: "creative", label: "🎨 Creativo" },
+const CATS = [
+  { id: "all",       label: "✨ Todos",     bg: "#8B5CF6" },
+  { id: "romantic",  label: "💕 Romántico", bg: "#EC4899" },
+  { id: "adventure", label: "🗺️ Aventura",  bg: "#F59E0B" },
+  { id: "chill",     label: "😌 Relax",     bg: "#10B981" },
+  { id: "creative",  label: "🎨 Creativo",  bg: "#3B82F6" },
 ]
 
-interface Props { onBack: () => void }
+const CAT_COLORS: Record<string, { from: string; to: string }> = {
+  all:       { from: "#8B5CF6", to: "#EC4899" },
+  romantic:  { from: "#EC4899", to: "#F472B6" },
+  adventure: { from: "#F59E0B", to: "#EF4444" },
+  chill:     { from: "#10B981", to: "#3B82F6" },
+  creative:  { from: "#3B82F6", to: "#8B5CF6" },
+}
 
-export function DailyChallengeApp({ onBack }: Props) {
+export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
   const [category, setCategory] = useState("all")
-  const [revealed, setRevealed] = useState(false)
-  const [currentChallenge, setCurrentChallenge] = useState<ChallengeTask | null>(null)
+  const [challenge, setChallenge] = useState<ChallengeTask | null>(null)
+  const [accepted, setAccepted] = useState(false)
+  const [completed, setCompleted] = useState(false)
   const [history, setHistory] = useState<ChallengeTask[]>([])
   const [showHistory, setShowHistory] = useState(false)
-  const [accepted, setAccepted] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const filtered = useMemo(
-    () => CHALLENGES.filter((c) => category === "all" || determineCategory(c.text) === category),
+    () => CHALLENGES.filter((c) => category === "all" || getCategory(c.text) === category),
     [category]
   )
 
+  const catColor = CAT_COLORS[category] ?? CAT_COLORS.all
+
   function pickRandom() {
-    const pool = filtered.filter((c) => c.text !== currentChallenge?.text)
+    const pool = filtered.filter((c) => c.text !== challenge?.text)
     const pick = pool[Math.floor(Math.random() * pool.length)]
-    setCurrentChallenge(pick)
-    setRevealed(true)
+    setChallenge(pick)
     setAccepted(false)
+    setCompleted(false)
   }
 
   function handleAccept() {
-    if (!currentChallenge) return
-    setHistory((h) => [currentChallenge, ...h].slice(0, 10))
+    if (!challenge) return
+    setHistory((h) => [challenge, ...h].slice(0, 10))
     setAccepted(true)
     toast.success("¡Reto aceptado! 🎉")
   }
 
   async function handleComplete() {
-    // Save to DB
+    if (!challenge || saving) return
+    setSaving(true)
     try {
       const auth = getFirebaseAuth()
       const token = await auth.currentUser?.getIdToken()
-      if (!token || !currentChallenge) return
-      await fetch("/api/challenges/daily", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ challenge_text: currentChallenge.text, category: determineCategory(currentChallenge.text) }),
-      })
-      toast.success("¡Reto completado! 🏆")
-      setRevealed(false)
-      setCurrentChallenge(null)
-      setAccepted(false)
+      if (token) {
+        await fetch("/api/challenges/daily", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ challenge_text: challenge.text, category: getCategory(challenge.text) }),
+        })
+      }
+      setCompleted(true)
+      toast.success("¡Reto completado! 🏆 ¡Sois los mejores!")
     } catch {
-      toast.error("Error al guardar el reto")
-    }
+      toast.error("Error al guardar")
+    } finally { setSaving(false) }
   }
 
   return (
@@ -169,135 +175,205 @@ export function DailyChallengeApp({ onBack }: Props) {
         <button className="back-btn-phone" onClick={onBack}>‹</button>
         <span>🎲 Reto Diario</span>
       </div>
-      <div className="app-content-body">
-        {/* Category filters */}
+
+      <div className="app-content-body" style={{ gap: "0.75rem", padding: "0.75rem" }}>
+        {/* Category chips */}
         <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
-          {CATEGORIES.map((c) => (
+          {CATS.map((c) => (
             <button
               key={c.id}
-              onClick={() => { setCategory(c.id); setRevealed(false); setCurrentChallenge(null) }}
+              onClick={() => { setCategory(c.id); setChallenge(null); setAccepted(false); setCompleted(false) }}
               style={{
-                padding: "0.25rem 0.625rem",
-                borderRadius: "999px",
-                fontSize: "0.6875rem",
-                fontWeight: 600,
-                fontFamily: "inherit",
-                cursor: "pointer",
-                border: "none",
-                background: category === c.id ? "var(--primary)" : "var(--muted)",
-                color: category === c.id ? "white" : "var(--foreground-light)",
+                padding: "0.25rem 0.625rem", borderRadius: "999px",
+                fontSize: "0.6875rem", fontWeight: 700,
+                fontFamily: "inherit", cursor: "pointer", border: "none",
+                background: category === c.id ? c.bg : "#f0ebfa",
+                color: category === c.id ? "white" : "#7C3AED",
                 transition: "all 0.15s",
               }}
-            >
-              {c.label}
-            </button>
+            >{c.label}</button>
           ))}
         </div>
 
         {/* Challenge card */}
-        <div
-          style={{
-            flex: 1,
-            background: "white",
-            borderRadius: "var(--radius-lg)",
-            border: "1px solid var(--border)",
-            padding: "1.25rem",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            textAlign: "center",
-            gap: "0.75rem",
-            minHeight: "160px",
-          }}
-        >
-          {!revealed ? (
-            <>
-              <div style={{ fontSize: "2rem" }}>❓</div>
-              <h3 style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)" }}>
+        {!challenge ? (
+          /* ── Idle state ─────────────────────────────────── */
+          <div style={{
+            background: `linear-gradient(135deg, ${catColor.from}22, ${catColor.to}22)`,
+            border: `2px dashed ${catColor.from}66`,
+            borderRadius: "20px",
+            padding: "2rem 1.25rem",
+            display: "flex", flexDirection: "column",
+            alignItems: "center", gap: "0.875rem", textAlign: "center",
+          }}>
+            <div style={{ fontSize: "3rem", lineHeight: 1 }}>🎁</div>
+            <div>
+              <p style={{ fontWeight: 700, fontSize: "1rem", color: "#2D1B3E", marginBottom: "0.25rem", fontFamily: "'Fredoka', sans-serif" }}>
                 ¿Listos para un nuevo reto?
-              </h3>
-              <button className="btn btn-primary" style={{ fontSize: "0.875rem" }} onClick={pickRandom}>
-                🎲 Descubrir Reto
-              </button>
-            </>
-          ) : currentChallenge && (
-            <>
-              <div style={{ fontSize: "2.5rem" }}>{currentChallenge.emoji}</div>
-              <p style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--foreground)", lineHeight: 1.5 }}>
-                {currentChallenge.text}
               </p>
-              {accepted && (
-                <span style={{ fontSize: "0.75rem", color: "var(--success-dark)", fontWeight: 600 }}>
-                  ✅ Reto aceptado
-                </span>
-              )}
-            </>
-          )}
-        </div>
+              <p style={{ fontSize: "0.75rem", color: "#6B5B7E" }}>
+                {filtered.length} retos disponibles en esta categoría
+              </p>
+            </div>
+            <button
+              onClick={pickRandom}
+              style={{
+                padding: "0.75rem 1.5rem", borderRadius: "999px", border: "none",
+                background: `linear-gradient(135deg, ${catColor.from}, ${catColor.to})`,
+                color: "white", fontFamily: "'Fredoka', sans-serif",
+                fontSize: "1rem", fontWeight: 700, cursor: "pointer",
+                boxShadow: `0 6px 20px ${catColor.from}55`,
+              }}
+            >
+              🎲 ¡Descubrir Reto!
+            </button>
+          </div>
+        ) : (
+          /* ── Revealed state ──────────────────────────────── */
+          <div style={{
+            background: completed
+              ? "linear-gradient(135deg, #D1FAE5, #A7F3D0)"
+              : `linear-gradient(135deg, ${catColor.from}18, ${catColor.to}18)`,
+            border: `2px solid ${completed ? "#10B981" : catColor.from}`,
+            borderRadius: "20px",
+            padding: "1.5rem 1.25rem",
+            display: "flex", flexDirection: "column",
+            alignItems: "center", gap: "1rem", textAlign: "center",
+          }}>
+            {/* Big emoji */}
+            <div style={{
+              width: "72px", height: "72px", borderRadius: "50%",
+              background: `linear-gradient(135deg, ${catColor.from}33, ${catColor.to}33)`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "2.25rem", lineHeight: 1,
+              border: `2px solid ${catColor.from}44`,
+            }}>
+              {completed ? "🏆" : challenge.emoji}
+            </div>
 
-        {/* Actions */}
-        {revealed && (
+            {/* Challenge text — ALWAYS visible */}
+            <p style={{
+              fontSize: "0.9375rem",
+              fontWeight: 700,
+              color: "#2D1B3E",
+              lineHeight: 1.55,
+              margin: 0,
+              fontFamily: "'Fredoka', sans-serif",
+            }}>
+              {challenge.text}
+            </p>
+
+            {/* Status badge */}
+            {completed && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: "0.375rem",
+                background: "#10B98122", borderRadius: "999px",
+                padding: "0.375rem 0.875rem",
+                fontSize: "0.8125rem", fontWeight: 700, color: "#065F46",
+              }}>
+                <Trophy size={14} /> ¡Reto completado! ¡Sois geniales!
+              </div>
+            )}
+            {accepted && !completed && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: "0.375rem",
+                background: "#8B5CF622", borderRadius: "999px",
+                padding: "0.375rem 0.875rem",
+                fontSize: "0.8125rem", fontWeight: 700, color: "#5B21B6",
+              }}>
+                <CheckCircle size={14} /> Reto aceptado · ¡A por ello!
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Action buttons */}
+        {challenge && !completed && (
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <button
-              className="btn btn-outline"
-              style={{ flex: 1, fontSize: "0.8125rem" }}
               onClick={pickRandom}
+              style={{
+                flex: 1, padding: "0.75rem", borderRadius: "12px",
+                border: "2px solid #E9D5FF", background: "white",
+                fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 700,
+                color: "#7C3AED", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem",
+              }}
             >
-              Otro Reto
+              <RefreshCw size={15} /> Otro
             </button>
             {!accepted ? (
               <button
-                className="btn btn-primary"
-                style={{ flex: 1, fontSize: "0.8125rem" }}
                 onClick={handleAccept}
+                style={{
+                  flex: 2, padding: "0.75rem", borderRadius: "12px", border: "none",
+                  background: `linear-gradient(135deg, ${catColor.from}, ${catColor.to})`,
+                  fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 700,
+                  color: "white", cursor: "pointer",
+                  boxShadow: `0 4px 16px ${catColor.from}44`,
+                }}
               >
-                ¡Aceptar!
+                ✅ ¡Aceptar Reto!
               </button>
             ) : (
               <button
-                className="btn btn-primary"
-                style={{ flex: 1, fontSize: "0.8125rem", background: "var(--success-dark)" }}
                 onClick={handleComplete}
+                disabled={saving}
+                style={{
+                  flex: 2, padding: "0.75rem", borderRadius: "12px", border: "none",
+                  background: "linear-gradient(135deg, #10B981, #059669)",
+                  fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 700,
+                  color: "white", cursor: saving ? "not-allowed" : "pointer",
+                  opacity: saving ? 0.7 : 1,
+                  boxShadow: "0 4px 16px #10B98144",
+                }}
               >
-                ✅ Completar
+                {saving ? "..." : "🏆 ¡Completado!"}
               </button>
             )}
           </div>
         )}
 
+        {/* New challenge after completion */}
+        {completed && (
+          <button
+            onClick={pickRandom}
+            style={{
+              width: "100%", padding: "0.75rem", borderRadius: "12px", border: "none",
+              background: "linear-gradient(135deg, #8B5CF6, #EC4899)",
+              fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 700,
+              color: "white", cursor: "pointer",
+            }}
+          >
+            🎲 Nuevo Reto
+          </button>
+        )}
+
         {/* History */}
         {history.length > 0 && (
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.375rem" }}>
-              <h3 style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground-light)" }}>
-                📜 Retos Recientes
-              </h3>
-              <button
-                onClick={() => setShowHistory((s) => !s)}
-                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", color: "var(--primary)" }}
-              >
-                {showHistory ? "Ocultar" : "Ver"}
-              </button>
-            </div>
+            <button
+              onClick={() => setShowHistory((s) => !s)}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                width: "100%", background: "none", border: "none", cursor: "pointer",
+                padding: "0.25rem 0", marginBottom: showHistory ? "0.5rem" : 0,
+              }}
+            >
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6B5B7E" }}>📜 Retos recientes ({history.length})</span>
+              <span style={{ fontSize: "0.75rem", color: "#8B5CF6", fontWeight: 600 }}>{showHistory ? "▲ Ocultar" : "▼ Ver"}</span>
+            </button>
             {showHistory && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
                 {history.map((h, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      gap: "0.5rem",
-                      alignItems: "flex-start",
-                      fontSize: "0.75rem",
-                      color: "var(--foreground-muted)",
-                      background: "var(--muted)",
-                      borderRadius: "var(--radius-sm)",
-                      padding: "0.375rem 0.5rem",
-                    }}
-                  >
-                    <span>{h.emoji}</span>
-                    <span>{h.text}</span>
+                  <div key={i} style={{
+                    display: "flex", gap: "0.625rem", alignItems: "flex-start",
+                    padding: "0.625rem 0.75rem",
+                    background: "white", borderRadius: "10px",
+                    border: "1px solid #E9D5FF",
+                  }}>
+                    <span style={{ fontSize: "1.25rem", flexShrink: 0 }}>{h.emoji}</span>
+                    <span style={{ fontSize: "0.75rem", color: "#2D1B3E", lineHeight: 1.4 }}>{h.text}</span>
                   </div>
                 ))}
               </div>
