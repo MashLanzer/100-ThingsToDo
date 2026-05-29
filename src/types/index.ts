@@ -1,0 +1,201 @@
+export interface User {
+  id: string // Firebase UID
+  name: string
+  email: string
+  avatar_url: string | null
+  couple_code: string
+  couple_id: string | null
+  created_at: string
+}
+
+export interface Couple {
+  id: string
+  user1_id: string
+  user2_id: string
+  created_at: string
+  user1?: User
+  user2?: User
+}
+
+export interface Plan {
+  id: string
+  title: string
+  description: string | null
+  couple_id: string
+  created_by: string
+  created_at: string
+  updated_at: string
+  task_count?: number
+  completed_count?: number
+}
+
+export interface Task {
+  id: string
+  plan_id: string
+  title: string
+  icon: string
+  completed: boolean
+  completed_by: string | null
+  completed_at: string | null
+  sort_order: number
+  created_by: string
+  created_at: string
+}
+
+export interface Place {
+  id: string
+  couple_id: string
+  name: string
+  country: string
+  lat: number
+  lng: number
+  status: "visited" | "wishlist"
+  note: string | null
+  date: string | null
+  photos: string[]
+  created_by: string
+  created_at: string
+}
+
+export interface JournalEntry {
+  id: string
+  couple_id: string
+  date: string
+  content: string
+  mood: string | null
+  photos: string[]
+  created_by: string
+  created_at: string
+}
+
+export type CapsuleType =
+  | "memory"
+  | "dream"
+  | "love"
+  | "achievement"
+  | "mystery"
+  | "reflection"
+
+export interface TimeCapsule {
+  id: string
+  couple_id: string
+  message: string
+  type: CapsuleType
+  unlock_date: string
+  is_opened: boolean
+  attachments: string[]
+  created_by: string
+  created_at: string
+}
+
+export interface SavingsGoal {
+  id: string
+  couple_id: string
+  name: string
+  target_amount: number
+  created_by: string
+  created_at: string
+  contributions?: GoalContribution[]
+  total_saved?: number
+}
+
+export interface GoalContribution {
+  id: string
+  goal_id: string
+  amount: number
+  contributed_by: string
+  created_at: string
+}
+
+export type FavorDifficulty = "easy" | "medium" | "hard"
+export type FavorCategory = "romantic" | "fun" | "help" | "surprise"
+
+export interface Favor {
+  id: string
+  couple_id: string
+  title: string
+  description: string | null
+  difficulty: FavorDifficulty
+  points: number
+  category: FavorCategory
+  is_completed: boolean
+  completed_by: string | null
+  completed_at: string | null
+  created_by: string
+  created_at: string
+}
+
+export type ChallengeCategory = "all" | "romantic" | "adventure" | "chill" | "creative"
+
+export interface DailyChallengeHistory {
+  id: string
+  couple_id: string
+  challenge_text: string
+  category: string
+  is_completed: boolean
+  accepted_by: string
+  accepted_at: string
+  completed_at: string | null
+}
+
+export interface PushSubscription {
+  id: string
+  user_id: string
+  endpoint: string
+  p256dh: string
+  auth_key: string
+  created_at: string
+}
+
+// Challenge data type (static list, not from DB)
+export interface ChallengeData {
+  emoji: string
+  text: string
+  category: ChallengeCategory
+  categoryLabel: string
+  difficulty: "easy" | "medium" | "hard"
+  difficultyLabel: string
+}
+
+export const KAWAII_ICONS: Record<string, string> = {
+  clipboard: "📋",
+  heart: "💕",
+  gift: "🎁",
+  skewers: "🍢",
+  cup: "☕",
+  brush: "🪮",
+  notepad: "📝",
+  tv: "📺",
+  guitar: "🎸",
+  phone: "📱",
+  gift_box: "🎀",
+  gamepad: "🎮",
+  laptop: "💻",
+  envelope: "💌",
+  flower: "🌸",
+  pizza: "🍕",
+  movie: "🎬",
+  travel: "✈️",
+  book: "📚",
+  music: "🎶",
+  camera: "📸",
+  bath: "🛁",
+  game: "🎲",
+  money: "💰",
+  house: "🏠",
+  car: "🚗",
+  star: "⭐",
+  ring: "💍",
+  balloon: "🎈",
+  cat: "🐈",
+  dog: "🐕",
+  bear: "🐻",
+  bunny: "🐰",
+  cloud: "☁️",
+  sun: "☀️",
+  rainbow: "🌈",
+  ice_cream: "🍦",
+  sushi: "🍣",
+  cactus: "🌵",
+  estrellas: "✨",
+}

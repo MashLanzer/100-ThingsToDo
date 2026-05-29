@@ -1,0 +1,18 @@
+{
+  "appId": "com.mashlanzer.thingstodo",
+  "appName": "ThingsToDo",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://thingstodo.vercel.app",
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": ["google.com"],
+      "google": {
+        "clientId": "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+      }
+    }
+  }
+}
