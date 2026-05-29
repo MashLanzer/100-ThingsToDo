@@ -11,7 +11,7 @@
       "skipNativeAuth": false,
       "providers": ["google.com"],
       "google": {
-        "clientId": "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+        "clientId": "258798229107-e8b3187ur4h2dn5fpv451tp7bnl6ea07.apps.googleusercontent.com"
       }
     }
   }

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "258798229107",
+    "project_id": "thingstodo-2772c",
+    "storage_bucket": "thingstodo-2772c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:258798229107:android:6e8cbec56ea88c4e2d3c06",
+        "android_client_info": {
+          "package_name": "com.mashlanzer.thingstodo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "258798229107-lg9qlgtavbmcd51atsbc067nidqddjjq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mashlanzer.thingstodo",
+            "certificate_hash": "137898d0c8a65996937f8800f16f391647341382"
+          }
+        },
+        {
+          "client_id": "258798229107-e8b3187ur4h2dn5fpv451tp7bnl6ea07.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCW_HvSR2Zt9-TK9IR3FXOfWYJh0uyg5wU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "258798229107-e8b3187ur4h2dn5fpv451tp7bnl6ea07.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
