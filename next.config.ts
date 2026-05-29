@@ -28,9 +28,9 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com https://vercel.live",
               "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://tile.openstreetmap.org https://*.supabase.co https://vercel.live",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://nominatim.openstreetmap.org https://vercel.live https://*.vercel.live wss://*.vercel.live",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://nominatim.openstreetmap.org https://vercel.live https://*.vercel.live wss://*.vercel.live https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseapp.com",
               "worker-src 'self' blob:",
-              "frame-src https://vercel.live",
+              "frame-src 'self' https://vercel.live https://*.firebaseapp.com https://accounts.google.com",
               "object-src 'none'",
               "base-uri 'self'",
             ].join("; "),
@@ -71,7 +71,7 @@ const withPWAConfig = withPWA({
     cleanupOutdatedCaches: true,
     runtimeCaching: [
       {
-        urlPattern: /^https:\/\/thingstodo\.vercel\.app\/(?!api\/).*/,
+        urlPattern: /^https:\/\/100-things-todo\.vercel\.app\/(?!api\/).*/,
         handler: "NetworkFirst",
         options: {
           cacheName: "pages-cache",
