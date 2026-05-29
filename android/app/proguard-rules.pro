@@ -19,3 +19,12 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# capacitor-firebase-authentication includes optional Facebook provider
+# that we don't use — suppress missing class errors from R8
+-dontwarn com.facebook.**
+-keep class com.facebook.** { *; }
+-dontwarn com.twitter.**
+-dontwarn com.github.scribejava.**
+-dontwarn com.google.android.gms.auth.api.phone.**
+
