@@ -3,7 +3,7 @@
   "appName": "ThingsToDo",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://thingstodo.vercel.app",
+    "url": "https://100-things-todo.vercel.app",
     "androidScheme": "https"
   },
   "plugins": {
