@@ -1,9 +1,16 @@
 name: Build APK
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
-  workflow_dispatch:
+    paths:
+      - 'android/**'
+      - 'capacitor.config.json'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -12,48 +19,74 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install npm dependencies and sync Capacitor
+        run: |
+          npm ci
+          mkdir -p www && echo '<!DOCTYPE html><html><body></body></html>' > www/index.html
+          npx cap sync android
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle.properties') }}
+          restore-keys: gradle-
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build Release APK
-        working-directory: android
+      - name: Fix Java home in gradle.properties
+        run: |
+          sed -i "s|org.gradle.java.home=.*|org.gradle.java.home=$JAVA_HOME|" android/gradle.properties
+
+      - name: Build release APK
         env:
-          VERSION_CODE: ${{ github.run_number }}
+          ANDROID_HOME: /usr/local/lib/android/sdk
           KEYSTORE_PASSWORD: "Ttd@2025#Kawaii!"
           KEY_PASSWORD: "Ttd@2025#Kawaii!"
-        run: ./gradlew assembleRelease
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          cd android
+          ./gradlew assembleRelease
 
       - name: Rename APK
         run: |
-          mkdir -p apk-output
-          cp android/app/build/outputs/apk/release/app-release.apk apk-output/ThingsToDo-v1.${{ github.run_number }}.apk
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/app-release.apk \
+             out/ThingsToDo-v1.${{ github.run_number }}.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: ThingsToDo-APK
-          path: apk-output/ThingsToDo-v1.${{ github.run_number }}.apk
+          path: out/ThingsToDo-v1.${{ github.run_number }}.apk
           retention-days: 90
 
       - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.${{ github.run_number }}
-          name: ThingsToDo v1.${{ github.run_number }}
+          tag_name: apk-v${{ github.run_number }}
+          name: "ThingsToDo APK v1.${{ github.run_number }}"
           body: |
-            APK generada automáticamente desde el commit ${{ github.sha }}
+            APK lista para instalar en Android.
 
-            **Instalar:** Descarga el archivo .apk y ábrelo en tu Android.
-            *(Puede que necesites activar "Instalar apps de fuentes desconocidas" en Ajustes → Seguridad)*
-          files: apk-output/ThingsToDo-v1.${{ github.run_number }}.apk
+            Descarga `ThingsToDo-v1.${{ github.run_number }}.apk` e instala en tu dispositivo.
+            *(Es posible que necesites activar "Instalar apps de fuentes desconocidas" en Ajustes → Seguridad)*
+
+            La app carga la web en vivo — cualquier actualización de código se refleja automáticamente sin reinstalar.
+          files: out/ThingsToDo-v1.${{ github.run_number }}.apk
           draft: false
-          prerelease: false
