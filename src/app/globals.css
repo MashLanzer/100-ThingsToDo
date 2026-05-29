@@ -270,6 +270,8 @@ body {
   background: rgba(253, 252, 254, 0.92);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
+  /* Push content below the Android/iOS status bar */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .header-content {
@@ -279,6 +281,11 @@ body {
   padding: 0.75rem 1rem;
   max-width: 800px;
   margin: 0 auto;
+}
+
+/* Bottom safe area for nav gestures */
+main {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .header-left {

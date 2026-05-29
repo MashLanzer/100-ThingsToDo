@@ -13,8 +13,9 @@ const APPS = [
   { id: "journal",   emoji: "🗓️", name: "Diario",    bg: "#c3e6cb" },
   { id: "music",     emoji: "🎧", name: "Música",    bg: "#a2d2ff" },
   { id: "challenge", emoji: "🎁", name: "Reto Diario", bg: "#ffdeeb" },
-  { id: "capsule",   emoji: "⏳", name: "Cápsulas",  bg: "linear-gradient(135deg, #8B5CF6, #EC4899)" },
-  { id: "goals",     emoji: "💰", name: "Metas",     bg: "#d4edda" },
+  // Hidden for now — code kept, icons not shown
+  // { id: "capsule",   emoji: "⏳", name: "Cápsulas",  bg: "linear-gradient(135deg, #8B5CF6, #EC4899)" },
+  // { id: "goals",     emoji: "💰", name: "Metas",     bg: "#d4edda" },
 ]
 
 export function PhoneModal() {
