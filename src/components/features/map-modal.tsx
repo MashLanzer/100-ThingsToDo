@@ -95,20 +95,14 @@ export function MapModal() {
     if (globeInstanceRef.current || !globeRef.current) return
     try {
       const GlobeModule = await import("globe.gl" as never) as { default: unknown }
-      const GlobeGL = GlobeModule.default as (el: HTMLElement) => {
-        width: (n: number) => unknown; height: (n: number) => unknown
-        backgroundColor: (c: string) => unknown; globeImageUrl: (url: string) => unknown
-        pointsData: (data: unknown[]) => unknown; pointLat: (fn: (d: unknown) => number) => unknown
-        pointLng: (fn: (d: unknown) => number) => unknown; pointColor: (fn: (d: unknown) => string) => unknown
-        pointAltitude: (n: number) => unknown; pointRadius: (n: number) => unknown
-        pointLabel: (fn: (d: unknown) => string) => unknown
-        controls: () => { autoRotate: boolean; autoRotateSpeed: number }
-      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const GlobeGL = GlobeModule.default as (el: HTMLElement) => any
       if (!globeRef.current) return
       const globe = GlobeGL(globeRef.current)
-      globe.width(globeRef.current.offsetWidth || 380).height(240)
-        .backgroundColor("rgba(0,0,0,0)")
-        .globeImageUrl("//unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
+      globe.width(globeRef.current.offsetWidth || 380)
+      globe.height(240)
+      globe.backgroundColor("rgba(0,0,0,0)")
+      globe.globeImageUrl("//unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
       const pointData = places.map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, status: p.status }))
       globe.pointsData(pointData)
         .pointLat((d) => (d as { lat: number }).lat)
