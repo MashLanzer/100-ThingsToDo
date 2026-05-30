@@ -12,9 +12,13 @@ export function PlanCard({ plan }: Props) {
   const total = plan.task_count ?? 0
   const done = plan.completed_count ?? 0
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
+  const isComplete = total > 0 && pct === 100
 
   return (
-    <div className="plan-card animate-fade-in" onClick={() => router.push(`/plans/${plan.id}`)}>
+    <div
+      className={`plan-card animate-fade-in ${isComplete ? "celebrate-100" : ""}`}
+      onClick={() => router.push(`/plans/${plan.id}`)}
+    >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
         <h3 style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)", flex: 1, marginRight: "0.5rem" }}>
           {plan.title}
@@ -22,15 +26,15 @@ export function PlanCard({ plan }: Props) {
         <span
           style={{
             fontSize: "0.75rem",
-            fontWeight: 600,
-            color: pct === 100 ? "var(--success-dark)" : "var(--foreground-muted)",
-            background: pct === 100 ? "var(--mint)" : "var(--muted)",
+            fontWeight: 700,
+            color: isComplete ? "var(--success-dark)" : "var(--foreground-muted)",
+            background: isComplete ? "var(--mint)" : "var(--muted)",
             borderRadius: "999px",
-            padding: "0.125rem 0.5rem",
+            padding: "0.2rem 0.625rem",
             flexShrink: 0,
           }}
         >
-          {pct === 100 ? "✅ Listo" : `${done}/${total}`}
+          {isComplete ? "🎉 ¡Listo!" : `${done}/${total}`}
         </span>
       </div>
 
@@ -44,9 +48,16 @@ export function PlanCard({ plan }: Props) {
         <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
       </div>
 
-      <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginTop: "0.5rem" }}>
-        {total === 0 ? "Sin tareas" : `${pct}% completado`}
-      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.375rem" }}>
+        <p style={{ fontSize: "0.75rem", color: isComplete ? "var(--primary)" : "var(--foreground-muted)", fontWeight: isComplete ? 700 : 400 }}>
+          {total === 0 ? "Sin tareas" : isComplete ? "✨ ¡Plan completado!" : `${pct}% completado`}
+        </p>
+        {total > 0 && !isComplete && (
+          <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
+            {total - done} pendiente{total - done !== 1 ? "s" : ""}
+          </p>
+        )}
+      </div>
     </div>
   )
 }

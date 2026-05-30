@@ -100,7 +100,14 @@ export function TimeCapsuleApp({ onBack }: Props) {
     } catch { toast.error("Error al abrir") }
   }
 
-  const now = new Date().toISOString().split("T")[0]
+  const nowDate = new Date()
+  const now = `${nowDate.getFullYear()}-${String(nowDate.getMonth()+1).padStart(2,"0")}-${String(nowDate.getDate()).padStart(2,"0")}`
+
+  function daysUntil(dateStr: string): number {
+    const unlock = new Date(dateStr + "T00:00:00")
+    const today = new Date(now + "T00:00:00")
+    return Math.ceil((unlock.getTime() - today.getTime()) / 86_400_000)
+  }
 
   if (view === "read" && selected) {
     const t = CAPSULE_TYPES.find((t) => t.id === selected.type)
@@ -292,25 +299,39 @@ export function TimeCapsuleApp({ onBack }: Props) {
                     display: "flex",
                     alignItems: "center",
                     gap: "0.75rem",
-                    padding: "0.75rem",
-                    background: c.is_opened ? "var(--muted)" : "white",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--border)",
+                    padding: "0.875rem",
+                    background: c.is_opened
+                      ? "var(--muted)"
+                      : canOpen
+                      ? "linear-gradient(135deg, #fdf4ff 0%, #fce7f3 100%)"
+                      : "white",
+                    borderRadius: "var(--radius-lg)",
+                    border: canOpen && !c.is_opened
+                      ? "2px solid var(--primary-light)"
+                      : "1px solid var(--border)",
                     cursor: "pointer",
                     textAlign: "left",
                     fontFamily: "inherit",
-                    opacity: c.is_opened ? 0.7 : 1,
+                    opacity: c.is_opened ? 0.65 : 1,
+                    width: "100%",
                   }}
                 >
-                  <span style={{ fontSize: "1.5rem" }}>{c.is_opened ? "📭" : canOpen ? "📬" : "🔒"}</span>
+                  <span style={{ fontSize: "1.75rem" }}>{c.is_opened ? "📭" : canOpen ? "📬" : "🔒"}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--foreground)" }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>
                       {t?.icon} {t?.label}
                     </div>
-                    <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
-                      {c.is_opened ? "Abierta" : canOpen ? "¡Lista para abrir!" : `Abre el ${formatDate(c.unlock_date)}`}
+                    <div style={{ fontSize: "0.6875rem", color: canOpen && !c.is_opened ? "var(--primary)" : "var(--foreground-muted)", fontWeight: canOpen && !c.is_opened ? 700 : 400 }}>
+                      {c.is_opened
+                        ? `Abierta el ${formatDate(c.unlock_date)}`
+                        : canOpen
+                        ? "¡Lista para abrir! ✨"
+                        : `Se abre en ${daysUntil(c.unlock_date)} día${daysUntil(c.unlock_date) !== 1 ? "s" : ""}`}
                     </div>
                   </div>
+                  {canOpen && !c.is_opened && (
+                    <span style={{ fontSize: "1.25rem" }}>💝</span>
+                  )}
                 </button>
               )
             })}

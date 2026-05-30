@@ -119,41 +119,84 @@ export function SavingsGoalsApp({ onBack }: Props) {
   if (view === "detail" && selected) {
     const saved = selected.total_saved ?? 0
     const pct = selected.target_amount > 0 ? Math.min(100, Math.round((saved / selected.target_amount) * 100)) : 0
+    const isComplete = pct >= 100
+    // SVG circle ring
+    const r = 52
+    const circ = 2 * Math.PI * r
+    const dash = (pct / 100) * circ
 
     return (
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("list")}>‹</button>
-          <span>💰 {selected.name}</span>
+          <span>🐖 {selected.name}</span>
         </div>
         <div className="app-content-body" style={{ alignItems: "center" }}>
-          <div style={{ fontSize: "3rem" }}>🐖</div>
-          <div style={{ width: "100%", marginBottom: "0.5rem" }}>
-            <div className="progress-bar-track">
-              <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
+          {/* Circular progress ring */}
+          <div style={{ position: "relative", width: 130, height: 130, marginBottom: "0.5rem" }}>
+            <svg width="130" height="130" style={{ transform: "rotate(-90deg)" }}>
+              <circle cx="65" cy="65" r={r} fill="none" stroke="var(--muted)" strokeWidth="10" />
+              <circle
+                cx="65" cy="65" r={r}
+                fill="none"
+                stroke="url(#goalGrad)"
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={`${dash} ${circ}`}
+                style={{ transition: "stroke-dasharray 0.6s cubic-bezier(0.4,0,0.2,1)" }}
+              />
+              <defs>
+                <linearGradient id="goalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="var(--primary)" />
+                  <stop offset="100%" stopColor="var(--secondary)" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div style={{
+              position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", gap: "2px"
+            }}>
+              <span style={{ fontSize: isComplete ? "1.75rem" : "0.625rem", lineHeight: 1 }}>
+                {isComplete ? "🎉" : "🐖"}
+              </span>
+              {!isComplete && (
+                <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--primary)", lineHeight: 1 }}>
+                  {pct}%
+                </span>
+              )}
             </div>
-          </div>
-          <p style={{ fontWeight: 700, fontSize: "1rem", color: "var(--primary)" }}>{pct}%</p>
-          <div style={{ display: "flex", gap: "1.5rem", fontSize: "0.8125rem", color: "var(--foreground-light)" }}>
-            <span>Ahorrado: <strong style={{ color: "var(--foreground)" }}>${saved}</strong></span>
-            <span>Objetivo: <strong style={{ color: "var(--foreground)" }}>${selected.target_amount}</strong></span>
           </div>
 
-          <div className="form-group" style={{ width: "100%" }}>
-            <label className="form-label">Añadir aportación</label>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <input
-                className="input"
-                type="number"
-                placeholder="Importe ($)"
-                value={contribution}
-                onChange={(e) => setContribution(e.target.value)}
-              />
-              <button className="btn btn-primary" style={{ flexShrink: 0 }} onClick={handleContribute} disabled={saving}>
-                Aportar
-              </button>
-            </div>
+          <div style={{ textAlign: "center", marginBottom: "0.75rem" }}>
+            <p style={{ fontWeight: 700, fontSize: "1.25rem", color: isComplete ? "var(--primary)" : "var(--foreground)", fontFamily: "'Fredoka', sans-serif" }}>
+              {isComplete ? "¡Meta cumplida! 🎊" : selected.name}
+            </p>
+            <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>
+              <strong style={{ color: "var(--foreground)" }}>${saved.toLocaleString()}</strong>
+              {" de "}
+              <strong style={{ color: "var(--foreground)" }}>${selected.target_amount.toLocaleString()}</strong>
+              {" ahorrados"}
+            </p>
           </div>
+
+          {!isComplete && (
+            <div className="form-group" style={{ width: "100%" }}>
+              <label className="form-label">Añadir aportación</label>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <input
+                  className="input"
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="Importe ($)"
+                  value={contribution}
+                  onChange={(e) => setContribution(e.target.value)}
+                />
+                <button className="btn btn-primary" style={{ flexShrink: 0 }} onClick={handleContribute} disabled={saving}>
+                  {saving ? "..." : "Aportar"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </>
     )
@@ -192,31 +235,37 @@ export function SavingsGoalsApp({ onBack }: Props) {
           goals.map((g) => {
             const saved = g.total_saved ?? 0
             const pct = g.target_amount > 0 ? Math.min(100, Math.round((saved / g.target_amount) * 100)) : 0
+            const isComplete = pct >= 100
             return (
               <button
                 key={g.id}
                 onClick={() => { setSelected(g); setView("detail") }}
                 style={{
                   display: "flex",
-                  flexDirection: "column",
-                  gap: "0.375rem",
-                  padding: "0.75rem",
-                  background: "white",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--border)",
+                  alignItems: "center",
+                  gap: "0.875rem",
+                  padding: "0.875rem",
+                  background: isComplete ? "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)" : "white",
+                  borderRadius: "var(--radius-lg)",
+                  border: isComplete ? "1.5px solid #6ee7b7" : "1px solid var(--border)",
                   cursor: "pointer",
                   textAlign: "left",
                   fontFamily: "inherit",
                   width: "100%",
                 }}
               >
-                <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>💰 {g.name}</span>
-                <div className="progress-bar-track">
-                  <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
+                <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>{isComplete ? "🎉" : "🐖"}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.375rem" }}>
+                    {g.name}
+                  </div>
+                  <div className="progress-bar-track">
+                    <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
+                  </div>
+                  <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>
+                    ${saved.toLocaleString()} / ${g.target_amount.toLocaleString()} — {pct}%
+                  </div>
                 </div>
-                <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
-                  ${saved} / ${g.target_amount} — {pct}%
-                </span>
               </button>
             )
           })

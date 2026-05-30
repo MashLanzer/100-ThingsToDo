@@ -465,26 +465,57 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                   (favTab === "active" ? activeFavors : completedFavors).map((f) => {
                     const diff = DIFFICULTIES.find((d) => d.id === f.difficulty)
                     const cat = CATEGORIES.find((c) => c.id === f.category)
+                    const catEmoji = cat?.label.split(" ")[0] ?? "💝"
+                    const diffColor = f.difficulty === "easy" ? "#10B981" : f.difficulty === "medium" ? "#F59E0B" : "#EF4444"
                     return (
-                      <div key={f.id} style={{
-                        padding: "0.75rem", background: f.is_completed ? "var(--muted)" : "white",
-                        borderRadius: "var(--radius-md)", border: "1px solid var(--border)", opacity: f.is_completed ? 0.75 : 1,
+                      <div key={f.id} className="animate-slide-up" style={{
+                        background: f.is_completed ? "var(--muted)" : "white",
+                        borderRadius: "var(--radius-lg)",
+                        border: f.is_completed ? "1px solid var(--border)" : "1.5px solid var(--primary-light)",
+                        overflow: "hidden",
+                        opacity: f.is_completed ? 0.7 : 1,
+                        display: "flex",
                       }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                          <h4 style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--foreground)", flex: 1 }}>{f.title}</h4>
-                          <span style={{ fontSize: "0.625rem", fontWeight: 600, color: "var(--primary)", marginLeft: "0.5rem", flexShrink: 0 }}>+{f.points}pts</span>
-                        </div>
-                        {f.description && <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.2rem" }}>{f.description}</p>}
-                        <div style={{ display: "flex", gap: "0.25rem", marginTop: "0.375rem", alignItems: "center" }}>
-                          <span style={{ fontSize: "0.625rem", color: "var(--foreground-muted)" }}>{diff?.emoji} {diff?.label}</span>
-                          <span style={{ fontSize: "0.625rem", color: "var(--foreground-muted)" }}>•</span>
-                          <span style={{ fontSize: "0.625rem", color: "var(--foreground-muted)" }}>{cat?.label}</span>
-                          {!f.is_completed && (
-                            <button onClick={() => handleCompleteFavor(f.id)} className="btn btn-primary"
-                              style={{ marginLeft: "auto", fontSize: "0.625rem", padding: "0.2rem 0.5rem" }}>
-                              ✅ Completar
-                            </button>
-                          )}
+                        {/* Left color strip */}
+                        <div style={{
+                          width: "5px",
+                          background: f.is_completed ? "var(--muted-foreground)" : `linear-gradient(180deg, var(--primary), var(--secondary))`,
+                          flexShrink: 0,
+                        }} />
+                        {/* Content */}
+                        <div style={{ flex: 1, padding: "0.75rem 0.75rem 0.75rem 0.625rem" }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                            <span style={{ fontSize: "1.25rem", lineHeight: 1, flexShrink: 0 }}>{catEmoji}</span>
+                            <div style={{ flex: 1 }}>
+                              <h4 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", lineHeight: 1.3 }}>{f.title}</h4>
+                              {f.description && <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "2px", lineHeight: 1.4 }}>{f.description}</p>}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginTop: "0.5rem" }}>
+                            <span style={{
+                              fontSize: "0.5625rem", fontWeight: 700, color: diffColor,
+                              background: `${diffColor}18`, padding: "1px 6px", borderRadius: "999px",
+                            }}>
+                              {diff?.emoji} {diff?.label}
+                            </span>
+                            <span style={{ fontSize: "0.5625rem", color: "var(--foreground-muted)" }}>{cat?.label}</span>
+                            {!f.is_completed && (
+                              <button onClick={() => handleCompleteFavor(f.id)}
+                                style={{
+                                  marginLeft: "auto", fontSize: "0.6875rem", fontWeight: 700,
+                                  padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none",
+                                  background: "linear-gradient(135deg, var(--primary), var(--secondary))",
+                                  color: "white", cursor: "pointer", fontFamily: "inherit",
+                                }}>
+                                ✅ Canjear
+                              </button>
+                            )}
+                            {f.is_completed && (
+                              <span style={{ marginLeft: "auto", fontSize: "0.6875rem", color: "var(--success-dark)", fontWeight: 700 }}>
+                                ✓ Canjeado
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )

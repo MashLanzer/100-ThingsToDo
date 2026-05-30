@@ -15,6 +15,8 @@ const APPS = [
   { id: "music",    emoji: "🎧", name: "Música",     bg: "#a2d2ff" },
   { id: "desafios", emoji: "🎯", name: "Desafíos",   bg: "#ffe8d6" },
   { id: "map",      emoji: "🗺️", name: "Aventuras", bg: "#d4f1f9" },
+  { id: "capsule",  emoji: "⏳", name: "Cápsulas",  bg: "#f3e8ff" },
+  { id: "goals",    emoji: "🐖", name: "Metas",      bg: "#d1fae5" },
 ]
 
 export function PhoneModal() {
@@ -71,10 +73,25 @@ export function PhoneModal() {
               {/* Homescreen */}
               {activePhoneApp === "home" && (
                 <div className="phone-app-view active">
-                  <div className="phone-homescreen">
+                  <div className="phone-homescreen" style={{
+                    background: "linear-gradient(160deg, #fdf4ff 0%, #fce7f3 60%, #ede9fe 100%)",
+                  }}>
                     <div className="phone-status-bar">
-                      <span>{time}</span>
+                      <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600 }}>{time}</span>
                       <span>📶 🔋</span>
+                    </div>
+                    <div style={{ textAlign: "center", paddingBottom: "0.25rem" }}>
+                      <p style={{
+                        fontFamily: "'Fredoka', sans-serif", fontSize: "1rem",
+                        fontWeight: 600, color: "var(--primary)", lineHeight: 1.3,
+                      }}>
+                        {(() => {
+                          const h = new Date().getHours()
+                          if (h < 12) return "¡Buenos días! ☀️"
+                          if (h < 19) return "¡Buenas tardes! 🌸"
+                          return "¡Buenas noches! 🌙"
+                        })()}
+                      </p>
                     </div>
                     <div className="app-grid">
                       {APPS.map((app) => (

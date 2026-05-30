@@ -262,11 +262,16 @@ export function JournalApp({ onBack }: Props) {
           </div>
           <textarea
             className="textarea"
-            rows={8}
+            rows={6}
             placeholder="¿Cómo fue vuestro día hoy?..."
             value={writeContent}
-            onChange={(e) => setWriteContent(e.target.value)}
+            onChange={(e) => {
+              setWriteContent(e.target.value)
+              e.target.style.height = "auto"
+              e.target.style.height = `${e.target.scrollHeight}px`
+            }}
             autoFocus
+            style={{ minHeight: "120px" }}
           />
           <button
             className="btn btn-primary"
