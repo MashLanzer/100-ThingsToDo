@@ -28,7 +28,18 @@ export async function GET(req: NextRequest) {
     .order("created_at", { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  const plans = (data ?? []).map((plan: { tasks?: { completed: boolean }[] } & Record<string, unknown>) => {
+    const tasks = plan.tasks ?? []
+    return {
+      ...plan,
+      task_count: tasks.length,
+      completed_count: tasks.filter((t) => t.completed).length,
+      tasks: undefined,
+    }
+  })
+
+  return NextResponse.json(plans)
 }
 
 // POST /api/plans

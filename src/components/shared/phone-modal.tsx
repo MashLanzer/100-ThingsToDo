@@ -7,15 +7,18 @@ import { JournalApp } from "@/components/features/journal-app"
 import { TimeCapsuleApp } from "@/components/features/time-capsule-app"
 import { SavingsGoalsApp } from "@/components/features/savings-goals-app"
 import { MusicApp } from "@/components/features/music-app"
+import { CoupleApp } from "@/components/features/couple-app"
+import { FavorsApp } from "@/components/features/favors-app"
+import { MapApp } from "@/components/features/map-app"
 import { useState, useEffect } from "react"
 
 const APPS = [
-  { id: "journal",   emoji: "🗓️", name: "Diario",    bg: "#c3e6cb" },
-  { id: "music",     emoji: "🎧", name: "Música",    bg: "#a2d2ff" },
-  { id: "challenge", emoji: "🎁", name: "Reto Diario", bg: "#ffdeeb" },
-  // Hidden for now — code kept, icons not shown
-  // { id: "capsule",   emoji: "⏳", name: "Cápsulas",  bg: "linear-gradient(135deg, #8B5CF6, #EC4899)" },
-  // { id: "goals",     emoji: "💰", name: "Metas",     bg: "#d4edda" },
+  { id: "journal",   emoji: "🗓️", name: "Diario",       bg: "#c3e6cb" },
+  { id: "music",     emoji: "🎧", name: "Música",        bg: "#a2d2ff" },
+  { id: "challenge", emoji: "🎁", name: "Reto Diario",   bg: "#ffdeeb" },
+  { id: "couple",    emoji: "💑", name: "Mi Pareja",     bg: "#fde2e4" },
+  { id: "map",       emoji: "🗺️", name: "Aventuras",    bg: "#d4f1f9" },
+  { id: "favors",    emoji: "💝", name: "Favores",       bg: "#f9d4f1" },
 ]
 
 export function PhoneModal() {
@@ -122,6 +125,21 @@ export function PhoneModal() {
               {activePhoneApp === "goals" && (
                 <div className="phone-app-view active">
                   <SavingsGoalsApp onBack={goHome} />
+                </div>
+              )}
+              {activePhoneApp === "couple" && (
+                <div className="phone-app-view active">
+                  <CoupleApp onBack={goHome} />
+                </div>
+              )}
+              {activePhoneApp === "favors" && (
+                <div className="phone-app-view active">
+                  <FavorsApp onBack={goHome} />
+                </div>
+              )}
+              {activePhoneApp === "map" && (
+                <div className="phone-app-view active">
+                  <MapApp onBack={goHome} />
                 </div>
               )}
             </div>

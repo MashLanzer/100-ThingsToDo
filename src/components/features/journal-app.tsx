@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { getFirebaseAuth } from "@/lib/firebase/client"
+import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import type { JournalEntry } from "@/types"
 
@@ -19,6 +20,8 @@ interface Props { onBack: () => void }
 type View = "calendar" | "read" | "write"
 
 export function JournalApp({ onBack }: Props) {
+  const { user } = useAuth()
+  const myUid = user?.uid ?? ""
   const [view, setView] = useState<View>("calendar")
   const [currentDate, setCurrentDate] = useState(new Date())
   const [entries, setEntries] = useState<JournalEntry[]>([])
@@ -27,16 +30,10 @@ export function JournalApp({ onBack }: Props) {
   const [writeContent, setWriteContent] = useState("")
   const [writeMood, setWriteMood] = useState("happy")
   const [saving, setSaving] = useState(false)
-  const [myUid, setMyUid] = useState<string>("")
   const [showPartnerEntry, setShowPartnerEntry] = useState(false)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
-
-  useEffect(() => {
-    const auth = getFirebaseAuth()
-    setMyUid(auth.currentUser?.uid ?? "")
-  }, [])
 
   useEffect(() => {
     loadEntries()
