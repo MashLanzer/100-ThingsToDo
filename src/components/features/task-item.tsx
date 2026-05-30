@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import React, { useState, useRef } from "react"
 import { KAWAII_ICONS } from "@/types"
 import type { Task } from "@/types"
 import { Trash2, Check } from "lucide-react"
@@ -144,6 +144,27 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, onMoveUp, onMoveDow
               ✅ {task.completed_by_name}
             </span>
           )}
+          {task.notes && (
+            <span style={{ display: "block", fontSize: "0.625rem", color: "var(--foreground-muted)", fontWeight: 400, marginTop: "1px" }}>
+              {task.notes}
+            </span>
+          )}
+          {task.due_date && (() => {
+            const today = new Date().toISOString().split("T")[0]
+            const diffDays = Math.ceil((new Date(task.due_date).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24))
+            let badge: React.ReactNode
+            if (task.due_date < today) {
+              badge = <span style={{ display: "inline-block", fontSize: "0.5625rem", background: "#fef2f2", color: "#dc2626", borderRadius: "4px", padding: "1px 5px", fontWeight: 600, marginTop: "2px", textDecoration: "none" }}>⚠️ Vencida</span>
+            } else if (task.due_date === today) {
+              badge = <span style={{ display: "inline-block", fontSize: "0.5625rem", background: "#fff7ed", color: "#ea580c", borderRadius: "4px", padding: "1px 5px", fontWeight: 600, marginTop: "2px", textDecoration: "none" }}>📅 Hoy</span>
+            } else if (diffDays <= 3) {
+              badge = <span style={{ display: "inline-block", fontSize: "0.5625rem", background: "#fefce8", color: "#ca8a04", borderRadius: "4px", padding: "1px 5px", fontWeight: 600, marginTop: "2px", textDecoration: "none" }}>📅 En {diffDays} días</span>
+            } else {
+              const [y, m, d] = task.due_date.split("-")
+              badge = <span style={{ display: "inline-block", fontSize: "0.5625rem", background: "var(--muted)", color: "var(--foreground-muted)", borderRadius: "4px", padding: "1px 5px", fontWeight: 600, marginTop: "2px", textDecoration: "none" }}>📅 {d}/{m}</span>
+            }
+            return <span style={{ display: "block" }}>{badge}</span>
+          })()}
         </span>
 
         {/* Right-side actions */}

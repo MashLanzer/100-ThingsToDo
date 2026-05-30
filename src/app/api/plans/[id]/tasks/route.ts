@@ -58,12 +58,12 @@ export async function POST(req: NextRequest, { params }: Context) {
   const { data: plan } = await supabase.from("plans").select("id").eq("id", planId).eq("couple_id", me.couple_id).single()
   if (!plan) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { title, icon, sort_order } = await req.json()
+  const { title, icon, sort_order, notes, due_date } = await req.json()
   if (!title?.trim()) return NextResponse.json({ error: "Título requerido" }, { status: 400 })
 
   const { data, error } = await supabase
     .from("tasks")
-    .insert({ plan_id: planId, title: title.trim(), icon: icon ?? "✨", sort_order: sort_order ?? 0, created_by: user.uid })
+    .insert({ plan_id: planId, title: title.trim(), icon: icon ?? "✨", sort_order: sort_order ?? 0, created_by: user.uid, notes: notes ?? null, due_date: due_date ?? null })
     .select()
     .single()
 

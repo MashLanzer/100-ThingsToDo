@@ -1,6 +1,7 @@
 "use client"
 
 import { useAppStore } from "@/stores/app-store"
+import { useShallow } from "zustand/react/shallow"
 import { X } from "lucide-react"
 import { JournalApp } from "@/components/features/journal-app"
 import { TimeCapsuleApp } from "@/components/features/time-capsule-app"
@@ -26,7 +27,15 @@ const GREETINGS: Record<string, [string, string]> = {
 }
 
 export function PhoneModal() {
-  const { showPhoneModal, closePhoneModal, activePhoneApp, setActivePhoneApp } = useAppStore()
+  const { showPhoneModal, closePhoneModal, activePhoneApp, setActivePhoneApp, nowPlayingTrack } = useAppStore(
+    useShallow((s) => ({
+      showPhoneModal: s.showPhoneModal,
+      closePhoneModal: s.closePhoneModal,
+      activePhoneApp: s.activePhoneApp,
+      setActivePhoneApp: s.setActivePhoneApp,
+      nowPlayingTrack: s.nowPlayingTrack,
+    }))
+  )
   const [time, setTime] = useState("")
   const [hiddenApps, setHiddenApps] = useState<string[]>([])
 
@@ -171,6 +180,27 @@ export function PhoneModal() {
                 </div>
               )}
             </div>
+            {/* Mini player bar — shown when music is playing and user is in another app */}
+            {activePhoneApp !== "music" && nowPlayingTrack && (
+              <div
+                style={{
+                  position: "absolute", bottom: "40px", left: 0, right: 0,
+                  background: "linear-gradient(135deg, var(--primary), var(--secondary))",
+                  padding: "0.5rem 0.75rem",
+                  display: "flex", alignItems: "center", gap: "0.5rem",
+                  cursor: "pointer",
+                  zIndex: 10,
+                }}
+                onClick={() => setActivePhoneApp("music")}
+              >
+                <span style={{ fontSize: "1rem" }}>{nowPlayingTrack.emoji}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "white", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nowPlayingTrack.title}</div>
+                  <div style={{ fontSize: "0.5625rem", color: "rgba(255,255,255,0.8)" }}>{nowPlayingTrack.artist}</div>
+                </div>
+                <div style={{ fontSize: "0.875rem" }}>🎵</div>
+              </div>
+            )}
           </div>
         </div>
       </div>

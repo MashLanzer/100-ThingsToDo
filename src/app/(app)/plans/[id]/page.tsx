@@ -25,6 +25,8 @@ export default function PlanDetailPage() {
 
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [taskTitle, setTaskTitle] = useState("")
+  const [taskNotes, setTaskNotes] = useState("")
+  const [taskDueDate, setTaskDueDate] = useState("")
   const [selectedIcon, setSelectedIcon] = useState("heart")
   const [showEditModal, setShowEditModal] = useState(false)
   const [editTitle, setEditTitle] = useState("")
@@ -34,13 +36,22 @@ export default function PlanDetailPage() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editTaskTitle, setEditTaskTitle] = useState("")
   const [editTaskIcon, setEditTaskIcon] = useState("heart")
+  const [editTaskNotes, setEditTaskNotes] = useState("")
+  const [editTaskDueDate, setEditTaskDueDate] = useState("")
 
   const iconEntries = Object.entries(KAWAII_ICONS)
 
   async function handleSaveTaskEdit() {
     if (!editingTaskId || !editTaskTitle.trim()) return
     try {
-      await updateTask.mutateAsync({ taskId: editingTaskId, planId: params.id, title: editTaskTitle.trim(), icon: editTaskIcon })
+      await updateTask.mutateAsync({
+        taskId: editingTaskId,
+        planId: params.id,
+        title: editTaskTitle.trim(),
+        icon: editTaskIcon,
+        notes: editTaskNotes.trim() || null,
+        due_date: editTaskDueDate || null,
+      })
       setEditingTaskId(null)
       toast.success("Tarea actualizada ✨")
     } catch (e: unknown) {
@@ -74,8 +85,16 @@ export default function PlanDetailPage() {
   async function handleAddTask() {
     if (!taskTitle.trim()) return
     try {
-      await createTask.mutateAsync({ planId: params.id, title: taskTitle.trim(), icon: selectedIcon })
+      await createTask.mutateAsync({
+        planId: params.id,
+        title: taskTitle.trim(),
+        icon: selectedIcon,
+        notes: taskNotes.trim() || undefined,
+        due_date: taskDueDate || undefined,
+      })
       setTaskTitle("")
+      setTaskNotes("")
+      setTaskDueDate("")
       setSelectedIcon("heart")
       setShowTaskForm(false)
     } catch (e: unknown) {
@@ -221,6 +240,21 @@ export default function PlanDetailPage() {
               style={{ marginBottom: "0.75rem" }}
               autoFocus
             />
+            <textarea
+              className="textarea"
+              rows={2}
+              placeholder="Nota opcional..."
+              value={taskNotes}
+              onChange={(e) => setTaskNotes(e.target.value)}
+              style={{ marginBottom: "0.75rem" }}
+            />
+            <input
+              type="date"
+              className="input"
+              value={taskDueDate}
+              onChange={(e) => setTaskDueDate(e.target.value)}
+              style={{ marginBottom: "0.75rem" }}
+            />
             <div style={{ marginBottom: "0.75rem" }}>
               <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground-light)", marginBottom: "0.5rem" }}>
                 Ícono personalizado
@@ -280,7 +314,13 @@ export default function PlanDetailPage() {
                   task={task}
                   onToggle={() => toggleTask.mutate({ taskId: task.id, planId: params.id, completed: task.completed })}
                   onDelete={() => deleteTask.mutate({ taskId: task.id, planId: params.id })}
-                  onEdit={() => { setEditingTaskId(task.id); setEditTaskTitle(task.title); setEditTaskIcon(task.icon ?? "heart") }}
+                  onEdit={() => {
+                    setEditingTaskId(task.id)
+                    setEditTaskTitle(task.title)
+                    setEditTaskIcon(task.icon ?? "heart")
+                    setEditTaskNotes(task.notes ?? "")
+                    setEditTaskDueDate(task.due_date ?? "")
+                  }}
                   onMoveUp={i > 0 ? () => handleMoveTask(task.id, "up") : undefined}
                   onMoveDown={i < tasks.length - 1 ? () => handleMoveTask(task.id, "down") : undefined}
                 />
@@ -298,6 +338,21 @@ export default function PlanDetailPage() {
                       onKeyDown={(e) => e.key === "Enter" && handleSaveTaskEdit()}
                       style={{ marginBottom: "0.625rem" }}
                       autoFocus
+                    />
+                    <textarea
+                      className="textarea"
+                      rows={2}
+                      placeholder="Nota opcional..."
+                      value={editTaskNotes}
+                      onChange={(e) => setEditTaskNotes(e.target.value)}
+                      style={{ marginBottom: "0.625rem" }}
+                    />
+                    <input
+                      type="date"
+                      className="input"
+                      value={editTaskDueDate}
+                      onChange={(e) => setEditTaskDueDate(e.target.value)}
+                      style={{ marginBottom: "0.625rem" }}
                     />
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.625rem" }}>
                       {iconEntries.map(([key, emoji]) => (
@@ -365,6 +420,17 @@ export default function PlanDetailPage() {
                     Eliminar
                   </button>
                 </div>
+                <button
+                  className="btn btn-outline"
+                  onClick={() =>
+                    updatePlan.mutateAsync({ id: params.id, archived: !plan?.archived }).then(() => {
+                      setShowEditModal(false)
+                      router.push("/dashboard")
+                    })
+                  }
+                >
+                  {plan?.archived ? "📤 Desarchivar" : "📦 Archivar"}
+                </button>
               </div>
             </div>
           </div>

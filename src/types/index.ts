@@ -27,6 +27,7 @@ export interface Plan {
   updated_at: string
   task_count?: number
   completed_count?: number
+  archived?: boolean
 }
 
 export interface Task {
@@ -39,6 +40,8 @@ export interface Task {
   completed_by_name?: string | null
   completed_at: string | null
   sort_order: number
+  notes?: string | null
+  due_date?: string | null
   created_by: string
   created_at: string
 }

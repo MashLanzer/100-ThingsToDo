@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Play, Pause, SkipForward, SkipBack, Plus, Trash2, ListMusic } from "lucide-react"
+import { useAppStore } from "@/stores/app-store"
 
 interface Track {
   id: string
@@ -105,12 +106,22 @@ function VinylRecord({ isPlaying, color, emoji }: { isPlaying: boolean; color: s
 
 type AppView = "player" | "playlists" | "addTrack" | "addPlaylist"
 
+function formatTime(s: number): string {
+  if (!isFinite(s) || s < 0) return "0:00"
+  const m = Math.floor(s / 60)
+  const sec = Math.floor(s % 60)
+  return `${m}:${sec.toString().padStart(2, "0")}`
+}
+
 export function MusicApp({ onBack }: { onBack: () => void }) {
+  const { setNowPlayingTrack } = useAppStore()
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [playlistIdx, setPlaylistIdx] = useState(0)
   const [trackIdx, setTrackIdx] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
   const [isLoop, setIsLoop] = useState(false)
   const [isShuffle, setIsShuffle] = useState(false)
   const [view, setView] = useState<AppView>("player")
@@ -180,7 +191,11 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
-    const onTime = () => setProgress(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0)
+    const onTime = () => {
+      setProgress(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0)
+      setCurrentTime(audio.currentTime)
+      setDuration(audio.duration || 0)
+    }
     const onEnd = () => {
       if (isLoop) { audio.currentTime = 0; audio.play().catch(() => {}) }
       else if (isShuffle) goToRandom()
@@ -235,7 +250,12 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   function togglePlay() {
     if (!track) return
     // YouTube: visual only (iframe handles audio)
-    if (isYouTube(track.url || "")) { setIsPlaying((p) => !p); return }
+    if (isYouTube(track.url || "")) {
+      const next = !isPlaying
+      setIsPlaying(next)
+      if (next) setNowPlayingTrack({ title: track.title, artist: track.artist, emoji: track.emoji, color: track.color })
+      return
+    }
     const audio = audioRef.current
     if (!audio) return
     if (!track.url) { setIsPlaying((p) => !p); return }  // no URL → visual demo
@@ -243,7 +263,10 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
       audio.pause(); setIsPlaying(false)
     } else {
       if (audio.src !== track.url) audio.src = track.url
-      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(true))
+      audio.play().then(() => {
+        setIsPlaying(true)
+        setNowPlayingTrack({ title: track.title, artist: track.artist, emoji: track.emoji, color: track.color })
+      }).catch(() => setIsPlaying(true))
     }
   }
 
@@ -459,6 +482,12 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
               transition: isPlaying ? "width 0.5s linear" : "none",
             }} />
           </div>
+          {track?.url && !isYouTube(track.url) && duration > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", width: "100%", fontSize: "0.5625rem", color: "var(--foreground-muted)", marginTop: "2px" }}>
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+          )}
         </div>
 
         {/* Shuffle/Loop toggles */}

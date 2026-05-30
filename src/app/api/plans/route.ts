@@ -21,10 +21,11 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from("plans")
     .select(`
-      id, title, description, created_by, created_at, updated_at,
+      id, title, description, created_by, created_at, updated_at, archived,
       tasks ( id, completed )
     `)
     .eq("couple_id", me.couple_id)
+    .order("archived", { ascending: true, nullsFirst: true })
     .order("created_at", { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

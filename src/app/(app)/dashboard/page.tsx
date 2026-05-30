@@ -55,6 +55,20 @@ function SwipePlanCard({ plan, index, onDelete }: { plan: Plan; index: number; o
   )
 }
 
+type SortBy = "newest" | "oldest" | "progress_asc" | "progress_desc"
+
+function sortPlans(plans: Plan[], sortBy: SortBy): Plan[] {
+  return [...plans].sort((a, b) => {
+    if (sortBy === "newest") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    if (sortBy === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    const progressA = (a.task_count ?? 0) > 0 ? (a.completed_count ?? 0) / (a.task_count ?? 1) : 0
+    const progressB = (b.task_count ?? 0) > 0 ? (b.completed_count ?? 0) / (b.task_count ?? 1) : 0
+    if (sortBy === "progress_desc") return progressB - progressA
+    if (sortBy === "progress_asc") return progressA - progressB
+    return 0
+  })
+}
+
 export default function DashboardPage() {
   const { data: plans, isLoading, refetch } = usePlans()
   const { data: coupleData } = useCoupleStatus()
@@ -66,6 +80,8 @@ export default function DashboardPage() {
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [sortBy, setSortBy] = useState<SortBy>("newest")
+  const [showArchived, setShowArchived] = useState(false)
 
   const hasCouple = !!coupleData?.couple
 
@@ -78,11 +94,21 @@ export default function DashboardPage() {
     }
   }, [])
 
-  const filteredPlans = plans?.filter((p) => {
+  const allPlans = plans ?? []
+
+  // Split into active and archived
+  const activePlans = allPlans.filter((p) => !p.archived)
+  const archivedPlans = allPlans.filter((p) => p.archived)
+
+  // Apply search filter
+  const filterFn = (p: Plan) => {
     if (!searchQuery.trim()) return true
     const q = searchQuery.toLowerCase()
     return p.title.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q)
-  })
+  }
+
+  const filteredActive = sortPlans(activePlans.filter(filterFn), sortBy)
+  const filteredArchived = sortPlans(archivedPlans.filter(filterFn), sortBy)
 
   async function handleDeletePlan(id: string) {
     if (!confirm("¿Eliminar este plan y todas sus tareas?")) return
@@ -111,6 +137,9 @@ export default function DashboardPage() {
       toast.error(e instanceof Error ? e.message : "Error al crear plan")
     }
   }
+
+  const hasAnyPlans = allPlans.length > 0
+  const noResults = searchQuery.trim() && filteredActive.length === 0 && filteredArchived.length === 0
 
   return (
     <div className="page-container">
@@ -191,7 +220,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Search bar */}
-      {plans && plans.length > 2 && (
+      {hasAnyPlans && allPlans.length > 2 && (
         <div style={{ position: "relative", marginBottom: "0.875rem" }}>
           <Search size={15} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--foreground-muted)", pointerEvents: "none" }} />
           <input
@@ -202,6 +231,37 @@ export default function DashboardPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ paddingLeft: "2.25rem" }}
           />
+        </div>
+      )}
+
+      {/* Sort pills */}
+      {hasAnyPlans && (
+        <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: "0.875rem" }}>
+          {([
+            { key: "newest", label: "🕐 Recientes" },
+            { key: "oldest", label: "🕐 Antiguos" },
+            { key: "progress_desc", label: "📈 Más progreso" },
+            { key: "progress_asc", label: "📉 Menos progreso" },
+          ] as { key: SortBy; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setSortBy(key)}
+              style={{
+                padding: "3px 10px",
+                borderRadius: "999px",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: "0.6875rem",
+                fontWeight: 600,
+                background: sortBy === key ? "var(--primary)" : "var(--muted)",
+                color: sortBy === key ? "white" : "var(--foreground-muted)",
+                transition: "background 0.15s, color 0.15s",
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
 
@@ -246,7 +306,7 @@ export default function DashboardPage() {
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
         </div>
-      ) : !plans || plans.length === 0 || (searchQuery.trim() && filteredPlans?.length === 0) ? (
+      ) : !hasAnyPlans || noResults ? (
         <div className="empty-state">
           <div className="empty-icon animate-bounce-slow">
             {hasCouple ? "💝" : "💌"}
@@ -268,11 +328,52 @@ export default function DashboardPage() {
           )}
         </div>
       ) : (
-        <div className="plans-grid">
-          {(filteredPlans ?? plans ?? []).map((plan, i) => (
-            <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
-          ))}
-        </div>
+        <>
+          {/* Active plans */}
+          {filteredActive.length > 0 && (
+            <div className="plans-grid">
+              {filteredActive.map((plan, i) => (
+                <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
+              ))}
+            </div>
+          )}
+
+          {/* Archived / completed section */}
+          {filteredArchived.length > 0 && (
+            <div style={{ marginTop: "1rem" }}>
+              <button
+                onClick={() => setShowArchived((v) => !v)}
+                style={{
+                  display: "flex", alignItems: "center", gap: "0.5rem", width: "100%",
+                  background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius-md)",
+                  padding: "0.5rem 0.75rem", cursor: "pointer", fontFamily: "inherit",
+                  fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground-light)",
+                  marginBottom: showArchived ? "0.75rem" : 0,
+                }}
+              >
+                <span>✅ Completados</span>
+                <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
+                  {filteredArchived.length} {showArchived ? "▲" : "▼"}
+                </span>
+              </button>
+              {showArchived && (
+                <div className="plans-grid animate-fade-in">
+                  {filteredArchived.map((plan, i) => (
+                    <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* If no active plans but only archived */}
+          {filteredActive.length === 0 && filteredArchived.length === 0 && searchQuery.trim() && (
+            <div className="empty-state">
+              <div className="empty-icon animate-bounce-slow">🔍</div>
+              <p className="empty-text">No hay planes que coincidan con tu búsqueda</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
