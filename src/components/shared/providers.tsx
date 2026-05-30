@@ -48,6 +48,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { applyStoredTheme() }, [])
 
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    }
+  }, [])
+
   return (
     <QueryClientProvider client={queryClient}>
       {children}

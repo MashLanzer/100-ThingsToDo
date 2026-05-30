@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useAppStore } from "@/stores/app-store"
 import { useCoupleStatus, useLinkPartner, useUnlinkPartner } from "@/hooks/use-couple"
 import { useAuth } from "@/hooks/use-auth"
+import { usePushNotifications } from "@/hooks/use-push-notifications"
 import { toast } from "sonner"
 import { X, Copy, Check } from "lucide-react"
 
@@ -133,6 +134,7 @@ export function SettingsModal() {
   const { user } = useAuth()
   const linkMutation = useLinkPartner()
   const unlinkMutation = useUnlinkPartner()
+  const { subscribe: subscribePush, subscribing: pushSubscribing, isSubscribed: pushSubscribed, isSupported: pushSupported, permission: pushPermission } = usePushNotifications()
   const [code, setCode] = useState("")
   const [copied, setCopied] = useState(false)
   const [currentTheme, setCurrentTheme] = useState("purple")
@@ -245,6 +247,15 @@ export function SettingsModal() {
     saveThemeSettings({ ...ts, darkMode: v })
     if (v) document.documentElement.setAttribute("data-dark", "true")
     else document.documentElement.removeAttribute("data-dark")
+  }
+
+  async function handleEnablePush() {
+    await subscribePush()
+    if (pushPermission === "denied") {
+      toast.error("Notificaciones bloqueadas en tu navegador")
+    } else {
+      toast.success("¡Notificaciones activadas! 🔔")
+    }
   }
 
   async function getAuthToken() {
@@ -551,6 +562,39 @@ export function SettingsModal() {
                     <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>📳 Vibración al completar tarea</p>
                   </div>
                   <Toggle checked={vibrationEnabled} onChange={handleVibrationToggle} />
+                </div>
+              </section>
+
+              {/* ── Notificaciones push ── */}
+              <section>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem" }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>
+                      🔔 Notificaciones push
+                    </p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginTop: "0.125rem" }}>
+                      {!pushSupported
+                        ? "No soportado en este navegador"
+                        : pushSubscribed || pushPermission === "granted"
+                        ? "Activadas ✅"
+                        : pushPermission === "denied"
+                        ? "Bloqueadas en el navegador"
+                        : "Desactivadas"}
+                    </p>
+                    <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>
+                      Recibirás una notificación cuando tu pareja complete una tarea 💕
+                    </p>
+                  </div>
+                  {pushSupported && !pushSubscribed && pushPermission !== "granted" && pushPermission !== "denied" && (
+                    <button
+                      className="btn btn-primary"
+                      style={{ fontSize: "0.75rem", padding: "0.375rem 0.75rem", flexShrink: 0 }}
+                      onClick={handleEnablePush}
+                      disabled={pushSubscribing}
+                    >
+                      {pushSubscribing ? "..." : "Activar"}
+                    </button>
+                  )}
                 </div>
               </section>
 

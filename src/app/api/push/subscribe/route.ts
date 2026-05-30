@@ -23,6 +23,14 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // Table may not exist yet — fail silently so the app keeps working
+  if (error) {
+    // 42P01 = table does not exist in Postgres
+    if (error.code === "42P01") {
+      return NextResponse.json({ ok: true, skipped: true })
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
   return NextResponse.json(data, { status: 201 })
 }

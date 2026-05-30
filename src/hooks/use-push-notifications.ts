@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
@@ -16,14 +16,29 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
 
 export function usePushNotifications() {
   const [subscribing, setSubscribing] = useState(false)
-  const [subscribed, setSubscribed] = useState(false)
+  const [isSubscribed, setIsSubscribed] = useState(false)
+  const [permission, setPermission] = useState<NotificationPermission>("default")
+  const [isSupported, setIsSupported] = useState(false)
+
+  useEffect(() => {
+    const supported =
+      typeof window !== "undefined" &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window &&
+      "Notification" in window
+    setIsSupported(supported)
+    if (supported) {
+      setPermission(Notification.permission)
+    }
+  }, [])
 
   const subscribe = useCallback(async () => {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return
+    if (!isSupported) return
     setSubscribing(true)
     try {
-      const permission = await Notification.requestPermission()
-      if (permission !== "granted") return
+      const perm = await Notification.requestPermission()
+      setPermission(perm)
+      if (perm !== "granted") return
 
       const reg = await navigator.serviceWorker.ready
       const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -47,15 +62,15 @@ export function usePushNotifications() {
         body: JSON.stringify({
           endpoint: sub.endpoint,
           p256dh: btoa(String.fromCharCode(...new Uint8Array(sub.getKey("p256dh")!))),
-          auth_key: btoa(String.fromCharCode(...new Uint8Array(sub.getKey("auth")!))),
+          auth: btoa(String.fromCharCode(...new Uint8Array(sub.getKey("auth")!))),
         }),
       })
 
-      setSubscribed(true)
+      setIsSubscribed(true)
     } finally {
       setSubscribing(false)
     }
-  }, [])
+  }, [isSupported])
 
-  return { subscribe, subscribing, subscribed }
+  return { subscribe, subscribing, isSubscribed, isSupported, permission }
 }

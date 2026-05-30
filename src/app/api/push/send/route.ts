@@ -29,20 +29,25 @@ export async function POST(req: NextRequest) {
 
   const partnerId = couple.user1_id === user.uid ? couple.user2_id : couple.user1_id
 
-  const { data: subscription } = await supabase
+  const { data: subscription, error: subError } = await supabase
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth_key")
     .eq("user_id", partnerId)
     .single()
 
-  if (!subscription) return NextResponse.json({ ok: true })
+  // Table doesn't exist or no subscription — skip silently
+  if (subError || !subscription) return NextResponse.json({ ok: true })
 
   const { title, body, icon } = await req.json()
 
-  await sendPushNotification(
-    { endpoint: subscription.endpoint, p256dh: subscription.p256dh, auth_key: subscription.auth_key },
-    { title: title ?? "ThingsToDo 💕", body: body ?? "", icon: icon ?? "/icons/icon-192.png" }
-  )
+  try {
+    await sendPushNotification(
+      { endpoint: subscription.endpoint, p256dh: subscription.p256dh, auth_key: subscription.auth_key },
+      { title: title ?? "ThingsToDo 💕", body: body ?? "", icon: icon ?? "/icons/icon-192.png" }
+    )
+  } catch {
+    // Push delivery failed — don't break the caller
+  }
 
   return NextResponse.json({ ok: true })
 }
