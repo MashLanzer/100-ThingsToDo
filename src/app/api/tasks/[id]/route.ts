@@ -41,8 +41,8 @@ export async function PATCH(req: NextRequest, { params }: Context) {
 
   if ("title" in body) updates.title = body.title
   if ("icon" in body) updates.icon = body.icon
-  if ("notes" in body) updates.notes = body.notes ?? null
-  if ("due_date" in body) updates.due_date = body.due_date ?? null
+  if ("notes" in body && body.notes) updates.notes = body.notes
+  if ("due_date" in body && body.due_date) updates.due_date = body.due_date
   if ("sort_order" in body) updates.sort_order = body.sort_order
 
   const { data, error } = await supabase

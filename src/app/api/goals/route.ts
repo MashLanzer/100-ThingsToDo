@@ -38,9 +38,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "name and target_amount required" }, { status: 400 })
   }
 
-  const { data, error } = await supabase
-    .from("savings_goals")
-    .insert({ couple_id: me.couple_id, name: name.trim(), target_amount: Number(target_amount), created_by: user.uid, emoji: body.emoji ?? "🐖" })
+  const goalData: Record<string, unknown> = { couple_id: me.couple_id, name: name.trim(), target_amount: Number(target_amount), created_by: user.uid }
+  if (body.emoji) goalData.emoji = body.emoji
+
+  const { data, error } = await supabase.from("savings_goals").insert(goalData)
     .select()
     .single()
 
