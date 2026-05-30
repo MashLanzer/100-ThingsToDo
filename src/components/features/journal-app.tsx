@@ -320,7 +320,9 @@ export function JournalApp({ onBack }: Props) {
             const myMood = myEntry ? MOODS.find((m) => m.id === myEntry.mood) : null
             const partnerMood = partnerEntry ? MOODS.find((m) => m.id === partnerEntry.mood) : null
             const hasAny = dayEntries.length > 0
-            const isToday = dateStr === new Date().toISOString().split("T")[0]
+            const now = new Date()
+            const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
+            const isToday = dateStr === todayLocal
 
             return (
               <button

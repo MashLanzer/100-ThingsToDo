@@ -5,6 +5,7 @@ interface AppStore {
   showPhoneModal: boolean
   showFavorsModal: boolean
   showMapModal: boolean
+  showSettingsModal: boolean
   activePhoneApp: string
 
   openCoupleModal: () => void
@@ -15,6 +16,8 @@ interface AppStore {
   closeFavorsModal: () => void
   openMapModal: () => void
   closeMapModal: () => void
+  openSettingsModal: () => void
+  closeSettingsModal: () => void
   setActivePhoneApp: (app: string) => void
 }
 
@@ -23,6 +26,7 @@ export const useAppStore = create<AppStore>((set) => ({
   showPhoneModal: false,
   showFavorsModal: false,
   showMapModal: false,
+  showSettingsModal: false,
   activePhoneApp: "home",
 
   openCoupleModal: () => set({ showCoupleModal: true }),
@@ -34,5 +38,7 @@ export const useAppStore = create<AppStore>((set) => ({
   closeFavorsModal: () => set({ showFavorsModal: false }),
   openMapModal: () => set({ showMapModal: true }),
   closeMapModal: () => set({ showMapModal: false }),
+  openSettingsModal: () => set({ showSettingsModal: true }),
+  closeSettingsModal: () => set({ showSettingsModal: false }),
   setActivePhoneApp: (app) => set({ activePhoneApp: app }),
 }))

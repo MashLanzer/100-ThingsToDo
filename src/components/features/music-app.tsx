@@ -21,14 +21,7 @@ interface Playlist {
 const DEMO_PLAYLIST: Playlist = {
   id: "default",
   name: "Nuestra Música 💕",
-  tracks: [
-    { id: "d1", title: "Perfect", artist: "Ed Sheeran", url: "", emoji: "🎸", color: "#a2d2ff" },
-    { id: "d2", title: "All of Me", artist: "John Legend", url: "", emoji: "🎹", color: "#ffdeeb" },
-    { id: "d3", title: "A Thousand Years", artist: "Christina Perri", url: "", emoji: "🌹", color: "#fce4ec" },
-    { id: "d4", title: "Can't Help Falling in Love", artist: "Elvis Presley", url: "", emoji: "💫", color: "#ede9fe" },
-    { id: "d5", title: "Lover", artist: "Taylor Swift", url: "", emoji: "💕", color: "#fde68a" },
-    { id: "d6", title: "Thinking Out Loud", artist: "Ed Sheeran", url: "", emoji: "🎶", color: "#c3e6cb" },
-  ],
+  tracks: [],
 }
 
 const STORAGE_KEY = "ttd_playlists_v2"
@@ -146,9 +139,12 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
         const data = await res.json()
         if (Array.isArray(data) && data.length > 0) {
           setPlaylists(data)
-          savePlaylists(data) // sync to localStorage too
+          savePlaylists(data)
         } else {
-          setPlaylists(loadPlaylists()) // fallback to localStorage
+          // Server returned empty — use localStorage if it has custom playlists, else empty
+          const local = loadPlaylists()
+          const hasCustom = local.some((pl) => pl.id !== "default")
+          setPlaylists(hasCustom ? local : [{ id: "default", name: "Nuestra Música 💕", tracks: [] }])
         }
       } else {
         setPlaylists(loadPlaylists())

@@ -8,6 +8,7 @@ import { CoupleModal } from "@/components/shared/couple-modal"
 import { PhoneModal } from "@/components/shared/phone-modal"
 import { FavorsModal } from "@/components/features/favors-modal"
 import { MapModal } from "@/components/features/map-modal"
+import { SettingsModal } from "@/components/shared/settings-modal"
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -36,6 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AppHeader />
       <main>{children}</main>
       <CoupleModal />
+      <SettingsModal />
       <PhoneModal />
       <FavorsModal />
       <MapModal />
