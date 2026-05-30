@@ -111,6 +111,8 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   const [trackIdx, setTrackIdx] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [isLoop, setIsLoop] = useState(false)
+  const [isShuffle, setIsShuffle] = useState(false)
   const [view, setView] = useState<AppView>("player")
   const [loadingDb, setLoadingDb] = useState(true)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -179,7 +181,11 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
     const audio = audioRef.current
     if (!audio) return
     const onTime = () => setProgress(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0)
-    const onEnd = () => goNext()
+    const onEnd = () => {
+      if (isLoop) { audio.currentTime = 0; audio.play().catch(() => {}) }
+      else if (isShuffle) goToRandom()
+      else goNext()
+    }
     audio.addEventListener("timeupdate", onTime)
     audio.addEventListener("ended", onEnd)
     return () => { audio.removeEventListener("timeupdate", onTime); audio.removeEventListener("ended", onEnd) }
@@ -204,7 +210,27 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   }
 
   function goPrev() { goTo((trackIdx - 1 + tracks.length) % tracks.length) }
-  function goNext() { goTo((trackIdx + 1) % tracks.length) }
+  function goNext() {
+    if (isShuffle) goToRandom()
+    else goTo((trackIdx + 1) % tracks.length)
+  }
+  function goToRandom() {
+    if (tracks.length <= 1) return
+    let next: number
+    do { next = Math.floor(Math.random() * tracks.length) } while (next === trackIdx)
+    goTo(next)
+  }
+
+  function moveTrack(idx: number, dir: "up" | "down") {
+    const swapIdx = dir === "up" ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= tracks.length) return
+    const newTracks = [...tracks]
+    ;[newTracks[idx], newTracks[swapIdx]] = [newTracks[swapIdx], newTracks[idx]]
+    const updated = playlists.map((pl, i) => i === playlistIdx ? { ...pl, tracks: newTracks } : pl)
+    persist(updated)
+    if (trackIdx === idx) setTrackIdx(swapIdx)
+    else if (trackIdx === swapIdx) setTrackIdx(idx)
+  }
 
   function togglePlay() {
     if (!track) return
@@ -435,8 +461,32 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
           </div>
         </div>
 
+        {/* Shuffle/Loop toggles */}
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.625rem" }}>
+          <button
+            onClick={() => setIsShuffle((s) => !s)}
+            style={{
+              padding: "4px 10px", borderRadius: "999px", border: "none", cursor: "pointer",
+              fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 700,
+              background: isShuffle ? "var(--primary)" : "var(--muted)",
+              color: isShuffle ? "white" : "var(--foreground-muted)",
+              transition: "background 0.2s, color 0.2s",
+            }}
+          >🔀 Aleatorio</button>
+          <button
+            onClick={() => setIsLoop((l) => !l)}
+            style={{
+              padding: "4px 10px", borderRadius: "999px", border: "none", cursor: "pointer",
+              fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 700,
+              background: isLoop ? "var(--primary)" : "var(--muted)",
+              color: isLoop ? "white" : "var(--foreground-muted)",
+              transition: "background 0.2s, color 0.2s",
+            }}
+          >🔁 Repetir</button>
+        </div>
+
         {/* Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", marginTop: "0.75rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", marginTop: "0.5rem" }}>
           <button onClick={goPrev} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-light)", display: "flex" }}>
             <SkipBack size={22} />
           </button>
@@ -519,6 +569,12 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
                   ) : (
                     <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{t.artist}{t.url ? (isYouTube(t.url) ? " · YT" : " · Audio") : ""}</div>
                   )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1px", flexShrink: 0 }}>
+                  <button onClick={(e) => { e.stopPropagation(); moveTrack(i, "up") }} disabled={i === 0}
+                    style={{ background: "none", border: "none", cursor: i > 0 ? "pointer" : "default", color: i > 0 ? "var(--foreground-muted)" : "var(--border)", padding: "1px 4px", fontSize: "0.5rem", lineHeight: 1 }}>▲</button>
+                  <button onClick={(e) => { e.stopPropagation(); moveTrack(i, "down") }} disabled={i === tracks.length - 1}
+                    style={{ background: "none", border: "none", cursor: i < tracks.length - 1 ? "pointer" : "default", color: i < tracks.length - 1 ? "var(--foreground-muted)" : "var(--border)", padding: "1px 4px", fontSize: "0.5rem", lineHeight: 1 }}>▼</button>
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); deleteTrack(t.id) }}

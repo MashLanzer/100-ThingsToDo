@@ -7,6 +7,7 @@ interface AppStore {
   showMapModal: boolean
   showSettingsModal: boolean
   activePhoneApp: string
+  coupleName: string
 
   openCoupleModal: () => void
   closeCoupleModal: () => void
@@ -19,6 +20,7 @@ interface AppStore {
   openSettingsModal: () => void
   closeSettingsModal: () => void
   setActivePhoneApp: (app: string) => void
+  setCoupleName: (name: string) => void
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -28,6 +30,7 @@ export const useAppStore = create<AppStore>((set) => ({
   showMapModal: false,
   showSettingsModal: false,
   activePhoneApp: "home",
+  coupleName: "ThingsToDo",
 
   openCoupleModal: () => set({ showCoupleModal: true }),
   closeCoupleModal: () => set({ showCoupleModal: false }),
@@ -41,4 +44,5 @@ export const useAppStore = create<AppStore>((set) => ({
   openSettingsModal: () => set({ showSettingsModal: true }),
   closeSettingsModal: () => set({ showSettingsModal: false }),
   setActivePhoneApp: (app) => set({ activePhoneApp: app }),
+  setCoupleName: (name) => set({ coupleName: name }),
 }))

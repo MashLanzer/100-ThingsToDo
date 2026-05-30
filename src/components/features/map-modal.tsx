@@ -21,6 +21,10 @@ export function MapModal() {
   const [view, setView] = useState<"list" | "add">("list")
   const [tab, setTab] = useState<"all" | "visited" | "wishlist">("all")
   const [saving, setSaving] = useState(false)
+  const [editingPlace, setEditingPlace] = useState<Place | null>(null)
+  const [editName, setEditName] = useState("")
+  const [editStatus, setEditStatus] = useState<PlaceStatus>("wishlist")
+  const [editNote, setEditNote] = useState("")
   const globeRef = useRef<HTMLDivElement>(null)
   const globeInstanceRef = useRef<unknown>(null)
   const leafletMapRef = useRef<HTMLDivElement>(null)
@@ -225,6 +229,20 @@ export function MapModal() {
     } catch { toast.error("Error al eliminar") }
   }
 
+  async function handleEditSave() {
+    if (!editingPlace || !editName.trim()) return
+    setSaving(true)
+    try {
+      await authFetch(`/api/places/${editingPlace.id}`, {
+        method: "PUT",
+        body: JSON.stringify({ ...editingPlace, name: editName.trim(), status: editStatus, note: editNote.trim() }),
+      })
+      toast.success("Lugar actualizado ✨")
+      setEditingPlace(null)
+      loadPlaces()
+    } catch { toast.error("Error al actualizar") } finally { setSaving(false) }
+  }
+
   if (!showMapModal) return null
 
   const filtered = tab === "all" ? places : places.filter((p) => p.status === tab)
@@ -422,16 +440,45 @@ export function MapModal() {
                     <p className="empty-text">{tab === "all" ? "¡Añade vuestro primer lugar!" : tab === "visited" ? "Aún no hay lugares visitados" : "La lista de deseos está vacía"}</p>
                   </div>
                 ) : filtered.map((p) => (
-                  <div key={p.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem", padding: "0.75rem", background: "white", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
-                    <span style={{ fontSize: "1.25rem", flexShrink: 0 }}>{p.status === "visited" ? "📍" : "⭐"}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h4 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>{p.name}</h4>
-                      {p.country && <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{p.country}</p>}
-                      {p.note && <p style={{ fontSize: "0.75rem", color: "var(--foreground-light)", marginTop: "0.25rem" }}>{p.note}</p>}
+                  <div key={p.id}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem", padding: "0.75rem", background: "white", borderRadius: "var(--radius-md)", border: editingPlace?.id === p.id ? "2px solid var(--primary)" : "1px solid var(--border)" }}>
+                      <span style={{ fontSize: "1.25rem", flexShrink: 0 }}>{p.status === "visited" ? "📍" : "⭐"}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>{p.name}</h4>
+                        {p.country && <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{p.country}</p>}
+                        {p.note && <p style={{ fontSize: "0.75rem", color: "var(--foreground-light)", marginTop: "0.25rem" }}>{p.note}</p>}
+                      </div>
+                      <button
+                        onClick={() => { setEditingPlace(p); setEditName(p.name); setEditStatus(p.status as PlaceStatus); setEditNote(p.note ?? "") }}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "0.25rem", flexShrink: 0, fontSize: "0.875rem" }}
+                      >✏️</button>
+                      <button onClick={() => handleDelete(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "0.25rem", flexShrink: 0 }}>
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                    <button onClick={() => handleDelete(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "0.25rem", flexShrink: 0 }}>
-                      <Trash2 size={14} />
-                    </button>
+                    {editingPlace?.id === p.id && (
+                      <div style={{ background: "var(--primary-lighter)", borderRadius: "0 0 var(--radius-md) var(--radius-md)", padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem", borderTop: "none" }}>
+                        <input className="input" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Nombre" autoFocus />
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          {STATUS_OPTIONS.map((s) => (
+                            <button key={s.id} onClick={() => setEditStatus(s.id)} style={{
+                              flex: 1, padding: "0.375rem", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                              border: editStatus === s.id ? "2px solid var(--primary)" : "2px solid var(--border)",
+                              background: editStatus === s.id ? "var(--primary-lighter)" : "white",
+                              fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600,
+                              color: editStatus === s.id ? "var(--primary)" : "var(--foreground-light)",
+                            }}>{s.emoji} {s.label}</button>
+                          ))}
+                        </div>
+                        <textarea className="input" rows={2} value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder="Nota (opcional)" style={{ resize: "none" }} maxLength={300} />
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button className="btn btn-primary" onClick={handleEditSave} disabled={saving} style={{ flex: 1 }}>
+                            {saving ? "..." : "Guardar"}
+                          </button>
+                          <button className="btn btn-outline" onClick={() => setEditingPlace(null)} style={{ flex: 1 }}>Cancelar</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

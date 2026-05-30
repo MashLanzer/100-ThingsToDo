@@ -9,9 +9,12 @@ interface Props {
   task: Task
   onToggle: () => void
   onDelete: () => void
+  onEdit?: () => void
+  onMoveUp?: () => void
+  onMoveDown?: () => void
 }
 
-export function TaskItem({ task, onToggle, onDelete }: Props) {
+export function TaskItem({ task, onToggle, onDelete, onEdit, onMoveUp, onMoveDown }: Props) {
   const emoji = KAWAII_ICONS[task.icon] ?? task.icon
   const [popping, setPopping] = useState(false)
   const [sparkle, setSparkle] = useState(false)
@@ -25,16 +28,20 @@ export function TaskItem({ task, onToggle, onDelete }: Props) {
       setSparkle(true)
       setTimeout(() => setPopping(false), 400)
       setTimeout(() => setSparkle(false), 700)
-      // vibration
       try {
         const raw = localStorage.getItem("ttd_settings_v1")
-        if (raw) {
-          const s = JSON.parse(raw)
-          if (s.vibrationEnabled !== false) {
-            navigator.vibrate?.(50)
-          }
-        } else {
-          navigator.vibrate?.(50)
+        const s = raw ? JSON.parse(raw) : {}
+        if (s.vibrationEnabled !== false) navigator.vibrate?.(50)
+        if (s.soundEnabled !== false) {
+          const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.connect(gain); gain.connect(ctx.destination)
+          osc.frequency.setValueAtTime(660, ctx.currentTime)
+          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08)
+          gain.gain.setValueAtTime(0.18, ctx.currentTime)
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
+          osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.35)
         }
       } catch { /* ignore */ }
     }
@@ -138,6 +145,33 @@ export function TaskItem({ task, onToggle, onDelete }: Props) {
             </span>
           )}
         </span>
+
+        {/* Right-side actions */}
+        {(onEdit || onMoveUp || onMoveDown) && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px", flexShrink: 0 }}>
+            {(onMoveUp || onMoveDown) && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                <button
+                  onClick={onMoveUp}
+                  disabled={!onMoveUp}
+                  style={{ background: "none", border: "none", cursor: onMoveUp ? "pointer" : "default", padding: "2px 4px", color: onMoveUp ? "var(--foreground-muted)" : "var(--border)", fontSize: "0.625rem", lineHeight: 1 }}
+                >▲</button>
+                <button
+                  onClick={onMoveDown}
+                  disabled={!onMoveDown}
+                  style={{ background: "none", border: "none", cursor: onMoveDown ? "pointer" : "default", padding: "2px 4px", color: onMoveDown ? "var(--foreground-muted)" : "var(--border)", fontSize: "0.625rem", lineHeight: 1 }}
+                >▼</button>
+              </div>
+            )}
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "3px 4px", color: "var(--foreground-muted)", fontSize: "0.75rem", lineHeight: 1 }}
+                title="Editar tarea"
+              >✏️</button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -128,7 +128,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function SettingsModal() {
-  const { showSettingsModal, closeSettingsModal } = useAppStore()
+  const { showSettingsModal, closeSettingsModal, setCoupleName: setStoreCoupleName } = useAppStore()
   const { data, isLoading } = useCoupleStatus()
   const { user } = useAuth()
   const linkMutation = useLinkPartner()
@@ -203,6 +203,7 @@ export function SettingsModal() {
   function handleCoupleNameChange(v: string) {
     setCoupleName(v)
     saveAppSettings({ coupleName: v })
+    setStoreCoupleName(v.trim() || "ThingsToDo")
   }
 
   function handleSoundToggle(v: boolean) {

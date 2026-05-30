@@ -15,8 +15,16 @@ const MOODS = [
   { id: "sad",      emoji: "😢", label: "Triste",      accent: "#DBEAFE", accentBorder: "#3B82F6", accentText: "#1E40AF" },
 ]
 
-interface Props { onBack: () => void }
+function readJournalSettings() {
+  try {
+    const raw = localStorage.getItem("ttd_settings_v1")
+    if (!raw) return { weekStartsMonday: false, privateJournal: false }
+    const s = JSON.parse(raw)
+    return { weekStartsMonday: !!s.weekStartsMonday, privateJournal: !!s.privateJournal }
+  } catch { return { weekStartsMonday: false, privateJournal: false } }
+}
 
+interface Props { onBack: () => void }
 type View = "calendar" | "read" | "write"
 
 export function JournalApp({ onBack }: Props) {
@@ -31,13 +39,20 @@ export function JournalApp({ onBack }: Props) {
   const [writeMood, setWriteMood] = useState("happy")
   const [saving, setSaving] = useState(false)
   const [showPartnerEntry, setShowPartnerEntry] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [weekStartsMonday, setWeekStartsMonday] = useState(false)
+  const [privateJournal, setPrivateJournal] = useState(false)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
 
   useEffect(() => {
-    loadEntries()
-  }, [month, year])
+    const s = readJournalSettings()
+    setWeekStartsMonday(s.weekStartsMonday)
+    setPrivateJournal(s.privateJournal)
+  }, [])
+
+  useEffect(() => { loadEntries() }, [month, year])
 
   async function loadEntries() {
     try {
@@ -48,34 +63,22 @@ export function JournalApp({ onBack }: Props) {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) return
-      const data = await res.json()
-      setEntries(data)
+      setEntries(await res.json())
     } catch { /* silently fail */ }
   }
 
-  function prevMonth() {
-    setCurrentDate(new Date(year, month - 1, 1))
-  }
-
-  function nextMonth() {
-    setCurrentDate(new Date(year, month + 1, 1))
-  }
-
-  function getEntriesForDate(dateStr: string): JournalEntry[] {
-    return entries.filter((e) => e.date === dateStr)
-  }
-
-  function getMyEntry(dateStr: string): JournalEntry | undefined {
+  function getMyEntry(dateStr: string) {
     return entries.find((e) => e.date === dateStr && e.created_by === myUid)
   }
 
-  function getPartnerEntry(dateStr: string): JournalEntry | undefined {
+  function getPartnerEntry(dateStr: string) {
     return entries.find((e) => e.date === dateStr && e.created_by !== myUid)
   }
 
   function openDay(dateStr: string) {
     setSelectedDate(dateStr)
     setShowPartnerEntry(false)
+    setIsEditing(false)
     const myEntry = getMyEntry(dateStr)
     if (myEntry) {
       setSelectedEntry(myEntry)
@@ -86,6 +89,13 @@ export function JournalApp({ onBack }: Props) {
       setWriteMood("happy")
       setView("write")
     }
+  }
+
+  function startEdit(entry: JournalEntry) {
+    setWriteContent(entry.content)
+    setWriteMood(entry.mood ?? "happy")
+    setIsEditing(true)
+    setView("write")
   }
 
   async function saveEntry() {
@@ -101,23 +111,28 @@ export function JournalApp({ onBack }: Props) {
         body: JSON.stringify({ date: selectedDate, content: writeContent.trim(), mood: writeMood }),
       })
       if (!res.ok) throw new Error("Error al guardar")
-      toast.success("Entrada guardada 💕")
+      toast.success(isEditing ? "Entrada actualizada ✏️" : "Entrada guardada 💕")
       await loadEntries()
       setView("calendar")
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error")
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
-  // Build calendar grid
-  const firstDay = new Date(year, month, 1).getDay()
+  // Calendar calculations with weekStartsMonday support
+  const rawFirstDay = new Date(year, month, 1).getDay() // 0=Sun
+  const firstDay = weekStartsMonday ? (rawFirstDay + 6) % 7 : rawFirstDay
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const monthName = currentDate.toLocaleString("es-ES", { month: "long", year: "numeric" })
+  const monthLabel = `${currentDate.toLocaleString("es-ES", { month: "long" })} ${year}`
+  const weekDays = weekStartsMonday
+    ? ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"]
+    : ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"]
 
+  // ── Read view ──────────────────────────────────────────────────────────────
   if (view === "read" && selectedEntry && selectedDate) {
     const partnerEntry = getPartnerEntry(selectedDate)
+    // If private journal mode and I haven't written yet: don't show partner entry
+    const partnerVisible = partnerEntry && !(privateJournal && !selectedEntry)
     const displayEntry = showPartnerEntry ? partnerEntry : selectedEntry
     const displayMood = displayEntry ? MOODS.find((m) => m.id === displayEntry.mood) : null
 
@@ -128,31 +143,25 @@ export function JournalApp({ onBack }: Props) {
           <span>{selectedDate}</span>
         </div>
         <div className="app-content-body">
-          {/* Toggle between my entry and partner's entry */}
-          {partnerEntry && (
+          {partnerVisible && (
             <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.75rem" }}>
-              <button
-                onClick={() => setShowPartnerEntry(false)}
-                style={{
-                  flex: 1, padding: "0.375rem 0.5rem", borderRadius: "999px", border: "none",
-                  cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600,
-                  background: !showPartnerEntry ? "var(--primary)" : "var(--muted)",
-                  color: !showPartnerEntry ? "white" : "var(--foreground-light)",
-                }}
-              >
-                Tu entrada
-              </button>
-              <button
-                onClick={() => setShowPartnerEntry(true)}
-                style={{
-                  flex: 1, padding: "0.375rem 0.5rem", borderRadius: "999px", border: "none",
-                  cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600,
-                  background: showPartnerEntry ? "var(--primary)" : "var(--muted)",
-                  color: showPartnerEntry ? "white" : "var(--foreground-light)",
-                }}
-              >
-                Entrada de pareja
-              </button>
+              {[
+                { label: "Tu entrada", isPartner: false },
+                { label: "Pareja", isPartner: true },
+              ].map(({ label, isPartner }) => (
+                <button
+                  key={label}
+                  onClick={() => setShowPartnerEntry(isPartner)}
+                  style={{
+                    flex: 1, padding: "0.375rem 0.5rem", borderRadius: "999px", border: "none",
+                    cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600,
+                    background: showPartnerEntry === isPartner ? "var(--primary)" : "var(--muted)",
+                    color: showPartnerEntry === isPartner ? "white" : "var(--foreground-light)",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           )}
 
@@ -161,11 +170,7 @@ export function JournalApp({ onBack }: Props) {
               <span style={{ fontSize: "1.5rem" }}>{displayMood.emoji}</span>
               <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground-light)" }}>{displayMood.label}</span>
               {showPartnerEntry && (
-                <span style={{
-                  marginLeft: "auto", fontSize: "0.625rem", fontWeight: 700,
-                  color: "var(--foreground-muted)", background: "var(--muted)",
-                  padding: "0.125rem 0.5rem", borderRadius: "999px",
-                }}>
+                <span style={{ marginLeft: "auto", fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", background: "var(--muted)", padding: "0.125rem 0.5rem", borderRadius: "999px" }}>
                   SOLO LECTURA
                 </span>
               )}
@@ -177,66 +182,53 @@ export function JournalApp({ onBack }: Props) {
           </p>
 
           {!showPartnerEntry && (
-            <button
-              className="btn btn-outline"
-              style={{ marginTop: "1rem", fontSize: "0.8125rem" }}
-              onClick={() => {
-                setWriteContent(selectedEntry.content)
-                setWriteMood(selectedEntry.mood ?? "happy")
-                setView("write")
-              }}
-            >
-              ✏️ Editar
+            <button className="btn btn-outline" style={{ marginTop: "1rem", fontSize: "0.8125rem" }} onClick={() => startEdit(selectedEntry)}>
+              ✏️ Editar entrada
             </button>
           )}
 
-          {/* Show partner entry below if both exist and not in toggle mode */}
-          {partnerEntry && !showPartnerEntry && (
+          {/* Partner entry below (if not toggled) */}
+          {partnerVisible && !showPartnerEntry && (
             <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground-muted)" }}>
-                  Entrada de pareja
-                </span>
-                <span style={{
-                  fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)",
-                  background: "var(--muted)", padding: "0.125rem 0.5rem", borderRadius: "999px",
-                }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground-muted)" }}>Entrada de pareja</span>
+                <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", background: "var(--muted)", padding: "0.125rem 0.5rem", borderRadius: "999px" }}>
                   SOLO LECTURA
                 </span>
               </div>
               {(() => {
-                const partnerMood = MOODS.find((m) => m.id === partnerEntry.mood)
+                const pm = MOODS.find((m) => m.id === partnerEntry?.mood)
                 return (
                   <>
-                    {partnerMood && (
+                    {pm && (
                       <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.375rem" }}>
-                        <span style={{ fontSize: "1.25rem" }}>{partnerMood.emoji}</span>
-                        <span style={{ fontSize: "0.75rem", color: "var(--foreground-light)" }}>{partnerMood.label}</span>
+                        <span style={{ fontSize: "1.25rem" }}>{pm.emoji}</span>
+                        <span style={{ fontSize: "0.75rem", color: "var(--foreground-light)" }}>{pm.label}</span>
                       </div>
                     )}
                     <p style={{ fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
-                      {partnerEntry.content}
+                      {partnerEntry?.content}
                     </p>
                   </>
                 )
               })()}
             </div>
           )}
-
         </div>
       </>
     )
   }
 
+  // ── Write view ─────────────────────────────────────────────────────────────
   if (view === "write") {
     return (
       <>
         <div className="app-content-header">
-          <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
-          <span>✍️ {selectedDate}</span>
+          <button className="back-btn-phone" onClick={() => { setIsEditing(false); setView(selectedEntry ? "read" : "calendar") }}>‹</button>
+          <span>{isEditing ? "✏️ Editando" : "✍️ Nueva entrada"}</span>
         </div>
         <div className="app-content-body">
-          {/* Mood selector: 2×3 grid with color accents */}
+          <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.375rem" }}>{selectedDate}</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem", marginBottom: "0.625rem" }}>
             {MOODS.map((m) => {
               const isSelected = writeMood === m.id
@@ -245,11 +237,9 @@ export function JournalApp({ onBack }: Props) {
                   key={m.id}
                   onClick={() => setWriteMood(m.id)}
                   style={{
-                    padding: "0.75rem 0.5rem",
-                    borderRadius: "var(--radius-md)",
+                    padding: "0.75rem 0.5rem", borderRadius: "var(--radius-md)",
                     border: isSelected ? `2px solid ${m.accentBorder}` : "2px solid var(--border)",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
+                    cursor: "pointer", fontFamily: "inherit",
                     background: isSelected ? m.accent : "white",
                     display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem",
                     boxShadow: isSelected ? `0 2px 8px ${m.accentBorder}33` : "none",
@@ -258,10 +248,7 @@ export function JournalApp({ onBack }: Props) {
                   }}
                 >
                   <span style={{ fontSize: "1.75rem", lineHeight: 1 }}>{m.emoji}</span>
-                  <span style={{
-                    fontSize: "0.6875rem", fontWeight: 700,
-                    color: isSelected ? m.accentText : "var(--foreground-light)",
-                  }}>{m.label}</span>
+                  <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: isSelected ? m.accentText : "var(--foreground-light)" }}>{m.label}</span>
                 </button>
               )
             })}
@@ -279,19 +266,15 @@ export function JournalApp({ onBack }: Props) {
             autoFocus
             style={{ minHeight: "120px" }}
           />
-          <button
-            className="btn btn-primary"
-            style={{ marginTop: "0.5rem" }}
-            onClick={saveEntry}
-            disabled={saving || !writeContent.trim()}
-          >
-            {saving ? "Guardando..." : "Guardar Recuerdo 💕"}
+          <button className="btn btn-primary" style={{ marginTop: "0.5rem" }} onClick={saveEntry} disabled={saving || !writeContent.trim()}>
+            {saving ? "Guardando..." : isEditing ? "💾 Actualizar entrada" : "Guardar Recuerdo 💕"}
           </button>
         </div>
       </>
     )
   }
 
+  // ── Calendar view ──────────────────────────────────────────────────────────
   return (
     <>
       <div className="app-content-header">
@@ -299,54 +282,41 @@ export function JournalApp({ onBack }: Props) {
         <span>Nuestro Diario 💕</span>
       </div>
       <div className="app-content-body" style={{ gap: "0.5rem" }}>
-        {/* Month navigation */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <button className="back-btn-phone" onClick={prevMonth}>‹</button>
+          <button className="back-btn-phone" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>‹</button>
           <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", textTransform: "capitalize" }}>
-            {monthName}
+            {monthLabel}
           </span>
-          <button className="back-btn-phone" style={{ transform: "rotate(180deg)" }} onClick={nextMonth}>‹</button>
+          <button className="back-btn-phone" style={{ transform: "rotate(180deg)" }} onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>‹</button>
         </div>
 
-        {/* Weekday headers */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px", textAlign: "center" }}>
-          {["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"].map((d) => (
-            <div key={d} style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", padding: "0.25rem 0" }}>
-              {d}
-            </div>
+          {weekDays.map((d) => (
+            <div key={d} style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", padding: "0.25rem 0" }}>{d}</div>
           ))}
         </div>
 
-        {/* Calendar grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px" }}>
-          {Array.from({ length: firstDay }).map((_, i) => (
-            <div key={`empty-${i}`} />
-          ))}
+          {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = i + 1
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-            const dayEntries = getEntriesForDate(dateStr)
-            const myEntry = dayEntries.find((e) => e.created_by === myUid)
-            const partnerEntry = dayEntries.find((e) => e.created_by !== myUid)
-            const myMood = myEntry ? MOODS.find((m) => m.id === myEntry.mood) : null
-            const partnerMood = partnerEntry ? MOODS.find((m) => m.id === partnerEntry.mood) : null
-            const hasAny = dayEntries.length > 0
+            const myEntry = getMyEntry(dateStr)
+            const partnerEntry = getPartnerEntry(dateStr)
+            const hasAny = !!(myEntry || partnerEntry)
             const now = new Date()
             const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
             const isToday = dateStr === todayLocal
-
-            // Mood dot color
-            const moodDotColor = myMood
-              ? (["happy","love"].includes(myEntry?.mood ?? "") ? "var(--primary)" : ["sad","angry"].includes(myEntry?.mood ?? "") ? "#f87171" : "#94a3b8")
+            const moodId = myEntry?.mood ?? ""
+            const moodDotColor = myEntry
+              ? (["happy","love"].includes(moodId) ? "var(--primary)" : ["sad"].includes(moodId) ? "#f87171" : "#94a3b8")
               : null
-
             return (
               <button
                 key={day}
                 onClick={() => openDay(dateStr)}
                 style={{
-                  aspectRatio: "1",
-                  borderRadius: "10px",
+                  aspectRatio: "1", borderRadius: "10px",
                   border: isToday ? "2px solid var(--primary)" : hasAny ? "1.5px solid var(--primary-light)" : "1px solid var(--border)",
                   background: isToday
                     ? "var(--primary-lighter)"
@@ -356,28 +326,18 @@ export function JournalApp({ onBack }: Props) {
                     ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)"
                     : "white",
                   cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                   fontSize: "0.6875rem",
                   fontWeight: isToday ? 800 : hasAny ? 700 : 400,
                   color: isToday ? "var(--primary)" : hasAny ? "var(--foreground)" : "var(--foreground-muted)",
-                  gap: "2px",
-                  padding: "3px 2px",
+                  gap: "2px", padding: "3px 2px",
                   boxShadow: isToday ? "0 2px 8px rgba(139,92,246,0.2)" : "none",
                   transition: "transform 0.1s",
                 }}
               >
                 <span style={{ lineHeight: 1 }}>{day}</span>
-                {/* Mood dot */}
-                {moodDotColor && (
-                  <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: moodDotColor, flexShrink: 0 }} />
-                )}
-                {/* Partner dot (secondary color) */}
-                {!moodDotColor && partnerEntry && (
-                  <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--secondary)", flexShrink: 0 }} />
-                )}
+                {moodDotColor && <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: moodDotColor, flexShrink: 0 }} />}
+                {!moodDotColor && partnerEntry && <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--secondary)", flexShrink: 0 }} />}
               </button>
             )
           })}

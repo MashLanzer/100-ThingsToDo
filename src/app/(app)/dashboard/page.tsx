@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { usePlans, useCreatePlan } from "@/hooks/use-plans"
 import { useCoupleStatus } from "@/hooks/use-couple"
 import { PlanCard } from "@/components/features/plan-card"
 import { useAppStore } from "@/stores/app-store"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
-import { Plus, X, Trash2 } from "lucide-react"
+import { Plus, X, Trash2, Search } from "lucide-react"
 import { toast } from "sonner"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import type { Plan } from "@/types"
@@ -65,8 +65,24 @@ export default function DashboardPage() {
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
 
   const hasCouple = !!coupleData?.couple
+
+  // Restore scroll position on mount, save on unmount
+  useEffect(() => {
+    const saved = sessionStorage.getItem("ttd_scroll_dashboard")
+    if (saved) window.scrollTo(0, parseInt(saved, 10))
+    return () => {
+      sessionStorage.setItem("ttd_scroll_dashboard", String(window.scrollY))
+    }
+  }, [])
+
+  const filteredPlans = plans?.filter((p) => {
+    if (!searchQuery.trim()) return true
+    const q = searchQuery.toLowerCase()
+    return p.title.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q)
+  })
 
   async function handleDeletePlan(id: string) {
     if (!confirm("¿Eliminar este plan y todas sus tareas?")) return
@@ -157,7 +173,7 @@ export default function DashboardPage() {
       )}
 
       {/* Actions */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
         <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)" }}>
           Nuestros Planes 📋
         </h1>
@@ -173,6 +189,21 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* Search bar */}
+      {plans && plans.length > 2 && (
+        <div style={{ position: "relative", marginBottom: "0.875rem" }}>
+          <Search size={15} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--foreground-muted)", pointerEvents: "none" }} />
+          <input
+            className="input"
+            type="search"
+            placeholder="Buscar planes..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ paddingLeft: "2.25rem" }}
+          />
+        </div>
+      )}
 
       {/* New plan form */}
       {showForm && (
@@ -215,7 +246,7 @@ export default function DashboardPage() {
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
         </div>
-      ) : !plans || plans.length === 0 ? (
+      ) : !plans || plans.length === 0 || (searchQuery.trim() && filteredPlans?.length === 0) ? (
         <div className="empty-state">
           <div className="empty-icon animate-bounce-slow">
             {hasCouple ? "💝" : "💌"}
@@ -224,7 +255,9 @@ export default function DashboardPage() {
             {hasCouple ? "¡Sin planes aún!" : "¡Conecta con tu pareja!"}
           </h2>
           <p className="empty-text">
-            {hasCouple
+            {searchQuery.trim()
+              ? "No hay planes que coincidan con tu búsqueda"
+              : hasCouple
               ? "Crea vuestro primer plan romántico y empieza la aventura juntos ✨"
               : "Vincula a tu pareja para empezar a crear recuerdos juntos 💕"}
           </p>
@@ -236,7 +269,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="plans-grid">
-          {plans.map((plan, i) => (
+          {(filteredPlans ?? plans ?? []).map((plan, i) => (
             <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
           ))}
         </div>

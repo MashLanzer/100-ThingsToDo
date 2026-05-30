@@ -41,6 +41,9 @@ export function TimeCapsuleApp({ onBack }: Props) {
   const [unlockDays, setUnlockDays] = useState(30)
   const [customDate, setCustomDate] = useState("")
   const [useCustom, setUseCustom] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editMessage, setEditMessage] = useState("")
+  const [editDate, setEditDate] = useState("")
 
   useEffect(() => { loadCapsules() }, [])
 
@@ -96,6 +99,20 @@ export function TimeCapsuleApp({ onBack }: Props) {
     } catch { toast.error("Error al abrir") }
   }
 
+  async function handleEditSave(capsule: TimeCapsule) {
+    if (!editMessage.trim()) return
+    setSaving(true)
+    try {
+      await authFetch(`/api/capsules/${capsule.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ message: editMessage.trim(), unlock_date: editDate || capsule.unlock_date }),
+      })
+      toast.success("Cápsula actualizada ✨")
+      setEditingId(null)
+      loadCapsules()
+    } catch { toast.error("Error al actualizar") } finally { setSaving(false) }
+  }
+
   async function handleDelete(capsule: TimeCapsule) {
     if (!confirm("¿Eliminar esta cápsula?")) return
     try {
@@ -123,33 +140,54 @@ export function TimeCapsuleApp({ onBack }: Props) {
   })
 
   if (view === "read" && selected) {
-    const t = CAPSULE_TYPES.find((t) => t.id === selected.type)
+    const t = CAPSULE_TYPES.find((ct) => ct.id === selected.type)
+    const typeColors: Record<string, string> = {
+      memory: "#dbeafe", dream: "#ede9fe", love: "#fce7f3",
+      achievement: "#fef9c3", mystery: "#f3e8ff", reflection: "#dcfce7",
+    }
+    const bgColor = typeColors[selected.type] ?? "var(--muted)"
     return (
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("list")}>‹</button>
           <span>💎 Cápsula Abierta</span>
         </div>
-        <div className="app-content-body" style={{ alignItems: "center", textAlign: "center" }}>
-          <span style={{ fontSize: "3rem" }}>{t?.icon ?? "💎"}</span>
-          <h3 style={{ fontWeight: 700, color: "var(--foreground)" }}>{t?.label}</h3>
-          <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
-            Creada el {formatDate(selected.created_at)}
-          </p>
-          <div
-            style={{
-              background: "var(--muted)",
-              borderRadius: "var(--radius-lg)",
-              padding: "1.25rem",
-              textAlign: "left",
-              width: "100%",
-              fontSize: "0.875rem",
-              lineHeight: 1.7,
-              color: "var(--foreground)",
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            {selected.message}
+        <div className="app-content-body" style={{ alignItems: "center", gap: "0.875rem" }}>
+          {/* Type badge */}
+          <div style={{
+            background: bgColor, borderRadius: "var(--radius-xl)",
+            padding: "1.25rem 2rem", textAlign: "center", width: "100%",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem",
+          }}>
+            <span style={{ fontSize: "2.5rem" }}>{t?.icon ?? "💎"}</span>
+            <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1.125rem", color: "var(--foreground)" }}>
+              Cápsula de {t?.label}
+            </span>
+            <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
+              Creada el {formatDate(selected.created_at)}
+            </span>
+          </div>
+          {/* Message card */}
+          <div style={{
+            background: "white",
+            borderRadius: "var(--radius-lg)",
+            padding: "1.125rem",
+            width: "100%",
+            border: "1.5px solid var(--border)",
+            boxShadow: "0 2px 12px rgba(139,92,246,0.08)",
+          }}>
+            <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.625rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              💌 Mensaje
+            </p>
+            <p style={{ fontSize: "0.875rem", lineHeight: 1.75, color: "var(--foreground)", whiteSpace: "pre-wrap" }}>
+              {selected.message}
+            </p>
+          </div>
+          {/* Sealed date */}
+          <div style={{ textAlign: "center", width: "100%" }}>
+            <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
+              📅 Fecha de apertura: {formatDate(selected.unlock_date)}
+            </span>
           </div>
         </div>
       </>
@@ -326,8 +364,8 @@ export function TimeCapsuleApp({ onBack }: Props) {
               const canOpen = c.unlock_date <= now
               const days = daysUntil(c.unlock_date)
               return (
+                <div key={c.id}>
                 <div
-                  key={c.id}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -393,15 +431,51 @@ export function TimeCapsuleApp({ onBack }: Props) {
                     )}
                   </div>
 
-                  {/* Delete button (only for unopened) */}
+                  {/* Edit + delete (only for unopened) */}
                   {!c.is_opened && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "6px", flexShrink: 0, display: "flex", alignItems: "center", opacity: 0.6 }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", flexShrink: 0 }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEditingId(c.id); setEditMessage(c.message); setEditDate(c.unlock_date) }}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "4px", fontSize: "0.75rem" }}
+                      >✏️</button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "4px", display: "flex", alignItems: "center", opacity: 0.6 }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   )}
+                </div>
+                {editingId === c.id && (
+                  <div
+                    style={{
+                      marginTop: "0.375rem",
+                      background: "var(--primary-lighter)",
+                      borderRadius: "var(--radius-md)",
+                      padding: "0.75rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <textarea
+                      className="textarea"
+                      rows={3}
+                      value={editMessage}
+                      onChange={(e) => setEditMessage(e.target.value)}
+                      maxLength={2000}
+                      autoFocus
+                    />
+                    <input type="date" className="input" value={editDate} min={now} onChange={(e) => setEditDate(e.target.value)} />
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <button className="btn btn-primary" onClick={() => handleEditSave(c)} disabled={saving} style={{ flex: 1, fontSize: "0.75rem" }}>
+                        {saving ? "..." : "Guardar"}
+                      </button>
+                      <button className="btn btn-outline" onClick={() => setEditingId(null)} style={{ flex: 1, fontSize: "0.75rem" }}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
                 </div>
               )
             })}

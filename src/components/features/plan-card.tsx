@@ -3,6 +3,15 @@
 import { useRouter } from "next/navigation"
 import type { Plan } from "@/types"
 
+function relativeDate(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000)
+  if (diff === 0) return "hoy"
+  if (diff === 1) return "ayer"
+  if (diff < 30) return `hace ${diff} días`
+  if (diff < 365) return `hace ${Math.floor(diff / 30)} mes${Math.floor(diff / 30) > 1 ? "es" : ""}`
+  return `hace ${Math.floor(diff / 365)} año${Math.floor(diff / 365) > 1 ? "s" : ""}`
+}
+
 const PLAN_GRADIENTS = [
   "linear-gradient(90deg, #8B5CF6, #EC4899)",
   "linear-gradient(90deg, #06B6D4, #10B981)",
@@ -67,11 +76,9 @@ export function PlanCard({ plan, index = 0 }: Props) {
         <p style={{ fontSize: "0.75rem", color: isComplete ? "var(--primary)" : "var(--foreground-muted)", fontWeight: isComplete ? 700 : 400 }}>
           {total === 0 ? "Sin tareas" : isComplete ? "✨ ¡Plan completado!" : `${done} completada${done !== 1 ? "s" : ""}`}
         </p>
-        {total > 0 && !isComplete && (
-          <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
-            {total - done} pendiente{total - done !== 1 ? "s" : ""}
-          </p>
-        )}
+        <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", opacity: 0.7 }}>
+          {relativeDate(plan.created_at)}
+        </p>
       </div>
     </div>
   )

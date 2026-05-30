@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { usePlan, useUpdatePlan, useDeletePlan } from "@/hooks/use-plans"
-import { useTasks, useCreateTask, useToggleTask, useDeleteTask } from "@/hooks/use-tasks"
+import { useTasks, useCreateTask, useToggleTask, useDeleteTask, useUpdateTask } from "@/hooks/use-tasks"
 import { TaskItem } from "@/components/features/task-item"
 import { KAWAII_ICONS } from "@/types"
 import { ArrowLeft, Plus, Edit2, X, Trash2 } from "lucide-react"
@@ -18,6 +18,7 @@ export default function PlanDetailPage() {
   const createTask = useCreateTask()
   const toggleTask = useToggleTask()
   const deleteTask = useDeleteTask()
+  const updateTask = useUpdateTask()
   const updatePlan = useUpdatePlan()
   const deletePlan = useDeletePlan()
   const ptr = useWindowPTR(() => { refetchTasks() })
@@ -29,7 +30,43 @@ export default function PlanDetailPage() {
   const [editTitle, setEditTitle] = useState("")
   const [editDesc, setEditDesc] = useState("")
 
+  // Task editing state
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [editTaskTitle, setEditTaskTitle] = useState("")
+  const [editTaskIcon, setEditTaskIcon] = useState("heart")
+
   const iconEntries = Object.entries(KAWAII_ICONS)
+
+  async function handleSaveTaskEdit() {
+    if (!editingTaskId || !editTaskTitle.trim()) return
+    try {
+      await updateTask.mutateAsync({ taskId: editingTaskId, planId: params.id, title: editTaskTitle.trim(), icon: editTaskIcon })
+      setEditingTaskId(null)
+      toast.success("Tarea actualizada ✨")
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al actualizar tarea")
+    }
+  }
+
+  async function handleMoveTask(taskId: string, direction: "up" | "down") {
+    if (!tasks) return
+    const idx = tasks.findIndex((t) => t.id === taskId)
+    if (idx < 0) return
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= tasks.length) return
+    const taskA = tasks[idx]
+    const taskB = tasks[swapIdx]
+    const orderA = taskA.sort_order ?? idx
+    const orderB = taskB.sort_order ?? swapIdx
+    try {
+      await Promise.all([
+        updateTask.mutateAsync({ taskId: taskA.id, planId: params.id, sort_order: orderB }),
+        updateTask.mutateAsync({ taskId: taskB.id, planId: params.id, sort_order: orderA }),
+      ])
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al reordenar")
+    }
+  }
   const total = tasks?.length ?? 0
   const done = tasks?.filter((t) => t.completed).length ?? 0
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
@@ -237,13 +274,55 @@ export default function PlanDetailPage() {
           </div>
         ) : (
           <div>
-            {tasks.map((task) => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                onToggle={() => toggleTask.mutate({ taskId: task.id, planId: params.id, completed: task.completed })}
-                onDelete={() => deleteTask.mutate({ taskId: task.id, planId: params.id })}
-              />
+            {tasks.map((task, i) => (
+              <div key={task.id}>
+                <TaskItem
+                  task={task}
+                  onToggle={() => toggleTask.mutate({ taskId: task.id, planId: params.id, completed: task.completed })}
+                  onDelete={() => deleteTask.mutate({ taskId: task.id, planId: params.id })}
+                  onEdit={() => { setEditingTaskId(task.id); setEditTaskTitle(task.title); setEditTaskIcon(task.icon ?? "heart") }}
+                  onMoveUp={i > 0 ? () => handleMoveTask(task.id, "up") : undefined}
+                  onMoveDown={i < tasks.length - 1 ? () => handleMoveTask(task.id, "down") : undefined}
+                />
+                {editingTaskId === task.id && (
+                  <div className="card animate-fade-in" style={{ marginBottom: "0.75rem", marginTop: "-0.25rem", borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "2px solid var(--primary-lighter)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.625rem" }}>
+                      <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)" }}>✏️ Editar Tarea</h3>
+                      <button className="btn-icon" onClick={() => setEditingTaskId(null)}><X size={14} /></button>
+                    </div>
+                    <input
+                      className="input"
+                      type="text"
+                      value={editTaskTitle}
+                      onChange={(e) => setEditTaskTitle(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSaveTaskEdit()}
+                      style={{ marginBottom: "0.625rem" }}
+                      autoFocus
+                    />
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.625rem" }}>
+                      {iconEntries.map(([key, emoji]) => (
+                        <button
+                          key={key}
+                          onClick={() => setEditTaskIcon(key)}
+                          style={{
+                            width: "32px", height: "32px", borderRadius: "8px",
+                            border: editTaskIcon === key ? "2px solid var(--primary)" : "2px solid transparent",
+                            background: editTaskIcon === key ? "var(--primary-lighter)" : "var(--muted)",
+                            fontSize: "1rem", cursor: "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}
+                        >{emoji}</button>
+                      ))}
+                    </div>
+                    <div className="form-actions">
+                      <button className="btn btn-primary" onClick={handleSaveTaskEdit} disabled={updateTask.isPending}>
+                        {updateTask.isPending ? "Guardando..." : "Guardar"}
+                      </button>
+                      <button className="btn btn-outline" onClick={() => setEditingTaskId(null)}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}

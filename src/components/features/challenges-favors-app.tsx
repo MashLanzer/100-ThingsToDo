@@ -7,6 +7,7 @@ import { CheckCircle, Trophy } from "lucide-react"
 import { PullToRefresh } from "@/components/shared/pull-to-refresh"
 import { PhoneLoader } from "@/components/features/phone-loader"
 import type { Favor, FavorDifficulty, FavorCategory } from "@/types"
+import { useAuth } from "@/hooks/use-auth"
 
 // ── Challenge data ────────────────────────────────────────────────────────────
 
@@ -96,7 +97,7 @@ const CAT_COLORS: Record<string, { from: string; to: string }> = {
   creative:  { from: "#3B82F6", to: "#8B5CF6" },
 }
 
-interface DbChallenge { id: string; challenge_text: string; category: string; is_completed: boolean; accepted_by: string }
+interface DbChallenge { id: string; challenge_text: string; category: string; is_completed: boolean; accepted_by: string; accepted_at: string }
 
 // ── Favors data ───────────────────────────────────────────────────────────────
 
@@ -118,6 +119,7 @@ const CATEGORIES: { id: FavorCategory; label: string }[] = [
 interface Props { onBack: () => void }
 
 export function ChallengesFavorsApp({ onBack }: Props) {
+  const { user } = useAuth()
   const [mainTab, setMainTab] = useState<"challenge" | "favors">("challenge")
 
   // ── Challenge state ───────────────────────────────────────────────────────
@@ -128,6 +130,8 @@ export function ChallengesFavorsApp({ onBack }: Props) {
   const [saving, setSaving] = useState(false)
   const [dbChallenge, setDbChallenge] = useState<DbChallenge | null>(null)
   const [loadingChallenge, setLoadingChallenge] = useState(true)
+  const [challengeHistory, setChallengeHistory] = useState<DbChallenge[]>([])
+  const [challengeSubTab, setChallengeSubTab] = useState<"today" | "history">("today")
 
   const filtered = useMemo(
     () => CHALLENGES.filter((c) => category === "all" || getCategory(c.text) === category),
@@ -179,6 +183,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
           setCompleted(todayChallenge.is_completed)
         }
       }
+      if (Array.isArray(data?.history)) setChallengeHistory(data.history)
     } catch { /* */ } finally { setLoadingChallenge(false) }
   }
 
@@ -283,6 +288,66 @@ export function ChallengesFavorsApp({ onBack }: Props) {
 
       {/* ── CHALLENGE TAB ── */}
       {mainTab === "challenge" && (
+        <>
+        {/* Sub-tabs: Today / History */}
+        <div style={{ padding: "0.375rem 0.75rem 0", background: "white", flexShrink: 0 }}>
+          <div className="pill-tab-container">
+            {([
+              { id: "today",   label: "🎲 Hoy" },
+              { id: "history", label: "📜 Historial" },
+            ] as const).map((t) => (
+              <button key={t.id} onClick={() => setChallengeSubTab(t.id)}
+                className={`pill-tab-btn${challengeSubTab === t.id ? " active" : ""}`}
+                style={{ fontSize: "0.6875rem" }}
+              >{t.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {challengeSubTab === "history" ? (
+          <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {loadingChallenge ? <PhoneLoader /> : challengeHistory.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
+                <div style={{ fontSize: "2rem" }}>📜</div>
+                <p style={{ color: "var(--foreground-muted)", fontSize: "0.8125rem", marginTop: "0.375rem" }}>No hay retos completados aún</p>
+              </div>
+            ) : challengeHistory.map((h) => {
+              const found = CHALLENGES.find((c) => c.text === h.challenge_text)
+              const color = CAT_COLORS[h.category] ?? CAT_COLORS.all
+              return (
+                <div key={h.id} style={{
+                  display: "flex", alignItems: "flex-start", gap: "0.75rem",
+                  padding: "0.75rem", borderRadius: "var(--radius-lg)",
+                  background: h.is_completed ? "linear-gradient(135deg, #D1FAE511, #A7F3D011)" : "white",
+                  border: `1px solid ${h.is_completed ? "#10B98133" : "var(--border)"}`,
+                }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                    background: `linear-gradient(135deg, ${color.from}33, ${color.to}33)`,
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem",
+                  }}>
+                    {found?.emoji ?? "🎲"}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)", lineHeight: 1.4, marginBottom: "0.25rem" }}>
+                      {h.challenge_text}
+                    </p>
+                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                      {h.is_completed && (
+                        <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "#065F46", background: "#10B98122", padding: "1px 6px", borderRadius: "999px" }}>
+                          🏆 Completado
+                        </span>
+                      )}
+                      <span style={{ fontSize: "0.625rem", color: "var(--foreground-muted)" }}>
+                        {new Date(h.accepted_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
         <PullToRefresh onRefresh={loadActiveChallenge} style={{ gap: "0.75rem", padding: "0.75rem" }}>
           {/* Category chips */}
           <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
@@ -389,6 +454,8 @@ export function ChallengesFavorsApp({ onBack }: Props) {
             </>
           )}
         </PullToRefresh>
+        )}
+        </>
       )}
 
       {/* ── FAVORS TAB ── */}
@@ -508,7 +575,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                             )}
                             {f.is_completed && (
                               <span style={{ marginLeft: "auto", fontSize: "0.6875rem", color: "var(--success-dark)", fontWeight: 700 }}>
-                                ✓ Canjeado
+                                ✓ {f.completed_by === user?.uid ? "Canjeado por ti" : "Canjeado por pareja"}
                               </span>
                             )}
                           </div>

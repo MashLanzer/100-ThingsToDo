@@ -23,6 +23,9 @@ export function SavingsGoalsApp({ onBack }: Props) {
   const [saving, setSaving] = useState(false)
   const [contributions, setContributions] = useState<Contribution[]>([])
   const [loadingContribs, setLoadingContribs] = useState(false)
+  const [editingGoal, setEditingGoal] = useState(false)
+  const [editGoalName, setEditGoalName] = useState("")
+  const [editGoalTarget, setEditGoalTarget] = useState("")
 
   useEffect(() => { loadGoals() }, [])
 
@@ -107,6 +110,21 @@ export function SavingsGoalsApp({ onBack }: Props) {
     } finally { setSaving(false) }
   }
 
+  async function handleEditGoal() {
+    if (!selected || !editGoalName.trim() || !editGoalTarget) return
+    setSaving(true)
+    try {
+      const updated = await authFetch(`/api/goals/${selected.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: editGoalName.trim(), target_amount: Number(editGoalTarget) }),
+      })
+      setSelected(updated)
+      setEditingGoal(false)
+      toast.success("Meta actualizada ✨")
+      loadGoals()
+    } catch { toast.error("Error al actualizar") } finally { setSaving(false) }
+  }
+
   async function handleDeleteGoal() {
     if (!selected) return
     if (!confirm("¿Eliminar esta meta y todas sus aportaciones?")) return
@@ -168,8 +186,25 @@ export function SavingsGoalsApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("list")}>‹</button>
-          <span>🐖 {selected.name}</span>
+          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🐖 {selected.name}</span>
+          <button
+            onClick={() => { setEditGoalName(selected.name); setEditGoalTarget(String(selected.target_amount)); setEditingGoal(true) }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "4px", fontSize: "0.875rem", flexShrink: 0 }}
+          >✏️</button>
         </div>
+
+        {editingGoal && (
+          <div style={{ padding: "0.75rem", background: "var(--primary-lighter)", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <input className="input" value={editGoalName} onChange={(e) => setEditGoalName(e.target.value)} placeholder="Nombre" autoFocus />
+            <input className="input" type="number" value={editGoalTarget} onChange={(e) => setEditGoalTarget(e.target.value)} placeholder="Objetivo ($)" />
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button className="btn btn-primary" onClick={handleEditGoal} disabled={saving} style={{ flex: 1 }}>
+                {saving ? "..." : "Guardar"}
+              </button>
+              <button className="btn btn-outline" onClick={() => setEditingGoal(false)} style={{ flex: 1 }}>Cancelar</button>
+            </div>
+          </div>
+        )}
         <div className="app-content-body" style={{ alignItems: "center" }}>
           {/* Circular progress ring */}
           <div style={{ position: "relative", width: 130, height: 130, marginBottom: "0.5rem" }}>

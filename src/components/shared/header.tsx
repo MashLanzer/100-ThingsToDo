@@ -66,17 +66,16 @@ function LogoutDialog({ onConfirm, onCancel, loading }: { onConfirm: () => void;
 
 export function AppHeader() {
   const router = useRouter()
-  const { openPhoneModal, openSettingsModal } = useAppStore()
+  const { openPhoneModal, openSettingsModal, coupleName, setCoupleName } = useAppStore()
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
-  const [appTitle, setAppTitle] = useState("ThingsToDo")
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem("ttd_settings_v1")
       if (raw) {
         const s = JSON.parse(raw)
-        if (s.coupleName && s.coupleName.trim()) setAppTitle(s.coupleName.trim())
+        if (s.coupleName && s.coupleName.trim()) setCoupleName(s.coupleName.trim())
       }
     } catch { /* ignore */ }
   }, [])
@@ -101,7 +100,7 @@ export function AppHeader() {
             <svg width="28" height="28" viewBox="0 0 24 24" fill="#8B5CF6">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
-            <span className="header-title header-title-gradient">{appTitle}</span>
+            <span className="header-title header-title-gradient">{coupleName}</span>
           </div>
           <div className="header-right">
             {/* Settings */}

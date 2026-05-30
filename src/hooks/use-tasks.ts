@@ -61,3 +61,13 @@ export function useDeleteTask() {
       qc.invalidateQueries({ queryKey: ["tasks", vars.planId] }),
   })
 }
+
+export function useUpdateTask() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ taskId, planId, ...data }: { taskId: string; planId: string; title?: string; icon?: string; sort_order?: number }) =>
+      authFetch(`/api/tasks/${taskId}`, { method: "PATCH", body: JSON.stringify(data) }),
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({ queryKey: ["tasks", vars.planId] }),
+  })
+}
