@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   const { data: me } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
   if (!me?.couple_id) return NextResponse.json({ error: "Not in a couple" }, { status: 403 })
 
-  const { name, country, lat, lng, status, note, date } = await req.json()
+  const { name, country, lat, lng, status, note, date, photos } = await req.json()
   if (!name?.trim() || lat == null || lng == null) {
     return NextResponse.json({ error: "name, lat, lng required" }, { status: 400 })
   }
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       status: status ?? "wishlist",
       note: note?.trim() ?? null,
       date: date ?? null,
+      photos: Array.isArray(photos) ? photos : [],
       created_by: user.uid,
     })
     .select()

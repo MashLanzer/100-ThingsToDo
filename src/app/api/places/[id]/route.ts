@@ -26,6 +26,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
       status: body.status,
       note: body.note?.trim() ?? null,
       date: body.date ?? null,
+      photos: Array.isArray(body.photos) ? body.photos : undefined,
     })
     .eq("id", id)
     .eq("couple_id", me.couple_id)

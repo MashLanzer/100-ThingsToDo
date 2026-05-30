@@ -38,8 +38,16 @@ export function MapModal() {
   const [lng, setLng] = useState<number | null>(null)
   const [status, setStatus] = useState<PlaceStatus>("wishlist")
   const [note, setNote] = useState("")
+  const [date, setDate] = useState("")
+  const [photoUrls, setPhotoUrls] = useState<string[]>([])
+  const [photoInput, setPhotoInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [searching, setSearching] = useState(false)
+
+  // Edit state
+  const [editDate, setEditDate] = useState("")
+  const [editPhotoUrls, setEditPhotoUrls] = useState<string[]>([])
+  const [editPhotoInput, setEditPhotoInput] = useState("")
 
   useEffect(() => {
     if (showMapModal) {
@@ -209,10 +217,10 @@ export function MapModal() {
     try {
       await authFetch("/api/places", {
         method: "POST",
-        body: JSON.stringify({ name: name.trim(), country: country.trim(), lat, lng, status, note: note.trim() }),
+        body: JSON.stringify({ name: name.trim(), country: country.trim(), lat, lng, status, note: note.trim(), date: date || null, photos: photoUrls }),
       })
       toast.success(status === "visited" ? "¡Lugar visitado añadido! 📍" : "¡Añadido a tu lista! ⭐")
-      setName(""); setCountry(""); setLat(null); setLng(null); setNote(""); setSearchQuery("")
+      setName(""); setCountry(""); setLat(null); setLng(null); setNote(""); setDate(""); setPhotoUrls([]); setPhotoInput(""); setSearchQuery("")
       cleanupLeaflet()
       setView("list")
       loadPlaces()
@@ -235,7 +243,7 @@ export function MapModal() {
     try {
       await authFetch(`/api/places/${editingPlace.id}`, {
         method: "PUT",
-        body: JSON.stringify({ ...editingPlace, name: editName.trim(), status: editStatus, note: editNote.trim() }),
+        body: JSON.stringify({ ...editingPlace, name: editName.trim(), status: editStatus, note: editNote.trim(), date: editDate || null, photos: editPhotoUrls }),
       })
       toast.success("Lugar actualizado ✨")
       setEditingPlace(null)
@@ -377,6 +385,48 @@ export function MapModal() {
                 style={{ resize: "none" }}
               />
 
+              {/* Visit date */}
+              <div>
+                <label style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", fontWeight: 600, marginBottom: "0.25rem", display: "block" }}>📅 Fecha de visita (opcional)</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </div>
+
+              {/* Photos */}
+              <div>
+                <label style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", fontWeight: 600, marginBottom: "0.25rem", display: "block" }}>📸 Fotos (URLs)</label>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <input
+                    className="input"
+                    placeholder="Pega una URL de imagen..."
+                    value={photoInput}
+                    onChange={(e) => setPhotoInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && photoInput.trim()) { setPhotoUrls((p) => [...p, photoInput.trim()]); setPhotoInput("") } }}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => { if (photoInput.trim()) { setPhotoUrls((p) => [...p, photoInput.trim()]); setPhotoInput("") } }}
+                    style={{ padding: "0.5rem 0.75rem", flexShrink: 0 }}
+                  >+</button>
+                </div>
+                {photoUrls.length > 0 && (
+                  <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.375rem", overflowX: "auto" }}>
+                    {photoUrls.map((url, i) => (
+                      <div key={i} style={{ position: "relative", flexShrink: 0 }}>
+                        <img src={url} alt="" style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "8px", border: "1px solid var(--border)" }} onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.3" }} />
+                        <button onClick={() => setPhotoUrls((p) => p.filter((_, j) => j !== i))} style={{ position: "absolute", top: "-4px", right: "-4px", background: "#EF4444", color: "white", border: "none", borderRadius: "50%", width: "18px", height: "18px", fontSize: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <button
                 className="btn btn-primary"
                 onClick={handleAdd}
@@ -446,10 +496,18 @@ export function MapModal() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h4 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>{p.name}</h4>
                         {p.country && <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{p.country}</p>}
+                        {p.date && <p style={{ fontSize: "0.6875rem", color: "var(--primary)", marginTop: "0.125rem" }}>📅 {new Date(p.date + "T12:00:00").toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })}</p>}
                         {p.note && <p style={{ fontSize: "0.75rem", color: "var(--foreground-light)", marginTop: "0.25rem" }}>{p.note}</p>}
+                        {p.photos && p.photos.length > 0 && (
+                          <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.375rem", overflowX: "auto" }}>
+                            {p.photos.map((url, i) => (
+                              <img key={i} src={url} alt="" style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "8px", flexShrink: 0, border: "1px solid var(--border)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }} />
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <button
-                        onClick={() => { setEditingPlace(p); setEditName(p.name); setEditStatus(p.status as PlaceStatus); setEditNote(p.note ?? "") }}
+                        onClick={() => { setEditingPlace(p); setEditName(p.name); setEditStatus(p.status as PlaceStatus); setEditNote(p.note ?? ""); setEditDate(p.date ?? ""); setEditPhotoUrls(p.photos ?? []); setEditPhotoInput("") }}
                         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "0.25rem", flexShrink: 0, fontSize: "0.875rem" }}
                       >✏️</button>
                       <button onClick={() => handleDelete(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "0.25rem", flexShrink: 0 }}>
@@ -471,6 +529,30 @@ export function MapModal() {
                           ))}
                         </div>
                         <textarea className="input" rows={2} value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder="Nota (opcional)" style={{ resize: "none" }} maxLength={300} />
+                        <input type="date" className="input" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+                        <div>
+                          <div style={{ display: "flex", gap: "0.5rem" }}>
+                            <input
+                              className="input"
+                              placeholder="URL de foto..."
+                              value={editPhotoInput}
+                              onChange={(e) => setEditPhotoInput(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter" && editPhotoInput.trim()) { setEditPhotoUrls((p) => [...p, editPhotoInput.trim()]); setEditPhotoInput("") } }}
+                              style={{ flex: 1 }}
+                            />
+                            <button type="button" className="btn btn-primary" onClick={() => { if (editPhotoInput.trim()) { setEditPhotoUrls((p) => [...p, editPhotoInput.trim()]); setEditPhotoInput("") } }} style={{ padding: "0.375rem 0.625rem", flexShrink: 0 }}>+</button>
+                          </div>
+                          {editPhotoUrls.length > 0 && (
+                            <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.375rem", overflowX: "auto" }}>
+                              {editPhotoUrls.map((url, i) => (
+                                <div key={i} style={{ position: "relative", flexShrink: 0 }}>
+                                  <img src={url} alt="" style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "6px", border: "1px solid var(--border)" }} onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.3" }} />
+                                  <button onClick={() => setEditPhotoUrls((p) => p.filter((_, j) => j !== i))} style={{ position: "absolute", top: "-4px", right: "-4px", background: "#EF4444", color: "white", border: "none", borderRadius: "50%", width: "16px", height: "16px", fontSize: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <div style={{ display: "flex", gap: "0.5rem" }}>
                           <button className="btn btn-primary" onClick={handleEditSave} disabled={saving} style={{ flex: 1 }}>
                             {saving ? "..." : "Guardar"}
