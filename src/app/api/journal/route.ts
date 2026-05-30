@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   const { data: me } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
   if (!me?.couple_id) return NextResponse.json({ error: "Not in a couple" }, { status: 403 })
 
-  const { date, content, mood } = await req.json()
+  const { date, content, mood, photos } = await req.json()
   if (!date || !content?.trim()) {
     return NextResponse.json({ error: "date and content required" }, { status: 400 })
   }
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from("journal_entries")
     .upsert(
-      { couple_id: me.couple_id, date, content: content.trim(), mood: mood ?? "happy", created_by: user.uid },
+      { couple_id: me.couple_id, date, content: content.trim(), mood: mood ?? "happy", created_by: user.uid, photos: photos ?? [] },
       { onConflict: "couple_id,date,created_by" }
     )
     .select()

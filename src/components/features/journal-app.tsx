@@ -42,6 +42,13 @@ export function JournalApp({ onBack }: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const [weekStartsMonday, setWeekStartsMonday] = useState(false)
   const [privateJournal, setPrivateJournal] = useState(false)
+  // Feature 10: search
+  const [searchQuery, setSearchQuery] = useState("")
+  // Feature 11: photos
+  const [photoUrls, setPhotoUrls] = useState<string[]>([])
+  const [photoInput, setPhotoInput] = useState("")
+  // Feature 12: view partner entries
+  const [viewingPartner, setViewingPartner] = useState(false)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -87,6 +94,8 @@ export function JournalApp({ onBack }: Props) {
       setSelectedEntry(null)
       setWriteContent("")
       setWriteMood("happy")
+      setPhotoUrls([])
+      setPhotoInput("")
       setView("write")
     }
   }
@@ -94,6 +103,8 @@ export function JournalApp({ onBack }: Props) {
   function startEdit(entry: JournalEntry) {
     setWriteContent(entry.content)
     setWriteMood(entry.mood ?? "happy")
+    setPhotoUrls(entry.photos ?? [])
+    setPhotoInput("")
     setIsEditing(true)
     setView("write")
   }
@@ -108,7 +119,7 @@ export function JournalApp({ onBack }: Props) {
       const res = await fetch("/api/journal", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ date: selectedDate, content: writeContent.trim(), mood: writeMood }),
+        body: JSON.stringify({ date: selectedDate, content: writeContent.trim(), mood: writeMood, photos: photoUrls }),
       })
       if (!res.ok) throw new Error("Error al guardar")
       toast.success(isEditing ? "Entrada actualizada ✏️" : "Entrada guardada 💕")
@@ -181,6 +192,15 @@ export function JournalApp({ onBack }: Props) {
             {displayEntry?.content ?? ""}
           </p>
 
+          {/* Feature 11: show photos in read view */}
+          {displayEntry?.photos && displayEntry.photos.length > 0 && (
+            <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", marginTop: "0.75rem" }}>
+              {displayEntry.photos.map((url, i) => (
+                <img key={i} src={url} alt="" style={{ height: 120, width: "auto", borderRadius: "10px", flexShrink: 0, objectFit: "cover" }} />
+              ))}
+            </div>
+          )}
+
           {!showPartnerEntry && (
             <button className="btn btn-outline" style={{ marginTop: "1rem", fontSize: "0.8125rem" }} onClick={() => startEdit(selectedEntry)}>
               ✏️ Editar entrada
@@ -209,6 +229,14 @@ export function JournalApp({ onBack }: Props) {
                     <p style={{ fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
                       {partnerEntry?.content}
                     </p>
+                    {/* Feature 11: partner photos in read view */}
+                    {partnerEntry?.photos && partnerEntry.photos.length > 0 && (
+                      <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", marginTop: "0.75rem" }}>
+                        {partnerEntry.photos.map((url, i) => (
+                          <img key={i} src={url} alt="" style={{ height: 120, width: "auto", borderRadius: "10px", flexShrink: 0, objectFit: "cover" }} />
+                        ))}
+                      </div>
+                    )}
                   </>
                 )
               })()}
@@ -253,6 +281,29 @@ export function JournalApp({ onBack }: Props) {
               )
             })}
           </div>
+
+          {/* Feature 11: photo URL input */}
+          <div style={{ marginTop: "0.625rem" }}>
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "block", marginBottom: "0.375rem" }}>📸 Fotos (URL)</label>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <input className="input" placeholder="https://..." value={photoInput} onChange={(e) => setPhotoInput(e.target.value)} style={{ flex: 1 }} />
+              <button className="btn btn-outline" style={{ flexShrink: 0, padding: "0 0.75rem" }} onClick={() => {
+                if (photoInput.trim()) { setPhotoUrls(prev => [...prev, photoInput.trim()]); setPhotoInput("") }
+              }}>+</button>
+            </div>
+            {photoUrls.length > 0 && (
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                {photoUrls.map((url, i) => (
+                  <div key={i} style={{ position: "relative" }}>
+                    <img src={url} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: "8px", border: "2px solid var(--border)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }} />
+                    <button onClick={() => setPhotoUrls(prev => prev.filter((_, j) => j !== i))}
+                      style={{ position: "absolute", top: -6, right: -6, background: "#ef4444", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", fontSize: "0.625rem", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <textarea
             className="textarea"
             rows={6}
@@ -264,7 +315,7 @@ export function JournalApp({ onBack }: Props) {
               e.target.style.height = `${e.target.scrollHeight}px`
             }}
             autoFocus
-            style={{ minHeight: "120px" }}
+            style={{ minHeight: "120px", marginTop: "0.625rem" }}
           />
           <button className="btn btn-primary" style={{ marginTop: "0.5rem" }} onClick={saveEntry} disabled={saving || !writeContent.trim()}>
             {saving ? "Guardando..." : isEditing ? "💾 Actualizar entrada" : "Guardar Recuerdo 💕"}
@@ -280,68 +331,140 @@ export function JournalApp({ onBack }: Props) {
       <div className="app-content-header">
         <button className="back-btn-phone" onClick={onBack}>‹</button>
         <span>Nuestro Diario 💕</span>
+        {/* Feature 12: partner view toggle - only show if not privateJournal */}
+        {!privateJournal && (
+          <button
+            onClick={() => setViewingPartner(v => !v)}
+            style={{
+              fontSize: "0.6875rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none",
+              background: viewingPartner ? "var(--secondary)" : "var(--muted)",
+              color: viewingPartner ? "white" : "var(--foreground-muted)",
+              cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
+            }}
+          >
+            {viewingPartner ? "💕 Pareja" : "👤 Pareja"}
+          </button>
+        )}
       </div>
       <div className="app-content-body" style={{ gap: "0.5rem" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <button className="back-btn-phone" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>‹</button>
-          <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", textTransform: "capitalize" }}>
-            {monthLabel}
-          </span>
-          <button className="back-btn-phone" style={{ transform: "rotate(180deg)" }} onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>‹</button>
-        </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px", textAlign: "center" }}>
-          {weekDays.map((d) => (
-            <div key={d} style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", padding: "0.25rem 0" }}>{d}</div>
-          ))}
-        </div>
+        {/* Feature 12: partner view */}
+        {viewingPartner ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", textAlign: "center" }}>Entradas de tu pareja 💕</p>
+            {entries
+              .filter(e => e.created_by !== user?.uid)
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .map(e => (
+                <button key={e.id} onClick={() => { setSelectedDate(e.date); setViewingPartner(false) }}
+                  style={{ textAlign: "left", background: "linear-gradient(135deg, var(--primary-lighter), white)", border: "1px solid var(--primary-light)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem" }}>{e.date} 💕</div>
+                  <div style={{ fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                    {e.content}
+                  </div>
+                </button>
+              ))
+            }
+            {entries.filter(e => e.created_by !== user?.uid).length === 0 && (
+              <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
+                <div style={{ fontSize: "2rem" }}>💕</div>
+                <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginTop: "0.375rem" }}>Tu pareja aún no ha escrito</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Feature 10: search bar */}
+            <div style={{ position: "relative", marginBottom: "0.75rem" }}>
+              <span style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", fontSize: "0.875rem", pointerEvents: "none" }}>🔍</span>
+              <input className="input" type="search" placeholder="Buscar en el diario..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ paddingLeft: "2rem" }} />
+            </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px" }}>
-          {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
-          {Array.from({ length: daysInMonth }).map((_, i) => {
-            const day = i + 1
-            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-            const myEntry = getMyEntry(dateStr)
-            const partnerEntry = getPartnerEntry(dateStr)
-            const hasAny = !!(myEntry || partnerEntry)
-            const now = new Date()
-            const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
-            const isToday = dateStr === todayLocal
-            const moodId = myEntry?.mood ?? ""
-            const moodDotColor = myEntry
-              ? (["happy","love"].includes(moodId) ? "var(--primary)" : ["sad"].includes(moodId) ? "#f87171" : "#94a3b8")
-              : null
-            return (
-              <button
-                key={day}
-                onClick={() => openDay(dateStr)}
-                style={{
-                  aspectRatio: "1", borderRadius: "10px",
-                  border: isToday ? "2px solid var(--primary)" : hasAny ? "1.5px solid var(--primary-light)" : "1px solid var(--border)",
-                  background: isToday
-                    ? "var(--primary-lighter)"
-                    : myEntry
-                    ? "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)"
-                    : partnerEntry
-                    ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)"
-                    : "white",
-                  cursor: "pointer",
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  fontSize: "0.6875rem",
-                  fontWeight: isToday ? 800 : hasAny ? 700 : 400,
-                  color: isToday ? "var(--primary)" : hasAny ? "var(--foreground)" : "var(--foreground-muted)",
-                  gap: "2px", padding: "3px 2px",
-                  boxShadow: isToday ? "0 2px 8px rgba(139,92,246,0.2)" : "none",
-                  transition: "transform 0.1s",
-                }}
-              >
-                <span style={{ lineHeight: 1 }}>{day}</span>
-                {moodDotColor && <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: moodDotColor, flexShrink: 0 }} />}
-                {!moodDotColor && partnerEntry && <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--secondary)", flexShrink: 0 }} />}
-              </button>
-            )
-          })}
-        </div>
+            {/* Feature 10: search results vs calendar */}
+            {searchQuery.trim() ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {entries
+                  .filter(e => e.content.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .map(e => (
+                    <button key={e.id} onClick={() => { setSelectedDate(e.date); setSearchQuery("") }}
+                      style={{ textAlign: "left", background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                      <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem" }}>{e.date}</div>
+                      <div style={{ fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                        {e.content}
+                      </div>
+                    </button>
+                  ))
+                }
+                {entries.filter(e => e.content.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                  <p style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: "0.8125rem" }}>Sin resultados</p>
+                )}
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <button className="back-btn-phone" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>‹</button>
+                  <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", textTransform: "capitalize" }}>
+                    {monthLabel}
+                  </span>
+                  <button className="back-btn-phone" style={{ transform: "rotate(180deg)" }} onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>‹</button>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px", textAlign: "center" }}>
+                  {weekDays.map((d) => (
+                    <div key={d} style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", padding: "0.25rem 0" }}>{d}</div>
+                  ))}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px" }}>
+                  {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
+                  {Array.from({ length: daysInMonth }).map((_, i) => {
+                    const day = i + 1
+                    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+                    const myEntry = getMyEntry(dateStr)
+                    const partnerEntry = getPartnerEntry(dateStr)
+                    const hasAny = !!(myEntry || partnerEntry)
+                    const now = new Date()
+                    const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
+                    const isToday = dateStr === todayLocal
+                    const moodId = myEntry?.mood ?? ""
+                    const moodDotColor = myEntry
+                      ? (["happy","love"].includes(moodId) ? "var(--primary)" : ["sad"].includes(moodId) ? "#f87171" : "#94a3b8")
+                      : null
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => openDay(dateStr)}
+                        style={{
+                          aspectRatio: "1", borderRadius: "10px",
+                          border: isToday ? "2px solid var(--primary)" : hasAny ? "1.5px solid var(--primary-light)" : "1px solid var(--border)",
+                          background: isToday
+                            ? "var(--primary-lighter)"
+                            : myEntry
+                            ? "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)"
+                            : partnerEntry
+                            ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)"
+                            : "white",
+                          cursor: "pointer",
+                          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                          fontSize: "0.6875rem",
+                          fontWeight: isToday ? 800 : hasAny ? 700 : 400,
+                          color: isToday ? "var(--primary)" : hasAny ? "var(--foreground)" : "var(--foreground-muted)",
+                          gap: "2px", padding: "3px 2px",
+                          boxShadow: isToday ? "0 2px 8px rgba(139,92,246,0.2)" : "none",
+                          transition: "transform 0.1s",
+                        }}
+                      >
+                        <span style={{ lineHeight: 1 }}>{day}</span>
+                        {moodDotColor && <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: moodDotColor, flexShrink: 0 }} />}
+                        {!moodDotColor && partnerEntry && <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--secondary)", flexShrink: 0 }} />}
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </>
+        )}
       </div>
     </>
   )

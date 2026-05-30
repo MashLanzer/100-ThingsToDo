@@ -15,11 +15,11 @@ export async function PUT(req: NextRequest, { params }: Context) {
   const { data: me } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
   if (!me?.couple_id) return NextResponse.json({ error: "Not in a couple" }, { status: 403 })
 
-  const { content, mood } = await req.json()
+  const { content, mood, photos } = await req.json()
 
   const { data, error } = await supabase
     .from("journal_entries")
-    .update({ content: content?.trim(), mood })
+    .update({ content: content?.trim(), mood, photos: photos ?? [] })
     .eq("id", id)
     .eq("couple_id", me.couple_id)
     .select()
