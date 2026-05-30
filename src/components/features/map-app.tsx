@@ -6,6 +6,7 @@ import { useAppStore } from "@/stores/app-store"
 import { toast } from "sonner"
 import type { Place } from "@/types"
 import { Plus, Trash2, Search, Globe } from "lucide-react"
+import { PhoneLoader } from "@/components/features/phone-loader"
 
 type PlaceStatus = "visited" | "wishlist"
 
@@ -255,22 +256,20 @@ export function MapApp({ onBack }: Props) {
         </span>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid var(--border)", background: "white", marginTop: "0.5rem" }}>
-        {(["all", "visited", "wishlist"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{
-              flex: 1, padding: "0.5rem 0.25rem", background: "none", border: "none",
-              borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent",
-              cursor: "pointer", fontFamily: "inherit", fontSize: "0.625rem", fontWeight: tab === t ? 700 : 500,
-              color: tab === t ? "var(--primary)" : "var(--foreground-muted)", marginBottom: "-1px",
-            }}
-          >
-            {t === "all" ? "Todos" : t === "visited" ? "📍 Visitados" : "⭐ Deseos"}
-          </button>
-        ))}
+      {/* Tabs — pill style */}
+      <div style={{ padding: "0.375rem 0.75rem", background: "white" }}>
+        <div className="pill-tab-container">
+          {(["all", "visited", "wishlist"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`pill-tab-btn${tab === t ? " active" : ""}`}
+              style={{ fontSize: "0.6875rem" }}
+            >
+              {t === "all" ? "Todos" : t === "visited" ? "📍 Visitados" : "⭐ Deseos"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="app-content-body">
@@ -279,7 +278,7 @@ export function MapApp({ onBack }: Props) {
         </button>
 
         {loading ? (
-          <p style={{ color: "var(--foreground-muted)", fontSize: "0.8125rem", textAlign: "center" }}>Cargando...</p>
+          <PhoneLoader />
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
             <div className="animate-bounce-slow" style={{ fontSize: "2.25rem" }}>

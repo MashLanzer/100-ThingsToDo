@@ -5,6 +5,7 @@ import { getFirebaseAuth } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import type { TimeCapsule, CapsuleType } from "@/types"
 import { formatDate } from "@/lib/utils"
+import { PhoneLoader } from "@/components/features/phone-loader"
 
 const CAPSULE_TYPES: { id: CapsuleType; icon: string; label: string; desc: string }[] = [
   { id: "memory",      icon: "💙", label: "Recuerdo",   desc: "Momentos especiales" },
@@ -276,9 +277,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "1rem", color: "var(--foreground-muted)", fontSize: "0.875rem" }}>
-            Cargando...
-          </div>
+          <PhoneLoader />
         ) : capsules.length === 0 ? (
           <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
             <div className="animate-bounce-slow" style={{ fontSize: "2.25rem" }}>⏳</div>

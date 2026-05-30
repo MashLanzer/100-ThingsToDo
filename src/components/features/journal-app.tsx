@@ -329,35 +329,49 @@ export function JournalApp({ onBack }: Props) {
             const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
             const isToday = dateStr === todayLocal
 
+            // Mood dot color
+            const moodDotColor = myMood
+              ? (["happy","love"].includes(myEntry?.mood ?? "") ? "var(--primary)" : ["sad","angry"].includes(myEntry?.mood ?? "") ? "#f87171" : "#94a3b8")
+              : null
+
             return (
               <button
                 key={day}
                 onClick={() => openDay(dateStr)}
                 style={{
                   aspectRatio: "1",
-                  borderRadius: "8px",
-                  border: isToday ? "2px solid var(--primary)" : "1px solid transparent",
-                  background: hasAny ? "var(--primary-lighter)" : "var(--muted)",
+                  borderRadius: "10px",
+                  border: isToday ? "2px solid var(--primary)" : hasAny ? "1.5px solid var(--primary-light)" : "1px solid var(--border)",
+                  background: isToday
+                    ? "var(--primary-lighter)"
+                    : myEntry
+                    ? "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)"
+                    : partnerEntry
+                    ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)"
+                    : "white",
                   cursor: "pointer",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: "0.625rem",
-                  fontWeight: isToday ? 700 : 500,
-                  color: isToday ? "var(--primary)" : "var(--foreground-light)",
-                  gap: "1px",
-                  padding: "2px",
+                  fontSize: "0.6875rem",
+                  fontWeight: isToday ? 800 : hasAny ? 700 : 400,
+                  color: isToday ? "var(--primary)" : hasAny ? "var(--foreground)" : "var(--foreground-muted)",
+                  gap: "2px",
+                  padding: "3px 2px",
+                  boxShadow: isToday ? "0 2px 8px rgba(139,92,246,0.2)" : "none",
+                  transition: "transform 0.1s",
                 }}
               >
-                {/* Show up to 2 mood emojis */}
-                {(myMood || partnerMood) && (
-                  <div style={{ display: "flex", gap: "1px", lineHeight: 1 }}>
-                    {myMood && <span style={{ fontSize: "0.625rem" }}>{myMood.emoji}</span>}
-                    {partnerMood && <span style={{ fontSize: "0.5625rem" }}>{partnerMood.emoji}</span>}
-                  </div>
+                <span style={{ lineHeight: 1 }}>{day}</span>
+                {/* Mood dot */}
+                {moodDotColor && (
+                  <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: moodDotColor, flexShrink: 0 }} />
                 )}
-                <span>{day}</span>
+                {/* Partner dot (secondary color) */}
+                {!moodDotColor && partnerEntry && (
+                  <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--secondary)", flexShrink: 0 }} />
+                )}
               </button>
             )
           })}

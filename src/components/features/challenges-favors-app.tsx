@@ -5,6 +5,7 @@ import { getFirebaseAuth } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import { CheckCircle, Trophy } from "lucide-react"
 import { PullToRefresh } from "@/components/shared/pull-to-refresh"
+import { PhoneLoader } from "@/components/features/phone-loader"
 import type { Favor, FavorDifficulty, FavorCategory } from "@/types"
 
 // ── Challenge data ────────────────────────────────────────────────────────────
@@ -264,23 +265,20 @@ export function ChallengesFavorsApp({ onBack }: Props) {
         <span>{mainTab === "challenge" ? "🎲 Reto del Día" : "💝 Favores"}</span>
       </div>
 
-      {/* Main tab bar */}
-      <div style={{ display: "flex", borderBottom: "1px solid var(--border)", background: "white", flexShrink: 0 }}>
-        {([
-          { id: "challenge", label: "🎲 Reto" },
-          { id: "favors",    label: "💝 Favores" },
-        ] as const).map((tab) => (
-          <button key={tab.id} onClick={() => setMainTab(tab.id)}
-            style={{
-              flex: 1, padding: "0.5rem", background: "none", border: "none",
-              borderBottom: mainTab === tab.id ? "2px solid var(--primary)" : "2px solid transparent",
-              cursor: "pointer", fontFamily: "inherit", fontSize: "0.8125rem",
-              fontWeight: mainTab === tab.id ? 700 : 500,
-              color: mainTab === tab.id ? "var(--primary)" : "var(--foreground-muted)",
-              marginBottom: "-1px",
-            }}
-          >{tab.label}</button>
-        ))}
+      {/* Main tab bar — pill style */}
+      <div style={{ padding: "0.5rem 0.75rem 0", background: "white", flexShrink: 0 }}>
+        <div className="pill-tab-container">
+          {([
+            { id: "challenge", label: "🎲 Reto" },
+            { id: "favors",    label: "💝 Favores" },
+          ] as const).map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setMainTab(tab.id)}
+              className={`pill-tab-btn${mainTab === tab.id ? " active" : ""}`}
+            >{tab.label}</button>
+          ))}
+        </div>
       </div>
 
       {/* ── CHALLENGE TAB ── */}
@@ -303,9 +301,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
           </div>
 
           {loadingChallenge ? (
-            <div style={{ textAlign: "center", padding: "2rem", color: "var(--foreground-muted)", fontSize: "0.875rem" }}>
-              Cargando...
-            </div>
+            <PhoneLoader />
           ) : !challenge ? (
             <div style={{
               background: `linear-gradient(135deg, ${catColor.from}22, ${catColor.to}22)`,
@@ -398,20 +394,20 @@ export function ChallengesFavorsApp({ onBack }: Props) {
       {/* ── FAVORS TAB ── */}
       {mainTab === "favors" && (
         <>
-          {/* Favors sub-tab bar */}
-          <div style={{ display: "flex", borderBottom: "1px solid var(--border)", background: "white", flexShrink: 0 }}>
-            {(["active", "completed", "create"] as const).map((t) => (
-              <button key={t} onClick={() => setFavTab(t)} style={{
-                flex: 1, padding: "0.5rem 0.25rem", background: "none", border: "none",
-                borderBottom: favTab === t ? "2px solid var(--primary)" : "2px solid transparent",
-                cursor: "pointer", fontFamily: "inherit", fontSize: "0.6875rem",
-                fontWeight: favTab === t ? 700 : 500,
-                color: favTab === t ? "var(--primary)" : "var(--foreground-muted)",
-                marginBottom: "-1px",
-              }}>
-                {t === "active" ? "Activos" : t === "completed" ? "Hechos" : "+ Crear"}
-              </button>
-            ))}
+          {/* Favors sub-tab bar — pill style */}
+          <div style={{ padding: "0.375rem 0.75rem", background: "white", flexShrink: 0 }}>
+            <div className="pill-tab-container">
+              {(["active", "completed", "create"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setFavTab(t)}
+                  className={`pill-tab-btn${favTab === t ? " active" : ""}`}
+                  style={{ fontSize: "0.6875rem" }}
+                >
+                  {t === "active" ? "Activos" : t === "completed" ? "Hechos ✓" : "+ Crear"}
+                </button>
+              ))}
+            </div>
           </div>
 
           <PullToRefresh onRefresh={loadFavors}>
@@ -460,7 +456,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
             {(favTab === "active" || favTab === "completed") && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {loadingFavors ? (
-                  <p style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: "0.8125rem" }}>Cargando...</p>
+                  <PhoneLoader />
                 ) : (
                   (favTab === "active" ? activeFavors : completedFavors).map((f) => {
                     const diff = DIFFICULTIES.find((d) => d.id === f.difficulty)
@@ -522,10 +518,13 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                   })
                 )}
                 {!loadingFavors && (favTab === "active" ? activeFavors : completedFavors).length === 0 && (
-                  <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
-                    <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>{favTab === "active" ? "💝" : "🏆"}</div>
-                    <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)" }}>
-                      {favTab === "active" ? "No hay favores activos. ¡Crea el primero!" : "Aún no hay favores completados."}
+                  <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
+                    <div className="animate-bounce-slow" style={{ fontSize: "2.25rem" }}>{favTab === "active" ? "💝" : "🏆"}</div>
+                    <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--foreground)" }}>
+                      {favTab === "active" ? "¡Sin favores activos!" : "¡Sin favores hechos aún!"}
+                    </p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
+                      {favTab === "active" ? "Crea vuestro primer favor juntos 💕" : "¡Completa un favor para verlo aquí! ✨"}
                     </p>
                   </div>
                 )}

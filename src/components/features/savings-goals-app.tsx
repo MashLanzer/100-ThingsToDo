@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import type { SavingsGoal } from "@/types"
+import { PhoneLoader } from "@/components/features/phone-loader"
 
 interface Props { onBack: () => void }
 
@@ -223,9 +224,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "1rem", color: "var(--foreground-muted)", fontSize: "0.875rem" }}>
-            Cargando...
-          </div>
+          <PhoneLoader />
         ) : goals.length === 0 ? (
           <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
             <div className="animate-bounce-slow" style={{ fontSize: "2.25rem" }}>🐖</div>

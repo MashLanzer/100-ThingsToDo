@@ -57,18 +57,43 @@ export default function DashboardPage() {
       )}
       {/* Link partner banner */}
       {!hasCouple && (
-        <div className="link-partner-banner" style={{ marginBottom: "1rem" }}>
-          <div style={{ fontSize: "1.75rem", flexShrink: 0 }}>💌</div>
-          <div style={{ flex: 1 }}>
-            <h3 style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)", marginBottom: "0.125rem" }}>
+        <div
+          style={{
+            marginBottom: "1rem",
+            borderRadius: "var(--radius-lg)",
+            padding: "1rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "1rem",
+            position: "relative",
+            overflow: "hidden",
+            background: "linear-gradient(135deg, var(--primary-lighter) 0%, var(--pink-light) 100%)",
+            border: "1px solid var(--primary-light)",
+          }}
+        >
+          {/* Decorative hearts background */}
+          <div aria-hidden style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden", opacity: 0.18, fontSize: "1.25rem", lineHeight: 1 }}>
+            {["💕","💕","💕","💕","💕","💕","💕","💕","💕","💕","💕","💕"].map((h, i) => (
+              <span key={i} style={{
+                position: "absolute",
+                left: `${(i * 17 + 3) % 100}%`,
+                top: `${(i * 23 + 5) % 100}%`,
+                transform: `rotate(${i * 30}deg)`,
+                fontSize: i % 3 === 0 ? "1rem" : "0.75rem",
+              }}>{h}</span>
+            ))}
+          </div>
+          <div className="animate-bounce-slow" style={{ fontSize: "2rem", flexShrink: 0, position: "relative" }}>💌</div>
+          <div style={{ flex: 1, position: "relative" }}>
+            <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--foreground)", marginBottom: "0.125rem" }}>
               ¡Conecta con tu pareja!
             </h3>
             <p style={{ fontSize: "0.8125rem", color: "var(--foreground-light)" }}>
-              Comparte tu código o ingresa el de tu pareja para empezar a crear planes juntos.
+              Comparte vuestro código y empezad a crear recuerdos juntos 💕
             </p>
           </div>
-          <button className="btn btn-primary" style={{ flexShrink: 0, fontSize: "0.8125rem" }} onClick={openCoupleModal}>
-            Vincular
+          <button className="btn btn-primary" style={{ flexShrink: 0, fontSize: "0.8125rem", position: "relative" }} onClick={openCoupleModal}>
+            Vincular 💕
           </button>
         </div>
       )}
