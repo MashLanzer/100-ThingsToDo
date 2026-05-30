@@ -11,6 +11,7 @@ import { toast } from "sonner"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import type { Plan } from "@/types"
 import { OnboardingModal } from "@/components/shared/onboarding-modal"
+import { PlanCalendar } from "@/components/features/plan-calendar"
 
 function SwipePlanCard({ plan, index, onDelete }: { plan: Plan; index: number; onDelete: () => void }) {
   const [swipeX, setSwipeX] = useState(0)
@@ -88,6 +89,7 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<SortBy>("newest")
   const [showArchived, setShowArchived] = useState(false)
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<"grid" | "calendar">("grid")
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (typeof window === "undefined") return false
     return !localStorage.getItem("ttd_onboarding_done_v1")
@@ -237,6 +239,31 @@ export default function DashboardPage() {
           Nuestros Planes 📋
         </h1>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          {/* View mode toggle */}
+          <div style={{ display: "flex", borderRadius: "999px", border: "1px solid var(--border)", overflow: "hidden", background: "var(--muted)" }}>
+            {([
+              { key: "grid", label: "📋 Planes" },
+              { key: "calendar", label: "📅 Calendario" },
+            ] as { key: "grid" | "calendar"; label: string }[]).map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setViewMode(key)}
+                style={{
+                  padding: "4px 10px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  fontSize: "0.6875rem",
+                  fontWeight: 700,
+                  background: viewMode === key ? "var(--primary)" : "transparent",
+                  color: viewMode === key ? "white" : "var(--foreground-muted)",
+                  transition: "background 0.15s, color 0.15s",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <button
             className="btn btn-primary"
             onClick={() => setShowForm(true)}
@@ -444,81 +471,90 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Calendar view */}
+      {viewMode === "calendar" && !isLoading && (
+        <div className="card animate-fade-in">
+          <PlanCalendar plans={allPlans} />
+        </div>
+      )}
+
       {/* Plans grid */}
-      {isLoading ? (
-        <div className="empty-state">
-          <svg className="animate-heartbeat" width="40" height="40" viewBox="0 0 24 24" fill="#8B5CF6">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-          </svg>
-        </div>
-      ) : !hasAnyPlans || noResults ? (
-        <div className="empty-state">
-          <div className="empty-icon animate-bounce-slow">
-            {hasCouple ? "💝" : "💌"}
+      {viewMode === "grid" && (
+        isLoading ? (
+          <div className="empty-state">
+            <svg className="animate-heartbeat" width="40" height="40" viewBox="0 0 24 24" fill="#8B5CF6">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
           </div>
-          <h2 className="empty-title" style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem" }}>
-            {hasCouple ? "¡Sin planes aún!" : "¡Conecta con tu pareja!"}
-          </h2>
-          <p className="empty-text">
-            {searchQuery.trim()
-              ? "No hay planes que coincidan con tu búsqueda"
-              : hasCouple
-              ? "Crea vuestro primer plan romántico y empieza la aventura juntos ✨"
-              : "Vincula a tu pareja para empezar a crear recuerdos juntos 💕"}
-          </p>
-          {hasCouple && (
-            <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => setShowForm(true)}>
-              ✨ Crear primer plan
-            </button>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* Active plans */}
-          {filteredActive.length > 0 && (
-            <div className="plans-grid">
-              {filteredActive.map((plan, i) => (
-                <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
-              ))}
+        ) : !hasAnyPlans || noResults ? (
+          <div className="empty-state">
+            <div className="empty-icon animate-bounce-slow">
+              {hasCouple ? "💝" : "💌"}
             </div>
-          )}
-
-          {/* Archived / completed section */}
-          {filteredArchived.length > 0 && (
-            <div style={{ marginTop: "1rem" }}>
-              <button
-                onClick={() => setShowArchived((v) => !v)}
-                style={{
-                  display: "flex", alignItems: "center", gap: "0.5rem", width: "100%",
-                  background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius-md)",
-                  padding: "0.5rem 0.75rem", cursor: "pointer", fontFamily: "inherit",
-                  fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground-light)",
-                  marginBottom: showArchived ? "0.75rem" : 0,
-                }}
-              >
-                <span>✅ Completados</span>
-                <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
-                  {filteredArchived.length} {showArchived ? "▲" : "▼"}
-                </span>
+            <h2 className="empty-title" style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem" }}>
+              {hasCouple ? "¡Sin planes aún!" : "¡Conecta con tu pareja!"}
+            </h2>
+            <p className="empty-text">
+              {searchQuery.trim()
+                ? "No hay planes que coincidan con tu búsqueda"
+                : hasCouple
+                ? "Crea vuestro primer plan romántico y empieza la aventura juntos ✨"
+                : "Vincula a tu pareja para empezar a crear recuerdos juntos 💕"}
+            </p>
+            {hasCouple && (
+              <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => setShowForm(true)}>
+                ✨ Crear primer plan
               </button>
-              {showArchived && (
-                <div className="plans-grid animate-fade-in">
-                  {filteredArchived.map((plan, i) => (
-                    <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Active plans */}
+            {filteredActive.length > 0 && (
+              <div className="plans-grid">
+                {filteredActive.map((plan, i) => (
+                  <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
+                ))}
+              </div>
+            )}
 
-          {/* If no active plans but only archived */}
-          {filteredActive.length === 0 && filteredArchived.length === 0 && searchQuery.trim() && (
-            <div className="empty-state">
-              <div className="empty-icon animate-bounce-slow">🔍</div>
-              <p className="empty-text">No hay planes que coincidan con tu búsqueda</p>
-            </div>
-          )}
-        </>
+            {/* Archived / completed section */}
+            {filteredArchived.length > 0 && (
+              <div style={{ marginTop: "1rem" }}>
+                <button
+                  onClick={() => setShowArchived((v) => !v)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "0.5rem", width: "100%",
+                    background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius-md)",
+                    padding: "0.5rem 0.75rem", cursor: "pointer", fontFamily: "inherit",
+                    fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground-light)",
+                    marginBottom: showArchived ? "0.75rem" : 0,
+                  }}
+                >
+                  <span>✅ Completados</span>
+                  <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
+                    {filteredArchived.length} {showArchived ? "▲" : "▼"}
+                  </span>
+                </button>
+                {showArchived && (
+                  <div className="plans-grid animate-fade-in">
+                    {filteredArchived.map((plan, i) => (
+                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* If no active plans but only archived */}
+            {filteredActive.length === 0 && filteredArchived.length === 0 && searchQuery.trim() && (
+              <div className="empty-state">
+                <div className="empty-icon animate-bounce-slow">🔍</div>
+                <p className="empty-text">No hay planes que coincidan con tu búsqueda</p>
+              </div>
+            )}
+          </>
+        )
       )}
       {showOnboarding && <OnboardingModal onComplete={() => setShowOnboarding(false)} />}
     </div>

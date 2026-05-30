@@ -1,6 +1,8 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { Share2 } from "lucide-react"
+import { toast } from "sonner"
 import type { Plan } from "@/types"
 
 function relativeDate(dateStr: string): string {
@@ -187,6 +189,52 @@ export function PlanCard({ plan, index = 0 }: Props) {
               </span>
             )}
           </div>
+        )}
+
+        {/* Share button — only when 100% complete */}
+        {isComplete && total > 0 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              const text = `💕 ¡Lo logramos! 💕\n✅ Plan completado: ${plan.title}\n📝 ${total} cosa${total !== 1 ? "s" : ""} que hicimos juntos\n🎊 ThingsToDo Kawaii Edition`
+              if (typeof navigator !== "undefined" && navigator.share) {
+                navigator.share({ text }).catch(() => {/* user cancelled */})
+              } else {
+                navigator.clipboard.writeText(text).then(() => {
+                  toast.success("¡Enlace copiado! 💕")
+                }).catch(() => {
+                  toast.error("No se pudo copiar")
+                })
+              }
+            }}
+            style={{
+              marginTop: "0.5rem",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.3rem",
+              padding: "0.25rem 0.75rem",
+              borderRadius: "999px",
+              border: "1.5px solid var(--secondary)",
+              background: "transparent",
+              color: "var(--secondary)",
+              fontSize: "0.6875rem",
+              fontWeight: 700,
+              fontFamily: "inherit",
+              cursor: "pointer",
+              transition: "background 0.15s, color 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--secondary)"
+              e.currentTarget.style.color = "white"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent"
+              e.currentTarget.style.color = "var(--secondary)"
+            }}
+          >
+            <Share2 size={12} />
+            Compartir 🎉
+          </button>
         )}
       </div>
     </div>
