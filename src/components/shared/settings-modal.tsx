@@ -126,6 +126,9 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   )
 }
 
+// ── PIN constants ─────────────────────────────────────────────────────────────
+const PIN_KEY = "ttd_journal_pin_v1"
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function SettingsModal() {
@@ -152,6 +155,14 @@ export function SettingsModal() {
   const [weekStartsMonday, setWeekStartsMonday] = useState(false)
   const [hiddenApps, setHiddenApps] = useState<string[]>([])
 
+  // PIN state
+  const [pinEnabled, setPinEnabled] = useState(false)
+  const [pinSection, setPinSection] = useState<"idle" | "setup1" | "setup2" | "disable">("idle")
+  const [pinNew, setPinNew] = useState("")
+  const [pinConfirm, setPinConfirm] = useState("")
+  const [pinDisable, setPinDisable] = useState("")
+  const [pinError, setPinError] = useState("")
+
   useEffect(() => {
     if (showSettingsModal) {
       const s = readThemeSettings()
@@ -168,6 +179,17 @@ export function SettingsModal() {
       setPrivateJournal(as.privateJournal ?? false)
       setWeekStartsMonday(as.weekStartsMonday ?? false)
       setHiddenApps(as.hiddenApps ?? [])
+
+      // Load PIN state
+      try {
+        const stored = localStorage.getItem(PIN_KEY)
+        setPinEnabled(!!stored)
+      } catch { setPinEnabled(false) }
+      setPinSection("idle")
+      setPinNew("")
+      setPinConfirm("")
+      setPinDisable("")
+      setPinError("")
     }
   }, [showSettingsModal])
 
@@ -256,6 +278,80 @@ export function SettingsModal() {
     } else {
       toast.success("¡Notificaciones activadas! 🔔")
     }
+  }
+
+  // ── PIN handlers ──────────────────────────────────────────────────────────
+
+  function handlePinToggle(enable: boolean) {
+    setPinError("")
+    if (enable) {
+      // Start setup flow
+      setPinSection("setup1")
+      setPinNew("")
+      setPinConfirm("")
+    } else {
+      // Start disable flow
+      setPinSection("disable")
+      setPinDisable("")
+    }
+  }
+
+  function handlePinSetup1Submit() {
+    if (!/^\d{4}$/.test(pinNew)) {
+      setPinError("El PIN debe tener exactamente 4 dígitos")
+      return
+    }
+    setPinError("")
+    setPinSection("setup2")
+    setPinConfirm("")
+  }
+
+  function handlePinSetup2Submit() {
+    if (pinConfirm !== pinNew) {
+      setPinError("Los PINs no coinciden. Intenta de nuevo")
+      setPinSection("setup1")
+      setPinNew("")
+      setPinConfirm("")
+      return
+    }
+    try {
+      localStorage.setItem(PIN_KEY, pinNew)
+      setPinEnabled(true)
+      setPinSection("idle")
+      setPinNew("")
+      setPinConfirm("")
+      setPinError("")
+      toast.success("PIN activado 🔐")
+    } catch {
+      setPinError("Error al guardar el PIN")
+    }
+  }
+
+  function handlePinDisableSubmit() {
+    try {
+      const stored = localStorage.getItem(PIN_KEY)
+      if (pinDisable !== stored) {
+        setPinError("PIN incorrecto")
+        setPinDisable("")
+        return
+      }
+      localStorage.removeItem(PIN_KEY)
+      setPinEnabled(false)
+      setPinSection("idle")
+      setPinDisable("")
+      setPinError("")
+      toast.success("PIN desactivado")
+    } catch {
+      setPinError("Error al desactivar el PIN")
+    }
+  }
+
+  function cancelPinSection() {
+    setPinSection("idle")
+    setPinNew("")
+    setPinConfirm("")
+    setPinDisable("")
+    setPinError("")
   }
 
   async function getAuthToken() {
@@ -609,6 +705,117 @@ export function SettingsModal() {
                   </div>
                   <Toggle checked={privateJournal} onChange={handlePrivateJournalToggle} />
                 </div>
+              </section>
+
+              {/* ── PIN del diario ── */}
+              <section>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem" }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>🔐 PIN del diario</p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginTop: "0.125rem" }}>
+                      {pinEnabled ? "Activo — el diario se bloquea al abrirlo" : "Protege el diario con un PIN de 4 dígitos"}
+                    </p>
+                  </div>
+                  <Toggle checked={pinEnabled} onChange={handlePinToggle} />
+                </div>
+
+                {/* Inline expand for setup / disable */}
+                {pinSection !== "idle" && (
+                  <div style={{
+                    marginTop: "0.75rem",
+                    background: "var(--muted)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "0.875rem",
+                    display: "flex", flexDirection: "column", gap: "0.5rem",
+                  }}>
+                    {pinSection === "setup1" && (
+                      <>
+                        <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)" }}>
+                          Nuevo PIN (4 dígitos)
+                        </p>
+                        <input
+                          className="input"
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="••••"
+                          value={pinNew}
+                          onChange={e => setPinNew(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          style={{ letterSpacing: "0.5em", textAlign: "center", fontSize: "1.25rem" }}
+                          autoFocus
+                        />
+                        {pinError && <p style={{ fontSize: "0.75rem", color: "#ef4444" }}>{pinError}</p>}
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button className="btn btn-primary" style={{ flex: 1, fontSize: "0.8125rem" }}
+                            onClick={handlePinSetup1Submit} disabled={pinNew.length !== 4}>
+                            Continuar
+                          </button>
+                          <button className="btn btn-outline" style={{ fontSize: "0.8125rem" }} onClick={cancelPinSection}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {pinSection === "setup2" && (
+                      <>
+                        <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)" }}>
+                          Confirma el PIN
+                        </p>
+                        <input
+                          className="input"
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="••••"
+                          value={pinConfirm}
+                          onChange={e => setPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          style={{ letterSpacing: "0.5em", textAlign: "center", fontSize: "1.25rem" }}
+                          autoFocus
+                        />
+                        {pinError && <p style={{ fontSize: "0.75rem", color: "#ef4444" }}>{pinError}</p>}
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button className="btn btn-primary" style={{ flex: 1, fontSize: "0.8125rem" }}
+                            onClick={handlePinSetup2Submit} disabled={pinConfirm.length !== 4}>
+                            Activar PIN 🔐
+                          </button>
+                          <button className="btn btn-outline" style={{ fontSize: "0.8125rem" }} onClick={cancelPinSection}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {pinSection === "disable" && (
+                      <>
+                        <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)" }}>
+                          Ingresa tu PIN actual para desactivarlo
+                        </p>
+                        <input
+                          className="input"
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="••••"
+                          value={pinDisable}
+                          onChange={e => setPinDisable(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          style={{ letterSpacing: "0.5em", textAlign: "center", fontSize: "1.25rem" }}
+                          autoFocus
+                        />
+                        {pinError && <p style={{ fontSize: "0.75rem", color: "#ef4444" }}>{pinError}</p>}
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button className="btn btn-outline btn-danger" style={{ flex: 1, fontSize: "0.8125rem" }}
+                            onClick={handlePinDisableSubmit} disabled={pinDisable.length !== 4}>
+                            Desactivar
+                          </button>
+                          <button className="btn btn-outline" style={{ fontSize: "0.8125rem" }} onClick={cancelPinSection}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </section>
 
               {/* ── Primer día de semana ── */}

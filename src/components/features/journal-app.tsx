@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
@@ -22,6 +22,70 @@ function readJournalSettings() {
     const s = JSON.parse(raw)
     return { weekStartsMonday: !!s.weekStartsMonday, privateJournal: !!s.privateJournal }
   } catch { return { weekStartsMonday: false, privateJournal: false } }
+}
+
+// ── Streak calculation helpers ────────────────────────────────────────────────
+
+function toLocalDateStr(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
+
+function subtractDay(dateStr: string, days: number): string {
+  const d = new Date(dateStr + "T12:00:00")
+  d.setDate(d.getDate() - days)
+  return toLocalDateStr(d)
+}
+
+function calculateStreak(entries: JournalEntry[], myUid: string): number {
+  if (!myUid) return 0
+
+  // Build sets of dates per user
+  const myDates = new Set<string>()
+  const partnerDates = new Set<string>()
+  for (const e of entries) {
+    if (e.created_by === myUid) myDates.add(e.date)
+    else partnerDates.add(e.date)
+  }
+
+  // Dates where BOTH wrote
+  const bothDates = new Set<string>()
+  for (const d of myDates) {
+    if (partnerDates.has(d)) bothDates.add(d)
+  }
+
+  if (bothDates.size === 0) return 0
+
+  const todayStr = toLocalDateStr(new Date())
+  const yesterdayStr = subtractDay(todayStr, 1)
+
+  // Start from today if both wrote today, otherwise start from yesterday
+  const startDate = bothDates.has(todayStr) ? todayStr : yesterdayStr
+  if (!bothDates.has(startDate)) return 0
+
+  let streak = 0
+  let current = startDate
+  while (bothDates.has(current)) {
+    streak++
+    current = subtractDay(current, 1)
+  }
+  return streak
+}
+
+function getTodayStatus(entries: JournalEntry[], myUid: string): "both" | "onlyme" | "none" {
+  const todayStr = toLocalDateStr(new Date())
+  const iWrote = entries.some(e => e.date === todayStr && e.created_by === myUid)
+  const partnerWrote = entries.some(e => e.date === todayStr && e.created_by !== myUid)
+  if (iWrote && partnerWrote) return "both"
+  if (iWrote) return "onlyme"
+  return "none"
+}
+
+// ── PIN helpers ───────────────────────────────────────────────────────────────
+
+const PIN_KEY = "ttd_journal_pin_v1"
+
+function getStoredPin(): string | null {
+  try { return localStorage.getItem(PIN_KEY) } catch { return null }
 }
 
 interface Props { onBack: () => void }
@@ -50,6 +114,14 @@ export function JournalApp({ onBack }: Props) {
   // Feature 12: view partner entries
   const [viewingPartner, setViewingPartner] = useState(false)
 
+  // ── PIN state ──────────────────────────────────────────────────────────────
+  const [pinRequired, setPinRequired] = useState(false)
+  const [pinUnlocked, setPinUnlocked] = useState(false)
+  const [pinInput, setPinInput] = useState("")
+  const [pinShake, setPinShake] = useState(false)
+  const [pinSuccess, setPinSuccess] = useState(false)
+  const pinHiddenRef = useRef<HTMLInputElement>(null)
+
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
 
@@ -57,6 +129,12 @@ export function JournalApp({ onBack }: Props) {
     const s = readJournalSettings()
     setWeekStartsMonday(s.weekStartsMonday)
     setPrivateJournal(s.privateJournal)
+
+    // Check PIN on mount
+    const stored = getStoredPin()
+    if (stored) {
+      setPinRequired(true)
+    }
   }, [])
 
   useEffect(() => { loadEntries() }, [month, year])
@@ -130,6 +208,198 @@ export function JournalApp({ onBack }: Props) {
     } finally { setSaving(false) }
   }
 
+  // ── PIN handlers ──────────────────────────────────────────────────────────
+
+  function handlePinKeyPress(digit: string) {
+    if (pinInput.length >= 4) return
+    const next = pinInput + digit
+    setPinInput(next)
+    if (next.length === 4) {
+      const stored = getStoredPin()
+      if (next === stored) {
+        setPinSuccess(true)
+        setTimeout(() => {
+          setPinUnlocked(true)
+          setPinRequired(false)
+          setPinInput("")
+          setPinSuccess(false)
+        }, 600)
+      } else {
+        setPinShake(true)
+        setTimeout(() => {
+          setPinShake(false)
+          setPinInput("")
+        }, 700)
+      }
+    }
+  }
+
+  function handlePinBackspace() {
+    setPinInput(prev => prev.slice(0, -1))
+  }
+
+  // ── PIN lock screen ────────────────────────────────────────────────────────
+  if (pinRequired && !pinUnlocked) {
+    return (
+      <>
+        <style>{`
+          @keyframes pinShake {
+            0%,100%{transform:translateX(0)}
+            15%{transform:translateX(-8px)}
+            30%{transform:translateX(8px)}
+            45%{transform:translateX(-6px)}
+            60%{transform:translateX(6px)}
+            75%{transform:translateX(-4px)}
+            90%{transform:translateX(4px)}
+          }
+          @keyframes pinPop {
+            0%{transform:scale(0.8);opacity:0}
+            60%{transform:scale(1.15)}
+            100%{transform:scale(1);opacity:1}
+          }
+        `}</style>
+        <div className="app-content-header">
+          <button className="back-btn-phone" onClick={onBack}>‹</button>
+          <span>Diario Privado 🔐</span>
+        </div>
+        <div className="app-content-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1.5rem", paddingTop: "2rem" }}>
+          {/* Lock icon */}
+          <div style={{ fontSize: "3.5rem", animation: pinSuccess ? "pinPop 0.5s ease" : undefined }}>
+            {pinSuccess ? "✨" : "🔐"}
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.25rem" }}>
+              Diario privado
+            </p>
+            <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)" }}>Ingresa tu PIN para continuar</p>
+          </div>
+
+          {/* Dot indicators */}
+          <div
+            style={{
+              display: "flex", gap: "0.875rem",
+              animation: pinShake ? "pinShake 0.7s ease" : undefined,
+            }}
+          >
+            {[0, 1, 2, 3].map(i => (
+              <div
+                key={i}
+                style={{
+                  width: 16, height: 16, borderRadius: "50%",
+                  border: "2px solid",
+                  borderColor: pinShake ? "#ef4444" : pinSuccess ? "#10b981" : "var(--primary)",
+                  background: pinInput.length > i
+                    ? (pinShake ? "#ef4444" : pinSuccess ? "#10b981" : "var(--primary)")
+                    : "transparent",
+                  transition: "background 0.15s, border-color 0.15s",
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Hidden input for mobile keyboard fallback (not shown) */}
+          <input
+            ref={pinHiddenRef}
+            type="tel"
+            inputMode="numeric"
+            maxLength={4}
+            value={pinInput}
+            onChange={e => {
+              const val = e.target.value.replace(/\D/g, "").slice(0, 4)
+              setPinInput(val)
+              if (val.length === 4) {
+                const stored = getStoredPin()
+                if (val === stored) {
+                  setPinSuccess(true)
+                  setTimeout(() => { setPinUnlocked(true); setPinRequired(false); setPinInput(""); setPinSuccess(false) }, 600)
+                } else {
+                  setPinShake(true)
+                  setTimeout(() => { setPinShake(false); setPinInput("") }, 700)
+                }
+              }
+            }}
+            style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 1, height: 1 }}
+          />
+
+          {/* Numeric keypad */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.625rem", width: "100%", maxWidth: 240 }}>
+            {[1,2,3,4,5,6,7,8,9].map(n => (
+              <button
+                key={n}
+                onClick={() => handlePinKeyPress(String(n))}
+                style={{
+                  aspectRatio: "1", borderRadius: "50%",
+                  border: "2px solid var(--border)",
+                  background: "white",
+                  cursor: "pointer", fontFamily: "'Fredoka', sans-serif",
+                  fontSize: "1.375rem", fontWeight: 600,
+                  color: "var(--foreground)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                  transition: "background 0.1s, transform 0.1s",
+                }}
+                onMouseDown={e => (e.currentTarget.style.transform = "scale(0.92)")}
+                onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
+              >
+                {n}
+              </button>
+            ))}
+            {/* Row: [empty] [0] [backspace] */}
+            <div />
+            <button
+              onClick={() => handlePinKeyPress("0")}
+              style={{
+                aspectRatio: "1", borderRadius: "50%",
+                border: "2px solid var(--border)",
+                background: "white",
+                cursor: "pointer", fontFamily: "'Fredoka', sans-serif",
+                fontSize: "1.375rem", fontWeight: 600,
+                color: "var(--foreground)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                transition: "background 0.1s, transform 0.1s",
+              }}
+              onMouseDown={e => (e.currentTarget.style.transform = "scale(0.92)")}
+              onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
+            >
+              0
+            </button>
+            <button
+              onClick={handlePinBackspace}
+              style={{
+                aspectRatio: "1", borderRadius: "50%",
+                border: "2px solid var(--border)",
+                background: "white",
+                cursor: "pointer",
+                fontSize: "1.125rem",
+                color: "var(--foreground-light)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                transition: "background 0.1s, transform 0.1s",
+              }}
+              onMouseDown={e => (e.currentTarget.style.transform = "scale(0.92)")}
+              onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
+            >
+              ⌫
+            </button>
+          </div>
+
+          {/* Cancel */}
+          <button
+            onClick={onBack}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              fontSize: "0.8125rem", color: "var(--foreground-muted)",
+              fontFamily: "inherit", textDecoration: "underline", marginTop: "0.25rem",
+            }}
+          >
+            Cancelar
+          </button>
+        </div>
+      </>
+    )
+  }
+
   // Calendar calculations with weekStartsMonday support
   const rawFirstDay = new Date(year, month, 1).getDay() // 0=Sun
   const firstDay = weekStartsMonday ? (rawFirstDay + 6) % 7 : rawFirstDay
@@ -138,6 +408,10 @@ export function JournalApp({ onBack }: Props) {
   const weekDays = weekStartsMonday
     ? ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"]
     : ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"]
+
+  // ── Streak calculation ─────────────────────────────────────────────────────
+  const streak = calculateStreak(entries, myUid)
+  const todayStatus = getTodayStatus(entries, myUid)
 
   // ── Read view ──────────────────────────────────────────────────────────────
   if (view === "read" && selectedEntry && selectedDate) {
@@ -347,6 +621,46 @@ export function JournalApp({ onBack }: Props) {
         )}
       </div>
       <div className="app-content-body" style={{ gap: "0.5rem" }}>
+
+        {/* ── Streak banner ─────────────────────────────────────────────────── */}
+        {!viewingPartner && !searchQuery.trim() && (
+          <div style={{ marginBottom: "0.25rem" }}>
+            {/* Main streak pill */}
+            <div style={{
+              background: streak > 0
+                ? "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)"
+                : "var(--muted)",
+              borderRadius: "999px",
+              padding: "0.5rem 1.125rem",
+              textAlign: "center",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem",
+              boxShadow: streak > 0 ? "0 3px 12px rgba(139,92,246,0.25)" : "none",
+            }}>
+              <span style={{
+                fontFamily: "'Fredoka', sans-serif",
+                fontSize: "1rem", fontWeight: 700,
+                color: streak > 0 ? "white" : "var(--foreground-muted)",
+              }}>
+                {streak > 0 ? `🔥 ${streak} día${streak === 1 ? "" : "s"} de racha juntos` : "💌 Escribe hoy para empezar la racha"}
+              </span>
+            </div>
+
+            {/* Today status */}
+            <div style={{ textAlign: "center", marginTop: "0.375rem" }}>
+              <span style={{
+                fontSize: "0.75rem", fontWeight: 600,
+                color: todayStatus === "both" ? "#065f46" : todayStatus === "onlyme" ? "#92400e" : "var(--foreground-muted)",
+                background: todayStatus === "both" ? "#d1fae5" : todayStatus === "onlyme" ? "#fef3c7" : "transparent",
+                padding: todayStatus !== "none" ? "0.125rem 0.625rem" : undefined,
+                borderRadius: "999px",
+              }}>
+                {todayStatus === "both" && "✅ Los dos escribieron hoy"}
+                {todayStatus === "onlyme" && "📝 Solo tú escribiste hoy"}
+                {todayStatus === "none" && "💌 Ninguno ha escrito hoy"}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Feature 12: partner view */}
         {viewingPartner ? (
