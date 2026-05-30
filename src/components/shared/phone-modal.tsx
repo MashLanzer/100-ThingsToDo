@@ -2,21 +2,19 @@
 
 import { useAppStore } from "@/stores/app-store"
 import { X } from "lucide-react"
-import { DailyChallengeApp } from "@/components/features/daily-challenge-app"
 import { JournalApp } from "@/components/features/journal-app"
 import { TimeCapsuleApp } from "@/components/features/time-capsule-app"
 import { SavingsGoalsApp } from "@/components/features/savings-goals-app"
 import { MusicApp } from "@/components/features/music-app"
-import { FavorsApp } from "@/components/features/favors-app"
 import { MapApp } from "@/components/features/map-app"
+import { ChallengesFavorsApp } from "@/components/features/challenges-favors-app"
 import { useState, useEffect } from "react"
 
 const APPS = [
-  { id: "journal",   emoji: "🗓️", name: "Diario",       bg: "#c3e6cb" },
-  { id: "music",     emoji: "🎧", name: "Música",        bg: "#a2d2ff" },
-  { id: "challenge", emoji: "🎁", name: "Reto Diario",   bg: "#ffdeeb" },
-  { id: "map",       emoji: "🗺️", name: "Aventuras",    bg: "#d4f1f9" },
-  { id: "favors",    emoji: "💝", name: "Favores",       bg: "#f9d4f1" },
+  { id: "journal",  emoji: "🗓️", name: "Diario",    bg: "#c3e6cb" },
+  { id: "music",    emoji: "🎧", name: "Música",     bg: "#a2d2ff" },
+  { id: "desafios", emoji: "🎯", name: "Desafíos",   bg: "#ffe8d6" },
+  { id: "map",      emoji: "🗺️", name: "Aventuras", bg: "#d4f1f9" },
 ]
 
 export function PhoneModal() {
@@ -110,9 +108,9 @@ export function PhoneModal() {
                   <MusicApp onBack={goHome} />
                 </div>
               )}
-              {activePhoneApp === "challenge" && (
+              {activePhoneApp === "desafios" && (
                 <div className="phone-app-view active">
-                  <DailyChallengeApp onBack={goHome} />
+                  <ChallengesFavorsApp onBack={goHome} />
                 </div>
               )}
               {activePhoneApp === "capsule" && (
@@ -123,11 +121,6 @@ export function PhoneModal() {
               {activePhoneApp === "goals" && (
                 <div className="phone-app-view active">
                   <SavingsGoalsApp onBack={goHome} />
-                </div>
-              )}
-              {activePhoneApp === "favors" && (
-                <div className="phone-app-view active">
-                  <FavorsApp onBack={goHome} />
                 </div>
               )}
               {activePhoneApp === "map" && (

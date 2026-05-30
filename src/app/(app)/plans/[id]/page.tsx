@@ -6,7 +6,8 @@ import { usePlan, useUpdatePlan, useDeletePlan } from "@/hooks/use-plans"
 import { useTasks, useCreateTask, useToggleTask, useDeleteTask } from "@/hooks/use-tasks"
 import { TaskItem } from "@/components/features/task-item"
 import { KAWAII_ICONS } from "@/types"
-import { ArrowLeft, Plus, Edit2, X, Trash2, RefreshCw } from "lucide-react"
+import { ArrowLeft, Plus, Edit2, X, Trash2 } from "lucide-react"
+import { useWindowPTR } from "@/hooks/use-window-ptr"
 import { toast } from "sonner"
 
 export default function PlanDetailPage() {
@@ -19,6 +20,7 @@ export default function PlanDetailPage() {
   const deleteTask = useDeleteTask()
   const updatePlan = useUpdatePlan()
   const deletePlan = useDeletePlan()
+  const ptr = useWindowPTR(() => { refetchTasks() })
 
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [taskTitle, setTaskTitle] = useState("")
@@ -84,6 +86,17 @@ export default function PlanDetailPage() {
 
   return (
     <>
+      {/* Pull-to-refresh indicator */}
+      {ptr.visible && (
+        <div style={{ position: "fixed", top: "100px", left: "50%", transform: "translateX(-50%)", zIndex: 200,
+          width: "36px", height: "36px", borderRadius: "50%", background: "var(--primary-lighter)",
+          border: "2px solid var(--primary)", display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: "1.1rem", color: "var(--primary)" }}>
+          <span style={{ animation: ptr.spinning ? "ptr-spin 0.7s linear infinite" : "none" }}>
+            {ptr.spinning ? "↻" : "↓"}
+          </span>
+        </div>
+      )}
       {/* Sub-header */}
       <header
         style={{
@@ -120,9 +133,6 @@ export default function PlanDetailPage() {
               </p>
             )}
           </div>
-          <button className="btn-icon" onClick={() => { refetchTasks() }} title="Actualizar">
-            <RefreshCw size={15} />
-          </button>
           <button className="btn-icon" onClick={openEdit} title="Editar plan">
             <Edit2 size={16} />
           </button>

@@ -5,7 +5,8 @@ import { usePlans, useCreatePlan } from "@/hooks/use-plans"
 import { useCoupleStatus } from "@/hooks/use-couple"
 import { PlanCard } from "@/components/features/plan-card"
 import { useAppStore } from "@/stores/app-store"
-import { Plus, X, RefreshCw } from "lucide-react"
+import { useWindowPTR } from "@/hooks/use-window-ptr"
+import { Plus, X } from "lucide-react"
 import { toast } from "sonner"
 
 export default function DashboardPage() {
@@ -13,6 +14,7 @@ export default function DashboardPage() {
   const { data: coupleData } = useCoupleStatus()
   const createPlan = useCreatePlan()
   const { openCoupleModal } = useAppStore()
+  const ptr = useWindowPTR(() => { refetch() })
 
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState("")
@@ -38,6 +40,17 @@ export default function DashboardPage() {
 
   return (
     <div className="page-container">
+      {/* Pull-to-refresh indicator */}
+      {ptr.visible && (
+        <div style={{ position: "fixed", top: "68px", left: "50%", transform: "translateX(-50%)", zIndex: 200,
+          width: "36px", height: "36px", borderRadius: "50%", background: "var(--primary-lighter)",
+          border: "2px solid var(--primary)", display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: "1.1rem", color: "var(--primary)" }}>
+          <span style={{ animation: ptr.spinning ? "ptr-spin 0.7s linear infinite" : "none" }}>
+            {ptr.spinning ? "↻" : "↓"}
+          </span>
+        </div>
+      )}
       {/* Link partner banner */}
       {!hasCouple && (
         <div className="link-partner-banner" style={{ marginBottom: "1rem" }}>
@@ -62,9 +75,6 @@ export default function DashboardPage() {
           Nuestros Planes 📋
         </h1>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <button className="btn-icon" onClick={() => refetch()} title="Actualizar">
-            <RefreshCw size={18} />
-          </button>
           <button
             className="btn btn-primary"
             onClick={() => setShowForm(true)}
