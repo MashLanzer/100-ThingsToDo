@@ -19,7 +19,26 @@ export async function GET(req: NextRequest) {
     .order("created_at", { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  const capsules = data ?? []
+
+  // Send push for capsules that became ready today
+  const todayStr = new Date().toISOString().split("T")[0]
+  const readyToday = (capsules ?? []).filter(
+    (c: { is_opened: boolean; unlock_date: string }) => !c.is_opened && c.unlock_date === todayStr
+  )
+  if (readyToday.length > 0) {
+    const label = readyToday.length === 1
+      ? "¡Una cápsula está lista para abrir! 💎"
+      : `¡${readyToday.length} cápsulas están listas para abrir! 💎`
+    fetch(`${req.nextUrl.origin}/api/push/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: req.headers.get("Authorization") ?? "" },
+      body: JSON.stringify({ title: "¡Cápsula del tiempo! ⏳", body: label }),
+    }).catch(() => {})
+  }
+
+  return NextResponse.json(capsules)
 }
 
 export async function POST(req: NextRequest) {

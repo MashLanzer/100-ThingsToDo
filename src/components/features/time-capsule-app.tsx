@@ -189,6 +189,24 @@ export function TimeCapsuleApp({ onBack }: Props) {
               📅 Fecha de apertura: {formatDate(selected.unlock_date)}
             </span>
           </div>
+          <button
+            className="btn btn-outline"
+            style={{ width: "100%", fontSize: "0.8125rem" }}
+            onClick={async () => {
+              const t = CAPSULE_TYPES.find(ct => ct.id === selected.type)
+              const text = `${t?.icon ?? "💎"} Cápsula de ${t?.label ?? "Tiempo"}\n\n${selected.message}\n\n— Abierta el ${formatDate(selected.unlock_date)}`
+              if (navigator.share) {
+                try { await navigator.share({ title: "Nuestra Cápsula del Tiempo 💕", text }) } catch { /* cancelled */ }
+              } else {
+                try {
+                  await navigator.clipboard.writeText(text)
+                  toast.success("¡Copiado al portapapeles! 📋")
+                } catch { toast.error("No se pudo copiar") }
+              }
+            }}
+          >
+            📤 Compartir cápsula
+          </button>
         </div>
       </>
     )
@@ -344,6 +362,29 @@ export function TimeCapsuleApp({ onBack }: Props) {
             </button>
           ))}
         </div>
+
+        {/* Ready banner */}
+        {(() => {
+          const readyCount = capsules.filter(c => !c.is_opened && c.unlock_date <= now).length
+          if (!readyCount) return null
+          return (
+            <div className="animate-glow-pulse" style={{
+              background: "linear-gradient(135deg, #fdf4ff, #fce7f3)",
+              border: "2px solid var(--primary-light)",
+              borderRadius: "var(--radius-lg)",
+              padding: "0.75rem 1rem",
+              display: "flex", alignItems: "center", gap: "0.75rem",
+            }}>
+              <span style={{ fontSize: "1.5rem" }}>📬</span>
+              <div>
+                <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)" }}>
+                  {readyCount === 1 ? "¡Tienes una cápsula lista!" : `¡Tienes ${readyCount} cápsulas listas!`}
+                </p>
+                <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>Toca para abrir 💎</p>
+              </div>
+            </div>
+          )
+        })()}
 
         {loading ? (
           <PhoneLoader />
