@@ -178,8 +178,8 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="plans-grid">
-          {plans.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} />
+          {plans.map((plan, i) => (
+            <PlanCard key={plan.id} plan={plan} index={i} />
           ))}
         </div>
       )}

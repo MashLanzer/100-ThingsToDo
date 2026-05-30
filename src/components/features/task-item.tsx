@@ -42,7 +42,21 @@ export function TaskItem({ task, onToggle, onDelete }: Props) {
         )}
       </button>
 
-      <span style={{ fontSize: "1.375rem", flexShrink: 0 }}>{emoji}</span>
+      <div style={{
+        width: "32px",
+        height: "32px",
+        borderRadius: "50%",
+        background: task.completed
+          ? "linear-gradient(135deg, var(--primary), var(--secondary))"
+          : "var(--primary-lighter)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        fontSize: "1.125rem",
+      }}>
+        {emoji}
+      </div>
 
       <span
         className="task-title"

@@ -7,12 +7,12 @@ import { toast } from "sonner"
 import type { JournalEntry } from "@/types"
 
 const MOODS = [
-  { id: "happy",    emoji: "😊", label: "Feliz" },
-  { id: "love",     emoji: "🥰", label: "Enamorado/a" },
-  { id: "fun",      emoji: "😄", label: "Divertido" },
-  { id: "romantic", emoji: "💕", label: "Romántico" },
-  { id: "chill",    emoji: "😌", label: "Tranquilo" },
-  { id: "sad",      emoji: "😢", label: "Triste" },
+  { id: "happy",    emoji: "😊", label: "Feliz",       accent: "#FEF3C7", accentBorder: "#F59E0B", accentText: "#92400E" },
+  { id: "love",     emoji: "🥰", label: "Enamorado/a", accent: "#FCE7F3", accentBorder: "#EC4899", accentText: "#9D174D" },
+  { id: "fun",      emoji: "😄", label: "Divertido",   accent: "#FED7AA", accentBorder: "#F97316", accentText: "#7C2D12" },
+  { id: "romantic", emoji: "💕", label: "Romántico",   accent: "#FFE4E6", accentBorder: "#F43F5E", accentText: "#881337" },
+  { id: "chill",    emoji: "😌", label: "Tranquilo",   accent: "#E0F2FE", accentBorder: "#0284C7", accentText: "#075985" },
+  { id: "sad",      emoji: "😢", label: "Triste",      accent: "#DBEAFE", accentBorder: "#3B82F6", accentText: "#1E40AF" },
 ]
 
 interface Props { onBack: () => void }
@@ -236,29 +236,35 @@ export function JournalApp({ onBack }: Props) {
           <span>✍️ {selectedDate}</span>
         </div>
         <div className="app-content-body">
-          {/* Better mood selector: grid of cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.375rem", marginBottom: "0.625rem" }}>
-            {MOODS.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setWriteMood(m.id)}
-                style={{
-                  padding: "0.5rem 0.375rem",
-                  borderRadius: "var(--radius-md)",
-                  border: writeMood === m.id ? "2px solid var(--primary)" : "2px solid var(--border)",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  background: writeMood === m.id ? "var(--primary-lighter)" : "white",
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: "0.125rem",
-                }}
-              >
-                <span style={{ fontSize: "2rem", lineHeight: 1 }}>{m.emoji}</span>
-                <span style={{
-                  fontSize: "0.625rem", fontWeight: 600,
-                  color: writeMood === m.id ? "var(--primary)" : "var(--foreground-light)",
-                }}>{m.label}</span>
-              </button>
-            ))}
+          {/* Mood selector: 2×3 grid with color accents */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem", marginBottom: "0.625rem" }}>
+            {MOODS.map((m) => {
+              const isSelected = writeMood === m.id
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => setWriteMood(m.id)}
+                  style={{
+                    padding: "0.75rem 0.5rem",
+                    borderRadius: "var(--radius-md)",
+                    border: isSelected ? `2px solid ${m.accentBorder}` : "2px solid var(--border)",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    background: isSelected ? m.accent : "white",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem",
+                    boxShadow: isSelected ? `0 2px 8px ${m.accentBorder}33` : "none",
+                    transform: isSelected ? "scale(1.03)" : "scale(1)",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span style={{ fontSize: "1.75rem", lineHeight: 1 }}>{m.emoji}</span>
+                  <span style={{
+                    fontSize: "0.6875rem", fontWeight: 700,
+                    color: isSelected ? m.accentText : "var(--foreground-light)",
+                  }}>{m.label}</span>
+                </button>
+              )
+            })}
           </div>
           <textarea
             className="textarea"

@@ -297,6 +297,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
                 <button
                   key={c.id}
                   onClick={() => handleOpen(c)}
+                  className={canOpen && !c.is_opened ? "animate-glow-pulse" : ""}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -318,7 +319,9 @@ export function TimeCapsuleApp({ onBack }: Props) {
                     width: "100%",
                   }}
                 >
-                  <span style={{ fontSize: "1.75rem" }}>{c.is_opened ? "📭" : canOpen ? "📬" : "🔒"}</span>
+                  <span style={{ fontSize: canOpen && !c.is_opened ? "1.875rem" : "1.75rem" }}>
+                    {c.is_opened ? "📭" : canOpen ? "📬" : "🔒"}
+                  </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>
                       {t?.icon} {t?.label}
@@ -330,6 +333,11 @@ export function TimeCapsuleApp({ onBack }: Props) {
                         ? "¡Lista para abrir! ✨"
                         : `Se abre en ${daysUntil(c.unlock_date)} día${daysUntil(c.unlock_date) !== 1 ? "s" : ""}`}
                     </div>
+                    {canOpen && !c.is_opened && (
+                      <div style={{ fontSize: "0.625rem", fontWeight: 700, color: "#059669", marginTop: "0.125rem" }}>
+                        ¡Ábrela! ✨
+                      </div>
+                    )}
                   </div>
                   {canOpen && !c.is_opened && (
                     <span style={{ fontSize: "1.25rem" }}>💝</span>

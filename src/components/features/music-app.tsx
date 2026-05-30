@@ -493,8 +493,18 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
                   padding: "0.5rem 0.5rem", cursor: "pointer",
                   background: trackIdx === i ? "var(--primary-lighter)" : "transparent",
                   borderRadius: "var(--radius-sm)",
+                  borderLeft: trackIdx === i ? "3px solid var(--primary)" : "3px solid transparent",
+                  transition: "background 0.15s, border-color 0.15s",
                 }}
               >
+                {/* Track number */}
+                <span style={{
+                  fontFamily: "'Fredoka', sans-serif", fontWeight: 600,
+                  fontSize: "0.75rem", color: trackIdx === i ? "var(--primary)" : "var(--foreground-muted)",
+                  width: "16px", textAlign: "center", flexShrink: 0,
+                }}>
+                  {i + 1}
+                </span>
                 {/* Mini vinyl */}
                 <div style={{
                   width: "34px", height: "34px", borderRadius: "50%", flexShrink: 0,
@@ -504,7 +514,11 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
                   <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: trackIdx === i ? "var(--primary)" : "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {t.title}
                   </div>
-                  <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{t.artist}{t.url ? (isYouTube(t.url) ? " · YT" : " · Audio") : ""}</div>
+                  {trackIdx === i ? (
+                    <div style={{ fontSize: "0.625rem", color: "var(--primary)", fontWeight: 700 }}>▶ Reproduciendo</div>
+                  ) : (
+                    <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{t.artist}{t.url ? (isYouTube(t.url) ? " · YT" : " · Audio") : ""}</div>
+                  )}
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); deleteTrack(t.id) }}

@@ -258,16 +258,48 @@ export function SavingsGoalsApp({ onBack }: Props) {
                   width: "100%",
                 }}
               >
-                <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>{isComplete ? "🎉" : "🐖"}</span>
+                {/* Mini SVG ring */}
+                {(() => {
+                  const r = 16
+                  const circ = 2 * Math.PI * r
+                  const dash = (pct / 100) * circ
+                  return (
+                    <div style={{ position: "relative", width: 40, height: 40, flexShrink: 0 }}>
+                      <svg width="40" height="40" style={{ transform: "rotate(-90deg)" }}>
+                        <circle cx="20" cy="20" r={r} fill="none" stroke="var(--muted)" strokeWidth="4" />
+                        <circle
+                          cx="20" cy="20" r={r}
+                          fill="none"
+                          stroke="url(#miniGoalGrad)"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeDasharray={`${dash} ${circ}`}
+                        />
+                        <defs>
+                          <linearGradient id="miniGoalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="var(--primary)" />
+                            <stop offset="100%" stopColor="var(--secondary)" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {isComplete ? (
+                          <span style={{ fontSize: "1rem" }}>🎉</span>
+                        ) : (
+                          <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.5625rem", fontWeight: 700, color: "var(--primary)", lineHeight: 1 }}>
+                            {pct}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.375rem" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.25rem" }}>
                     {g.name}
                   </div>
-                  <div className="progress-bar-track">
-                    <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
-                  </div>
-                  <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>
-                    ${saved.toLocaleString()} / ${g.target_amount.toLocaleString()} — {pct}%
+                  <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
+                    ${saved.toLocaleString()} / ${g.target_amount.toLocaleString()}
                   </div>
                 </div>
               </button>
