@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { toast } from "sonner"
-import { CheckCircle, Trophy } from "lucide-react"
+import { CheckCircle, Trophy, Trash2 } from "lucide-react"
 import { PullToRefresh } from "@/components/shared/pull-to-refresh"
 import { PhoneLoader } from "@/components/features/phone-loader"
 import type { Favor, FavorDifficulty, FavorCategory } from "@/types"
@@ -148,6 +148,11 @@ export function ChallengesFavorsApp({ onBack }: Props) {
   const [difficulty, setDifficulty] = useState<FavorDifficulty>("medium")
   const [favCategory, setFavCategory] = useState<FavorCategory>("romantic")
   const [savingFavor, setSavingFavor] = useState(false)
+  const [favCategoryFilter, setFavCategoryFilter] = useState<FavorCategory | "all">("all")
+
+  // ── Custom challenge state ────────────────────────────────────────────────
+  const [showCustomChallenge, setShowCustomChallenge] = useState(false)
+  const [customChallengeText, setCustomChallengeText] = useState("")
 
   // ── Auth helper ───────────────────────────────────────────────────────────
   async function authFetch(path: string, init?: RequestInit) {
@@ -256,6 +261,15 @@ export function ChallengesFavorsApp({ onBack }: Props) {
       toast.success("¡Favor completado! 🎉")
       loadFavors()
     } catch { toast.error("Error") }
+  }
+
+  async function handleDeleteFavor(id: string) {
+    if (!confirm("¿Eliminar este favor?")) return
+    try {
+      await authFetch(`/api/favors/${id}`, { method: "DELETE" })
+      toast.success("Favor eliminado")
+      loadFavors()
+    } catch { toast.error("Error al eliminar") }
   }
 
   const activeFavors = favors.filter((f) => !f.is_completed)
@@ -381,12 +395,37 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                 </p>
                 <p style={{ fontSize: "0.75rem", color: "#6B5B7E" }}>{filtered.length} retos disponibles</p>
               </div>
-              <button onClick={pickRandom} style={{
-                padding: "0.75rem 1.5rem", borderRadius: "999px", border: "none",
-                background: `linear-gradient(135deg, ${catColor.from}, ${catColor.to})`,
-                color: "white", fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 700,
-                cursor: "pointer", boxShadow: `0 6px 20px ${catColor.from}55`,
-              }}>🎲 ¡Descubrir Reto!</button>
+              {showCustomChallenge ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", width: "100%" }}>
+                  <textarea className="textarea" rows={3} placeholder="Escribe vuestro reto personalizado..." value={customChallengeText} onChange={(e) => setCustomChallengeText(e.target.value)} maxLength={200} autoFocus />
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button className="btn btn-primary" style={{ flex: 2 }} onClick={() => {
+                      if (!customChallengeText.trim()) return
+                      setChallenge({ emoji: "✨", text: customChallengeText.trim() })
+                      setShowCustomChallenge(false)
+                      setCustomChallengeText("")
+                      setAccepted(false)
+                      setCompleted(false)
+                      setDbChallenge(null)
+                    }}>✅ Usar este reto</button>
+                    <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowCustomChallenge(false)}>Cancelar</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button onClick={pickRandom} style={{
+                    padding: "0.75rem 1.5rem", borderRadius: "999px", border: "none",
+                    background: `linear-gradient(135deg, ${catColor.from}, ${catColor.to})`,
+                    color: "white", fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 700,
+                    cursor: "pointer", boxShadow: `0 6px 20px ${catColor.from}55`,
+                  }}>🎲 ¡Descubrir Reto!</button>
+                  <button onClick={() => setShowCustomChallenge(true)} style={{
+                    padding: "0.5rem 1rem", borderRadius: "999px", border: "2px solid var(--primary)",
+                    background: "white", color: "var(--primary)", fontFamily: "'Fredoka', sans-serif",
+                    fontSize: "0.875rem", fontWeight: 700, cursor: "pointer",
+                  }}>✏️ Reto propio</button>
+                </>
+              )}
             </div>
           ) : (
             <>
@@ -522,10 +561,21 @@ export function ChallengesFavorsApp({ onBack }: Props) {
 
             {(favTab === "active" || favTab === "completed") && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <div style={{ padding: "0 0.75rem" }}>
+                  <div className="pill-tab-container" style={{ flexWrap: "wrap" }}>
+                    <button className={`pill-tab-btn${favCategoryFilter === "all" ? " active" : ""}`} style={{ fontSize: "0.625rem" }} onClick={() => setFavCategoryFilter("all")}>✨ Todos</button>
+                    {CATEGORIES.map((c) => (
+                      <button key={c.id} className={`pill-tab-btn${favCategoryFilter === c.id ? " active" : ""}`} style={{ fontSize: "0.625rem" }} onClick={() => setFavCategoryFilter(c.id)}>{c.label}</button>
+                    ))}
+                  </div>
+                </div>
                 {loadingFavors ? (
                   <PhoneLoader />
                 ) : (
-                  (favTab === "active" ? activeFavors : completedFavors).map((f) => {
+                  (() => {
+                    const displayFavors = (favTab === "active" ? activeFavors : completedFavors)
+                      .filter(f => favCategoryFilter === "all" || f.category === favCategoryFilter)
+                    return displayFavors.map((f) => {
                     const diff = DIFFICULTIES.find((d) => d.id === f.difficulty)
                     const cat = CATEGORIES.find((c) => c.id === f.category)
                     const catEmoji = cat?.label.split(" ")[0] ?? "💝"
@@ -578,13 +628,20 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                                 ✓ {f.completed_by === user?.uid ? "Canjeado por ti" : "Canjeado por pareja"}
                               </span>
                             )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteFavor(f.id) }}
+                              style={{ marginLeft: f.is_completed ? "0.25rem" : "0", background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "2px", opacity: 0.5, display: "flex", alignItems: "center" }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
                           </div>
                         </div>
                       </div>
                     )
                   })
+                  })()
                 )}
-                {!loadingFavors && (favTab === "active" ? activeFavors : completedFavors).length === 0 && (
+                {!loadingFavors && (favTab === "active" ? activeFavors : completedFavors).filter(f => favCategoryFilter === "all" || f.category === favCategoryFilter).length === 0 && (
                   <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
                     <div className="animate-bounce-slow" style={{ fontSize: "2.25rem" }}>{favTab === "active" ? "💝" : "🏆"}</div>
                     <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--foreground)" }}>
