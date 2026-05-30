@@ -34,7 +34,7 @@ function readThemeSettings() {
   } catch { return { themeId: "purple", fontSize: "normal" } }
 }
 
-function saveThemeSettings(patch: Partial<{ themeId: string; fontSize: string }>) {
+function saveThemeSettings(patch: Partial<{ themeId: string; fontSize: string; darkMode: boolean }>) {
   try {
     const current = readThemeSettings()
     localStorage.setItem("ttd_theme_v1", JSON.stringify({ ...current, ...patch }))
@@ -140,6 +140,8 @@ export function SettingsModal() {
   const [hoveredTheme, setHoveredTheme] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"perfil" | "ajustes">("perfil")
 
+  const [darkMode, setDarkMode] = useState(false)
+
   // App settings state
   const [coupleName, setCoupleName] = useState("")
   const [soundEnabled, setSoundEnabled] = useState(true)
@@ -153,6 +155,9 @@ export function SettingsModal() {
       const s = readThemeSettings()
       setCurrentTheme(s.themeId ?? "purple")
       setCurrentFont(s.fontSize ?? "normal")
+      setDarkMode(s.darkMode ?? false)
+      if (s.darkMode) document.documentElement.setAttribute("data-dark", "true")
+      else document.documentElement.removeAttribute("data-dark")
 
       const as = readAppSettings()
       setCoupleName(as.coupleName ?? "")
@@ -232,6 +237,60 @@ export function SettingsModal() {
       : hiddenApps.filter((id) => id !== appId)
     setHiddenApps(updated)
     saveAppSettings({ hiddenApps: updated })
+  }
+
+  function handleDarkMode(v: boolean) {
+    setDarkMode(v)
+    const ts = readThemeSettings()
+    saveThemeSettings({ ...ts, darkMode: v })
+    if (v) document.documentElement.setAttribute("data-dark", "true")
+    else document.documentElement.removeAttribute("data-dark")
+  }
+
+  async function getAuthToken() {
+    const { getFirebaseAuth } = await import("@/lib/firebase/client")
+    return getFirebaseAuth().currentUser?.getIdToken()
+  }
+
+  async function handleExportPlans() {
+    try {
+      const token = await getAuthToken()
+      if (!token) { toast.error("No autenticado"); return }
+      const res = await fetch("/api/plans", { headers: { Authorization: `Bearer ${token}` } })
+      const plans = await res.json()
+      let text = "# Planes y Tareas\n\n"
+      for (const plan of (plans ?? [])) {
+        text += `## ${plan.title}\n`
+        if (plan.description) text += `${plan.description}\n`
+        text += `Progreso: ${plan.completed_count ?? 0}/${plan.task_count ?? 0} tareas\n\n`
+      }
+      downloadText(text, "planes-thingstodo.txt")
+    } catch { toast.error("Error al exportar") }
+  }
+
+  async function handleExportJournal() {
+    try {
+      const token = await getAuthToken()
+      if (!token) { toast.error("No autenticado"); return }
+      const res = await fetch("/api/journal", { headers: { Authorization: `Bearer ${token}` } })
+      const entries = await res.json()
+      let text = "# Diario de Pareja\n\n"
+      for (const entry of (Array.isArray(entries) ? entries : (entries.entries ?? []))) {
+        text += `## ${entry.date}\n`
+        if (entry.mood) text += `Estado de ánimo: ${entry.mood}\n`
+        text += `${entry.content}\n\n---\n\n`
+      }
+      downloadText(text, "diario-thingstodo.txt")
+    } catch { toast.error("Error al exportar") }
+  }
+
+  function downloadText(content: string, filename: string) {
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url; a.download = filename; a.click()
+    URL.revokeObjectURL(url)
+    toast.success("¡Descargado! ✨")
   }
 
   return (
@@ -464,6 +523,17 @@ export function SettingsModal() {
                 />
               </section>
 
+              {/* ── Modo oscuro ── */}
+              <section>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.5rem 0", borderBottom: "1px solid var(--border)" }}>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--foreground)" }}>🌙 Modo Oscuro</p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>Cambia a fondo oscuro</p>
+                  </div>
+                  <Toggle checked={darkMode} onChange={handleDarkMode} />
+                </div>
+              </section>
+
               {/* ── Sonidos ── */}
               <section>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -540,6 +610,27 @@ export function SettingsModal() {
                   ))}
                 </div>
               </section>
+
+              {/* ── Exportar datos ── */}
+              <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
+                <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.625rem" }}>📤 Exportar datos</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <button
+                    className="btn btn-outline"
+                    style={{ fontSize: "0.8125rem", justifyContent: "flex-start" }}
+                    onClick={handleExportPlans}
+                  >
+                    📋 Exportar planes y tareas
+                  </button>
+                  <button
+                    className="btn btn-outline"
+                    style={{ fontSize: "0.8125rem", justifyContent: "flex-start" }}
+                    onClick={handleExportJournal}
+                  >
+                    📓 Exportar diario
+                  </button>
+                </div>
+              </div>
             </>
           )}
         </div>

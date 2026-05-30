@@ -26,6 +26,10 @@ export function SavingsGoalsApp({ onBack }: Props) {
   const [editingGoal, setEditingGoal] = useState(false)
   const [editGoalName, setEditGoalName] = useState("")
   const [editGoalTarget, setEditGoalTarget] = useState("")
+  const [goalEmoji, setGoalEmoji] = useState("🐖")
+  const [editGoalEmoji, setEditGoalEmoji] = useState("🐖")
+
+  const GOAL_EMOJIS = ["🐖", "✈️", "🏠", "🚗", "💍", "👶", "🎓", "💻", "🌴", "🎯", "💰", "🌙", "🏖️", "🎪", "🎁"]
 
   useEffect(() => { loadGoals() }, [])
 
@@ -68,11 +72,12 @@ export function SavingsGoalsApp({ onBack }: Props) {
     try {
       await authFetch("/api/goals", {
         method: "POST",
-        body: JSON.stringify({ name: goalName.trim(), target_amount: Number(goalTarget) }),
+        body: JSON.stringify({ name: goalName.trim(), target_amount: Number(goalTarget), emoji: goalEmoji }),
       })
       toast.success("Meta creada 💰")
       setGoalName("")
       setGoalTarget("")
+      setGoalEmoji("🐖")
       setView("list")
       loadGoals()
     } catch (e: unknown) {
@@ -116,7 +121,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
     try {
       const updated = await authFetch(`/api/goals/${selected.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name: editGoalName.trim(), target_amount: Number(editGoalTarget) }),
+        body: JSON.stringify({ name: editGoalName.trim(), target_amount: Number(editGoalTarget), emoji: editGoalEmoji }),
       })
       setSelected(updated)
       setEditingGoal(false)
@@ -132,6 +137,16 @@ export function SavingsGoalsApp({ onBack }: Props) {
       await authFetch(`/api/goals/${selected.id}`, { method: "DELETE" })
       toast.success("Meta eliminada")
       setView("list")
+      loadGoals()
+    } catch { toast.error("Error al eliminar") }
+  }
+
+  async function handleDeleteContribution(goalId: string, contribId: string) {
+    if (!confirm("¿Eliminar esta aportación?")) return
+    try {
+      await authFetch(`/api/goals/${goalId}/contributions?contributionId=${contribId}`, { method: "DELETE" })
+      toast.success("Aportación eliminada")
+      loadContributions(goalId)
       loadGoals()
     } catch { toast.error("Error al eliminar") }
   }
@@ -155,6 +170,19 @@ export function SavingsGoalsApp({ onBack }: Props) {
               value={goalName}
               onChange={(e) => setGoalName(e.target.value)}
             />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Emoji de la meta</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
+              {GOAL_EMOJIS.map(e => (
+                <button key={e} onClick={() => setGoalEmoji(e)} style={{
+                  width: 38, height: 38, borderRadius: "10px", fontSize: "1.25rem",
+                  border: goalEmoji === e ? "2px solid var(--primary)" : "2px solid transparent",
+                  background: goalEmoji === e ? "var(--primary-lighter)" : "var(--muted)",
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                }}>{e}</button>
+              ))}
+            </div>
           </div>
           <div className="form-group">
             <label className="form-label">Cantidad objetivo ($)</label>
@@ -186,9 +214,9 @@ export function SavingsGoalsApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("list")}>‹</button>
-          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🐖 {selected.name}</span>
+          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected.emoji ?? "🐖"} {selected.name}</span>
           <button
-            onClick={() => { setEditGoalName(selected.name); setEditGoalTarget(String(selected.target_amount)); setEditingGoal(true) }}
+            onClick={() => { setEditGoalName(selected.name); setEditGoalTarget(String(selected.target_amount)); setEditGoalEmoji(selected.emoji ?? "🐖"); setEditingGoal(true) }}
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "4px", fontSize: "0.875rem", flexShrink: 0 }}
           >✏️</button>
         </div>
@@ -197,6 +225,16 @@ export function SavingsGoalsApp({ onBack }: Props) {
           <div style={{ padding: "0.75rem", background: "var(--primary-lighter)", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <input className="input" value={editGoalName} onChange={(e) => setEditGoalName(e.target.value)} placeholder="Nombre" autoFocus />
             <input className="input" type="number" value={editGoalTarget} onChange={(e) => setEditGoalTarget(e.target.value)} placeholder="Objetivo ($)" />
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
+              {GOAL_EMOJIS.map(e => (
+                <button key={e} onClick={() => setEditGoalEmoji(e)} style={{
+                  width: 38, height: 38, borderRadius: "10px", fontSize: "1.25rem",
+                  border: editGoalEmoji === e ? "2px solid var(--primary)" : "2px solid transparent",
+                  background: editGoalEmoji === e ? "var(--primary-lighter)" : "var(--muted)",
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                }}>{e}</button>
+              ))}
+            </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <button className="btn btn-primary" onClick={handleEditGoal} disabled={saving} style={{ flex: 1 }}>
                 {saving ? "..." : "Guardar"}
@@ -231,7 +269,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
               alignItems: "center", justifyContent: "center", gap: "2px"
             }}>
               <span style={{ fontSize: isComplete ? "1.75rem" : "0.625rem", lineHeight: 1 }}>
-                {isComplete ? "🎉" : "🐖"}
+                {isComplete ? "🎉" : (selected.emoji ?? "🐖")}
               </span>
               {!isComplete && (
                 <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--primary)", lineHeight: 1 }}>
@@ -299,6 +337,14 @@ export function SavingsGoalsApp({ onBack }: Props) {
                       <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", flex: 1 }}>
                         {isMe ? "Tú" : "Pareja"} · {formatDate(c.created_at)}
                       </span>
+                      {c.contributed_by === user?.uid && (
+                        <button
+                          onClick={() => handleDeleteContribution(selected.id, c.id)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "2px", opacity: 0.6, display: "flex", alignItems: "center" }}
+                        >
+                          <span style={{ fontSize: "0.75rem" }}>🗑</span>
+                        </button>
+                      )}
                     </div>
                   )
                 })}

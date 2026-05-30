@@ -58,6 +58,54 @@
   --radius-full: 9999px;
 }
 
+[data-dark="true"] {
+  --background: #1a1225;
+  --foreground: #f0e8ff;
+  --foreground-light: #c4b8d8;
+  --foreground-muted: #9080a8;
+  --muted: #2a1e3a;
+  --border: #3d2d55;
+  --card-bg: #221833;
+  --primary-lighter: #2d1f45;
+  --pink-light: #3d1e35;
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+  color-scheme: dark;
+}
+
+[data-dark="true"] body {
+  background: #1a1225;
+}
+
+[data-dark="true"] .card,
+[data-dark="true"] .plan-card,
+[data-dark="true"] .task-item,
+[data-dark="true"] .modal-box {
+  background: #221833;
+  border-color: #3d2d55;
+}
+
+[data-dark="true"] .input,
+[data-dark="true"] .textarea {
+  background: #2a1e3a;
+  color: #f0e8ff;
+  border-color: #3d2d55;
+}
+
+[data-dark="true"] .app-header {
+  background: rgba(26,18,37,0.95);
+  border-color: #3d2d55;
+}
+
+[data-dark="true"] .btn-outline {
+  border-color: #3d2d55;
+  color: var(--foreground-light);
+}
+
+[data-dark="true"] .modal-overlay-bg {
+  background: rgba(0,0,0,0.7);
+}
+
 * {
   margin: 0;
   padding: 0;

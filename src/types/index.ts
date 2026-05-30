@@ -97,6 +97,7 @@ export interface SavingsGoal {
   couple_id: string
   name: string
   target_amount: number
+  emoji?: string
   created_by: string
   created_at: string
   contributions?: GoalContribution[]

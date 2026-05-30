@@ -16,6 +16,7 @@ export async function PATCH(req: NextRequest, { params }: Context) {
   const updates: Record<string, unknown> = {}
   if (body.name) updates.name = body.name
   if (body.target_amount !== undefined) updates.target_amount = Number(body.target_amount)
+  if (body.emoji) updates.emoji = body.emoji
   const { data, error } = await supabase.from("savings_goals").update(updates).eq("id", id).eq("couple_id", me.couple_id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json(data)
