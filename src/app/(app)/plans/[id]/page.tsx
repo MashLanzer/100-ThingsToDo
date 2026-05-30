@@ -118,25 +118,6 @@ export default function PlanDetailPage() {
     }
   }
 
-  async function handleMoveTask(taskId: string, direction: "up" | "down") {
-    if (!tasks) return
-    const idx = tasks.findIndex((t) => t.id === taskId)
-    if (idx < 0) return
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1
-    if (swapIdx < 0 || swapIdx >= tasks.length) return
-    const taskA = tasks[idx]
-    const taskB = tasks[swapIdx]
-    const orderA = taskA.sort_order ?? idx
-    const orderB = taskB.sort_order ?? swapIdx
-    try {
-      await Promise.all([
-        updateTask.mutateAsync({ taskId: taskA.id, planId: params.id, sort_order: orderB }),
-        updateTask.mutateAsync({ taskId: taskB.id, planId: params.id, sort_order: orderA }),
-      ])
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Error al reordenar")
-    }
-  }
   const total = displayTasks.length
   const done = displayTasks.filter((t) => t.completed).length
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
@@ -406,8 +387,6 @@ export default function PlanDetailPage() {
                     setEditTaskNotes(task.notes ?? "")
                     setEditTaskDueDate(task.due_date ?? "")
                   }}
-                  onMoveUp={i > 0 ? () => handleMoveTask(task.id, "up") : undefined}
-                  onMoveDown={i < displayTasks.length - 1 ? () => handleMoveTask(task.id, "down") : undefined}
                   currentUserId={user?.uid}
                 />
                 {editingTaskId === task.id && (

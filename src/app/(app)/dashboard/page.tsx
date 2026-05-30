@@ -6,17 +6,35 @@ import { useCoupleStatus } from "@/hooks/use-couple"
 import { PlanCard } from "@/components/features/plan-card"
 import { useAppStore } from "@/stores/app-store"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
-import { Plus, X, Trash2, Search } from "lucide-react"
+import { Plus, X, Trash2, Search, GripVertical } from "lucide-react"
 import { toast } from "sonner"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import type { Plan } from "@/types"
 import { OnboardingModal } from "@/components/shared/onboarding-modal"
 import { PlanCalendar } from "@/components/features/plan-calendar"
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  arrayMove,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 function SwipePlanCard({ plan, index, onDelete }: { plan: Plan; index: number; onDelete: () => void }) {
   const [swipeX, setSwipeX] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const touchStartX = useRef<number>(0)
+
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: plan.id })
 
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX
@@ -34,7 +52,20 @@ function SwipePlanCard({ plan, index, onDelete }: { plan: Plan; index: number; o
   }
 
   return (
-    <div style={{ position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+    <div
+      ref={setNodeRef}
+      style={{
+        position: "relative",
+        borderRadius: "var(--radius-lg)",
+        overflow: "hidden",
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: isDragging ? 10 : undefined,
+        marginBottom: "0.75rem",
+      }}
+    >
+      {/* Red delete panel behind */}
       <div
         style={{
           position: "absolute", right: 0, top: 0, bottom: 0, width: 80,
@@ -45,6 +76,22 @@ function SwipePlanCard({ plan, index, onDelete }: { plan: Plan; index: number; o
       >
         <Trash2 size={22} color="white" />
       </div>
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        style={{
+          position: "absolute", top: "8px", right: "8px", zIndex: 20,
+          cursor: "grab", touchAction: "none", padding: "4px",
+          background: "rgba(255,255,255,0.85)", borderRadius: "6px",
+          display: "flex", alignItems: "center", color: "#888",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+        }}
+        title="Arrastrar para reordenar"
+      >
+        <GripVertical size={14} />
+      </div>
+      {/* Sliding content */}
       <div
         style={{ transform: `translateX(${swipeX}px)`, transition: isSwiping ? "none" : "transform 0.25s ease" }}
         onTouchStart={onTouchStart}
@@ -78,6 +125,11 @@ export default function DashboardPage() {
   const { openCoupleModal } = useAppStore()
   const ptr = useWindowPTR(() => { refetch() })
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+  )
+
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
@@ -90,6 +142,7 @@ export default function DashboardPage() {
   const [showArchived, setShowArchived] = useState(false)
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"grid" | "calendar">("grid")
+  const [localPlanOrder, setLocalPlanOrder] = useState<string[] | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (typeof window === "undefined") return false
     return !localStorage.getItem("ttd_onboarding_done_v1")
@@ -125,6 +178,28 @@ export default function DashboardPage() {
 
   const filteredActive = sortPlans(activePlans.filter(filterFn), sortBy)
   const filteredArchived = sortPlans(archivedPlans.filter(filterFn), sortBy)
+
+  // Apply manual drag order on top of sort
+  const orderedActive = localPlanOrder
+    ? [...filteredActive].sort((a, b) => {
+        const ai = localPlanOrder.indexOf(a.id)
+        const bi = localPlanOrder.indexOf(b.id)
+        if (ai === -1 && bi === -1) return 0
+        if (ai === -1) return 1
+        if (bi === -1) return -1
+        return ai - bi
+      })
+    : filteredActive
+
+  function handlePlanDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const current = localPlanOrder ?? filteredActive.map((p) => p.id)
+    const oldIndex = current.indexOf(active.id as string)
+    const newIndex = current.indexOf(over.id as string)
+    if (oldIndex < 0 || newIndex < 0) return
+    setLocalPlanOrder(arrayMove(current, oldIndex, newIndex))
+  }
 
   async function handleDeletePlan(id: string) {
     if (!confirm("¿Eliminar este plan y todas sus tareas?")) return
@@ -309,34 +384,39 @@ export default function DashboardPage() {
 
       {/* Sort pills + view toggle */}
       {hasAnyPlans && (
-        <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: "0.875rem", alignItems: "center" }}>
-          {([
-            { key: "newest", label: "🕐 Recientes" },
-            { key: "oldest", label: "🕐 Antiguos" },
-            { key: "progress_desc", label: "📈 Más progreso" },
-            { key: "progress_asc", label: "📉 Menos progreso" },
-          ] as { key: SortBy; label: string }[]).map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setSortBy(key)}
-              style={{
-                padding: "3px 10px",
-                borderRadius: "999px",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                fontSize: "0.6875rem",
-                fontWeight: 600,
-                background: sortBy === key ? "var(--primary)" : "var(--muted)",
-                color: sortBy === key ? "white" : "var(--foreground-muted)",
-                transition: "background 0.15s, color 0.15s",
-              }}
-            >
-              {label}
-            </button>
-          ))}
-          {/* View mode toggle — icon buttons at the far right */}
-          <div style={{ marginLeft: "auto", display: "flex", borderRadius: "999px", border: "1px solid var(--border)", overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
+          {/* Scrollable sort pills */}
+          <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", flex: 1, paddingBottom: "2px", scrollbarWidth: "none" }}>
+            {([
+              { key: "newest", label: "🕐 Recientes" },
+              { key: "oldest", label: "🕐 Antiguos" },
+              { key: "progress_desc", label: "📈 Más progreso" },
+              { key: "progress_asc", label: "📉 Menos progreso" },
+            ] as { key: SortBy; label: string }[]).map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => { setSortBy(key); setLocalPlanOrder(null) }}
+                style={{
+                  padding: "3px 10px",
+                  borderRadius: "999px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  fontSize: "0.6875rem",
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  background: sortBy === key ? "var(--primary)" : "var(--muted)",
+                  color: sortBy === key ? "white" : "var(--foreground-muted)",
+                  transition: "background 0.15s, color 0.15s",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {/* View mode toggle — always visible on the right */}
+          <div style={{ display: "flex", borderRadius: "999px", border: "1px solid var(--border)", overflow: "hidden", flexShrink: 0 }}>
             {([
               { key: "grid", icon: "▦", title: "Vista planes" },
               { key: "calendar", icon: "📅", title: "Vista calendario" },
@@ -507,13 +587,17 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            {/* Active plans */}
-            {filteredActive.length > 0 && (
-              <div className="plans-grid">
-                {filteredActive.map((plan, i) => (
-                  <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
-                ))}
-              </div>
+            {/* Active plans — drag to reorder */}
+            {orderedActive.length > 0 && (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handlePlanDragEnd}>
+                <SortableContext items={orderedActive.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+                  <div>
+                    {orderedActive.map((plan, i) => (
+                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             )}
 
             {/* Archived / completed section */}

@@ -22,8 +22,6 @@ interface Props {
   onToggle: () => void
   onDelete: () => void
   onEdit?: () => void
-  onMoveUp?: () => void
-  onMoveDown?: () => void
   currentUserId?: string
 }
 
@@ -43,7 +41,7 @@ async function authFetch(path: string, init?: RequestInit) {
   return res.json()
 }
 
-export function TaskItem({ task, onToggle, onDelete, onEdit, onMoveUp, onMoveDown, currentUserId }: Props) {
+export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Props) {
   const emoji = KAWAII_ICONS[task.icon] ?? task.icon
   const [popping, setPopping] = useState(false)
   const [sparkle, setSparkle] = useState(false)
@@ -272,31 +270,13 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, onMoveUp, onMoveDow
             })()}
           </span>
 
-          {/* Right-side actions */}
-          {(onEdit || onMoveUp || onMoveDown) && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px", flexShrink: 0 }}>
-              {(onMoveUp || onMoveDown) && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
-                  <button
-                    onClick={onMoveUp}
-                    disabled={!onMoveUp}
-                    style={{ background: "none", border: "none", cursor: onMoveUp ? "pointer" : "default", padding: "2px 4px", color: onMoveUp ? "var(--foreground-muted)" : "var(--border)", fontSize: "0.5rem", lineHeight: 1, opacity: 0.5 }}
-                  >▲</button>
-                  <button
-                    onClick={onMoveDown}
-                    disabled={!onMoveDown}
-                    style={{ background: "none", border: "none", cursor: onMoveDown ? "pointer" : "default", padding: "2px 4px", color: onMoveDown ? "var(--foreground-muted)" : "var(--border)", fontSize: "0.5rem", lineHeight: 1, opacity: 0.5 }}
-                  >▼</button>
-                </div>
-              )}
-              {onEdit && (
-                <button
-                  onClick={onEdit}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: "3px 4px", color: "var(--foreground-muted)", fontSize: "0.75rem", lineHeight: 1 }}
-                  title="Editar tarea"
-                >✏️</button>
-              )}
-            </div>
+          {/* Edit button */}
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "3px 4px", color: "var(--foreground-muted)", fontSize: "0.75rem", lineHeight: 1, flexShrink: 0 }}
+              title="Editar tarea"
+            >✏️</button>
           )}
         </div>
       </div>
