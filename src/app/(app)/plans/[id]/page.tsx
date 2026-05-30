@@ -6,13 +6,30 @@ import { usePlan, useUpdatePlan, useDeletePlan } from "@/hooks/use-plans"
 import { useTasks, useCreateTask, useToggleTask, useDeleteTask, useUpdateTask } from "@/hooks/use-tasks"
 import { TaskItem } from "@/components/features/task-item"
 import { KAWAII_ICONS } from "@/types"
+import type { Task } from "@/types"
 import { ArrowLeft, Plus, Edit2, X, Trash2 } from "lucide-react"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
+import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  arrayMove,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
 
 export default function PlanDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
+  const { user } = useAuth()
   const { data: plan, isLoading: planLoading } = usePlan(params.id)
   const { data: tasks, isLoading: tasksLoading, refetch: refetchTasks } = useTasks(params.id)
   const createTask = useCreateTask()
@@ -31,6 +48,10 @@ export default function PlanDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editTitle, setEditTitle] = useState("")
   const [editDesc, setEditDesc] = useState("")
+  const [editCoverImage, setEditCoverImage] = useState("")
+  const [editDueDate, setEditDueDate] = useState("")
+  const [editTagInput, setEditTagInput] = useState("")
+  const [editTags, setEditTags] = useState<string[]>([])
 
   // Task editing state
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
@@ -39,7 +60,45 @@ export default function PlanDetailPage() {
   const [editTaskNotes, setEditTaskNotes] = useState("")
   const [editTaskDueDate, setEditTaskDueDate] = useState("")
 
+  // Local optimistic task order for drag-and-drop
+  const [localTasks, setLocalTasks] = useState<Task[] | null>(null)
+  const displayTasks = localTasks ?? tasks ?? []
+
   const iconEntries = Object.entries(KAWAII_ICONS)
+
+  // DnD sensors — support both pointer (desktop) and touch (mobile)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  )
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const currentTasks = localTasks ?? tasks ?? []
+    const oldIndex = currentTasks.findIndex((t) => t.id === active.id)
+    const newIndex = currentTasks.findIndex((t) => t.id === over.id)
+    if (oldIndex < 0 || newIndex < 0) return
+
+    const reordered = arrayMove(currentTasks, oldIndex, newIndex)
+    // Optimistic update
+    setLocalTasks(reordered)
+
+    // Persist new sort_orders
+    try {
+      await Promise.all(
+        reordered.map((t, i) =>
+          updateTask.mutateAsync({ taskId: t.id, planId: params.id, sort_order: i })
+        )
+      )
+      // After persistence, clear local override so server data takes over
+      setLocalTasks(null)
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al reordenar")
+      setLocalTasks(null)
+    }
+  }
 
   async function handleSaveTaskEdit() {
     if (!editingTaskId || !editTaskTitle.trim()) return
@@ -78,8 +137,8 @@ export default function PlanDetailPage() {
       toast.error(e instanceof Error ? e.message : "Error al reordenar")
     }
   }
-  const total = tasks?.length ?? 0
-  const done = tasks?.filter((t) => t.completed).length ?? 0
+  const total = displayTasks.length
+  const done = displayTasks.filter((t) => t.completed).length
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
 
   async function handleAddTask() {
@@ -105,13 +164,30 @@ export default function PlanDetailPage() {
   function openEdit() {
     setEditTitle(plan?.title ?? "")
     setEditDesc(plan?.description ?? "")
+    setEditCoverImage(plan?.cover_image ?? "")
+    setEditDueDate(plan?.due_date ?? "")
+    setEditTags(plan?.tags ?? [])
+    setEditTagInput("")
     setShowEditModal(true)
+  }
+
+  function handleAddEditTag() {
+    const tag = editTagInput.trim()
+    if (tag && !editTags.includes(tag)) setEditTags((prev) => [...prev, tag])
+    setEditTagInput("")
   }
 
   async function handleSaveEdit() {
     if (!editTitle.trim()) return
     try {
-      await updatePlan.mutateAsync({ id: params.id, title: editTitle.trim(), description: editDesc.trim() || undefined })
+      await updatePlan.mutateAsync({
+        id: params.id,
+        title: editTitle.trim(),
+        description: editDesc.trim() || undefined,
+        cover_image: editCoverImage.trim() || null,
+        due_date: editDueDate || null,
+        tags: editTags,
+      })
       setShowEditModal(false)
       toast.success("Plan actualizado ✨")
     } catch (e: unknown) {
@@ -307,8 +383,17 @@ export default function PlanDetailPage() {
             </button>
           </div>
         ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={displayTasks.map((t) => t.id)}
+              strategy={verticalListSortingStrategy}
+            >
           <div>
-            {tasks.map((task, i) => (
+            {displayTasks.map((task, i) => (
               <div key={task.id}>
                 <TaskItem
                   task={task}
@@ -322,7 +407,8 @@ export default function PlanDetailPage() {
                     setEditTaskDueDate(task.due_date ?? "")
                   }}
                   onMoveUp={i > 0 ? () => handleMoveTask(task.id, "up") : undefined}
-                  onMoveDown={i < tasks.length - 1 ? () => handleMoveTask(task.id, "down") : undefined}
+                  onMoveDown={i < displayTasks.length - 1 ? () => handleMoveTask(task.id, "down") : undefined}
+                  currentUserId={user?.uid}
                 />
                 {editingTaskId === task.id && (
                   <div className="card animate-fade-in" style={{ marginBottom: "0.75rem", marginTop: "-0.25rem", borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "2px solid var(--primary-lighter)" }}>
@@ -380,6 +466,8 @@ export default function PlanDetailPage() {
               </div>
             ))}
           </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 
