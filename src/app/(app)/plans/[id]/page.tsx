@@ -495,6 +495,78 @@ export default function PlanDetailPage() {
                   onChange={(e) => setEditDesc(e.target.value)}
                   placeholder="Descripción (opcional)"
                 />
+                <div>
+                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "block", marginBottom: "0.25rem" }}>
+                    🖼️ URL de portada (opcional)
+                  </label>
+                  <input
+                    className="input"
+                    type="url"
+                    placeholder="https://..."
+                    value={editCoverImage}
+                    onChange={(e) => setEditCoverImage(e.target.value)}
+                  />
+                  {editCoverImage.trim() && (
+                    <div style={{ marginTop: "0.375rem", borderRadius: "var(--radius-md)", overflow: "hidden", height: "60px" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={editCoverImage.trim()} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "block", marginBottom: "0.25rem" }}>
+                    📅 Fecha objetivo (opcional)
+                  </label>
+                  <input
+                    className="input"
+                    type="date"
+                    value={editDueDate}
+                    onChange={(e) => setEditDueDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "block", marginBottom: "0.25rem" }}>
+                    🏷️ Etiquetas
+                  </label>
+                  <div style={{ display: "flex", gap: "0.375rem" }}>
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="Nueva etiqueta..."
+                      value={editTagInput}
+                      onChange={(e) => setEditTagInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddEditTag() } }}
+                      style={{ flex: 1 }}
+                    />
+                    <button className="btn btn-outline" type="button" onClick={handleAddEditTag} style={{ flexShrink: 0, fontSize: "0.75rem" }}>
+                      +
+                    </button>
+                  </div>
+                  {editTags.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginTop: "0.375rem" }}>
+                      {editTags.map((tag) => (
+                        <span
+                          key={tag}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                            fontSize: "0.6875rem", fontWeight: 600,
+                            background: "var(--primary-lighter)", color: "var(--primary)",
+                            borderRadius: "999px", padding: "0.125rem 0.5rem",
+                          }}
+                        >
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => setEditTags((prev) => prev.filter((t) => t !== tag))}
+                            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, color: "var(--primary)", fontWeight: 700, fontSize: "0.75rem" }}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
                   <button className="btn btn-primary" onClick={handleSaveEdit} disabled={updatePlan.isPending}>
                     {updatePlan.isPending ? "Guardando..." : "Guardar Cambios"}

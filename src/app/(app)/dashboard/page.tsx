@@ -80,9 +80,14 @@ export default function DashboardPage() {
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
+  const [newCoverImage, setNewCoverImage] = useState("")
+  const [newDueDate, setNewDueDate] = useState("")
+  const [newTagInput, setNewTagInput] = useState("")
+  const [newTags, setNewTags] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState<SortBy>("newest")
   const [showArchived, setShowArchived] = useState(false)
+  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (typeof window === "undefined") return false
     return !localStorage.getItem("ttd_onboarding_done_v1")
@@ -105,8 +110,12 @@ export default function DashboardPage() {
   const activePlans = allPlans.filter((p) => !p.archived)
   const archivedPlans = allPlans.filter((p) => p.archived)
 
-  // Apply search filter
+  // Collect all unique tags from all plans
+  const allTags = Array.from(new Set(allPlans.flatMap((p) => p.tags ?? []))).sort()
+
+  // Apply search + tag filter
   const filterFn = (p: Plan) => {
+    if (activeTagFilter && !(p.tags ?? []).includes(activeTagFilter)) return false
     if (!searchQuery.trim()) return true
     const q = searchQuery.toLowerCase()
     return p.title.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q)
@@ -133,14 +142,30 @@ export default function DashboardPage() {
       return
     }
     try {
-      await createPlan.mutateAsync({ title: title.trim(), description: desc.trim() || undefined })
+      await createPlan.mutateAsync({
+        title: title.trim(),
+        description: desc.trim() || undefined,
+        cover_image: newCoverImage.trim() || undefined,
+        due_date: newDueDate || undefined,
+        tags: newTags.length > 0 ? newTags : undefined,
+      })
       setTitle("")
       setDesc("")
+      setNewCoverImage("")
+      setNewDueDate("")
+      setNewTags([])
+      setNewTagInput("")
       setShowForm(false)
       toast.success("Plan creado 🎉")
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error al crear plan")
     }
+  }
+
+  function handleAddNewTag() {
+    const tag = newTagInput.trim()
+    if (tag && !newTags.includes(tag)) setNewTags((prev) => [...prev, tag])
+    setNewTagInput("")
   }
 
   const hasAnyPlans = allPlans.length > 0
@@ -239,6 +264,49 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Tag filter pills */}
+      {hasAnyPlans && allTags.length > 0 && (
+        <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
+          <button
+            onClick={() => setActiveTagFilter(null)}
+            style={{
+              padding: "3px 10px",
+              borderRadius: "999px",
+              border: "none",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: "0.6875rem",
+              fontWeight: 600,
+              background: activeTagFilter === null ? "var(--secondary)" : "var(--muted)",
+              color: activeTagFilter === null ? "white" : "var(--foreground-muted)",
+              transition: "background 0.15s, color 0.15s",
+            }}
+          >
+            🏷️ Todos
+          </button>
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => setActiveTagFilter(activeTagFilter === tag ? null : tag)}
+              style={{
+                padding: "3px 10px",
+                borderRadius: "999px",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: "0.6875rem",
+                fontWeight: 600,
+                background: activeTagFilter === tag ? "var(--primary)" : "var(--muted)",
+                color: activeTagFilter === tag ? "white" : "var(--foreground-muted)",
+                transition: "background 0.15s, color 0.15s",
+              }}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Sort pills */}
       {hasAnyPlans && (
         <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: "0.875rem" }}>
@@ -294,6 +362,78 @@ export default function DashboardPage() {
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
             />
+            <div>
+              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "block", marginBottom: "0.25rem" }}>
+                🖼️ URL de portada (opcional)
+              </label>
+              <input
+                className="input"
+                type="url"
+                placeholder="https://..."
+                value={newCoverImage}
+                onChange={(e) => setNewCoverImage(e.target.value)}
+              />
+              {newCoverImage.trim() && (
+                <div style={{ marginTop: "0.375rem", borderRadius: "var(--radius-md)", overflow: "hidden", height: "60px" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={newCoverImage.trim()} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+              )}
+            </div>
+            <div>
+              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "block", marginBottom: "0.25rem" }}>
+                📅 Fecha objetivo (opcional)
+              </label>
+              <input
+                className="input"
+                type="date"
+                value={newDueDate}
+                onChange={(e) => setNewDueDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "block", marginBottom: "0.25rem" }}>
+                🏷️ Etiquetas
+              </label>
+              <div style={{ display: "flex", gap: "0.375rem" }}>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="Ej: Viajes, Romántico..."
+                  value={newTagInput}
+                  onChange={(e) => setNewTagInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddNewTag() } }}
+                  style={{ flex: 1 }}
+                />
+                <button className="btn btn-outline" type="button" onClick={handleAddNewTag} style={{ flexShrink: 0, fontSize: "0.75rem" }}>
+                  +
+                </button>
+              </div>
+              {newTags.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginTop: "0.375rem" }}>
+                  {newTags.map((tag) => (
+                    <span
+                      key={tag}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                        fontSize: "0.6875rem", fontWeight: 600,
+                        background: "var(--primary-lighter)", color: "var(--primary)",
+                        borderRadius: "999px", padding: "0.125rem 0.5rem",
+                      }}
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => setNewTags((prev) => prev.filter((t) => t !== tag))}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, color: "var(--primary)", fontWeight: 700, fontSize: "0.75rem" }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="form-actions">
               <button className="btn btn-primary" onClick={handleCreate} disabled={createPlan.isPending}>
                 {createPlan.isPending ? "Creando..." : "Crear"}

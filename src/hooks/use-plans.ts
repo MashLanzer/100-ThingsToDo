@@ -43,7 +43,7 @@ export function usePlan(id: string) {
 export function useCreatePlan() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { title: string; description?: string }) =>
+    mutationFn: (data: { title: string; description?: string; cover_image?: string; due_date?: string; tags?: string[] }) =>
       authFetch("/api/plans", { method: "POST", body: JSON.stringify(data) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["plans"] }),
   })
@@ -52,7 +52,7 @@ export function useCreatePlan() {
 export function useUpdatePlan() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: string; title?: string; description?: string; archived?: boolean }) =>
+    mutationFn: ({ id, ...data }: { id: string; title?: string; description?: string; archived?: boolean; cover_image?: string | null; due_date?: string | null; tags?: string[] }) =>
       authFetch(`/api/plans/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["plans"] })

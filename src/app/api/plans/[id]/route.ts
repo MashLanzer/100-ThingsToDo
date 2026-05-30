@@ -75,6 +75,9 @@ export async function PATCH(req: NextRequest, { params }: Context) {
   }
   if ("description" in body) updates.description = body.description?.trim() ?? null
   if ("archived" in body) updates.archived = body.archived
+  if ("cover_image" in body) updates.cover_image = body.cover_image ?? null
+  if ("due_date" in body) updates.due_date = body.due_date ?? null
+  if ("tags" in body) updates.tags = Array.isArray(body.tags) ? body.tags : []
 
   let { data, error } = await supabase
     .from("plans")
@@ -84,17 +87,25 @@ export async function PATCH(req: NextRequest, { params }: Context) {
     .select()
     .single()
 
-  // If archived column doesn't exist yet, retry without it
-  if (error && "archived" in updates) {
-    const { archived: _a, ...updatesWithoutArchived } = updates
-    void _a
-    ;({ data, error } = await supabase
-      .from("plans")
-      .update(updatesWithoutArchived)
-      .eq("id", id)
-      .eq("couple_id", me.couple_id)
-      .select()
-      .single())
+  // If a new column doesn't exist yet, retry stripping it
+  if (error) {
+    const safeUpdates = { ...updates }
+    let stripped = false
+    for (const col of ["archived", "cover_image", "due_date", "tags"] as const) {
+      if (col in safeUpdates) {
+        delete safeUpdates[col]
+        stripped = true
+      }
+    }
+    if (stripped) {
+      ;({ data, error } = await supabase
+        .from("plans")
+        .update(safeUpdates)
+        .eq("id", id)
+        .eq("couple_id", me.couple_id)
+        .select()
+        .single())
+    }
   }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

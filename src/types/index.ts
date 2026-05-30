@@ -28,6 +28,9 @@ export interface Plan {
   task_count?: number
   completed_count?: number
   archived?: boolean
+  cover_image?: string | null
+  due_date?: string | null
+  tags?: string[]
 }
 
 export interface Task {

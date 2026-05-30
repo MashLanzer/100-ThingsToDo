@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from("plans")
     .select(`
-      id, title, description, created_by, created_at, updated_at,
+      id, title, description, cover_image, due_date, tags, created_by, created_at, updated_at,
       tasks ( id, completed )
     `)
     .eq("couple_id", me.couple_id)
@@ -59,12 +59,23 @@ export async function POST(req: NextRequest) {
 
   if (!me?.couple_id) return NextResponse.json({ error: "Necesitas una pareja para crear planes" }, { status: 400 })
 
-  const { title, description } = await req.json()
+  const body = await req.json()
+  const { title, description } = body
   if (!title?.trim()) return NextResponse.json({ error: "Título requerido" }, { status: 400 })
+
+  const insertData: Record<string, unknown> = {
+    title: title.trim(),
+    description: description?.trim() ?? null,
+    couple_id: me.couple_id,
+    created_by: user.uid,
+  }
+  if (body.cover_image) insertData.cover_image = body.cover_image
+  if (body.due_date) insertData.due_date = body.due_date
+  if (Array.isArray(body.tags)) insertData.tags = body.tags
 
   const { data, error } = await supabase
     .from("plans")
-    .insert({ title: title.trim(), description: description?.trim() ?? null, couple_id: me.couple_id, created_by: user.uid })
+    .insert(insertData)
     .select()
     .single()
 
