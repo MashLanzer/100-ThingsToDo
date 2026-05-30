@@ -6,7 +6,7 @@ import { useCoupleStatus, useLinkPartner, useUnlinkPartner } from "@/hooks/use-c
 import { useAuth } from "@/hooks/use-auth"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
 import { toast } from "sonner"
-import { X, Copy, Check } from "lucide-react"
+import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload } from "lucide-react"
 
 const THEMES = [
   { id: "purple",   name: "Morado",   primary: "#8B5CF6", lighter: "#EDE9FE", border: "#F3E8FF", muted: "#F5F3FF" },
@@ -404,7 +404,7 @@ export function SettingsModal() {
     <div className="modal-overlay-bg" onClick={closeSettingsModal}>
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 className="modal-title">⚙️ Configuración</h2>
+          <h2 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Settings2 size={18} /> Configuración</h2>
           <button className="btn-icon" onClick={closeSettingsModal}><X size={18} /></button>
         </div>
 
@@ -414,13 +414,13 @@ export function SettingsModal() {
             className={`pill-tab-btn${activeTab === "perfil" ? " active" : ""}`}
             onClick={() => setActiveTab("perfil")}
           >
-            👤 Perfil
+            <User size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} /> Perfil
           </button>
           <button
             className={`pill-tab-btn${activeTab === "ajustes" ? " active" : ""}`}
             onClick={() => setActiveTab("ajustes")}
           >
-            ⚙️ Ajustes
+            <Settings2 size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} /> Ajustes
           </button>
         </div>
 
@@ -466,7 +466,7 @@ export function SettingsModal() {
                     color: data?.couple ? "#065f46" : "var(--foreground-muted)",
                     border: data?.couple ? "1px solid #6ee7b7" : "1px solid var(--border)",
                   }}>
-                    {data?.couple ? `💕 ${data.partner?.name ?? "Vinculado"}` : "Sin pareja"}
+                    {data?.couple ? <><Heart size={11} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} />{data.partner?.name ?? "Vinculado"}</> : "Sin pareja"}
                   </div>
                 </div>
               )}
@@ -474,7 +474,7 @@ export function SettingsModal() {
               {/* ── Couple management ── */}
               <section>
                 <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.75rem" }}>
-                  💕 Gestionar Pareja
+                  <Heart size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: 5 }} /> Gestionar Pareja
                 </h3>
 
                 {isLoading ? (
@@ -634,7 +634,7 @@ export function SettingsModal() {
               <section>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.5rem 0", borderBottom: "1px solid var(--border)" }}>
                   <div>
-                    <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--foreground)" }}>🌙 Modo Oscuro</p>
+                    <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: 4 }}><Moon size={14} /> Modo Oscuro</p>
                     <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>Cambia a fondo oscuro</p>
                   </div>
                   <Toggle checked={darkMode} onChange={handleDarkMode} />
@@ -645,7 +645,7 @@ export function SettingsModal() {
               <section>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
-                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>🔔 Sonidos</p>
+                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: 4 }}><Bell size={14} /> Sonidos</p>
                   </div>
                   <Toggle checked={soundEnabled} onChange={handleSoundToggle} />
                 </div>
@@ -655,7 +655,7 @@ export function SettingsModal() {
               <section>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
-                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>📳 Vibración al completar tarea</p>
+                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: 4 }}><Vibrate size={14} /> Vibración al completar tarea</p>
                   </div>
                   <Toggle checked={vibrationEnabled} onChange={handleVibrationToggle} />
                 </div>
@@ -711,7 +711,7 @@ export function SettingsModal() {
               <section>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem" }}>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>🔐 PIN del diario</p>
+                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: 4 }}><Lock size={14} /> PIN del diario</p>
                     <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginTop: "0.125rem" }}>
                       {pinEnabled ? "Activo — el diario se bloquea al abrirlo" : "Protege el diario con un PIN de 4 dígitos"}
                     </p>
@@ -864,7 +864,7 @@ export function SettingsModal() {
 
               {/* ── Exportar datos ── */}
               <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
-                <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.625rem" }}>📤 Exportar datos</p>
+                <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.625rem", display: "flex", alignItems: "center", gap: 4 }}><Upload size={14} /> Exportar datos</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   <button
                     className="btn btn-outline"

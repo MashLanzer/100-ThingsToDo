@@ -6,22 +6,23 @@ import { toast } from "sonner"
 import type { TimeCapsule, CapsuleType } from "@/types"
 import { formatDate } from "@/lib/utils"
 import { PhoneLoader } from "@/components/features/phone-loader"
-import { Trash2 } from "lucide-react"
+import { Trash2, Heart, Star, Trophy, HelpCircle, MessageSquare, Calendar, Timer, Lock, MailOpen, Gem, Sparkles, Upload, Mail, Pencil, Clock } from "lucide-react"
+import type { LucideProps } from "lucide-react"
 
-const CAPSULE_TYPES: { id: CapsuleType; icon: string; label: string; desc: string }[] = [
-  { id: "memory",      icon: "💙", label: "Recuerdo",   desc: "Momentos especiales" },
-  { id: "dream",       icon: "💜", label: "Sueño",      desc: "Metas y aspiraciones" },
-  { id: "love",        icon: "💕", label: "Amor",       desc: "Mensajes de corazón" },
-  { id: "achievement", icon: "🏆", label: "Logro",      desc: "Éxitos personales" },
-  { id: "mystery",     icon: "🔮", label: "Misterio",   desc: "Sorpresas ocultas" },
-  { id: "reflection",  icon: "🤔", label: "Reflexión",  desc: "Pensamientos profundos" },
+const CAPSULE_TYPES: { id: CapsuleType; Icon: React.FC<LucideProps>; label: string; desc: string; color: string }[] = [
+  { id: "memory",      Icon: Heart,          label: "Recuerdo",  desc: "Momentos especiales",    color: "#3b82f6" },
+  { id: "dream",       Icon: Star,           label: "Sueño",     desc: "Metas y aspiraciones",   color: "#8b5cf6" },
+  { id: "love",        Icon: Heart,          label: "Amor",      desc: "Mensajes de corazón",    color: "#ec4899" },
+  { id: "achievement", Icon: Trophy,         label: "Logro",     desc: "Éxitos personales",      color: "#f59e0b" },
+  { id: "mystery",     Icon: HelpCircle,     label: "Misterio",  desc: "Sorpresas ocultas",      color: "#6d28d9" },
+  { id: "reflection",  Icon: MessageSquare,  label: "Reflexión", desc: "Pensamientos profundos", color: "#10b981" },
 ]
 
 const DATE_PRESETS = [
-  { days: 30,  icon: "📅", label: "1 Mes" },
-  { days: 90,  icon: "🗓️", label: "3 Meses" },
-  { days: 180, icon: "📆", label: "6 Meses" },
-  { days: 365, icon: "🎂", label: "1 Año" },
+  { days: 30,  label: "1 Mes" },
+  { days: 90,  label: "3 Meses" },
+  { days: 180, label: "6 Meses" },
+  { days: 365, label: "1 Año" },
 ]
 
 type CapsuleFilter = "all" | "waiting" | "ready" | "opened"
@@ -150,7 +151,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("list")}>‹</button>
-          <span>💎 Cápsula Abierta</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Gem size={14} /> Cápsula Abierta</span>
         </div>
         <div className="app-content-body" style={{ alignItems: "center", gap: "0.875rem" }}>
           {/* Type badge */}
@@ -159,7 +160,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
             padding: "1.25rem 2rem", textAlign: "center", width: "100%",
             display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem",
           }}>
-            <span style={{ fontSize: "2.5rem" }}>{t?.icon ?? "💎"}</span>
+            {t ? <t.Icon size={40} color={t.color} /> : <Gem size={40} color="var(--primary)" />}
             <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1.125rem", color: "var(--foreground)" }}>
               Cápsula de {t?.label}
             </span>
@@ -177,7 +178,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
             boxShadow: "0 2px 12px rgba(139,92,246,0.08)",
           }}>
             <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.625rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-              💌 Mensaje
+              <Mail size={11} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} /> Mensaje
             </p>
             <p style={{ fontSize: "0.875rem", lineHeight: 1.75, color: "var(--foreground)", whiteSpace: "pre-wrap" }}>
               {selected.message}
@@ -186,7 +187,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
           {/* Sealed date */}
           <div style={{ textAlign: "center", width: "100%" }}>
             <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
-              📅 Fecha de apertura: {formatDate(selected.unlock_date)}
+              <Calendar size={11} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} /> Fecha de apertura: {formatDate(selected.unlock_date)}
             </span>
           </div>
           <button
@@ -194,9 +195,9 @@ export function TimeCapsuleApp({ onBack }: Props) {
             style={{ width: "100%", fontSize: "0.8125rem" }}
             onClick={async () => {
               const t = CAPSULE_TYPES.find(ct => ct.id === selected.type)
-              const text = `${t?.icon ?? "💎"} Cápsula de ${t?.label ?? "Tiempo"}\n\n${selected.message}\n\n— Abierta el ${formatDate(selected.unlock_date)}`
+              const text = `Cápsula de ${t?.label ?? "Tiempo"}\n\n${selected.message}\n\n— Abierta el ${formatDate(selected.unlock_date)}`
               if (navigator.share) {
-                try { await navigator.share({ title: "Nuestra Cápsula del Tiempo 💕", text }) } catch { /* cancelled */ }
+                try { await navigator.share({ title: "Nuestra Cápsula del Tiempo", text }) } catch { /* cancelled */ }
               } else {
                 try {
                   await navigator.clipboard.writeText(text)
@@ -205,7 +206,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
               }
             }}
           >
-            📤 Compartir cápsula
+            <Upload size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Compartir cápsula
           </button>
         </div>
       </>
@@ -217,11 +218,11 @@ export function TimeCapsuleApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("list")}>‹</button>
-          <span>✨ Nueva Cápsula</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Sparkles size={14} /> Nueva Cápsula</span>
         </div>
         <div className="app-content-body">
           <div className="form-group">
-            <label className="form-label">Tu Mensaje 💌</label>
+            <label className="form-label" style={{ display: "flex", alignItems: "center", gap: 4 }}><Mail size={13} /> Tu Mensaje</label>
             <textarea
               className="textarea"
               rows={5}
@@ -255,7 +256,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
                     fontFamily: "inherit",
                   }}
                 >
-                  <span style={{ fontSize: "1.125rem" }}>{t.icon}</span>
+                  <t.Icon size={18} color={capsuleType === t.id ? "var(--primary)" : t.color} />
                   <span style={{ fontSize: "0.625rem", fontWeight: 600, color: capsuleType === t.id ? "var(--primary)" : "var(--foreground-light)" }}>
                     {t.label}
                   </span>
@@ -265,7 +266,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Fecha de Apertura 📅</label>
+            <label className="form-label" style={{ display: "flex", alignItems: "center", gap: 4 }}><Calendar size={13} /> Fecha de Apertura</label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.375rem" }}>
               {DATE_PRESETS.map((p) => (
                 <button
@@ -283,7 +284,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
                     color: unlockDays === p.days && !useCustom ? "var(--primary)" : "var(--foreground-light)",
                   }}
                 >
-                  {p.icon} {p.label}
+                  <Calendar size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} />{p.label}
                 </button>
               ))}
               <button
@@ -316,7 +317,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
           </div>
 
           <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? "Guardando..." : "✨ Crear Cápsula"}
+            {saving ? "Guardando..." : "Crear Cápsula"}
           </button>
         </div>
       </>
@@ -328,7 +329,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
     <>
       <div className="app-content-header">
         <button className="back-btn-phone" onClick={onBack}>‹</button>
-        <span>💎 Cápsulas del Tiempo</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Clock size={14} /> Cápsulas del Tiempo</span>
       </div>
       <div className="app-content-body">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", textAlign: "center" }}>
@@ -348,9 +349,9 @@ export function TimeCapsuleApp({ onBack }: Props) {
         <div className="pill-tab-container">
           {([
             { id: "all",     label: "Todas" },
-            { id: "waiting", label: "Esperando ⏳" },
-            { id: "ready",   label: "¡Listas! 🎉" },
-            { id: "opened",  label: "Abiertas 📭" },
+            { id: "waiting", label: "Esperando" },
+            { id: "ready",   label: "¡Listas!" },
+            { id: "opened",  label: "Abiertas" },
           ] as { id: CapsuleFilter; label: string }[]).map((f) => (
             <button
               key={f.id}
@@ -375,12 +376,12 @@ export function TimeCapsuleApp({ onBack }: Props) {
               padding: "0.75rem 1rem",
               display: "flex", alignItems: "center", gap: "0.75rem",
             }}>
-              <span style={{ fontSize: "1.5rem" }}>📬</span>
+              <MailOpen size={24} color="var(--primary)" />
               <div>
                 <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)" }}>
                   {readyCount === 1 ? "¡Tienes una cápsula lista!" : `¡Tienes ${readyCount} cápsulas listas!`}
                 </p>
-                <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>Toca para abrir 💎</p>
+                <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>Toca para abrir</p>
               </div>
             </div>
           )
@@ -390,12 +391,12 @@ export function TimeCapsuleApp({ onBack }: Props) {
           <PhoneLoader />
         ) : filteredCapsules.length === 0 ? (
           <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
-            <div className="animate-bounce-slow" style={{ fontSize: "2.25rem" }}>⏳</div>
+            <div className="animate-bounce-slow"><Timer size={36} color="var(--primary)" /></div>
             <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--foreground)" }}>
               {filter === "all" ? "Sin cápsulas aún" : "Ninguna en esta categoría"}
             </p>
             <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
-              {filter === "all" ? "Guarda un mensaje para el futuro 💌" : "Prueba otro filtro ✨"}
+              {filter === "all" ? "Guarda un mensaje para el futuro" : "Prueba otro filtro"}
             </p>
           </div>
         ) : (
@@ -426,9 +427,9 @@ export function TimeCapsuleApp({ onBack }: Props) {
                 >
                   {/* Icon / ring */}
                   {c.is_opened ? (
-                    <span style={{ fontSize: "1.75rem", flexShrink: 0 }}>📭</span>
+                    <div style={{ flexShrink: 0, opacity: 0.5 }}><MailOpen size={28} color="var(--foreground-muted)" /></div>
                   ) : canOpen ? (
-                    <span className="animate-glow-pulse" style={{ fontSize: "1.875rem", flexShrink: 0 }}>📬</span>
+                    <div className="animate-glow-pulse" style={{ flexShrink: 0 }}><MailOpen size={30} color="var(--primary)" /></div>
                   ) : (
                     /* Mini countdown ring */
                     <div style={{ position: "relative", width: 36, height: 36, flexShrink: 0 }}>
@@ -456,18 +457,18 @@ export function TimeCapsuleApp({ onBack }: Props) {
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => handleOpen(c)}>
                     <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>
-                      {t?.icon} {t?.label}
+                      {t && <t.Icon size={14} color={t.color} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />}{t?.label}
                     </div>
                     <div style={{ fontSize: "0.6875rem", color: canOpen && !c.is_opened ? "var(--primary)" : "var(--foreground-muted)", fontWeight: canOpen && !c.is_opened ? 700 : 400 }}>
                       {c.is_opened
                         ? `Abierta el ${formatDate(c.unlock_date)}`
                         : canOpen
-                        ? "¡Lista para abrir! ✨"
+                        ? "¡Lista para abrir!"
                         : `Se abre en ${days} día${days !== 1 ? "s" : ""}`}
                     </div>
                     {canOpen && !c.is_opened && (
                       <div style={{ fontSize: "0.625rem", fontWeight: 700, color: "#059669", marginTop: "0.125rem" }}>
-                        ¡Ábrela! ✨
+                        ¡Ábrela!
                       </div>
                     )}
                   </div>
@@ -477,8 +478,8 @@ export function TimeCapsuleApp({ onBack }: Props) {
                     <div style={{ display: "flex", flexDirection: "column", gap: "2px", flexShrink: 0 }}>
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditingId(c.id); setEditMessage(c.message); setEditDate(c.unlock_date) }}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "4px", fontSize: "0.75rem" }}
-                      >✏️</button>
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "4px", display: "flex", alignItems: "center" }}
+                      ><Pencil size={13} /></button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
                         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "4px", display: "flex", alignItems: "center", opacity: 0.6 }}
@@ -524,7 +525,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
         )}
 
         <button className="btn btn-primary" onClick={() => setView("create")}>
-          ✨ Crear Cápsula
+          Crear Cápsula
         </button>
       </div>
     </>

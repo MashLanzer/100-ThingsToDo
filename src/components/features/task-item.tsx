@@ -1,14 +1,21 @@
 "use client"
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
-import { KAWAII_ICONS } from "@/types"
 import type { Task } from "@/types"
-import { Trash2, Check, GripVertical } from "lucide-react"
+import { Trash2, Check, GripVertical, Heart, Flame, Laugh, Star, ThumbsUp, AlertTriangle, Calendar, CheckCircle2, Sparkles, Edit2 } from "lucide-react"
+import { KawaiiIcon } from "@/components/ui/kawaii-icon"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 
 const REACTION_EMOJIS = ["❤️", "🔥", "😂", "⭐", "👏"]
+const REACTION_ICONS: Record<string, React.ReactNode> = {
+  "❤️": <Heart size={12} />,
+  "🔥": <Flame size={12} />,
+  "😂": <Laugh size={12} />,
+  "⭐": <Star size={12} />,
+  "👏": <ThumbsUp size={12} />,
+}
 
 interface Reaction {
   id: string
@@ -42,7 +49,6 @@ async function authFetch(path: string, init?: RequestInit) {
 }
 
 export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Props) {
-  const emoji = KAWAII_ICONS[task.icon] ?? task.icon
   const [popping, setPopping] = useState(false)
   const [sparkle, setSparkle] = useState(false)
   const [swipeX, setSwipeX] = useState(0)
@@ -207,8 +213,8 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
           >
             {task.completed && <Check size={13} color="white" strokeWidth={3} />}
             {sparkle && (
-              <span className="animate-sparkle" style={{ top: "-8px", left: "50%", transform: "translateX(-50%)" }}>
-                ✨
+              <span className="animate-sparkle" style={{ top: "-8px", left: "50%", transform: "translateX(-50%)", display: "flex" }}>
+                <Sparkles size={12} />
               </span>
             )}
           </button>
@@ -224,9 +230,8 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
-            fontSize: "1.125rem",
           }}>
-            {emoji}
+            <KawaiiIcon name={task.icon} size={18} color={task.completed ? "white" : "var(--primary)"} />
           </div>
 
           <span
@@ -242,8 +247,8 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
           >
             {task.title}
             {task.completed && task.completed_by_name && (
-              <span style={{ display: "block", fontSize: "0.625rem", color: "var(--foreground-muted)", fontWeight: 400, textDecoration: "none" }}>
-                ✅ {task.completed_by_name}
+              <span style={{ display: "flex", alignItems: "center", gap: "3px", fontSize: "0.625rem", color: "var(--foreground-muted)", fontWeight: 400, textDecoration: "none" }}>
+                <CheckCircle2 size={10} style={{ flexShrink: 0 }} /> {task.completed_by_name}
               </span>
             )}
             {task.notes && (
@@ -256,15 +261,15 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
               const diffDays = Math.ceil((new Date(task.due_date).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24))
               let badge: React.ReactNode
               if (task.due_date < today) {
-                badge = <span style={{ display: "inline-block", fontSize: "0.5625rem", background: "#fef2f2", color: "#dc2626", borderRadius: "4px", padding: "1px 5px", fontWeight: 600, marginTop: "2px", textDecoration: "none" }}>⚠️ Vencida</span>
+                badge = <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.5625rem", background: "#fef2f2", color: "#dc2626", borderRadius: "4px", padding: "1px 5px", fontWeight: 600, marginTop: "2px", textDecoration: "none" }}><AlertTriangle size={9} /> Vencida</span>
               } else if (task.due_date === today) {
-                badge = <span style={{ display: "inline-block", fontSize: "0.5625rem", background: "#fff7ed", color: "#ea580c", borderRadius: "4px", padding: "1px 5px", fontWeight: 600, marginTop: "2px", textDecoration: "none" }}>📅 Hoy</span>
+                badge = <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.5625rem", background: "#fff7ed", color: "#ea580c", borderRadius: "4px", padding: "1px 5px", fontWeight: 600, marginTop: "2px", textDecoration: "none" }}><Calendar size={9} /> Hoy</span>
               } else if (diffDays <= 3) {
-                badge = <span style={{ display: "inline-block", fontSize: "0.5625rem", background: "#fefce8", color: "#ca8a04", borderRadius: "4px", padding: "1px 5px", fontWeight: 600, marginTop: "2px", textDecoration: "none" }}>📅 En {diffDays} días</span>
+                badge = <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.5625rem", background: "#fefce8", color: "#ca8a04", borderRadius: "4px", padding: "1px 5px", fontWeight: 600, marginTop: "2px", textDecoration: "none" }}><Calendar size={9} /> En {diffDays} días</span>
               } else {
                 const [y, m, d] = task.due_date.split("-")
                 void y
-                badge = <span style={{ display: "inline-block", fontSize: "0.5625rem", background: "var(--muted)", color: "var(--foreground-muted)", borderRadius: "4px", padding: "1px 5px", fontWeight: 600, marginTop: "2px", textDecoration: "none" }}>📅 {d}/{m}</span>
+                badge = <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.5625rem", background: "var(--muted)", color: "var(--foreground-muted)", borderRadius: "4px", padding: "1px 5px", fontWeight: 600, marginTop: "2px", textDecoration: "none" }}><Calendar size={9} /> {d}/{m}</span>
               }
               return <span style={{ display: "block" }}>{badge}</span>
             })()}
@@ -274,9 +279,9 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
           {onEdit && (
             <button
               onClick={onEdit}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: "3px 4px", color: "var(--foreground-muted)", fontSize: "0.75rem", lineHeight: 1, flexShrink: 0 }}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "3px 4px", color: "var(--foreground-muted)", lineHeight: 1, flexShrink: 0, display: "flex", alignItems: "center" }}
               title="Editar tarea"
-            >✏️</button>
+            ><Edit2 size={14} /></button>
           )}
         </div>
       </div>
@@ -311,7 +316,7 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
             }}
             title={mine ? "Quitar reacción" : "Reaccionar"}
           >
-            {emojiChar} <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>{count}</span>
+            {REACTION_ICONS[emojiChar] ?? emojiChar} <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>{count}</span>
           </button>
         ))}
 
@@ -355,15 +360,17 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
                   style={{
                     background: "none",
                     border: "none",
-                    fontSize: "1.1rem",
                     cursor: "pointer",
-                    padding: "2px",
+                    padding: "4px",
                     borderRadius: "6px",
                     transition: "transform 0.1s",
+                    display: "flex",
+                    alignItems: "center",
+                    color: "var(--foreground)",
                   }}
                   title={e}
                 >
-                  {e}
+                  {REACTION_ICONS[e] ?? e}
                 </button>
               ))}
             </div>

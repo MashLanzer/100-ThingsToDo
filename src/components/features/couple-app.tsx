@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useCoupleStatus, useLinkPartner, useUnlinkPartner } from "@/hooks/use-couple"
 import { toast } from "sonner"
-import { Copy, Check } from "lucide-react"
+import { Copy, Check, Heart, Users, Sparkles } from "lucide-react"
 
 interface Props { onBack: () => void }
 
@@ -28,7 +28,7 @@ export function CoupleApp({ onBack }: Props) {
     }
     try {
       await linkMutation.mutateAsync(code.trim().toUpperCase())
-      toast.success("¡Pareja vinculada! 💕")
+      toast.success("¡Pareja vinculada!")
       setCode("")
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error al vincular")
@@ -49,7 +49,7 @@ export function CoupleApp({ onBack }: Props) {
     <>
       <div className="app-content-header">
         <button className="back-btn-phone" onClick={onBack}>‹</button>
-        <span>💕 Mi Pareja</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Heart size={14} /> Mi Pareja</span>
       </div>
       <div className="app-content-body">
         {isLoading ? (
@@ -60,7 +60,7 @@ export function CoupleApp({ onBack }: Props) {
           </div>
         ) : data?.couple ? (
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>💏</div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.5rem" }}><Users size={40} color="var(--primary)" /></div>
             <h3 style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)", marginBottom: "0.25rem" }}>
               Vinculado con
             </h3>
@@ -74,7 +74,7 @@ export function CoupleApp({ onBack }: Props) {
               background: "var(--mint)", borderRadius: "var(--radius-md)", padding: "0.625rem",
               marginBottom: "1.25rem", fontSize: "0.8125rem", color: "#065F46",
             }}>
-              ✨ ¡Compartiendo planes juntos!
+              <Sparkles size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> ¡Compartiendo planes juntos!
             </div>
             <button
               className="btn btn-outline btn-danger"

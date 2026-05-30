@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { usePlans, useCreatePlan } from "@/hooks/use-plans"
 import { useCoupleStatus } from "@/hooks/use-couple"
 import { PlanCard } from "@/components/features/plan-card"
 import { useAppStore } from "@/stores/app-store"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
-import { Plus, X, Trash2, Search, GripVertical } from "lucide-react"
+import { Plus, X, Trash2, Search, GripVertical, Clock, TrendingUp, TrendingDown, Tag, Image, Calendar, Heart, Mail, CheckCircle2, ClipboardList } from "lucide-react"
 import { toast } from "sonner"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import type { Plan } from "@/types"
@@ -281,37 +281,27 @@ export default function DashboardPage() {
             border: "1px solid var(--primary-light)",
           }}
         >
-          {/* Decorative hearts background */}
-          <div aria-hidden style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden", opacity: 0.18, fontSize: "1.25rem", lineHeight: 1 }}>
-            {["💕","💕","💕","💕","💕","💕","💕","💕","💕","💕","💕","💕"].map((h, i) => (
-              <span key={i} style={{
-                position: "absolute",
-                left: `${(i * 17 + 3) % 100}%`,
-                top: `${(i * 23 + 5) % 100}%`,
-                transform: `rotate(${i * 30}deg)`,
-                fontSize: i % 3 === 0 ? "1rem" : "0.75rem",
-              }}>{h}</span>
-            ))}
+          <div className="animate-bounce-slow" style={{ flexShrink: 0, position: "relative", color: "var(--primary)" }}>
+            <Mail size={32} />
           </div>
-          <div className="animate-bounce-slow" style={{ fontSize: "2rem", flexShrink: 0, position: "relative" }}>💌</div>
           <div style={{ flex: 1, position: "relative" }}>
             <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--foreground)", marginBottom: "0.125rem" }}>
               ¡Conecta con tu pareja!
             </h3>
             <p style={{ fontSize: "0.8125rem", color: "var(--foreground-light)" }}>
-              Comparte vuestro código y empezad a crear recuerdos juntos 💕
+              Comparte vuestro código y empezad a crear recuerdos juntos
             </p>
           </div>
           <button className="btn btn-primary" style={{ flexShrink: 0, fontSize: "0.8125rem", position: "relative" }} onClick={openCoupleModal}>
-            Vincular 💕
+            <Heart size={14} /> Vincular
           </button>
         </div>
       )}
 
       {/* Actions */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-        <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)" }}>
-          Nuestros Planes 📋
+        <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <ClipboardList size={20} /> Nuestros Planes
         </h1>
         <button
           className="btn btn-primary"
@@ -355,9 +345,12 @@ export default function DashboardPage() {
               background: activeTagFilter === null ? "var(--secondary)" : "var(--muted)",
               color: activeTagFilter === null ? "white" : "var(--foreground-muted)",
               transition: "background 0.15s, color 0.15s",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
             }}
           >
-            🏷️ Todos
+            <Tag size={11} /> Todos
           </button>
           {allTags.map((tag) => (
             <button
@@ -388,11 +381,11 @@ export default function DashboardPage() {
           {/* Scrollable sort pills */}
           <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", flex: 1, paddingBottom: "2px", scrollbarWidth: "none" }}>
             {([
-              { key: "newest", label: "🕐 Recientes" },
-              { key: "oldest", label: "🕐 Antiguos" },
-              { key: "progress_desc", label: "📈 Más progreso" },
-              { key: "progress_asc", label: "📉 Menos progreso" },
-            ] as { key: SortBy; label: string }[]).map(({ key, label }) => (
+              { key: "newest", Icon: Clock, label: "Recientes" },
+              { key: "oldest", Icon: Clock, label: "Antiguos" },
+              { key: "progress_desc", Icon: TrendingUp, label: "Más progreso" },
+              { key: "progress_asc", Icon: TrendingDown, label: "Menos progreso" },
+            ] as { key: SortBy; Icon: React.FC<{size?: number}>; label: string }[]).map(({ key, Icon, label }) => (
               <button
                 key={key}
                 onClick={() => { setSortBy(key); setLocalPlanOrder(null) }}
@@ -409,9 +402,12 @@ export default function DashboardPage() {
                   background: sortBy === key ? "var(--primary)" : "var(--muted)",
                   color: sortBy === key ? "white" : "var(--foreground-muted)",
                   transition: "background 0.15s, color 0.15s",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
                 }}
               >
-                {label}
+                <Icon size={11} /> {label}
               </button>
             ))}
           </div>
@@ -419,7 +415,7 @@ export default function DashboardPage() {
           <div style={{ display: "flex", borderRadius: "999px", border: "1px solid var(--border)", overflow: "hidden", flexShrink: 0 }}>
             {([
               { key: "grid", icon: "▦", title: "Vista planes" },
-              { key: "calendar", icon: "📅", title: "Vista calendario" },
+              { key: "calendar", icon: "Cal", title: "Vista calendario" },
             ] as { key: "grid" | "calendar"; icon: string; title: string }[]).map(({ key, icon, title }) => (
               <button
                 key={key}
@@ -468,8 +464,8 @@ export default function DashboardPage() {
               onChange={(e) => setDesc(e.target.value)}
             />
             <div>
-              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "block", marginBottom: "0.25rem" }}>
-                🖼️ URL de portada (opcional)
+              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
+                <Image size={13} /> URL de portada (opcional)
               </label>
               <input
                 className="input"
@@ -486,8 +482,8 @@ export default function DashboardPage() {
               )}
             </div>
             <div>
-              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "block", marginBottom: "0.25rem" }}>
-                📅 Fecha objetivo (opcional)
+              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
+                <Calendar size={13} /> Fecha objetivo (opcional)
               </label>
               <input
                 className="input"
@@ -497,8 +493,8 @@ export default function DashboardPage() {
               />
             </div>
             <div>
-              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "block", marginBottom: "0.25rem" }}>
-                🏷️ Etiquetas
+              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
+                <Tag size={13} /> Etiquetas
               </label>
               <div style={{ display: "flex", gap: "0.375rem" }}>
                 <input
@@ -566,8 +562,8 @@ export default function DashboardPage() {
           </div>
         ) : !hasAnyPlans || noResults ? (
           <div className="empty-state">
-            <div className="empty-icon animate-bounce-slow">
-              {hasCouple ? "💝" : "💌"}
+            <div className="empty-icon animate-bounce-slow" style={{ color: "var(--primary)" }}>
+              {hasCouple ? <Heart size={48} /> : <Mail size={48} />}
             </div>
             <h2 className="empty-title" style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem" }}>
               {hasCouple ? "¡Sin planes aún!" : "¡Conecta con tu pareja!"}
@@ -576,12 +572,12 @@ export default function DashboardPage() {
               {searchQuery.trim()
                 ? "No hay planes que coincidan con tu búsqueda"
                 : hasCouple
-                ? "Crea vuestro primer plan romántico y empieza la aventura juntos ✨"
-                : "Vincula a tu pareja para empezar a crear recuerdos juntos 💕"}
+                ? "Crea vuestro primer plan romántico y empieza la aventura juntos"
+                : "Vincula a tu pareja para empezar a crear recuerdos juntos"}
             </p>
             {hasCouple && (
               <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => setShowForm(true)}>
-                ✨ Crear primer plan
+                <Plus size={16} /> Crear primer plan
               </button>
             )}
           </div>
@@ -613,7 +609,7 @@ export default function DashboardPage() {
                     marginBottom: showArchived ? "0.75rem" : 0,
                   }}
                 >
-                  <span>✅ Completados</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><CheckCircle2 size={14} /> Completados</span>
                   <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
                     {filteredArchived.length} {showArchived ? "▲" : "▼"}
                   </span>
@@ -631,7 +627,7 @@ export default function DashboardPage() {
             {/* If no active plans but only archived */}
             {filteredActive.length === 0 && filteredArchived.length === 0 && searchQuery.trim() && (
               <div className="empty-state">
-                <div className="empty-icon animate-bounce-slow">🔍</div>
+                <div className="empty-icon animate-bounce-slow" style={{ color: "var(--foreground-muted)" }}><Search size={48} /></div>
                 <p className="empty-text">No hay planes que coincidan con tu búsqueda</p>
               </div>
             )}

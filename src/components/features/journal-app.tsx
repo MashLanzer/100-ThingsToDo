@@ -5,15 +5,27 @@ import { getFirebaseAuth } from "@/lib/firebase/client"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import type { JournalEntry } from "@/types"
+import { Lock, Unlock, Flame, Smile, Heart, Laugh, Frown, Meh, Moon, User, Camera, Mail, FileText, CheckCircle2, PenLine, Search as SearchIcon } from "lucide-react"
 
 const MOODS = [
-  { id: "happy",    emoji: "😊", label: "Feliz",       accent: "#FEF3C7", accentBorder: "#F59E0B", accentText: "#92400E" },
-  { id: "love",     emoji: "🥰", label: "Enamorado/a", accent: "#FCE7F3", accentBorder: "#EC4899", accentText: "#9D174D" },
-  { id: "fun",      emoji: "😄", label: "Divertido",   accent: "#FED7AA", accentBorder: "#F97316", accentText: "#7C2D12" },
-  { id: "romantic", emoji: "💕", label: "Romántico",   accent: "#FFE4E6", accentBorder: "#F43F5E", accentText: "#881337" },
-  { id: "chill",    emoji: "😌", label: "Tranquilo",   accent: "#E0F2FE", accentBorder: "#0284C7", accentText: "#075985" },
-  { id: "sad",      emoji: "😢", label: "Triste",      accent: "#DBEAFE", accentBorder: "#3B82F6", accentText: "#1E40AF" },
+  { id: "happy",    Icon: Smile,  label: "Feliz",       accent: "#FEF3C7", accentBorder: "#F59E0B", accentText: "#92400E" },
+  { id: "love",     Icon: Heart,  label: "Enamorado/a", accent: "#FCE7F3", accentBorder: "#EC4899", accentText: "#9D174D" },
+  { id: "fun",      Icon: Laugh,  label: "Divertido",   accent: "#FED7AA", accentBorder: "#F97316", accentText: "#7C2D12" },
+  { id: "romantic", Icon: Heart,  label: "Romántico",   accent: "#FFE4E6", accentBorder: "#F43F5E", accentText: "#881337" },
+  { id: "chill",    Icon: Meh,    label: "Tranquilo",   accent: "#E0F2FE", accentBorder: "#0284C7", accentText: "#075985" },
+  { id: "sad",      Icon: Frown,  label: "Triste",      accent: "#DBEAFE", accentBorder: "#3B82F6", accentText: "#1E40AF" },
 ]
+
+// Mood emoji to id mapping (for DB storage backward compat — kept as-is)
+const MOOD_EMOJI_TO_ID: Record<string, string> = {
+  "😊": "happy", "🥰": "love", "😄": "fun", "💕": "romantic", "😌": "chill", "😢": "sad",
+}
+
+function getMoodById(idOrEmoji: string | null | undefined) {
+  if (!idOrEmoji) return null
+  const mapped = MOOD_EMOJI_TO_ID[idOrEmoji] ?? idOrEmoji
+  return MOODS.find(m => m.id === mapped) ?? null
+}
 
 function readJournalSettings() {
   try {
@@ -260,12 +272,12 @@ export function JournalApp({ onBack }: Props) {
         `}</style>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={onBack}>‹</button>
-          <span>Diario Privado 🔐</span>
+          <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Lock size={16} /> Diario Privado</span>
         </div>
         <div className="app-content-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1.5rem", paddingTop: "2rem" }}>
           {/* Lock icon */}
-          <div style={{ fontSize: "3.5rem", animation: pinSuccess ? "pinPop 0.5s ease" : undefined }}>
-            {pinSuccess ? "✨" : "🔐"}
+          <div style={{ animation: pinSuccess ? "pinPop 0.5s ease" : undefined, color: pinSuccess ? "#10b981" : "var(--primary)" }}>
+            {pinSuccess ? <Unlock size={56} /> : <Lock size={56} />}
           </div>
           <div style={{ textAlign: "center" }}>
             <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.25rem" }}>
@@ -419,7 +431,7 @@ export function JournalApp({ onBack }: Props) {
     // If private journal mode and I haven't written yet: don't show partner entry
     const partnerVisible = partnerEntry && !(privateJournal && !selectedEntry)
     const displayEntry = showPartnerEntry ? partnerEntry : selectedEntry
-    const displayMood = displayEntry ? MOODS.find((m) => m.id === displayEntry.mood) : null
+    const displayMood = displayEntry ? getMoodById(displayEntry.mood) : null
 
     return (
       <>
@@ -452,7 +464,7 @@ export function JournalApp({ onBack }: Props) {
 
           {displayMood && (
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-              <span style={{ fontSize: "1.5rem" }}>{displayMood.emoji}</span>
+              <span style={{ color: "var(--primary)" }}><displayMood.Icon size={24} /></span>
               <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground-light)" }}>{displayMood.label}</span>
               {showPartnerEntry && (
                 <span style={{ marginLeft: "auto", fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", background: "var(--muted)", padding: "0.125rem 0.5rem", borderRadius: "999px" }}>
@@ -476,8 +488,8 @@ export function JournalApp({ onBack }: Props) {
           )}
 
           {!showPartnerEntry && (
-            <button className="btn btn-outline" style={{ marginTop: "1rem", fontSize: "0.8125rem" }} onClick={() => startEdit(selectedEntry)}>
-              ✏️ Editar entrada
+            <button className="btn btn-outline" style={{ marginTop: "1rem", fontSize: "0.8125rem", display: "inline-flex", alignItems: "center", gap: "0.375rem" }} onClick={() => startEdit(selectedEntry)}>
+              <FileText size={14} /> Editar entrada
             </button>
           )}
 
@@ -491,12 +503,12 @@ export function JournalApp({ onBack }: Props) {
                 </span>
               </div>
               {(() => {
-                const pm = MOODS.find((m) => m.id === partnerEntry?.mood)
+                const pm = getMoodById(partnerEntry?.mood)
                 return (
                   <>
                     {pm && (
                       <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.375rem" }}>
-                        <span style={{ fontSize: "1.25rem" }}>{pm.emoji}</span>
+                        <span style={{ color: "var(--primary)" }}><pm.Icon size={20} /></span>
                         <span style={{ fontSize: "0.75rem", color: "var(--foreground-light)" }}>{pm.label}</span>
                       </div>
                     )}
@@ -527,7 +539,7 @@ export function JournalApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => { setIsEditing(false); setView(selectedEntry ? "read" : "calendar") }}>‹</button>
-          <span>{isEditing ? "✏️ Editando" : "✍️ Nueva entrada"}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>{isEditing ? <><FileText size={14} /> Editando</> : <><PenLine size={14} /> Nueva entrada</>}</span>
         </div>
         <div className="app-content-body">
           <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.375rem" }}>{selectedDate}</p>
@@ -547,10 +559,11 @@ export function JournalApp({ onBack }: Props) {
                     boxShadow: isSelected ? `0 2px 8px ${m.accentBorder}33` : "none",
                     transform: isSelected ? "scale(1.03)" : "scale(1)",
                     transition: "all 0.15s ease",
+                    color: isSelected ? m.accentText : "var(--foreground-light)",
                   }}
                 >
-                  <span style={{ fontSize: "1.75rem", lineHeight: 1 }}>{m.emoji}</span>
-                  <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: isSelected ? m.accentText : "var(--foreground-light)" }}>{m.label}</span>
+                  <m.Icon size={28} />
+                  <span style={{ fontSize: "0.6875rem", fontWeight: 700 }}>{m.label}</span>
                 </button>
               )
             })}
@@ -558,7 +571,7 @@ export function JournalApp({ onBack }: Props) {
 
           {/* Feature 11: photo URL input */}
           <div style={{ marginTop: "0.625rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "block", marginBottom: "0.375rem" }}>📸 Fotos (URL)</label>
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Camera size={14} /> Fotos (URL)</label>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <input className="input" placeholder="https://..." value={photoInput} onChange={(e) => setPhotoInput(e.target.value)} style={{ flex: 1 }} />
               <button className="btn btn-outline" style={{ flexShrink: 0, padding: "0 0.75rem" }} onClick={() => {
@@ -592,7 +605,7 @@ export function JournalApp({ onBack }: Props) {
             style={{ minHeight: "120px", marginTop: "0.625rem" }}
           />
           <button className="btn btn-primary" style={{ marginTop: "0.5rem" }} onClick={saveEntry} disabled={saving || !writeContent.trim()}>
-            {saving ? "Guardando..." : isEditing ? "💾 Actualizar entrada" : "Guardar Recuerdo 💕"}
+            {saving ? "Guardando..." : isEditing ? "Actualizar entrada" : "Guardar Recuerdo"}
           </button>
         </div>
       </>
@@ -604,7 +617,7 @@ export function JournalApp({ onBack }: Props) {
     <>
       <div className="app-content-header">
         <button className="back-btn-phone" onClick={onBack}>‹</button>
-        <span>Nuestro Diario 💕</span>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Heart size={14} /> Nuestro Diario</span>
         {/* Feature 12: partner view toggle - only show if not privateJournal */}
         {!privateJournal && (
           <button
@@ -614,9 +627,10 @@ export function JournalApp({ onBack }: Props) {
               background: viewingPartner ? "var(--secondary)" : "var(--muted)",
               color: viewingPartner ? "white" : "var(--foreground-muted)",
               cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
+              display: "inline-flex", alignItems: "center", gap: "4px",
             }}
           >
-            {viewingPartner ? "💕 Pareja" : "👤 Pareja"}
+            {viewingPartner ? <><Heart size={12} /> Pareja</> : <><User size={12} /> Pareja</>}
           </button>
         )}
       </div>
@@ -641,7 +655,7 @@ export function JournalApp({ onBack }: Props) {
                 fontSize: "1rem", fontWeight: 700,
                 color: streak > 0 ? "white" : "var(--foreground-muted)",
               }}>
-                {streak > 0 ? `🔥 ${streak} día${streak === 1 ? "" : "s"} de racha juntos` : "💌 Escribe hoy para empezar la racha"}
+                {streak > 0 ? <><Flame size={16} style={{ flexShrink: 0 }} /> {streak} día{streak === 1 ? "" : "s"} de racha juntos</> : <><Mail size={16} style={{ flexShrink: 0 }} /> Escribe hoy para empezar la racha</>}
               </span>
             </div>
 
@@ -654,9 +668,9 @@ export function JournalApp({ onBack }: Props) {
                 padding: todayStatus !== "none" ? "0.125rem 0.625rem" : undefined,
                 borderRadius: "999px",
               }}>
-                {todayStatus === "both" && "✅ Los dos escribieron hoy"}
-                {todayStatus === "onlyme" && "📝 Solo tú escribiste hoy"}
-                {todayStatus === "none" && "💌 Ninguno ha escrito hoy"}
+                {todayStatus === "both" && <><CheckCircle2 size={12} style={{ display: "inline", verticalAlign: "middle" }} /> Los dos escribieron hoy</>}
+                {todayStatus === "onlyme" && <><FileText size={12} style={{ display: "inline", verticalAlign: "middle" }} /> Solo tú escribiste hoy</>}
+                {todayStatus === "none" && <><Mail size={12} style={{ display: "inline", verticalAlign: "middle" }} /> Ninguno ha escrito hoy</>}
               </span>
             </div>
           </div>
@@ -665,14 +679,14 @@ export function JournalApp({ onBack }: Props) {
         {/* Feature 12: partner view */}
         {viewingPartner ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", textAlign: "center" }}>Entradas de tu pareja 💕</p>
+            <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}><Heart size={12} /> Entradas de tu pareja</p>
             {entries
               .filter(e => e.created_by !== user?.uid)
               .sort((a, b) => b.date.localeCompare(a.date))
               .map(e => (
                 <button key={e.id} onClick={() => { setSelectedDate(e.date); setViewingPartner(false) }}
                   style={{ textAlign: "left", background: "linear-gradient(135deg, var(--primary-lighter), white)", border: "1px solid var(--primary-light)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
-                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem" }}>{e.date} 💕</div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>{e.date} <Heart size={10} /></div>
                   <div style={{ fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                     {e.content}
                   </div>
@@ -681,7 +695,7 @@ export function JournalApp({ onBack }: Props) {
             }
             {entries.filter(e => e.created_by !== user?.uid).length === 0 && (
               <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
-                <div style={{ fontSize: "2rem" }}>💕</div>
+                <div style={{ color: "var(--primary)", display: "flex", justifyContent: "center" }}><Heart size={32} /></div>
                 <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginTop: "0.375rem" }}>Tu pareja aún no ha escrito</p>
               </div>
             )}
@@ -690,7 +704,7 @@ export function JournalApp({ onBack }: Props) {
           <>
             {/* Feature 10: search bar */}
             <div style={{ position: "relative", marginBottom: "0.75rem" }}>
-              <span style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", fontSize: "0.875rem", pointerEvents: "none" }}>🔍</span>
+              <span style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--foreground-muted)" }}><SearchIcon size={14} /></span>
               <input className="input" type="search" placeholder="Buscar en el diario..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ paddingLeft: "2rem" }} />
             </div>
 

@@ -6,6 +6,7 @@ import { useAppStore } from "@/stores/app-store"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useState, useEffect } from "react"
+import { Heart, HeartCrack } from "lucide-react"
 
 function LogoutDialog({ onConfirm, onCancel, loading }: { onConfirm: () => void; onCancel: () => void; loading: boolean }) {
   return (
@@ -25,12 +26,12 @@ function LogoutDialog({ onConfirm, onCancel, loading }: { onConfirm: () => void;
           padding: "2rem 1.75rem", width: "100%", maxWidth: "320px", textAlign: "center",
         }}
       >
-        <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>💔</div>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.75rem" }}><HeartCrack size={48} color="#8B5CF6" /></div>
         <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "#2D1B3E", marginBottom: "0.5rem" }}>
           ¿Nos vamos?
         </h2>
         <p style={{ fontSize: "0.875rem", color: "#6B5B7E", lineHeight: 1.5, marginBottom: "1.5rem" }}>
-          ¿Seguro que quieres cerrar sesión? Te echaremos de menos 💜
+          ¿Seguro que quieres cerrar sesión? Te echaremos de menos
         </p>
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button
@@ -42,7 +43,7 @@ function LogoutDialog({ onConfirm, onCancel, loading }: { onConfirm: () => void;
               color: "#7C3AED", cursor: "pointer",
             }}
           >
-            Quedarme 💕
+            <Heart size={14} style={{ marginRight: 4, display: "inline", verticalAlign: "middle" }} /> Quedarme
           </button>
           <button
             onClick={onConfirm}

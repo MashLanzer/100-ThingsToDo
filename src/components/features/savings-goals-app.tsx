@@ -7,6 +7,30 @@ import type { SavingsGoal } from "@/types"
 import { PhoneLoader } from "@/components/features/phone-loader"
 import { formatDate } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
+import { Plane, Home, Car, Gem, Baby, GraduationCap, Laptop, Umbrella, Target, Wallet, Moon, Tent, Gift, PiggyBank, Sparkles, Trash2, Pencil, ClipboardList } from "lucide-react"
+import type { LucideProps } from "lucide-react"
+
+type GoalIcon = { key: string; Icon: React.FC<LucideProps>; label: string }
+const GOAL_ICONS: GoalIcon[] = [
+  { key: "piggy",   Icon: PiggyBank,     label: "Alcancía" },
+  { key: "travel",  Icon: Plane,         label: "Viaje" },
+  { key: "home",    Icon: Home,          label: "Casa" },
+  { key: "car",     Icon: Car,           label: "Auto" },
+  { key: "ring",    Icon: Gem,           label: "Anillo" },
+  { key: "baby",    Icon: Baby,          label: "Bebé" },
+  { key: "school",  Icon: GraduationCap, label: "Educación" },
+  { key: "laptop",  Icon: Laptop,        label: "Tecnología" },
+  { key: "beach",   Icon: Umbrella,      label: "Playa" },
+  { key: "goal",    Icon: Target,        label: "Meta" },
+  { key: "savings", Icon: Wallet,        label: "Ahorros" },
+  { key: "moon",    Icon: Moon,          label: "Sueño" },
+  { key: "camp",    Icon: Tent,          label: "Camping" },
+  { key: "gift",    Icon: Gift,          label: "Regalo" },
+  { key: "other",   Icon: Sparkles,      label: "Otro" },
+]
+function getGoalIcon(key: string | undefined): React.FC<LucideProps> {
+  return GOAL_ICONS.find(g => g.key === key)?.Icon ?? PiggyBank
+}
 
 interface Contribution { id: string; amount: number; contributed_by: string; created_at: string }
 interface Props { onBack: () => void }
@@ -26,10 +50,8 @@ export function SavingsGoalsApp({ onBack }: Props) {
   const [editingGoal, setEditingGoal] = useState(false)
   const [editGoalName, setEditGoalName] = useState("")
   const [editGoalTarget, setEditGoalTarget] = useState("")
-  const [goalEmoji, setGoalEmoji] = useState("🐖")
-  const [editGoalEmoji, setEditGoalEmoji] = useState("🐖")
-
-  const GOAL_EMOJIS = ["🐖", "✈️", "🏠", "🚗", "💍", "👶", "🎓", "💻", "🌴", "🎯", "💰", "🌙", "🏖️", "🎪", "🎁"]
+  const [goalIconKey, setGoalIconKey] = useState("piggy")
+  const [editGoalIconKey, setEditGoalIconKey] = useState("piggy")
 
   useEffect(() => { loadGoals() }, [])
 
@@ -72,12 +94,12 @@ export function SavingsGoalsApp({ onBack }: Props) {
     try {
       await authFetch("/api/goals", {
         method: "POST",
-        body: JSON.stringify({ name: goalName.trim(), target_amount: Number(goalTarget), emoji: goalEmoji }),
+        body: JSON.stringify({ name: goalName.trim(), target_amount: Number(goalTarget), emoji: goalIconKey }),
       })
-      toast.success("Meta creada 💰")
+      toast.success("Meta creada")
       setGoalName("")
       setGoalTarget("")
-      setGoalEmoji("🐖")
+      setGoalIconKey("piggy")
       setView("list")
       loadGoals()
     } catch (e: unknown) {
@@ -102,9 +124,9 @@ export function SavingsGoalsApp({ onBack }: Props) {
         if (g) {
           const newPct = g.target_amount > 0 ? Math.min(100, Math.round(((g.total_saved ?? 0) / g.target_amount) * 100)) : 0
           if (newPct >= 100) {
-            toast.success("¡Meta completada! 🎊🎉")
+            toast.success("¡Meta completada!")
           } else {
-            toast.success(`+$${amount} aportado 🐖`)
+            toast.success(`+$${amount} aportado`)
           }
           setSelected(g)
         }
@@ -121,11 +143,11 @@ export function SavingsGoalsApp({ onBack }: Props) {
     try {
       const updated = await authFetch(`/api/goals/${selected.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name: editGoalName.trim(), target_amount: Number(editGoalTarget), emoji: editGoalEmoji }),
+        body: JSON.stringify({ name: editGoalName.trim(), target_amount: Number(editGoalTarget), emoji: editGoalIconKey }),
       })
       setSelected(updated)
       setEditingGoal(false)
-      toast.success("Meta actualizada ✨")
+      toast.success("Meta actualizada")
       loadGoals()
     } catch { toast.error("Error al actualizar") } finally { setSaving(false) }
   }
@@ -159,7 +181,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("list")}>‹</button>
-          <span>💰 Nueva Meta</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Wallet size={14} /> Nueva Meta</span>
         </div>
         <div className="app-content-body">
           <div className="form-group">
@@ -172,15 +194,15 @@ export function SavingsGoalsApp({ onBack }: Props) {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Emoji de la meta</label>
+            <label className="form-label">Ícono de la meta</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
-              {GOAL_EMOJIS.map(e => (
-                <button key={e} onClick={() => setGoalEmoji(e)} style={{
-                  width: 38, height: 38, borderRadius: "10px", fontSize: "1.25rem",
-                  border: goalEmoji === e ? "2px solid var(--primary)" : "2px solid transparent",
-                  background: goalEmoji === e ? "var(--primary-lighter)" : "var(--muted)",
+              {GOAL_ICONS.map(({ key, Icon }) => (
+                <button key={key} onClick={() => setGoalIconKey(key)} title={key} style={{
+                  width: 38, height: 38, borderRadius: "10px",
+                  border: goalIconKey === key ? "2px solid var(--primary)" : "2px solid transparent",
+                  background: goalIconKey === key ? "var(--primary-lighter)" : "var(--muted)",
                   cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                }}>{e}</button>
+                }}><Icon size={18} color={goalIconKey === key ? "var(--primary)" : "var(--foreground-muted)"} /></button>
               ))}
             </div>
           </div>
@@ -195,7 +217,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
             />
           </div>
           <button className="btn btn-primary" onClick={handleCreate} disabled={saving}>
-            {saving ? "Creando..." : "Empezar a Ahorrar 🐖"}
+            {saving ? "Creando..." : "Empezar a Ahorrar"}
           </button>
         </div>
       </>
@@ -214,11 +236,14 @@ export function SavingsGoalsApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("list")}>‹</button>
-          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected.emoji ?? "🐖"} {selected.name}</span>
+          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
+            {(() => { const Icon = getGoalIcon(selected.emoji); return <Icon size={14} /> })()}
+            {selected.name}
+          </span>
           <button
-            onClick={() => { setEditGoalName(selected.name); setEditGoalTarget(String(selected.target_amount)); setEditGoalEmoji(selected.emoji ?? "🐖"); setEditingGoal(true) }}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "4px", fontSize: "0.875rem", flexShrink: 0 }}
-          >✏️</button>
+            onClick={() => { setEditGoalName(selected.name); setEditGoalTarget(String(selected.target_amount)); setEditGoalIconKey(selected.emoji ?? "piggy"); setEditingGoal(true) }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "4px", display: "flex", alignItems: "center", flexShrink: 0 }}
+          ><Pencil size={14} /></button>
         </div>
 
         {editingGoal && (
@@ -226,13 +251,13 @@ export function SavingsGoalsApp({ onBack }: Props) {
             <input className="input" value={editGoalName} onChange={(e) => setEditGoalName(e.target.value)} placeholder="Nombre" autoFocus />
             <input className="input" type="number" value={editGoalTarget} onChange={(e) => setEditGoalTarget(e.target.value)} placeholder="Objetivo ($)" />
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
-              {GOAL_EMOJIS.map(e => (
-                <button key={e} onClick={() => setEditGoalEmoji(e)} style={{
-                  width: 38, height: 38, borderRadius: "10px", fontSize: "1.25rem",
-                  border: editGoalEmoji === e ? "2px solid var(--primary)" : "2px solid transparent",
-                  background: editGoalEmoji === e ? "var(--primary-lighter)" : "var(--muted)",
+              {GOAL_ICONS.map(({ key, Icon }) => (
+                <button key={key} onClick={() => setEditGoalIconKey(key)} title={key} style={{
+                  width: 38, height: 38, borderRadius: "10px",
+                  border: editGoalIconKey === key ? "2px solid var(--primary)" : "2px solid transparent",
+                  background: editGoalIconKey === key ? "var(--primary-lighter)" : "var(--muted)",
                   cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                }}>{e}</button>
+                }}><Icon size={18} color={editGoalIconKey === key ? "var(--primary)" : "var(--foreground-muted)"} /></button>
               ))}
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -268,20 +293,22 @@ export function SavingsGoalsApp({ onBack }: Props) {
               position: "absolute", inset: 0, display: "flex", flexDirection: "column",
               alignItems: "center", justifyContent: "center", gap: "2px"
             }}>
-              <span style={{ fontSize: isComplete ? "1.75rem" : "0.625rem", lineHeight: 1 }}>
-                {isComplete ? "🎉" : (selected.emoji ?? "🐖")}
-              </span>
-              {!isComplete && (
-                <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--primary)", lineHeight: 1 }}>
-                  {pct}%
-                </span>
+              {isComplete ? (
+                <Sparkles size={28} color="var(--primary)" />
+              ) : (
+                <>
+                  {(() => { const Icon = getGoalIcon(selected.emoji); return <Icon size={18} color="var(--primary)" /> })()}
+                  <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--primary)", lineHeight: 1 }}>
+                    {pct}%
+                  </span>
+                </>
               )}
             </div>
           </div>
 
           <div style={{ textAlign: "center", marginBottom: "0.75rem" }}>
             <p style={{ fontWeight: 700, fontSize: "1.25rem", color: isComplete ? "var(--primary)" : "var(--foreground)", fontFamily: "'Fredoka', sans-serif" }}>
-              {isComplete ? "¡Meta cumplida! 🎊" : selected.name}
+              {isComplete ? "¡Meta cumplida!" : selected.name}
             </p>
             <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>
               <strong style={{ color: "var(--foreground)" }}>${saved.toLocaleString()}</strong>
@@ -312,8 +339,8 @@ export function SavingsGoalsApp({ onBack }: Props) {
 
           {/* Contribution history */}
           <div style={{ width: "100%", marginTop: "0.5rem" }}>
-            <p style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.5rem" }}>
-              📋 Historial de aportaciones
+            <p style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: 4 }}>
+              <ClipboardList size={13} /> Historial de aportaciones
             </p>
             {loadingContribs ? (
               <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", textAlign: "center" }}>Cargando...</p>
@@ -342,7 +369,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
                           onClick={() => handleDeleteContribution(selected.id, c.id)}
                           style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "2px", opacity: 0.6, display: "flex", alignItems: "center" }}
                         >
-                          <span style={{ fontSize: "0.75rem" }}>🗑</span>
+                          <Trash2 size={13} />
                         </button>
                       )}
                     </div>
@@ -358,7 +385,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
             style={{ width: "100%", marginTop: "1rem", color: "#ef4444", borderColor: "#fca5a5", fontSize: "0.8125rem" }}
             onClick={handleDeleteGoal}
           >
-            🗑 Eliminar esta meta
+            <Trash2 size={14} style={{ marginRight: 4 }} /> Eliminar esta meta
           </button>
         </div>
       </>
@@ -369,7 +396,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
     <>
       <div className="app-content-header">
         <button className="back-btn-phone" onClick={onBack}>‹</button>
-        <span>💰 Metas Futuras</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Wallet size={14} /> Metas Futuras</span>
       </div>
       <div className="app-content-body">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", textAlign: "center" }}>
@@ -389,12 +416,12 @@ export function SavingsGoalsApp({ onBack }: Props) {
           <PhoneLoader />
         ) : goals.length === 0 ? (
           <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
-            <div className="animate-bounce-slow" style={{ fontSize: "2.25rem" }}>🐖</div>
+            <div className="animate-bounce-slow"><PiggyBank size={36} color="var(--foreground-muted)" /></div>
             <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--foreground)" }}>
               ¡Empieza a ahorrar!
             </p>
             <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
-              Crea vuestra primera meta juntos 🌟
+              Crea vuestra primera meta juntos
             </p>
           </div>
         ) : (
@@ -446,7 +473,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
                       </svg>
                       <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {isComplete ? (
-                          <span style={{ fontSize: "1rem" }}>🎉</span>
+                          <Sparkles size={14} color="var(--primary)" />
                         ) : (
                           <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.5625rem", fontWeight: 700, color: "var(--primary)", lineHeight: 1 }}>
                             {pct}%
@@ -470,7 +497,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
         )}
 
         <button className="btn btn-primary" onClick={() => setView("create")}>
-          💰 Crear Nueva Meta
+          <Wallet size={16} style={{ marginRight: 6, display: "inline", verticalAlign: "middle" }} /> Crear Nueva Meta
         </button>
       </div>
     </>

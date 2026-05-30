@@ -5,9 +5,9 @@ import { useParams, useRouter } from "next/navigation"
 import { usePlan, useUpdatePlan, useDeletePlan } from "@/hooks/use-plans"
 import { useTasks, useCreateTask, useToggleTask, useDeleteTask, useUpdateTask } from "@/hooks/use-tasks"
 import { TaskItem } from "@/components/features/task-item"
-import { KAWAII_ICONS } from "@/types"
+import { KAWAII_ICON_REGISTRY, KawaiiIcon } from "@/components/ui/kawaii-icon"
 import type { Task } from "@/types"
-import { ArrowLeft, Plus, Edit2, X, Trash2 } from "lucide-react"
+import { ArrowLeft, Plus, Edit2, X, Trash2, Star, Image, Calendar, Tag, Upload, Archive } from "lucide-react"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
@@ -64,7 +64,7 @@ export default function PlanDetailPage() {
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null)
   const displayTasks = localTasks ?? tasks ?? []
 
-  const iconEntries = Object.entries(KAWAII_ICONS)
+  const iconEntries = Object.keys(KAWAII_ICON_REGISTRY)
 
   // DnD sensors — support both pointer (desktop) and touch (mobile)
   const sensors = useSensors(
@@ -317,7 +317,7 @@ export default function PlanDetailPage() {
                 Ícono personalizado
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
-                {iconEntries.map(([key, emoji]) => (
+                {iconEntries.map((key) => (
                   <button
                     key={key}
                     onClick={() => setSelectedIcon(key)}
@@ -327,7 +327,6 @@ export default function PlanDetailPage() {
                       borderRadius: "10px",
                       border: selectedIcon === key ? "2px solid var(--primary)" : "2px solid transparent",
                       background: selectedIcon === key ? "var(--primary-lighter)" : "var(--muted)",
-                      fontSize: "1.125rem",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
@@ -335,7 +334,7 @@ export default function PlanDetailPage() {
                     }}
                     title={key}
                   >
-                    {emoji}
+                    <KawaiiIcon name={key} size={18} color={selectedIcon === key ? "var(--primary)" : "var(--foreground-muted)"} />
                   </button>
                 ))}
               </div>
@@ -356,11 +355,11 @@ export default function PlanDetailPage() {
           </div>
         ) : !tasks || tasks.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-icon animate-bounce-slow">🌟</div>
+            <div className="empty-icon animate-bounce-slow"><Star size={40} color="var(--primary)" /></div>
             <h2 className="empty-title" style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem" }}>¡Sin tareas aún!</h2>
-            <p className="empty-text">Añade vuestra primera tarea y empezad juntos ✨</p>
+            <p className="empty-text">Añade vuestra primera tarea y empezad juntos</p>
             <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => setShowTaskForm(true)}>
-              ➕ Agregar tarea
+              <Plus size={16} /> Agregar tarea
             </button>
           </div>
         ) : (
@@ -392,7 +391,7 @@ export default function PlanDetailPage() {
                 {editingTaskId === task.id && (
                   <div className="card animate-fade-in" style={{ marginBottom: "0.75rem", marginTop: "-0.25rem", borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "2px solid var(--primary-lighter)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.625rem" }}>
-                      <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)" }}>✏️ Editar Tarea</h3>
+                      <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)", display: "flex", alignItems: "center", gap: "0.375rem" }}><Edit2 size={14} /> Editar Tarea</h3>
                       <button className="btn-icon" onClick={() => setEditingTaskId(null)}><X size={14} /></button>
                     </div>
                     <input
@@ -420,7 +419,7 @@ export default function PlanDetailPage() {
                       style={{ marginBottom: "0.625rem" }}
                     />
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.625rem" }}>
-                      {iconEntries.map(([key, emoji]) => (
+                      {iconEntries.map((key) => (
                         <button
                           key={key}
                           onClick={() => setEditTaskIcon(key)}
@@ -428,10 +427,10 @@ export default function PlanDetailPage() {
                             width: "32px", height: "32px", borderRadius: "8px",
                             border: editTaskIcon === key ? "2px solid var(--primary)" : "2px solid transparent",
                             background: editTaskIcon === key ? "var(--primary-lighter)" : "var(--muted)",
-                            fontSize: "1rem", cursor: "pointer",
+                            cursor: "pointer",
                             display: "flex", alignItems: "center", justifyContent: "center",
                           }}
-                        >{emoji}</button>
+                        ><KawaiiIcon name={key} size={16} color={editTaskIcon === key ? "var(--primary)" : "var(--foreground-muted)"} /></button>
                       ))}
                     </div>
                     <div className="form-actions">
@@ -455,7 +454,7 @@ export default function PlanDetailPage() {
         <div className="modal-overlay-bg" onClick={() => setShowEditModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">✏️ Editar Plan</h2>
+              <h2 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Edit2 size={16} /> Editar Plan</h2>
               <button className="btn-icon" onClick={() => setShowEditModal(false)}><X size={18} /></button>
             </div>
             <div className="modal-body">
@@ -475,8 +474,8 @@ export default function PlanDetailPage() {
                   placeholder="Descripción (opcional)"
                 />
                 <div>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "block", marginBottom: "0.25rem" }}>
-                    🖼️ URL de portada (opcional)
+                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
+                    <Image size={13} /> URL de portada (opcional)
                   </label>
                   <input
                     className="input"
@@ -493,8 +492,8 @@ export default function PlanDetailPage() {
                   )}
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "block", marginBottom: "0.25rem" }}>
-                    📅 Fecha objetivo (opcional)
+                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
+                    <Calendar size={13} /> Fecha objetivo (opcional)
                   </label>
                   <input
                     className="input"
@@ -504,8 +503,8 @@ export default function PlanDetailPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "block", marginBottom: "0.25rem" }}>
-                    🏷️ Etiquetas
+                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
+                    <Tag size={13} /> Etiquetas
                   </label>
                   <div style={{ display: "flex", gap: "0.375rem" }}>
                     <input
@@ -568,7 +567,7 @@ export default function PlanDetailPage() {
                     })
                   }
                 >
-                  {plan?.archived ? "📤 Desarchivar" : "📦 Archivar"}
+                  {plan?.archived ? <><Upload size={14} /> Desarchivar</> : <><Archive size={14} /> Archivar</>}
                 </button>
               </div>
             </div>

@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { toast } from "sonner"
-import { CheckCircle, Trophy, Trash2 } from "lucide-react"
+import { CheckCircle, Trophy, Trash2, Heart, Map, Moon, Palette, Star, Sparkles, Gift, Layers, Shuffle, Pencil, CheckCircle2, Users } from "lucide-react"
 import { PullToRefresh } from "@/components/shared/pull-to-refresh"
 import { PhoneLoader } from "@/components/features/phone-loader"
 import type { Favor, FavorDifficulty, FavorCategory } from "@/types"
@@ -81,12 +81,12 @@ function getCategory(text: string) {
   return "all"
 }
 
-const CATS = [
-  { id: "all",       label: "✨ Todos",     bg: "#8B5CF6" },
-  { id: "romantic",  label: "💕 Romántico", bg: "#EC4899" },
-  { id: "adventure", label: "🗺️ Aventura",  bg: "#F59E0B" },
-  { id: "chill",     label: "😌 Relax",     bg: "#10B981" },
-  { id: "creative",  label: "🎨 Creativo",  bg: "#3B82F6" },
+const CATS: { id: string; Icon: React.FC<{size?: number}>; label: string; bg: string }[] = [
+  { id: "all",       Icon: Layers,  label: "Todos",    bg: "#8B5CF6" },
+  { id: "romantic",  Icon: Heart,   label: "Romántico", bg: "#EC4899" },
+  { id: "adventure", Icon: Map,     label: "Aventura",  bg: "#F59E0B" },
+  { id: "chill",     Icon: Moon,    label: "Relax",     bg: "#10B981" },
+  { id: "creative",  Icon: Palette, label: "Creativo",  bg: "#3B82F6" },
 ]
 
 const CAT_COLORS: Record<string, { from: string; to: string }> = {
@@ -101,17 +101,17 @@ interface DbChallenge { id: string; challenge_text: string; category: string; is
 
 // ── Favors data ───────────────────────────────────────────────────────────────
 
-const DIFFICULTIES: { id: FavorDifficulty; label: string; pts: number; emoji: string }[] = [
-  { id: "easy",   label: "Fácil",   pts: 10, emoji: "⭐" },
-  { id: "medium", label: "Medio",   pts: 25, emoji: "⭐⭐" },
-  { id: "hard",   label: "Difícil", pts: 50, emoji: "⭐⭐⭐" },
+const DIFFICULTIES: { id: FavorDifficulty; label: string; pts: number; stars: number }[] = [
+  { id: "easy",   label: "Fácil",   pts: 10, stars: 1 },
+  { id: "medium", label: "Medio",   pts: 25, stars: 2 },
+  { id: "hard",   label: "Difícil", pts: 50, stars: 3 },
 ]
 
-const CATEGORIES: { id: FavorCategory; label: string }[] = [
-  { id: "romantic", label: "💕 Romántico" },
-  { id: "fun",      label: "🎉 Divertido" },
-  { id: "help",     label: "🤝 Ayuda" },
-  { id: "surprise", label: "🎁 Sorpresa" },
+const CATEGORIES: { id: FavorCategory; label: string; Icon: React.FC<{size?: number}> }[] = [
+  { id: "romantic", label: "Romántico", Icon: Heart },
+  { id: "fun",      label: "Divertido", Icon: Sparkles },
+  { id: "help",     label: "Ayuda",     Icon: Users },
+  { id: "surprise", label: "Sorpresa",  Icon: Gift },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -281,21 +281,22 @@ export function ChallengesFavorsApp({ onBack }: Props) {
       {/* Header */}
       <div className="app-content-header">
         <button className="back-btn-phone" onClick={onBack}>‹</button>
-        <span>{mainTab === "challenge" ? "🎲 Reto del Día" : "💝 Favores"}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>{mainTab === "challenge" ? <><Shuffle size={14} /> Reto del Día</> : <><Gift size={14} /> Favores</>}</span>
       </div>
 
       {/* Main tab bar — pill style */}
       <div style={{ padding: "0.5rem 0.75rem 0", background: "white", flexShrink: 0 }}>
         <div className="pill-tab-container">
           {([
-            { id: "challenge", label: "🎲 Reto" },
-            { id: "favors",    label: "💝 Favores" },
+            { id: "challenge", Icon: Shuffle, label: "Reto" },
+            { id: "favors",    Icon: Gift,    label: "Favores" },
           ] as const).map((tab) => (
             <button
               key={tab.id}
               onClick={() => setMainTab(tab.id)}
               className={`pill-tab-btn${mainTab === tab.id ? " active" : ""}`}
-            >{tab.label}</button>
+              style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+            ><tab.Icon size={12} />{tab.label}</button>
           ))}
         </div>
       </div>
@@ -307,8 +308,8 @@ export function ChallengesFavorsApp({ onBack }: Props) {
         <div style={{ padding: "0.375rem 0.75rem 0", background: "white", flexShrink: 0 }}>
           <div className="pill-tab-container">
             {([
-              { id: "today",   label: "🎲 Hoy" },
-              { id: "history", label: "📜 Historial" },
+              { id: "today",   label: "Hoy" },
+              { id: "history", label: "Historial" },
             ] as const).map((t) => (
               <button key={t.id} onClick={() => setChallengeSubTab(t.id)}
                 className={`pill-tab-btn${challengeSubTab === t.id ? " active" : ""}`}
@@ -374,8 +375,9 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                   cursor: "pointer", border: "none",
                   background: category === c.id ? c.bg : "#f0ebfa",
                   color: category === c.id ? "white" : "#7C3AED",
+                  display: "inline-flex", alignItems: "center", gap: "4px",
                 }}
-              >{c.label}</button>
+              ><c.Icon size={12} />{c.label}</button>
             ))}
           </div>
 
@@ -534,7 +536,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                         cursor: "pointer", fontFamily: "inherit", fontSize: "0.625rem", fontWeight: 600,
                         textAlign: "center", color: difficulty === d.id ? "var(--primary)" : "var(--foreground-light)",
                       }}>
-                        <div>{d.emoji}</div><div>{d.label}</div><div>{d.pts}pts</div>
+                        <div style={{ display: "flex", justifyContent: "center", gap: "1px" }}>{Array.from({ length: d.stars }).map((_, i) => <Star key={i} size={8} fill="currentColor" />)}</div><div>{d.label}</div><div>{d.pts}pts</div>
                       </button>
                     ))}
                   </div>
@@ -609,7 +611,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                               fontSize: "0.5625rem", fontWeight: 700, color: diffColor,
                               background: `${diffColor}18`, padding: "1px 6px", borderRadius: "999px",
                             }}>
-                              {diff?.emoji} {diff?.label}
+                              {diff && Array.from({ length: diff.stars }).map((_, i) => <Star key={i} size={7} fill="currentColor" style={{ display: "inline" }} />)} {diff?.label}
                             </span>
                             <span style={{ fontSize: "0.5625rem", color: "var(--foreground-muted)" }}>{cat?.label}</span>
                             {!f.is_completed && (

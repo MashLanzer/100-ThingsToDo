@@ -1,30 +1,36 @@
 "use client"
 
 import { useState } from "react"
+import { Heart, ClipboardList, Smartphone, Link2, Sparkles, type LucideProps } from "lucide-react"
 
-const STEPS = [
+const STEPS: { Icon: React.FC<LucideProps>; color: string; title: string; desc: string }[] = [
   {
-    emoji: "💕",
+    Icon: Heart,
+    color: "#EC4899",
     title: "¡Bienvenidos a ThingsToDo!",
     desc: "La app de pareja para crear planes, recordar momentos y vivir aventuras juntos.",
   },
   {
-    emoji: "📋",
+    Icon: ClipboardList,
+    color: "#8B5CF6",
     title: "Planes y Tareas",
     desc: "Crea listas de cosas que queréis hacer juntos. Marca las tareas al completarlas.",
   },
   {
-    emoji: "📱",
+    Icon: Smartphone,
+    color: "#0369a1",
     title: "Apps en el Teléfono",
     desc: "Abre el teléfono kawaii para acceder al diario, música, desafíos, metas y cápsulas del tiempo.",
   },
   {
-    emoji: "🔗",
+    Icon: Link2,
+    color: "#065F46",
     title: "Conecta con tu Pareja",
     desc: "Comparte tu código desde Ajustes para vincularos y compartir todo automáticamente.",
   },
   {
-    emoji: "✨",
+    Icon: Sparkles,
+    color: "#F59E0B",
     title: "¡Todo listo!",
     desc: "Empieza creando vuestro primer plan. ¡Que comience la aventura!",
   },
@@ -57,7 +63,9 @@ export function OnboardingModal({ onComplete }: { onComplete: () => void }) {
         boxShadow: "0 24px 80px rgba(139,92,246,0.35)",
         padding: "2.5rem 2rem", maxWidth: "340px", width: "100%", textAlign: "center",
       }}>
-        <div style={{ fontSize: "4rem", marginBottom: "1.25rem", lineHeight: 1 }}>{current.emoji}</div>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.25rem" }}>
+          <current.Icon size={64} color={current.color} />
+        </div>
         <h2 style={{
           fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700,
           color: "#2D1B3E", marginBottom: "0.75rem",
@@ -102,7 +110,7 @@ export function OnboardingModal({ onComplete }: { onComplete: () => void }) {
                 fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700,
                 color: "white", cursor: "pointer",
               }}
-            >¡Empezar! 💕</button>
+            >¡Empezar!</button>
           )}
         </div>
       </div>

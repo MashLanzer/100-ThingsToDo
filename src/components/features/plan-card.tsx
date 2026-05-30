@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Share2 } from "lucide-react"
+import { Share2, Sparkles, Calendar, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import type { Plan } from "@/types"
 
@@ -14,15 +14,15 @@ function relativeDate(dateStr: string): string {
   return `hace ${Math.floor(diff / 365)} año${Math.floor(diff / 365) > 1 ? "s" : ""}`
 }
 
-function dueDateBadge(dueDateStr: string): { text: string; color: string } {
+function dueDateBadge(dueDateStr: string): { text: string; color: string; icon: string } {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const due = new Date(dueDateStr + "T00:00:00")
   const days = Math.ceil((due.getTime() - today.getTime()) / 86_400_000)
-  if (days < 0) return { text: "⚠️ Vencido", color: "#ef4444" }
-  if (days === 0) return { text: "🔥 ¡Hoy!", color: "#f97316" }
-  if (days <= 7) return { text: `📅 ${days} día${days !== 1 ? "s" : ""}`, color: "#f97316" }
-  return { text: `📅 ${days} días`, color: "var(--foreground-muted)" }
+  if (days < 0) return { text: "Vencido", color: "#ef4444", icon: "warning" }
+  if (days === 0) return { text: "¡Hoy!", color: "#f97316", icon: "calendar" }
+  if (days <= 7) return { text: `${days} día${days !== 1 ? "s" : ""}`, color: "#f97316", icon: "calendar" }
+  return { text: `${days} días`, color: "var(--foreground-muted)", icon: "calendar" }
 }
 
 function tagColor(tag: string): string {
@@ -111,7 +111,7 @@ export function PlanCard({ plan, index = 0 }: Props) {
               flexShrink: 0,
             }}
           >
-            {isComplete ? "🎉 ¡Listo!" : `${pct}%`}
+            {isComplete ? <><Sparkles size={12} /> ¡Listo!</> : `${pct}%`}
           </span>
         </div>
 
@@ -126,9 +126,12 @@ export function PlanCard({ plan, index = 0 }: Props) {
                 background: `${dueInfo.color}18`,
                 borderRadius: "999px",
                 padding: "0.125rem 0.5rem",
-                display: "inline-block",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "3px",
               }}
             >
+              {dueInfo.icon === "warning" ? <AlertTriangle size={9} /> : <Calendar size={9} />}
               {dueInfo.text}
             </span>
           </div>
@@ -146,7 +149,7 @@ export function PlanCard({ plan, index = 0 }: Props) {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.375rem" }}>
           <p style={{ fontSize: "0.75rem", color: isComplete ? "var(--primary)" : "var(--foreground-muted)", fontWeight: isComplete ? 700 : 400 }}>
-            {total === 0 ? "Sin tareas" : isComplete ? "✨ ¡Plan completado!" : `${done} completada${done !== 1 ? "s" : ""}`}
+            {total === 0 ? "Sin tareas" : isComplete ? <><Sparkles size={12} /> ¡Plan completado!</> : `${done} completada${done !== 1 ? "s" : ""}`}
           </p>
           <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", opacity: 0.7 }}>
             {relativeDate(plan.created_at)}
@@ -196,7 +199,7 @@ export function PlanCard({ plan, index = 0 }: Props) {
           <button
             onClick={(e) => {
               e.stopPropagation()
-              const text = `💕 ¡Lo logramos! 💕\n✅ Plan completado: ${plan.title}\n📝 ${total} cosa${total !== 1 ? "s" : ""} que hicimos juntos\n🎊 ThingsToDo Kawaii Edition`
+              const text = `¡Lo logramos!\nPlan completado: ${plan.title}\n${total} cosa${total !== 1 ? "s" : ""} que hicimos juntos\nThingsToDo Kawaii Edition`
               if (typeof navigator !== "undefined" && navigator.share) {
                 navigator.share({ text }).catch(() => {/* user cancelled */})
               } else {
@@ -233,7 +236,7 @@ export function PlanCard({ plan, index = 0 }: Props) {
             }}
           >
             <Share2 size={12} />
-            Compartir 🎉
+            Compartir
           </button>
         )}
       </div>

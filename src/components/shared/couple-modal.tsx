@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useAppStore } from "@/stores/app-store"
 import { useCoupleStatus, useLinkPartner, useUnlinkPartner } from "@/hooks/use-couple"
 import { toast } from "sonner"
-import { X, Copy, Check } from "lucide-react"
+import { X, Copy, Check, Heart, Users, Sparkles } from "lucide-react"
 
 export function CoupleModal() {
   const { showCoupleModal, closeCoupleModal } = useAppStore()
@@ -51,7 +51,7 @@ export function CoupleModal() {
     <div className="modal-overlay-bg" onClick={closeCoupleModal}>
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 className="modal-title">💕 Gestionar Pareja</h2>
+          <h2 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Heart size={18} /> Gestionar Pareja</h2>
           <button className="btn-icon" onClick={closeCoupleModal}><X size={18} /></button>
         </div>
 
@@ -65,7 +65,7 @@ export function CoupleModal() {
           ) : data?.couple ? (
             // Linked view
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>💏</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.75rem" }}><Users size={48} color="var(--primary)" /></div>
               <h3 style={{ fontWeight: 700, color: "var(--foreground)", marginBottom: "0.25rem" }}>
                 Vinculado con
               </h3>
@@ -85,7 +85,7 @@ export function CoupleModal() {
                   color: "#065F46",
                 }}
               >
-                ✨ ¡Ahora pueden compartir planes y tareas juntos!
+                <Sparkles size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> ¡Ahora pueden compartir planes y tareas juntos!
               </div>
               <button
                 className="btn btn-outline btn-danger"
@@ -154,7 +154,7 @@ export function CoupleModal() {
 
         <div className="modal-footer">
           <span style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
-            ThingsToDo Kawaii Edition v1.0 — Hecho con 💕 por MashLanzer
+            ThingsToDo Kawaii Edition v1.0 — Hecho con <Heart size={12} style={{ display: "inline", verticalAlign: "middle" }} /> por MashLanzer
           </span>
         </div>
       </div>
