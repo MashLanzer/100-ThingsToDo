@@ -5,11 +5,11 @@ import { usePlans, useCreatePlan } from "@/hooks/use-plans"
 import { useCoupleStatus } from "@/hooks/use-couple"
 import { PlanCard } from "@/components/features/plan-card"
 import { useAppStore } from "@/stores/app-store"
-import { Plus, X } from "lucide-react"
+import { Plus, X, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 
 export default function DashboardPage() {
-  const { data: plans, isLoading } = usePlans()
+  const { data: plans, isLoading, refetch } = usePlans()
   const { data: coupleData } = useCoupleStatus()
   const createPlan = useCreatePlan()
   const { openCoupleModal } = useAppStore()
@@ -61,15 +61,20 @@ export default function DashboardPage() {
         <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)" }}>
           Nuestros Planes 📋
         </h1>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowForm(true)}
-          disabled={!hasCouple}
-          title={!hasCouple ? "Vincula una pareja para crear planes" : undefined}
-        >
-          <Plus size={18} />
-          Nuevo Plan
-        </button>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <button className="btn-icon" onClick={() => refetch()} title="Actualizar">
+            <RefreshCw size={18} />
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowForm(true)}
+            disabled={!hasCouple}
+            title={!hasCouple ? "Vincula una pareja para crear planes" : undefined}
+          >
+            <Plus size={18} />
+            Nuevo Plan
+          </button>
+        </div>
       </div>
 
       {/* New plan form */}

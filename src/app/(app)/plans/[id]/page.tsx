@@ -6,14 +6,14 @@ import { usePlan, useUpdatePlan, useDeletePlan } from "@/hooks/use-plans"
 import { useTasks, useCreateTask, useToggleTask, useDeleteTask } from "@/hooks/use-tasks"
 import { TaskItem } from "@/components/features/task-item"
 import { KAWAII_ICONS } from "@/types"
-import { ArrowLeft, Plus, Edit2, X, Trash2 } from "lucide-react"
+import { ArrowLeft, Plus, Edit2, X, Trash2, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 
 export default function PlanDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const { data: plan, isLoading: planLoading } = usePlan(params.id)
-  const { data: tasks, isLoading: tasksLoading } = useTasks(params.id)
+  const { data: tasks, isLoading: tasksLoading, refetch: refetchTasks } = useTasks(params.id)
   const createTask = useCreateTask()
   const toggleTask = useToggleTask()
   const deleteTask = useDeleteTask()
@@ -120,6 +120,9 @@ export default function PlanDetailPage() {
               </p>
             )}
           </div>
+          <button className="btn-icon" onClick={() => { refetchTasks() }} title="Actualizar">
+            <RefreshCw size={15} />
+          </button>
           <button className="btn-icon" onClick={openEdit} title="Editar plan">
             <Edit2 size={16} />
           </button>
@@ -221,7 +224,7 @@ export default function PlanDetailPage() {
               <TaskItem
                 key={task.id}
                 task={task}
-                onToggle={() => toggleTask.mutate({ taskId: task.id, planId: params.id })}
+                onToggle={() => toggleTask.mutate({ taskId: task.id, planId: params.id, completed: task.completed })}
                 onDelete={() => deleteTask.mutate({ taskId: task.id, planId: params.id })}
               />
             ))}

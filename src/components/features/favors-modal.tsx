@@ -5,7 +5,7 @@ import { useAppStore } from "@/stores/app-store"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import type { Favor, FavorDifficulty, FavorCategory } from "@/types"
-import { X, Plus } from "lucide-react"
+import { X, Plus, RefreshCw } from "lucide-react"
 
 const DIFFICULTIES: { id: FavorDifficulty; label: string; pts: number; emoji: string }[] = [
   { id: "easy",   label: "Fácil",   pts: 10, emoji: "⭐" },
@@ -33,6 +33,13 @@ export function FavorsModal() {
 
   useEffect(() => {
     if (showFavorsModal) loadFavors()
+  }, [showFavorsModal])
+
+  useEffect(() => {
+    if (showFavorsModal) {
+      const interval = setInterval(loadFavors, 20_000)
+      return () => clearInterval(interval)
+    }
   }, [showFavorsModal])
 
   async function authFetch(path: string, init?: RequestInit) {
@@ -92,6 +99,7 @@ export function FavorsModal() {
       <div className="modal-box" style={{ maxHeight: "80vh" }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title">Favores & Desafíos 💝</h2>
+          <button className="btn-icon" onClick={loadFavors} title="Actualizar"><RefreshCw size={16} /></button>
           <button className="btn-icon" onClick={closeFavorsModal}><X size={18} /></button>
         </div>
 

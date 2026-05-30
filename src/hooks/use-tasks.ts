@@ -28,6 +28,7 @@ export function useTasks(planId: string) {
     queryKey: ["tasks", planId],
     queryFn: () => authFetch(`/api/plans/${planId}/tasks`),
     enabled: !!planId,
+    refetchInterval: 15_000,
   })
 }
 
@@ -44,8 +45,8 @@ export function useCreateTask() {
 export function useToggleTask() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ taskId, planId }: { taskId: string; planId: string }) =>
-      authFetch(`/api/tasks/${taskId}`, { method: "PATCH" }),
+    mutationFn: ({ taskId, planId, completed }: { taskId: string; planId: string; completed: boolean }) =>
+      authFetch(`/api/tasks/${taskId}`, { method: "PATCH", body: JSON.stringify({ completed: !completed }) }),
     onSuccess: (_data, vars) =>
       qc.invalidateQueries({ queryKey: ["tasks", vars.planId] }),
   })

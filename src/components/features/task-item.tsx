@@ -37,6 +37,11 @@ export function TaskItem({ task, onToggle, onDelete }: Props) {
         }}
       >
         {task.title}
+        {task.completed && task.completed_by_name && (
+          <span style={{ display: "block", fontSize: "0.625rem", color: "var(--foreground-muted)", fontWeight: 400, textDecoration: "none" }}>
+            ✅ completado por {task.completed_by_name}
+          </span>
+        )}
       </span>
 
       <button

@@ -28,6 +28,7 @@ export function usePlans() {
     queryKey: ["plans"],
     queryFn: () => authFetch("/api/plans"),
     staleTime: 30_000,
+    refetchInterval: 20_000,
   })
 }
 
@@ -35,6 +36,7 @@ export function usePlan(id: string) {
   return useQuery<Plan>({
     queryKey: ["plans", id],
     queryFn: () => authFetch(`/api/plans/${id}`),
+    refetchInterval: 15_000,
   })
 }
 

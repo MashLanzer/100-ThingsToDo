@@ -49,12 +49,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "date and content required" }, { status: 400 })
   }
 
-  // Upsert by couple_id + date
+  // Upsert by couple_id + date + created_by
   const { data, error } = await supabase
     .from("journal_entries")
     .upsert(
       { couple_id: me.couple_id, date, content: content.trim(), mood: mood ?? "happy", created_by: user.uid },
-      { onConflict: "couple_id,date" }
+      { onConflict: "couple_id,date,created_by" }
     )
     .select()
     .single()

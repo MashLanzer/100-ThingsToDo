@@ -36,6 +36,7 @@ export interface Task {
   icon: string
   completed: boolean
   completed_by: string | null
+  completed_by_name?: string | null
   completed_at: string | null
   sort_order: number
   created_by: string

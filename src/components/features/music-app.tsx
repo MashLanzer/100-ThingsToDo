@@ -119,6 +119,7 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [view, setView] = useState<AppView>("player")
+  const [loadingDb, setLoadingDb] = useState(true)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // Add-track form
@@ -129,8 +130,52 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   const [newColor, setNewColor] = useState(COLOR_OPTIONS[0])
   const [newPlaylistName, setNewPlaylistName] = useState("")
 
+  async function getToken() {
+    const { getFirebaseAuth } = await import("@/lib/firebase/client")
+    const token = await getFirebaseAuth().currentUser?.getIdToken()
+    return token
+  }
+
+  async function loadFromServer() {
+    setLoadingDb(true)
+    try {
+      const token = await getToken()
+      if (!token) { setPlaylists(loadPlaylists()); setLoadingDb(false); return }
+      const res = await fetch("/api/music", { headers: { Authorization: `Bearer ${token}` } })
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data) && data.length > 0) {
+          setPlaylists(data)
+          savePlaylists(data) // sync to localStorage too
+        } else {
+          setPlaylists(loadPlaylists()) // fallback to localStorage
+        }
+      } else {
+        setPlaylists(loadPlaylists())
+      }
+    } catch { setPlaylists(loadPlaylists()) } finally { setLoadingDb(false) }
+  }
+
+  async function saveToServer(updated: Playlist[]) {
+    try {
+      const token = await getToken()
+      if (!token) return
+      await fetch("/api/music", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(updated),
+      })
+    } catch { /* silently fail */ }
+  }
+
   useEffect(() => {
-    setPlaylists(loadPlaylists())
+    loadFromServer()
+  }, [])
+
+  // Auto-refresh every 30s while in player view
+  useEffect(() => {
+    const t = setInterval(loadFromServer, 30_000)
+    return () => clearInterval(t)
   }, [])
 
   // Audio time tracking
@@ -147,6 +192,7 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   function persist(updated: Playlist[]) {
     setPlaylists(updated)
     savePlaylists(updated)
+    saveToServer(updated)
   }
 
   const playlist = playlists[playlistIdx] ?? DEMO_PLAYLIST
@@ -350,9 +396,11 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
 
       <div className="app-content-body" style={{ alignItems: "center", padding: "0.625rem 0.75rem 0.5rem", gap: 0 }}>
         {/* Vinyl */}
-        {track
-          ? <VinylRecord isPlaying={isPlaying} color={track.color} emoji={track.emoji} />
-          : <div style={{ width: "150px", height: "150px", borderRadius: "50%", background: "#1c1c1c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" }}>🎵</div>
+        {loadingDb
+          ? <div style={{ width: "150px", height: "150px", borderRadius: "50%", background: "#1c1c1c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" }}>...</div>
+          : track
+            ? <VinylRecord isPlaying={isPlaying} color={track.color} emoji={track.emoji} />
+            : <div style={{ width: "150px", height: "150px", borderRadius: "50%", background: "#1c1c1c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" }}>🎵</div>
         }
 
         {/* Hidden YouTube iframe */}
