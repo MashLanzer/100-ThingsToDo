@@ -28,6 +28,7 @@ const GREETINGS: Record<string, [string, string]> = {
 export function PhoneModal() {
   const { showPhoneModal, closePhoneModal, activePhoneApp, setActivePhoneApp } = useAppStore()
   const [time, setTime] = useState("")
+  const [hiddenApps, setHiddenApps] = useState<string[]>([])
 
   useEffect(() => {
     const updateTime = () => {
@@ -38,6 +39,20 @@ export function PhoneModal() {
     const interval = setInterval(updateTime, 60_000)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (showPhoneModal) {
+      try {
+        const raw = localStorage.getItem("ttd_settings_v1")
+        if (raw) {
+          const s = JSON.parse(raw)
+          setHiddenApps(Array.isArray(s.hiddenApps) ? s.hiddenApps : [])
+        } else {
+          setHiddenApps([])
+        }
+      } catch { setHiddenApps([]) }
+    }
+  }, [showPhoneModal])
 
   if (!showPhoneModal) return null
 
@@ -104,7 +119,7 @@ export function PhoneModal() {
                       })()}
                     </div>
                     <div className="app-grid">
-                      {APPS.map((app) => (
+                      {APPS.filter((app) => !hiddenApps.includes(app.id)).map((app) => (
                         <div
                           key={app.id}
                           className="app-icon-item"

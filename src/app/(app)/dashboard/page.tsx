@@ -1,13 +1,59 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { usePlans, useCreatePlan } from "@/hooks/use-plans"
 import { useCoupleStatus } from "@/hooks/use-couple"
 import { PlanCard } from "@/components/features/plan-card"
 import { useAppStore } from "@/stores/app-store"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
-import { Plus, X } from "lucide-react"
+import { Plus, X, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { getFirebaseAuth } from "@/lib/firebase/client"
+import type { Plan } from "@/types"
+
+function SwipePlanCard({ plan, index, onDelete }: { plan: Plan; index: number; onDelete: () => void }) {
+  const [swipeX, setSwipeX] = useState(0)
+  const [isSwiping, setIsSwiping] = useState(false)
+  const touchStartX = useRef<number>(0)
+
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+    setIsSwiping(true)
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    const delta = e.touches[0].clientX - touchStartX.current
+    if (delta < 0) setSwipeX(Math.max(delta, -80))
+    else setSwipeX(0)
+  }
+  function onTouchEnd() {
+    setIsSwiping(false)
+    if (swipeX < -50) setSwipeX(-80)
+    else setSwipeX(0)
+  }
+
+  return (
+    <div style={{ position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+      <div
+        style={{
+          position: "absolute", right: 0, top: 0, bottom: 0, width: 80,
+          background: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", borderRadius: "0 var(--radius-lg) var(--radius-lg) 0",
+        }}
+        onClick={onDelete}
+      >
+        <Trash2 size={22} color="white" />
+      </div>
+      <div
+        style={{ transform: `translateX(${swipeX}px)`, transition: isSwiping ? "none" : "transform 0.25s ease" }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <PlanCard plan={plan} index={index} />
+      </div>
+    </div>
+  )
+}
 
 export default function DashboardPage() {
   const { data: plans, isLoading, refetch } = usePlans()
@@ -21,6 +67,18 @@ export default function DashboardPage() {
   const [desc, setDesc] = useState("")
 
   const hasCouple = !!coupleData?.couple
+
+  async function handleDeletePlan(id: string) {
+    if (!confirm("¿Eliminar este plan y todas sus tareas?")) return
+    try {
+      const auth = getFirebaseAuth()
+      const token = await auth.currentUser?.getIdToken()
+      const res = await fetch(`/api/plans/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token ?? ""}` } })
+      if (!res.ok) throw new Error("Error")
+      toast.success("Plan eliminado 🗑")
+      refetch()
+    } catch { toast.error("Error al eliminar") }
+  }
 
   async function handleCreate() {
     if (!title.trim()) {
@@ -179,7 +237,7 @@ export default function DashboardPage() {
       ) : (
         <div className="plans-grid">
           {plans.map((plan, i) => (
-            <PlanCard key={plan.id} plan={plan} index={i} />
+            <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
           ))}
         </div>
       )}

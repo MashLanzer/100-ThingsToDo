@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import type { TimeCapsule, CapsuleType } from "@/types"
 import { formatDate } from "@/lib/utils"
 import { PhoneLoader } from "@/components/features/phone-loader"
+import { Trash2 } from "lucide-react"
 
 const CAPSULE_TYPES: { id: CapsuleType; icon: string; label: string; desc: string }[] = [
   { id: "memory",      icon: "💙", label: "Recuerdo",   desc: "Momentos especiales" },
@@ -23,8 +24,8 @@ const DATE_PRESETS = [
   { days: 365, icon: "🎂", label: "1 Año" },
 ]
 
+type CapsuleFilter = "all" | "waiting" | "ready" | "opened"
 interface Props { onBack: () => void }
-
 type View = "list" | "create" | "read"
 
 export function TimeCapsuleApp({ onBack }: Props) {
@@ -33,17 +34,15 @@ export function TimeCapsuleApp({ onBack }: Props) {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<TimeCapsule | null>(null)
   const [saving, setSaving] = useState(false)
+  const [filter, setFilter] = useState<CapsuleFilter>("all")
 
-  // Form state
   const [message, setMessage] = useState("")
   const [capsuleType, setCapsuleType] = useState<CapsuleType>("memory")
   const [unlockDays, setUnlockDays] = useState(30)
   const [customDate, setCustomDate] = useState("")
   const [useCustom, setUseCustom] = useState(false)
 
-  useEffect(() => {
-    loadCapsules()
-  }, [])
+  useEffect(() => { loadCapsules() }, [])
 
   async function authFetch(path: string, init?: RequestInit) {
     const auth = getFirebaseAuth()
@@ -61,9 +60,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
     try {
       const data = await authFetch("/api/capsules")
       setCapsules(data)
-    } catch { /* ignore */ } finally {
-      setLoading(false)
-    }
+    } catch { /* ignore */ } finally { setLoading(false) }
   }
 
   async function handleSave() {
@@ -83,9 +80,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
       loadCapsules()
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error")
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
   async function handleOpen(capsule: TimeCapsule) {
@@ -101,6 +96,15 @@ export function TimeCapsuleApp({ onBack }: Props) {
     } catch { toast.error("Error al abrir") }
   }
 
+  async function handleDelete(capsule: TimeCapsule) {
+    if (!confirm("¿Eliminar esta cápsula?")) return
+    try {
+      await authFetch(`/api/capsules/${capsule.id}`, { method: "DELETE" })
+      toast.success("Cápsula eliminada")
+      loadCapsules()
+    } catch { toast.error("Error al eliminar") }
+  }
+
   const nowDate = new Date()
   const now = `${nowDate.getFullYear()}-${String(nowDate.getMonth()+1).padStart(2,"0")}-${String(nowDate.getDate()).padStart(2,"0")}`
 
@@ -109,6 +113,14 @@ export function TimeCapsuleApp({ onBack }: Props) {
     const today = new Date(now + "T00:00:00")
     return Math.ceil((unlock.getTime() - today.getTime()) / 86_400_000)
   }
+
+  const filteredCapsules = capsules.filter((c) => {
+    const canOpen = c.unlock_date <= now
+    if (filter === "waiting") return !c.is_opened && !canOpen
+    if (filter === "ready")   return !c.is_opened && canOpen
+    if (filter === "opened")  return c.is_opened
+    return true
+  })
 
   if (view === "read" && selected) {
     const t = CAPSULE_TYPES.find((t) => t.id === selected.type)
@@ -276,28 +288,46 @@ export function TimeCapsuleApp({ onBack }: Props) {
           ))}
         </div>
 
+        {/* Filter pills */}
+        <div className="pill-tab-container">
+          {([
+            { id: "all",     label: "Todas" },
+            { id: "waiting", label: "Esperando ⏳" },
+            { id: "ready",   label: "¡Listas! 🎉" },
+            { id: "opened",  label: "Abiertas 📭" },
+          ] as { id: CapsuleFilter; label: string }[]).map((f) => (
+            <button
+              key={f.id}
+              className={`pill-tab-btn${filter === f.id ? " active" : ""}`}
+              onClick={() => setFilter(f.id)}
+              style={{ fontSize: "0.625rem" }}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         {loading ? (
           <PhoneLoader />
-        ) : capsules.length === 0 ? (
+        ) : filteredCapsules.length === 0 ? (
           <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
             <div className="animate-bounce-slow" style={{ fontSize: "2.25rem" }}>⏳</div>
             <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--foreground)" }}>
-              Sin cápsulas aún
+              {filter === "all" ? "Sin cápsulas aún" : "Ninguna en esta categoría"}
             </p>
             <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
-              Guarda un mensaje para el futuro 💌
+              {filter === "all" ? "Guarda un mensaje para el futuro 💌" : "Prueba otro filtro ✨"}
             </p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {capsules.map((c) => {
+            {filteredCapsules.map((c) => {
               const t = CAPSULE_TYPES.find((t) => t.id === c.type)
               const canOpen = c.unlock_date <= now
+              const days = daysUntil(c.unlock_date)
               return (
-                <button
+                <div
                   key={c.id}
-                  onClick={() => handleOpen(c)}
-                  className={canOpen && !c.is_opened ? "animate-glow-pulse" : ""}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -312,17 +342,40 @@ export function TimeCapsuleApp({ onBack }: Props) {
                     border: canOpen && !c.is_opened
                       ? "2px solid var(--primary-light)"
                       : "1px solid var(--border)",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    fontFamily: "inherit",
                     opacity: c.is_opened ? 0.65 : 1,
-                    width: "100%",
                   }}
                 >
-                  <span style={{ fontSize: canOpen && !c.is_opened ? "1.875rem" : "1.75rem" }}>
-                    {c.is_opened ? "📭" : canOpen ? "📬" : "🔒"}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Icon / ring */}
+                  {c.is_opened ? (
+                    <span style={{ fontSize: "1.75rem", flexShrink: 0 }}>📭</span>
+                  ) : canOpen ? (
+                    <span className="animate-glow-pulse" style={{ fontSize: "1.875rem", flexShrink: 0 }}>📬</span>
+                  ) : (
+                    /* Mini countdown ring */
+                    <div style={{ position: "relative", width: 36, height: 36, flexShrink: 0 }}>
+                      {(() => {
+                        const r = 14
+                        const circ = 2 * Math.PI * r
+                        const fill = 1 - Math.min(days / 365, 1)
+                        const dash = fill * circ
+                        return (
+                          <svg width="36" height="36" style={{ transform: "rotate(-90deg)" }}>
+                            <circle cx="18" cy="18" r={r} fill="none" stroke="var(--muted)" strokeWidth="3.5" />
+                            <circle cx="18" cy="18" r={r} fill="none" stroke="var(--primary)" strokeWidth="3.5"
+                              strokeLinecap="round" strokeDasharray={`${dash} ${circ}`} />
+                          </svg>
+                        )
+                      })()}
+                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.5rem", fontWeight: 700, color: "var(--primary)", lineHeight: 1 }}>
+                          {days > 99 ? "99+" : days}d
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => handleOpen(c)}>
                     <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>
                       {t?.icon} {t?.label}
                     </div>
@@ -331,7 +384,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
                         ? `Abierta el ${formatDate(c.unlock_date)}`
                         : canOpen
                         ? "¡Lista para abrir! ✨"
-                        : `Se abre en ${daysUntil(c.unlock_date)} día${daysUntil(c.unlock_date) !== 1 ? "s" : ""}`}
+                        : `Se abre en ${days} día${days !== 1 ? "s" : ""}`}
                     </div>
                     {canOpen && !c.is_opened && (
                       <div style={{ fontSize: "0.625rem", fontWeight: 700, color: "#059669", marginTop: "0.125rem" }}>
@@ -339,10 +392,17 @@ export function TimeCapsuleApp({ onBack }: Props) {
                       </div>
                     )}
                   </div>
-                  {canOpen && !c.is_opened && (
-                    <span style={{ fontSize: "1.25rem" }}>💝</span>
+
+                  {/* Delete button (only for unopened) */}
+                  {!c.is_opened && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "6px", flexShrink: 0, display: "flex", alignItems: "center", opacity: 0.6 }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   )}
-                </button>
+                </div>
               )
             })}
           </div>

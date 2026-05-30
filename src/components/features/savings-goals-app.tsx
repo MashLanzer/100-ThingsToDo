@@ -5,10 +5,14 @@ import { getFirebaseAuth } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import type { SavingsGoal } from "@/types"
 import { PhoneLoader } from "@/components/features/phone-loader"
+import { formatDate } from "@/lib/utils"
+import { useAuth } from "@/hooks/use-auth"
 
+interface Contribution { id: string; amount: number; contributed_by: string; created_at: string }
 interface Props { onBack: () => void }
 
 export function SavingsGoalsApp({ onBack }: Props) {
+  const { user } = useAuth()
   const [goals, setGoals] = useState<SavingsGoal[]>([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<"list" | "create" | "detail">("list")
@@ -17,8 +21,16 @@ export function SavingsGoalsApp({ onBack }: Props) {
   const [goalTarget, setGoalTarget] = useState("")
   const [contribution, setContribution] = useState("")
   const [saving, setSaving] = useState(false)
+  const [contributions, setContributions] = useState<Contribution[]>([])
+  const [loadingContribs, setLoadingContribs] = useState(false)
 
   useEffect(() => { loadGoals() }, [])
+
+  useEffect(() => {
+    if (view === "detail" && selected) {
+      loadContributions(selected.id)
+    }
+  }, [view, selected?.id])
 
   async function authFetch(path: string, init?: RequestInit) {
     const auth = getFirebaseAuth()
@@ -37,6 +49,14 @@ export function SavingsGoalsApp({ onBack }: Props) {
       const data = await authFetch("/api/goals")
       setGoals(data)
     } catch { /* ignore */ } finally { setLoading(false) }
+  }
+
+  async function loadContributions(goalId: string) {
+    setLoadingContribs(true)
+    try {
+      const data = await authFetch(`/api/goals/${goalId}/contributions`)
+      setContributions(Array.isArray(data) ? data : [])
+    } catch { setContributions([]) } finally { setLoadingContribs(false) }
   }
 
   async function handleCreate() {
@@ -65,18 +85,37 @@ export function SavingsGoalsApp({ onBack }: Props) {
         method: "POST",
         body: JSON.stringify({ amount: Number(contribution) }),
       })
-      toast.success(`+$${contribution} aportado 🐖`)
+      const amount = Number(contribution)
       setContribution("")
       await loadGoals()
-      // Refresh selected
       const updated = await authFetch(`/api/goals?id=${selected.id}`)
       if (Array.isArray(updated)) {
         const g = updated.find((g: SavingsGoal) => g.id === selected.id)
-        if (g) setSelected(g)
+        if (g) {
+          const newPct = g.target_amount > 0 ? Math.min(100, Math.round(((g.total_saved ?? 0) / g.target_amount) * 100)) : 0
+          if (newPct >= 100) {
+            toast.success("¡Meta completada! 🎊🎉")
+          } else {
+            toast.success(`+$${amount} aportado 🐖`)
+          }
+          setSelected(g)
+        }
       }
+      loadContributions(selected.id)
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error")
     } finally { setSaving(false) }
+  }
+
+  async function handleDeleteGoal() {
+    if (!selected) return
+    if (!confirm("¿Eliminar esta meta y todas sus aportaciones?")) return
+    try {
+      await authFetch(`/api/goals/${selected.id}`, { method: "DELETE" })
+      toast.success("Meta eliminada")
+      setView("list")
+      loadGoals()
+    } catch { toast.error("Error al eliminar") }
   }
 
   const totalSaved = goals.reduce((s, g) => s + (g.total_saved ?? 0), 0)
@@ -121,7 +160,6 @@ export function SavingsGoalsApp({ onBack }: Props) {
     const saved = selected.total_saved ?? 0
     const pct = selected.target_amount > 0 ? Math.min(100, Math.round((saved / selected.target_amount) * 100)) : 0
     const isComplete = pct >= 100
-    // SVG circle ring
     const r = 52
     const circ = 2 * Math.PI * r
     const dash = (pct / 100) * circ
@@ -198,6 +236,49 @@ export function SavingsGoalsApp({ onBack }: Props) {
               </div>
             </div>
           )}
+
+          {/* Contribution history */}
+          <div style={{ width: "100%", marginTop: "0.5rem" }}>
+            <p style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.5rem" }}>
+              📋 Historial de aportaciones
+            </p>
+            {loadingContribs ? (
+              <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", textAlign: "center" }}>Cargando...</p>
+            ) : contributions.length === 0 ? (
+              <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", textAlign: "center", padding: "0.5rem 0" }}>
+                Sin aportaciones aún
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+                {contributions.slice(0, 10).map((c) => {
+                  const isMe = c.contributed_by === user?.uid
+                  return (
+                    <div key={c.id} style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+                      <div style={{
+                        width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                        background: isMe ? "var(--primary)" : "var(--secondary)",
+                      }} />
+                      <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground)" }}>
+                        +${Number(c.amount).toLocaleString()}
+                      </span>
+                      <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", flex: 1 }}>
+                        {isMe ? "Tú" : "Pareja"} · {formatDate(c.created_at)}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Delete goal */}
+          <button
+            className="btn btn-outline"
+            style={{ width: "100%", marginTop: "1rem", color: "#ef4444", borderColor: "#fca5a5", fontSize: "0.8125rem" }}
+            onClick={handleDeleteGoal}
+          >
+            🗑 Eliminar esta meta
+          </button>
         </div>
       </>
     )
