@@ -280,10 +280,13 @@ export function TimeCapsuleApp({ onBack }: Props) {
             Cargando...
           </div>
         ) : capsules.length === 0 ? (
-          <div className="empty-state" style={{ padding: "1.5rem 0" }}>
-            <div style={{ fontSize: "2.5rem" }}>💎</div>
-            <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", textAlign: "center" }}>
-              Tu primera cápsula te espera
+          <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
+            <div className="animate-bounce-slow" style={{ fontSize: "2.25rem" }}>⏳</div>
+            <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--foreground)" }}>
+              Sin cápsulas aún
+            </p>
+            <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
+              Guarda un mensaje para el futuro 💌
             </p>
           </div>
         ) : (

@@ -11,13 +11,19 @@ import { ChallengesFavorsApp } from "@/components/features/challenges-favors-app
 import { useState, useEffect } from "react"
 
 const APPS = [
-  { id: "journal",  emoji: "🗓️", name: "Diario",    bg: "#c3e6cb" },
-  { id: "music",    emoji: "🎧", name: "Música",     bg: "#a2d2ff" },
-  { id: "desafios", emoji: "🎯", name: "Desafíos",   bg: "#ffe8d6" },
-  { id: "map",      emoji: "🗺️", name: "Aventuras", bg: "#d4f1f9" },
-  { id: "capsule",  emoji: "⏳", name: "Cápsulas",  bg: "#f3e8ff" },
-  { id: "goals",    emoji: "🐖", name: "Metas",      bg: "#d1fae5" },
+  { id: "journal",  emoji: "🗓️", name: "Diario",    bg: "linear-gradient(135deg, #c3e6cb 0%, #a8d5b5 100%)" },
+  { id: "music",    emoji: "🎧", name: "Música",     bg: "linear-gradient(135deg, #a2d2ff 0%, #7ab9f5 100%)" },
+  { id: "desafios", emoji: "🎯", name: "Desafíos",   bg: "linear-gradient(135deg, #ffe8d6 0%, #f5c9a0 100%)" },
+  { id: "map",      emoji: "🗺️", name: "Aventuras", bg: "linear-gradient(135deg, #d4f1f9 0%, #a0daf0 100%)" },
+  { id: "capsule",  emoji: "⏳", name: "Cápsulas",  bg: "linear-gradient(135deg, #f3e8ff 0%, #dcc9f5 100%)" },
+  { id: "goals",    emoji: "🐖", name: "Metas",      bg: "linear-gradient(135deg, #d1fae5 0%, #a3e4c7 100%)" },
 ]
+
+const GREETINGS: Record<string, [string, string]> = {
+  morning: ["¡Buenos días! ☀️", "Hoy es un día bonito juntos 🌸"],
+  afternoon: ["¡Buenas tardes! 🌸", "La tarde es más dulce contigo 💕"],
+  night: ["¡Buenas noches! 🌙", "Que sueñen juntos esta noche ✨"],
+}
 
 export function PhoneModal() {
   const { showPhoneModal, closePhoneModal, activePhoneApp, setActivePhoneApp } = useAppStore()
@@ -81,17 +87,21 @@ export function PhoneModal() {
                       <span>📶 🔋</span>
                     </div>
                     <div style={{ textAlign: "center", paddingBottom: "0.25rem" }}>
-                      <p style={{
-                        fontFamily: "'Fredoka', sans-serif", fontSize: "1rem",
-                        fontWeight: 600, color: "var(--primary)", lineHeight: 1.3,
-                      }}>
-                        {(() => {
-                          const h = new Date().getHours()
-                          if (h < 12) return "¡Buenos días! ☀️"
-                          if (h < 19) return "¡Buenas tardes! 🌸"
-                          return "¡Buenas noches! 🌙"
-                        })()}
-                      </p>
+                      {(() => {
+                        const h = new Date().getHours()
+                        const key = h < 12 ? "morning" : h < 19 ? "afternoon" : "night"
+                        const [main, sub] = GREETINGS[key]
+                        return (
+                          <>
+                            <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 600, color: "var(--primary)", lineHeight: 1.3 }}>
+                              {main}
+                            </p>
+                            <p style={{ fontFamily: "'Quicksand', sans-serif", fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.125rem" }}>
+                              {sub}
+                            </p>
+                          </>
+                        )
+                      })()}
                     </div>
                     <div className="app-grid">
                       {APPS.map((app) => (

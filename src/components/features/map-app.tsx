@@ -9,11 +9,6 @@ import { Plus, Trash2, Search, Globe } from "lucide-react"
 
 type PlaceStatus = "visited" | "wishlist"
 
-const STATUS_OPTIONS: { id: PlaceStatus; label: string; emoji: string }[] = [
-  { id: "visited",  label: "Visitado",    emoji: "📍" },
-  { id: "wishlist", label: "Lista deseos", emoji: "⭐" },
-]
-
 interface Props { onBack: () => void }
 
 export function MapApp({ onBack }: Props) {
@@ -21,11 +16,11 @@ export function MapApp({ onBack }: Props) {
   const [places, setPlaces] = useState<Place[]>([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<"list" | "add">("list")
+  const [formStep, setFormStep] = useState<1 | 2>(1)
   const [tab, setTab] = useState<"all" | "visited" | "wishlist">("all")
   const [saving, setSaving] = useState(false)
   const [searching, setSearching] = useState(false)
 
-  // Form state
   const [name, setName] = useState("")
   const [country, setCountry] = useState("")
   const [lat, setLat] = useState("")
@@ -34,9 +29,7 @@ export function MapApp({ onBack }: Props) {
   const [note, setNote] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
 
-  useEffect(() => {
-    loadPlaces()
-  }, [])
+  useEffect(() => { loadPlaces() }, [])
 
   async function authFetch(path: string, init?: RequestInit) {
     const auth = getFirebaseAuth()
@@ -97,6 +90,7 @@ export function MapApp({ onBack }: Props) {
       toast.success("Lugar guardado 🗺️")
       setName(""); setCountry(""); setLat(""); setLng(""); setNote(""); setSearchQuery("")
       setStatus("wishlist")
+      setFormStep(1)
       setView("list")
       loadPlaces()
     } catch (e: unknown) {
@@ -118,69 +112,119 @@ export function MapApp({ onBack }: Props) {
     openMapModal()
   }
 
+  function startAdd() {
+    setName(""); setCountry(""); setLat(""); setLng(""); setNote(""); setSearchQuery("")
+    setStatus("wishlist"); setFormStep(1); setView("add")
+  }
+
   const filtered = tab === "all" ? places : places.filter((p) => p.status === tab)
+  const visitedCount = places.filter((p) => p.status === "visited").length
+  const wishlistCount = places.filter((p) => p.status === "wishlist").length
 
   if (view === "add") {
     return (
       <>
         <div className="app-content-header">
-          <button className="back-btn-phone" onClick={() => setView("list")}>‹</button>
-          <span>Añadir Lugar</span>
+          <button className="back-btn-phone" onClick={() => formStep === 2 ? setFormStep(1) : setView("list")}>‹</button>
+          <span>{formStep === 1 ? "📍 Paso 1 · Ubicación" : "✨ Paso 2 · Detalles"}</span>
+          <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", fontWeight: 500 }}>{formStep}/2</span>
         </div>
         <div className="app-content-body">
-          {/* Search */}
-          <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.625rem" }}>
-            <input
-              className="input"
-              placeholder="Buscar ciudad..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              style={{ fontSize: "0.8125rem" }}
-            />
-            <button
-              className="btn btn-primary"
-              onClick={handleSearch}
-              disabled={searching}
-              style={{ flexShrink: 0, padding: "0 0.625rem" }}
-            >
-              <Search size={14} />
-            </button>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <input className="input" placeholder="Nombre del lugar" value={name} onChange={(e) => setName(e.target.value)} />
-            <input className="input" placeholder="País" value={country} onChange={(e) => setCountry(e.target.value)} />
-            <div style={{ display: "flex", gap: "0.375rem" }}>
-              <input className="input" placeholder="Lat" value={lat} onChange={(e) => setLat(e.target.value)} type="number" step="any" />
-              <input className="input" placeholder="Lng" value={lng} onChange={(e) => setLng(e.target.value)} type="number" step="any" />
-            </div>
-
-            {/* Status */}
-            <div style={{ display: "flex", gap: "0.375rem" }}>
-              {STATUS_OPTIONS.map((s) => (
+          {formStep === 1 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+              {/* Search */}
+              <div style={{ display: "flex", gap: "0.375rem" }}>
+                <input
+                  className="input"
+                  placeholder="Buscar ciudad o lugar..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  style={{ fontSize: "0.875rem" }}
+                  autoFocus
+                />
                 <button
-                  key={s.id}
-                  onClick={() => setStatus(s.id)}
-                  style={{
-                    flex: 1, padding: "0.375rem", borderRadius: "var(--radius-md)",
-                    border: status === s.id ? "2px solid var(--primary)" : "2px solid var(--border)",
-                    background: status === s.id ? "var(--primary-lighter)" : "white",
-                    cursor: "pointer", fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
-                    color: status === s.id ? "var(--primary)" : "var(--foreground-light)",
-                  }}
+                  className="btn btn-primary"
+                  onClick={handleSearch}
+                  disabled={searching}
+                  style={{ flexShrink: 0, padding: "0 0.75rem" }}
                 >
-                  {s.emoji} {s.label}
+                  <Search size={15} />
                 </button>
-              ))}
+              </div>
+              <input className="input" placeholder="Nombre del lugar" value={name} onChange={(e) => setName(e.target.value)} />
+              <input className="input" placeholder="País" value={country} onChange={(e) => setCountry(e.target.value)} />
+              <div style={{ display: "flex", gap: "0.375rem" }}>
+                <input className="input" placeholder="Latitud" value={lat} onChange={(e) => setLat(e.target.value)} type="number" step="any" />
+                <input className="input" placeholder="Longitud" value={lng} onChange={(e) => setLng(e.target.value)} type="number" step="any" />
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  if (!name.trim() || !country.trim()) { toast.error("Nombre y país son requeridos"); return }
+                  setFormStep(2)
+                }}
+                style={{ marginTop: "0.25rem" }}
+              >
+                Siguiente →
+              </button>
             </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <div style={{
+                background: "var(--primary-lighter)", borderRadius: "var(--radius-md)",
+                padding: "0.625rem 0.875rem", display: "flex", alignItems: "center", gap: "0.5rem",
+              }}>
+                <span style={{ fontSize: "1.25rem" }}>📍</span>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)" }}>{name}</p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>{country}</p>
+                </div>
+              </div>
 
-            <textarea className="textarea" placeholder="Nota (opcional)" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+              <div>
+                <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground-light)", marginBottom: "0.5rem" }}>Estado</p>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  {([
+                    { id: "visited" as PlaceStatus,  emoji: "📍", label: "Ya visitamos",  bg: "#d1fae5", border: "#6ee7b7" },
+                    { id: "wishlist" as PlaceStatus, emoji: "⭐", label: "En nuestra lista", bg: "#fef9c3", border: "#fde047" },
+                  ]).map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setStatus(s.id)}
+                      style={{
+                        flex: 1, padding: "0.625rem 0.375rem", borderRadius: "var(--radius-md)",
+                        border: status === s.id ? `2px solid ${s.border}` : "2px solid var(--border)",
+                        background: status === s.id ? s.bg : "white",
+                        cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600,
+                        color: "var(--foreground)", display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
+                      }}
+                    >
+                      <span style={{ fontSize: "1.25rem" }}>{s.emoji}</span>
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? "Guardando..." : "Guardar Lugar 🗺️"}
-            </button>
-          </div>
+              <textarea
+                className="textarea"
+                placeholder="Nota o recuerdo especial... (opcional)"
+                rows={3}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setFormStep(1)}>
+                  ← Volver
+                </button>
+                <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSave} disabled={saving}>
+                  {saving ? "Guardando..." : "Guardar lugar 🗺️"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </>
     )
@@ -200,8 +244,19 @@ export function MapApp({ onBack }: Props) {
         </button>
       </div>
 
+      {/* Counter */}
+      <div style={{ padding: "0.5rem 1rem 0", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <span style={{ fontSize: "0.75rem", color: "var(--foreground-light)", fontWeight: 600 }}>
+          🗺️ <strong style={{ color: "var(--foreground)" }}>{visitedCount}</strong> visitados
+        </span>
+        <span style={{ color: "var(--border)", fontSize: "0.75rem" }}>·</span>
+        <span style={{ fontSize: "0.75rem", color: "var(--foreground-light)", fontWeight: 600 }}>
+          ⭐ <strong style={{ color: "var(--foreground)" }}>{wishlistCount}</strong> en lista
+        </span>
+      </div>
+
       {/* Tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid var(--border)", background: "white" }}>
+      <div style={{ display: "flex", borderBottom: "1px solid var(--border)", background: "white", marginTop: "0.5rem" }}>
         {(["all", "visited", "wishlist"] as const).map((t) => (
           <button
             key={t}
@@ -219,58 +274,75 @@ export function MapApp({ onBack }: Props) {
       </div>
 
       <div className="app-content-body">
-        <button
-          className="btn btn-primary"
-          style={{ marginBottom: "0.625rem", fontSize: "0.8125rem" }}
-          onClick={() => setView("add")}
-        >
+        <button className="btn btn-primary" style={{ fontSize: "0.8125rem" }} onClick={startAdd}>
           <Plus size={14} /> Añadir Lugar
         </button>
 
         {loading ? (
           <p style={{ color: "var(--foreground-muted)", fontSize: "0.8125rem", textAlign: "center" }}>Cargando...</p>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "1rem 0" }}>
-            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🌍</div>
-            <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)" }}>
-              {tab === "visited" ? "No hay lugares visitados aún." : tab === "wishlist" ? "No hay lugares en lista de deseos." : "No hay lugares guardados."}
+          <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+            <div className="animate-bounce-slow" style={{ fontSize: "2.25rem" }}>
+              {tab === "visited" ? "🌍" : tab === "wishlist" ? "⭐" : "🗺️"}
+            </div>
+            <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--foreground)" }}>
+              {tab === "visited" ? "¡Aún por explorar!" : tab === "wishlist" ? "¡La lista está vacía!" : "¡Sin aventuras aún!"}
+            </p>
+            <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
+              {tab === "visited" ? "Añade los lugares que habéis visitado juntos 💕" : tab === "wishlist" ? "¿Adónde queréis ir? ✈️" : "Empieza a guardar vuestros destinos 🌸"}
             </p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {filtered.map((p) => (
-              <div
-                key={p.id}
-                style={{
-                  padding: "0.625rem 0.75rem",
-                  background: "white",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--border)",
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "0.5rem",
-                }}
-              >
-                <span style={{ fontSize: "1rem", flexShrink: 0 }}>{p.status === "visited" ? "📍" : "⭐"}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {p.name}
-                  </p>
-                  <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{p.country}</p>
-                  {p.note && (
-                    <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", marginTop: "0.125rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {p.note}
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => handleDelete(p.id)}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem", color: "var(--foreground-muted)", flexShrink: 0 }}
+            {filtered.map((p) => {
+              const isVisited = p.status === "visited"
+              return (
+                <div
+                  key={p.id}
+                  style={{
+                    padding: "0.75rem",
+                    background: isVisited
+                      ? "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)"
+                      : "linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)",
+                    borderRadius: "var(--radius-lg)",
+                    border: isVisited ? "1.5px solid #a7f3d0" : "1.5px solid #fde68a",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.625rem",
+                    transition: "transform 0.12s ease",
+                  }}
                 >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            ))}
+                  <span style={{ fontSize: "1.25rem", flexShrink: 0, marginTop: "1px" }}>{isVisited ? "📍" : "⭐"}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.125rem" }}>
+                      <p style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {p.name}
+                      </p>
+                      <span style={{
+                        fontSize: "0.5625rem", fontWeight: 700, padding: "1px 6px", borderRadius: "999px",
+                        background: isVisited ? "#6ee7b7" : "#fde047",
+                        color: isVisited ? "#064e3b" : "#713f12",
+                        flexShrink: 0,
+                      }}>
+                        {isVisited ? "✓ Visitado" : "💫 Pendiente"}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{p.country}</p>
+                    {p.note && (
+                      <p style={{ fontSize: "0.625rem", color: "var(--foreground-light)", marginTop: "0.25rem", fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        "{p.note}"
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDelete(p.id)}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem", color: "var(--foreground-muted)", flexShrink: 0, opacity: 0.6 }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

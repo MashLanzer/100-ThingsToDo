@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useAppStore } from "@/stores/app-store"
 import { useCoupleStatus, useLinkPartner, useUnlinkPartner } from "@/hooks/use-couple"
+import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { X, Copy, Check } from "lucide-react"
 
@@ -46,12 +47,14 @@ function applyFontSize(size: "normal" | "large") {
 export function SettingsModal() {
   const { showSettingsModal, closeSettingsModal } = useAppStore()
   const { data, isLoading } = useCoupleStatus()
+  const { user } = useAuth()
   const linkMutation = useLinkPartner()
   const unlinkMutation = useUnlinkPartner()
   const [code, setCode] = useState("")
   const [copied, setCopied] = useState(false)
   const [currentTheme, setCurrentTheme] = useState("purple")
   const [currentFont, setCurrentFont] = useState<"normal" | "large">("normal")
+  const [hoveredTheme, setHoveredTheme] = useState<string | null>(null)
 
   useEffect(() => {
     if (showSettingsModal) {
@@ -107,6 +110,49 @@ export function SettingsModal() {
 
         <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
+          {/* ── User header ── */}
+          {user && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: "0.875rem",
+              background: "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)",
+              borderRadius: "var(--radius-lg)", padding: "0.875rem",
+            }}>
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt=""
+                  style={{ width: 44, height: 44, borderRadius: "50%", border: "2px solid var(--primary-light)", flexShrink: 0 }}
+                />
+              ) : (
+                <div style={{
+                  width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+                  background: "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "white", fontWeight: 700, fontSize: "1.125rem",
+                  fontFamily: "'Fredoka', sans-serif",
+                }}>
+                  {(user.displayName ?? user.email ?? "?")[0].toUpperCase()}
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {user.displayName ?? "Mi cuenta"}
+                </p>
+                <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {user.email}
+                </p>
+              </div>
+              <div style={{
+                fontSize: "0.625rem", fontWeight: 700, padding: "3px 8px", borderRadius: "999px", flexShrink: 0,
+                background: data?.couple ? "#d1fae5" : "var(--muted)",
+                color: data?.couple ? "#065f46" : "var(--foreground-muted)",
+                border: data?.couple ? "1px solid #6ee7b7" : "1px solid var(--border)",
+              }}>
+                {data?.couple ? `💕 ${data.partner?.name ?? "Vinculado"}` : "Sin pareja"}
+              </div>
+            </div>
+          )}
+
           {/* ── Color theme ── */}
           <section>
             <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.625rem" }}>
@@ -119,23 +165,35 @@ export function SettingsModal() {
                   <button
                     key={t.id}
                     onClick={() => handleTheme(t)}
+                    onMouseEnter={() => setHoveredTheme(t.id)}
+                    onMouseLeave={() => setHoveredTheme(null)}
+                    onTouchStart={() => setHoveredTheme(t.id)}
+                    onTouchEnd={() => setHoveredTheme(null)}
                     title={t.name}
                     style={{
-                      aspectRatio: "1", borderRadius: "10px",
-                      background: t.primary, border: "none",
+                      aspectRatio: "1", borderRadius: "12px",
+                      background: `linear-gradient(135deg, ${t.primary} 0%, ${t.lighter.replace("FE", "EE")} 100%)`,
+                      backgroundImage: `linear-gradient(135deg, ${t.primary}EE 0%, ${t.primary}99 100%)`,
+                      backgroundColor: t.primary,
+                      border: "none",
                       cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                      boxShadow: selected ? `0 0 0 3px white, 0 0 0 5px ${t.primary}` : "none",
+                      boxShadow: selected
+                        ? `0 0 0 3px white, 0 0 0 5px ${t.primary}`
+                        : hoveredTheme === t.id
+                        ? `0 0 0 2px white, 0 0 0 4px ${t.primary}88`
+                        : "none",
+                      transform: hoveredTheme === t.id ? "scale(1.12)" : "scale(1)",
                       fontSize: "0.9rem",
-                      transition: "box-shadow 0.15s",
+                      transition: "box-shadow 0.15s, transform 0.15s",
                     }}
                   >
-                    {selected && <span style={{ color: "white", fontWeight: 900, fontSize: "1rem" }}>✓</span>}
+                    {selected && <span style={{ color: "white", fontWeight: 900, fontSize: "1rem", textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>✓</span>}
                   </button>
                 )
               })}
             </div>
             <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.375rem" }}>
-              {THEMES.find((t) => t.id === currentTheme)?.name ?? ""}
+              {THEMES.find((t) => t.id === (hoveredTheme ?? currentTheme))?.name ?? ""}
             </p>
           </section>
 

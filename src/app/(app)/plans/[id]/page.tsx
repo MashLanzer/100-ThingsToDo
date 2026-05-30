@@ -89,12 +89,16 @@ export default function PlanDetailPage() {
       {/* Pull-to-refresh indicator */}
       {ptr.visible && (
         <div style={{ position: "fixed", top: "100px", left: "50%", transform: "translateX(-50%)", zIndex: 200,
-          width: "36px", height: "36px", borderRadius: "50%", background: "var(--primary-lighter)",
+          width: "40px", height: "40px", borderRadius: "50%", background: "var(--primary-lighter)",
           border: "2px solid var(--primary)", display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "1.1rem", color: "var(--primary)" }}>
-          <span style={{ animation: ptr.spinning ? "ptr-spin 0.7s linear infinite" : "none" }}>
-            {ptr.spinning ? "↻" : "↓"}
-          </span>
+          boxShadow: "0 4px 12px rgba(139,92,246,0.25)" }}>
+          <svg
+            width="20" height="20" viewBox="0 0 24 24"
+            fill="var(--primary)"
+            style={{ animation: ptr.spinning ? "heartBeat 0.7s ease-in-out infinite" : "none", transition: "transform 0.2s" }}
+          >
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
         </div>
       )}
       {/* Sub-header */}
@@ -139,7 +143,7 @@ export default function PlanDetailPage() {
         </div>
       </header>
 
-      <div className="page-container">
+      <div className="page-container animate-page-in">
         {/* Progress */}
         <div style={{ marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.375rem" }}>
@@ -224,9 +228,12 @@ export default function PlanDetailPage() {
           </div>
         ) : !tasks || tasks.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-icon">✨</div>
-            <h2 className="empty-title">Sin tareas aún</h2>
-            <p className="empty-text">Agrega tu primera tarea usando el botón de arriba</p>
+            <div className="empty-icon animate-bounce-slow">🌟</div>
+            <h2 className="empty-title" style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem" }}>¡Sin tareas aún!</h2>
+            <p className="empty-text">Añade vuestra primera tarea y empezad juntos ✨</p>
+            <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => setShowTaskForm(true)}>
+              ➕ Agregar tarea
+            </button>
           </div>
         ) : (
           <div>
