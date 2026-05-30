@@ -69,6 +69,7 @@ export function AppHeader() {
   const { openPhoneModal, openSettingsModal, coupleName, setCoupleName } = useAppStore()
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [partnerActive, setPartnerActive] = useState(false)
 
   useEffect(() => {
     try {
@@ -78,6 +79,26 @@ export function AppHeader() {
         if (s.coupleName && s.coupleName.trim()) setCoupleName(s.coupleName.trim())
       }
     } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    async function checkPartnerActivity() {
+      try {
+        const auth = getFirebaseAuth()
+        const token = await auth.currentUser?.getIdToken()
+        if (!token) return
+        const res = await fetch("/api/activity/partner", { headers: { Authorization: `Bearer ${token}` } })
+        if (!res.ok) return
+        const { lastActive } = await res.json()
+        if (lastActive) {
+          const diffHours = (Date.now() - new Date(lastActive).getTime()) / 3_600_000
+          setPartnerActive(diffHours < 24)
+        }
+      } catch { /* ignore */ }
+    }
+    checkPartnerActivity()
+    const interval = setInterval(checkPartnerActivity, 60_000)
+    return () => clearInterval(interval)
   }, [])
 
   async function confirmLogout() {
@@ -112,11 +133,19 @@ export function AppHeader() {
             </button>
 
             {/* Phone apps */}
-            <button className="btn-icon" title="Centro de Actividades" onClick={() => openPhoneModal("home")}>
+            <button className="btn-icon" title="Centro de Actividades" onClick={() => openPhoneModal("home")} style={{ position: "relative" }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
                 <line x1="12" y1="18" x2="12.01" y2="18" />
               </svg>
+              {partnerActive && (
+                <span style={{
+                  position: "absolute", top: "4px", right: "4px",
+                  width: "8px", height: "8px", borderRadius: "50%",
+                  background: "#10B981", border: "2px solid white",
+                  animation: "heartBeat 1.5s ease-in-out infinite",
+                }} />
+              )}
             </button>
 
             {/* Logout */}

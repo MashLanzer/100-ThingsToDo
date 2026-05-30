@@ -10,6 +10,7 @@ import { Plus, X, Trash2, Search } from "lucide-react"
 import { toast } from "sonner"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import type { Plan } from "@/types"
+import { OnboardingModal } from "@/components/shared/onboarding-modal"
 
 function SwipePlanCard({ plan, index, onDelete }: { plan: Plan; index: number; onDelete: () => void }) {
   const [swipeX, setSwipeX] = useState(0)
@@ -82,6 +83,10 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState<SortBy>("newest")
   const [showArchived, setShowArchived] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window === "undefined") return false
+    return !localStorage.getItem("ttd_onboarding_done_v1")
+  })
 
   const hasCouple = !!coupleData?.couple
 
@@ -375,6 +380,7 @@ export default function DashboardPage() {
           )}
         </>
       )}
+      {showOnboarding && <OnboardingModal onComplete={() => setShowOnboarding(false)} />}
     </div>
   )
 }
