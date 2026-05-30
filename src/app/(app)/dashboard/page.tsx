@@ -238,42 +238,15 @@ export default function DashboardPage() {
         <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)" }}>
           Nuestros Planes 📋
         </h1>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          {/* View mode toggle */}
-          <div style={{ display: "flex", borderRadius: "999px", border: "1px solid var(--border)", overflow: "hidden", background: "var(--muted)" }}>
-            {([
-              { key: "grid", label: "📋 Planes" },
-              { key: "calendar", label: "📅 Calendario" },
-            ] as { key: "grid" | "calendar"; label: string }[]).map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setViewMode(key)}
-                style={{
-                  padding: "4px 10px",
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  fontSize: "0.6875rem",
-                  fontWeight: 700,
-                  background: viewMode === key ? "var(--primary)" : "transparent",
-                  color: viewMode === key ? "white" : "var(--foreground-muted)",
-                  transition: "background 0.15s, color 0.15s",
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowForm(true)}
-            disabled={!hasCouple}
-            title={!hasCouple ? "Vincula una pareja para crear planes" : undefined}
-          >
-            <Plus size={18} />
-            Nuevo Plan
-          </button>
-        </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowForm(true)}
+          disabled={!hasCouple}
+          title={!hasCouple ? "Vincula una pareja para crear planes" : undefined}
+        >
+          <Plus size={18} />
+          Nuevo Plan
+        </button>
       </div>
 
       {/* Search bar */}
@@ -334,9 +307,9 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Sort pills */}
+      {/* Sort pills + view toggle */}
       {hasAnyPlans && (
-        <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: "0.875rem" }}>
+        <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: "0.875rem", alignItems: "center" }}>
           {([
             { key: "newest", label: "🕐 Recientes" },
             { key: "oldest", label: "🕐 Antiguos" },
@@ -362,6 +335,31 @@ export default function DashboardPage() {
               {label}
             </button>
           ))}
+          {/* View mode toggle — icon buttons at the far right */}
+          <div style={{ marginLeft: "auto", display: "flex", borderRadius: "999px", border: "1px solid var(--border)", overflow: "hidden" }}>
+            {([
+              { key: "grid", icon: "▦", title: "Vista planes" },
+              { key: "calendar", icon: "📅", title: "Vista calendario" },
+            ] as { key: "grid" | "calendar"; icon: string; title: string }[]).map(({ key, icon, title }) => (
+              <button
+                key={key}
+                onClick={() => setViewMode(key)}
+                title={title}
+                style={{
+                  padding: "4px 10px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  fontSize: "0.75rem",
+                  background: viewMode === key ? "var(--primary)" : "var(--muted)",
+                  color: viewMode === key ? "white" : "var(--foreground-muted)",
+                  transition: "background 0.15s, color 0.15s",
+                }}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
