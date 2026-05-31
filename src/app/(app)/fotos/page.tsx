@@ -91,10 +91,11 @@ function ReactionStrip({ photoId, reactions, myUid, onToggle }: {
   )
 }
 
-function PolaroidCard({ photo, onClick, index, isNew, reactions, myUid, onReact, selectionMode, selected, onSelect }: {
+function PolaroidCard({ photo, onClick, index, isNew, reactions, myUid, onReact, selectionMode, selected, onSelect, isMonthPhoto }: {
   photo: Photo; onClick: () => void; index: number; isNew?: boolean
   reactions: PhotoReaction[]; myUid: string; onReact: (emoji: string) => void
   selectionMode: boolean; selected: boolean; onSelect: () => void
+  isMonthPhoto?: boolean
 }) {
   const rotation = polaroidRotation(photo.id, index)
   const date = new Date(photo.created_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" })
@@ -142,6 +143,17 @@ function PolaroidCard({ photo, onClick, index, isNew, reactions, myUid, onReact,
           style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }}
           loading="lazy"
         />
+        {isMonthPhoto && !selectionMode && (
+          <div style={{
+            position: "absolute", top: 6, left: 6,
+            background: "linear-gradient(135deg, #F59E0B, #EF4444)",
+            borderRadius: "999px", padding: "2px 8px",
+            fontSize: "0.625rem", fontWeight: 800, color: "white",
+            letterSpacing: "0.03em", boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
+          }}>
+            ⭐ Foto del mes
+          </div>
+        )}
         {selectionMode && (
           <div style={{ position: "absolute", top: 6, right: 6, color: selected ? "var(--primary)" : "rgba(255,255,255,0.8)", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))" }}>
             {selected ? <CheckCircle2 size={22} fill="white" /> : <Circle size={22} />}
@@ -572,6 +584,18 @@ export default function FotosPage() {
     : filter === "thingstodo" ? allPhotos.filter((p) => p.source === "thingstodo")
     : allPhotos.filter((p) => p.source === "14feb")
 
+  // F9: stats
+  const now = new Date()
+  const thisMonth = allPhotos.filter((p) => {
+    const d = new Date(p.created_at)
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+  })
+  const lastPhoto = allPhotos.length > 0 ? allPhotos.reduce((a, b) => a.created_at > b.created_at ? a : b) : null
+  const daysSinceLast = lastPhoto ? Math.floor((now.getTime() - new Date(lastPhoto.created_at).getTime()) / 86400000) : null
+
+  // F10: photo of the month — most recent photo in the current month
+  const photoOfMonth = thisMonth.length > 0 ? thisMonth.reduce((a, b) => a.created_at > b.created_at ? a : b) : null
+
   const allPhotoIds = useMemo(() => allPhotos.map((p) => p.id), [allPhotos])
   const { data: reactions = [] } = usePhotoReactions(allPhotoIds)
 
@@ -679,6 +703,25 @@ export default function FotosPage() {
         </div>
       </div>
 
+      {/* F9: Stats strip */}
+      {allPhotos.length > 0 && !isLoading && (
+        <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", marginBottom: "0.875rem", paddingBottom: "2px" }}>
+          {thisMonth.length > 0 && (
+            <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "var(--primary-lighter)", color: "var(--primary)", borderRadius: "999px", padding: "4px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>
+              📸 {thisMonth.length} este mes
+            </span>
+          )}
+          {daysSinceLast !== null && (
+            <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "var(--muted)", color: "var(--foreground-muted)", borderRadius: "999px", padding: "4px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>
+              {daysSinceLast === 0 ? "⚡ Último recuerdo: hoy" : daysSinceLast === 1 ? "⏰ Último: ayer" : `⏰ Último: hace ${daysSinceLast}d`}
+            </span>
+          )}
+          <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "var(--muted)", color: "var(--foreground-muted)", borderRadius: "999px", padding: "4px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>
+            🗓️ {allPhotos.length} en total
+          </span>
+        </div>
+      )}
+
       {/* Filter pills + view toggle */}
       {(allPhotos.length > 0 || isLoading) && (
         <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.875rem", alignItems: "center" }}>
@@ -768,6 +811,7 @@ export default function FotosPage() {
                       selectionMode={selectionMode}
                       selected={selectedIds.has(photo.id)}
                       onSelect={() => toggleSelect(photo.id)}
+                      isMonthPhoto={photoOfMonth?.id === photo.id}
                       onClick={() => {
                         if (selectionMode) { toggleSelect(photo.id); return }
                         setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))
