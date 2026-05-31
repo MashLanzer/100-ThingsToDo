@@ -277,7 +277,7 @@ function Lightbox({
             {photo.caption}
           </p>
         )}
-        {photo.uploaded_by_name && (
+        {photo.file_name && (
           <p
             style={{
               color: "rgba(255,255,255,0.5)",
@@ -286,7 +286,7 @@ function Lightbox({
               fontSize: "0.75rem",
             }}
           >
-            Subida por {photo.uploaded_by_name}
+            {photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"}
           </p>
         )}
       </div>

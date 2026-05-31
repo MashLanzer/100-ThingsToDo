@@ -1,46 +1,53 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifyFirebaseToken } from "@/lib/api-auth"
-import { getSupabaseAdmin } from "@/lib/supabase/server"
-import { createClient } from "@supabase/supabase-js"
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const IMGBB_API_KEY = process.env.IMGBB_API_KEY!
+const FIREBASE_API_KEY = process.env.FEBRERO_FIREBASE_API_KEY!
+const FIRESTORE_BASE = "https://firestore.googleapis.com/v1/projects/febrero-d6968/databases/(default)/documents"
+
+interface FirestoreDoc {
+  name: string
+  fields: Record<string, { stringValue?: string; timestampValue?: string }>
+  createTime: string
+}
+
+function parseDoc(doc: FirestoreDoc) {
+  const id = doc.name.split("/").pop() ?? ""
+  const f = doc.fields ?? {}
+  return {
+    id,
+    image_url: f.imageUrl?.stringValue ?? "",
+    thumb_url: f.thumbUrl?.stringValue ?? null,
+    delete_url: f.deleteUrl?.stringValue ?? null,
+    file_name: f.fileName?.stringValue ?? null,
+    caption: f.caption?.stringValue ?? null,
+    source: f.source?.stringValue ?? "14feb",
+    created_at: f.timestamp?.timestampValue ?? doc.createTime ?? new Date().toISOString(),
+  }
+}
 
 export async function GET(req: NextRequest) {
   const user = await verifyFirebaseToken(req)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const supabase = getSupabaseAdmin()
-  if (!supabase) return NextResponse.json({ error: "DB unavailable" }, { status: 503 })
+  const url = `${FIRESTORE_BASE}/memories?key=${FIREBASE_API_KEY}&pageSize=200`
+  const res = await fetch(url)
+  if (!res.ok) return NextResponse.json({ error: "Firestore error" }, { status: 502 })
 
-  const { data: me } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
-  if (!me?.couple_id) return NextResponse.json([])
+  const data = await res.json()
+  const docs: FirestoreDoc[] = data.documents ?? []
 
-  const { data, error } = await supabase
-    .from("photos")
-    .select("*")
-    .eq("collection_key", me.couple_id)
-    .order("created_at", { ascending: false })
+  const photos = docs
+    .map(parseDoc)
+    .filter((p) => p.image_url)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json(photos)
 }
 
 export async function POST(req: NextRequest) {
   const user = await verifyFirebaseToken(req)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-  const supabase = getSupabaseAdmin()
-  if (!supabase) return NextResponse.json({ error: "DB unavailable" }, { status: 503 })
-
-  const { data: me } = await supabase
-    .from("users")
-    .select("couple_id, name")
-    .eq("id", user.uid)
-    .single()
-  if (!me?.couple_id) return NextResponse.json({ error: "Not in a couple" }, { status: 403 })
 
   let formData: FormData
   try {
@@ -57,39 +64,44 @@ export async function POST(req: NextRequest) {
   const caption = formData.get("caption")
   const captionStr = typeof caption === "string" ? caption.trim() || null : null
 
-  const timestamp = Date.now()
-  const safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
-  const filePath = `${me.couple_id}/${timestamp}_${safeFilename}`
+  // Upload to ImgBB
+  const imgbbForm = new FormData()
+  imgbbForm.append("image", file)
 
-  const fileBuffer = await file.arrayBuffer()
-  const { error: uploadError } = await supabaseAdmin.storage
-    .from("couple-photos")
-    .upload(filePath, Buffer.from(fileBuffer), {
-      contentType: file.type,
-      upsert: false,
-    })
+  const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+    method: "POST",
+    body: imgbbForm,
+  })
+  if (!imgbbRes.ok) return NextResponse.json({ error: "ImgBB upload failed" }, { status: 502 })
 
-  if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 })
+  const imgbbData = await imgbbRes.json()
+  if (!imgbbData?.data?.url) return NextResponse.json({ error: "ImgBB response invalid" }, { status: 502 })
+
+  const imageUrl: string = imgbbData.data.url
+  const thumbUrl: string = imgbbData.data.thumb?.url ?? imageUrl
+  const deleteUrl: string | null = imgbbData.data.delete_url ?? null
+
+  // Save to Firebase Firestore (febrero-d6968 / memories)
+  const now = new Date().toISOString()
+  const firestoreBody = {
+    fields: {
+      imageUrl: { stringValue: imageUrl },
+      thumbUrl: { stringValue: thumbUrl },
+      ...(deleteUrl ? { deleteUrl: { stringValue: deleteUrl } } : {}),
+      ...(captionStr ? { caption: { stringValue: captionStr } } : {}),
+      fileName: { stringValue: (file as File).name },
+      source: { stringValue: "thingstodo" },
+      timestamp: { timestampValue: now },
+    },
   }
 
-  const { data: { publicUrl } } = supabaseAdmin.storage
-    .from("couple-photos")
-    .getPublicUrl(filePath)
+  const firestoreRes = await fetch(`${FIRESTORE_BASE}/memories?key=${FIREBASE_API_KEY}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(firestoreBody),
+  })
+  if (!firestoreRes.ok) return NextResponse.json({ error: "Firestore save failed" }, { status: 502 })
 
-  const { data, error } = await supabase
-    .from("photos")
-    .insert({
-      collection_key: me.couple_id,
-      image_url: publicUrl,
-      caption: captionStr,
-      uploaded_by_name: me.name ?? user.name ?? null,
-      source: "thingstodo",
-      delete_url: filePath,
-    })
-    .select()
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data, { status: 201 })
+  const firestoreData: FirestoreDoc = await firestoreRes.json()
+  return NextResponse.json(parseDoc(firestoreData), { status: 201 })
 }

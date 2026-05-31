@@ -167,13 +167,12 @@ export interface ChallengeData {
 
 export interface Photo {
   id: string
-  collection_key: string
   image_url: string
-  thumb_url?: string | null
-  delete_url?: string | null
-  caption?: string | null
-  uploaded_by_name?: string | null
-  source: string
+  thumb_url: string | null
+  delete_url: string | null
+  file_name: string | null
+  caption: string | null
+  source: string   // 'thingstodo' | '14feb'
   created_at: string
 }
 

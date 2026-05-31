@@ -6,7 +6,7 @@ import { useCoupleStatus, useLinkPartner, useUnlinkPartner } from "@/hooks/use-c
 import { useAuth } from "@/hooks/use-auth"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
 import { toast } from "sonner"
-import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload, Link2 } from "lucide-react"
+import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload } from "lucide-react"
 
 const THEMES = [
   { id: "purple",   name: "Morado",   primary: "#8B5CF6", lighter: "#EDE9FE", border: "#F3E8FF", muted: "#F5F3FF" },
@@ -140,7 +140,6 @@ export function SettingsModal() {
   const { subscribe: subscribePush, subscribing: pushSubscribing, isSubscribed: pushSubscribed, isSupported: pushSupported, permission: pushPermission } = usePushNotifications()
   const [code, setCode] = useState("")
   const [copied, setCopied] = useState(false)
-  const [copiedToken, setCopiedToken] = useState(false)
   const [currentTheme, setCurrentTheme] = useState("purple")
   const [currentFont, setCurrentFont] = useState<"normal" | "large">("normal")
   const [hoveredTheme, setHoveredTheme] = useState<string | null>(null)
@@ -211,14 +210,6 @@ export function SettingsModal() {
     await navigator.clipboard.writeText(data.user.couple_code)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }
-
-  async function handleCopyToken() {
-    const coupleId = data?.couple?.id
-    if (!coupleId) return
-    await navigator.clipboard.writeText(coupleId)
-    setCopiedToken(true)
-    setTimeout(() => setCopiedToken(false), 2000)
   }
 
   async function handleLink() {
@@ -870,45 +861,6 @@ export function SettingsModal() {
                   ))}
                 </div>
               </section>
-
-              {/* ── Conectar con 14-Febrero ── */}
-              {data?.couple?.id && (
-                <div style={{ paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
-                  <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.375rem", display: "flex", alignItems: "center", gap: 4 }}>
-                    <Link2 size={14} /> Token de Sincronizacion
-                  </p>
-                  <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.625rem", lineHeight: 1.4 }}>
-                    Copia este codigo en tu pagina 14-Febrero para sincronizar fotos automaticamente
-                  </p>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <span
-                      style={{
-                        flex: 1,
-                        background: "var(--muted)",
-                        borderRadius: "var(--radius-md)",
-                        fontFamily: "monospace",
-                        fontSize: "0.75rem",
-                        padding: "0.5rem",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        color: "var(--foreground)",
-                        border: "1px solid var(--border)",
-                      }}
-                    >
-                      {data.couple.id}
-                    </span>
-                    <button
-                      className="btn-icon-small"
-                      onClick={handleCopyToken}
-                      title="Copiar token"
-                      style={{ flexShrink: 0 }}
-                    >
-                      {copiedToken ? <Check size={16} color="var(--success-dark)" /> : <Copy size={16} />}
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* ── Exportar datos ── */}
               <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
