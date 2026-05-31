@@ -298,6 +298,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  touch-action: none;
 }
 
 .modal-box {
@@ -309,7 +310,8 @@ body {
   max-height: 88vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
   animation: modalIn 0.25s ease;
 }
 

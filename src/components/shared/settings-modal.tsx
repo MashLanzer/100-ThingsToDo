@@ -576,18 +576,6 @@ export function SettingsModal() {
                 )}
               </section>
 
-              {/* ── Logout ── */}
-              <div style={{ paddingTop: "0.5rem", borderTop: "1px solid var(--border)" }}>
-                <button
-                  className="btn btn-outline btn-danger"
-                  style={{ width: "100%", justifyContent: "center", gap: "0.5rem" }}
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                >
-                  <LogOut size={15} />
-                  {loggingOut ? "Cerrando sesión..." : "Cerrar Sesión"}
-                </button>
-              </div>
             </>
           )}
 
@@ -928,6 +916,58 @@ export function SettingsModal() {
                     📓 Exportar diario
                   </button>
                 </div>
+              </div>
+
+              {/* ── Conectar con 14-Febrero ── */}
+              {data?.couple && (
+                <div style={{ paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
+                  <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.25rem" }}>
+                    🔗 Conectar con 14-Febrero
+                  </p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.625rem" }}>
+                    Copia estos valores y pégalos en el archivo <code style={{ background: "var(--muted)", padding: "1px 4px", borderRadius: 4, fontSize: "0.7rem" }}>script.js</code> de tu página 14-Febrero
+                  </p>
+                  {[
+                    { label: "SUPABASE_URL", value: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "" },
+                    { label: "SUPABASE_ANON_KEY", value: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" },
+                    { label: "COLLECTION_KEY (tu couple ID)", value: data.couple.id ?? "" },
+                  ].map(({ label, value }) => (
+                    <div key={label} style={{ marginBottom: "0.5rem" }}>
+                      <p style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "2px", textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</p>
+                      <div style={{ display: "flex", gap: "0.375rem", alignItems: "center" }}>
+                        <code style={{
+                          flex: 1, fontSize: "0.6875rem", background: "var(--muted)",
+                          padding: "0.375rem 0.5rem", borderRadius: "var(--radius-md)",
+                          wordBreak: "break-all", color: "var(--foreground)", lineHeight: 1.4,
+                        }}>
+                          {value || "—"}
+                        </code>
+                        <button
+                          className="btn-icon-small"
+                          title="Copiar"
+                          onClick={() => {
+                            if (value) navigator.clipboard.writeText(value).then(() => toast.success("Copiado ✓"))
+                          }}
+                        >
+                          <Copy size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* ── Cerrar sesión ── */}
+              <div style={{ paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
+                <button
+                  className="btn btn-outline btn-danger"
+                  style={{ width: "100%", justifyContent: "center", gap: "0.5rem" }}
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                >
+                  <LogOut size={15} />
+                  {loggingOut ? "Cerrando sesión..." : "Cerrar Sesión"}
+                </button>
               </div>
             </>
           )}
