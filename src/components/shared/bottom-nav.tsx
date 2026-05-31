@@ -1,18 +1,16 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { useAppStore } from "@/stores/app-store"
 import { ClipboardList, Images } from "lucide-react"
 
 const TABS = [
-  { id: "planes", label: "Planes", Icon: ClipboardList, href: "/dashboard" },
-  { id: "fotos", label: "Fotos", Icon: Images, href: "/fotos" },
+  { id: "planes", label: "Planes", Icon: ClipboardList, href: "/dashboard", emoji: "📋" },
+  { id: "fotos", label: "Fotos", Icon: Images, href: "/fotos", emoji: "📷" },
 ] as const
 
 export function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { } = useAppStore()
 
   return (
     <nav className="bottom-nav">
@@ -24,10 +22,10 @@ export function BottomNav() {
             className={`bottom-nav-item${isActive ? " active" : ""}`}
             onClick={() => router.push(href)}
           >
-            <span style={{ display: "inline-flex" }}>
-              <Icon size={22} />
+            <span className="nav-pill">
+              <Icon size={24} strokeWidth={isActive ? 2.2 : 1.7} />
             </span>
-            <span>{label}</span>
+            <span className="nav-label">{label}</span>
           </button>
         )
       })}
