@@ -114,17 +114,19 @@ export function PlanCard({ plan, index = 0 }: Props) {
           </div>
           <span
             style={{
-              fontSize: "0.8125rem",
+              fontSize: "0.9375rem",
               fontWeight: 700,
               fontFamily: "'Fredoka', sans-serif",
-              color: isComplete ? "var(--success-dark)" : "var(--primary)",
-              background: isComplete ? "var(--mint)" : "var(--primary-lighter)",
+              color: isComplete ? "var(--success-dark)" : total === 0 ? "var(--foreground-muted)" : "var(--primary)",
+              background: isComplete ? "var(--mint)" : total === 0 ? "var(--muted)" : "var(--primary-lighter)",
               borderRadius: "999px",
-              padding: "0.2rem 0.625rem",
+              padding: "0.25rem 0.75rem",
               flexShrink: 0,
+              minWidth: "48px",
+              textAlign: "center" as const,
             }}
           >
-            {isComplete ? <><Sparkles size={12} /> ¡Listo!</> : `${pct}%`}
+            {isComplete ? <><Sparkles size={13} /> ¡Listo!</> : `${pct}%`}
           </span>
         </div>
 

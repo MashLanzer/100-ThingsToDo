@@ -191,6 +191,20 @@ export default function DashboardPage() {
       })
     : filteredActive
 
+  const inProgressPlans = orderedActive.filter(
+    (p) => !(p.task_count && p.task_count > 0 && p.completed_count === p.task_count)
+  )
+  const completedActivePlans = orderedActive.filter(
+    (p) => !!(p.task_count && p.task_count > 0 && p.completed_count === p.task_count)
+  )
+  const allCompletedPlans = [...completedActivePlans, ...filteredArchived]
+  const totalInProgress = activePlans.filter(
+    (p) => !(p.task_count && p.task_count > 0 && p.completed_count === p.task_count)
+  ).length
+  const totalCompleted = activePlans.filter(
+    (p) => !!(p.task_count && p.task_count > 0 && p.completed_count === p.task_count)
+  ).length
+
   function handlePlanDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -322,19 +336,37 @@ export default function DashboardPage() {
         )
       })()}
 
-      {/* Actions */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-        <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <ClipboardList size={20} /> Nuestros Planes
-        </h1>
+      {/* Hero heading */}
+      <div style={{
+        background: "linear-gradient(135deg, var(--primary-lighter) 0%, var(--pink-light) 100%)",
+        borderRadius: "var(--radius-lg)",
+        padding: "1rem 1.125rem",
+        marginBottom: "0.875rem",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        border: "1px solid var(--primary-light)",
+      }}>
+        <div>
+          <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.5rem", fontWeight: 700, color: "var(--primary)", display: "flex", alignItems: "center", gap: "0.5rem", lineHeight: 1.2 }}>
+            <ClipboardList size={22} /> Nuestros Planes
+          </h1>
+          {hasAnyPlans && (
+            <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "3px" }}>
+              {totalInProgress > 0 ? `${totalInProgress} en progreso` : "¿Qué aventura sigue?"}
+              {totalCompleted > 0 ? ` · ${totalCompleted} completado${totalCompleted !== 1 ? "s" : ""}` : ""}
+            </p>
+          )}
+        </div>
         <button
           className="btn btn-primary"
           onClick={() => setShowForm(true)}
           disabled={!hasCouple}
           title={!hasCouple ? "Vincula una pareja para crear planes" : undefined}
+          style={{ flexShrink: 0 }}
         >
           <Plus size={18} />
-          Nuevo Plan
+          Nuevo
         </button>
       </div>
 
@@ -355,7 +387,7 @@ export default function DashboardPage() {
 
       {/* Tag filter pills */}
       {hasAnyPlans && allTags.length > 0 && (
-        <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", marginBottom: "0.5rem", paddingBottom: "2px", scrollbarWidth: "none" as const }}>
           <button
             onClick={() => setActiveTagFilter(null)}
             style={{
@@ -607,12 +639,12 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            {/* Active plans — drag to reorder */}
-            {orderedActive.length > 0 && (
+            {/* Active plans in progress — drag to reorder */}
+            {inProgressPlans.length > 0 && (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handlePlanDragEnd}>
-                <SortableContext items={orderedActive.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={inProgressPlans.map((p) => p.id)} strategy={verticalListSortingStrategy}>
                   <div>
-                    {orderedActive.map((plan, i) => (
+                    {inProgressPlans.map((plan, i) => (
                       <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
                     ))}
                   </div>
@@ -620,8 +652,8 @@ export default function DashboardPage() {
               </DndContext>
             )}
 
-            {/* Archived / completed section */}
-            {filteredArchived.length > 0 && (
+            {/* Completed + archived plans — collapsable */}
+            {allCompletedPlans.length > 0 && (
               <div style={{ marginTop: "1rem" }}>
                 <button
                   onClick={() => setShowArchived((v) => !v)}
@@ -635,12 +667,12 @@ export default function DashboardPage() {
                 >
                   <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><CheckCircle2 size={14} /> Completados</span>
                   <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
-                    {filteredArchived.length} {showArchived ? "▲" : "▼"}
+                    {allCompletedPlans.length} {showArchived ? "▲" : "▼"}
                   </span>
                 </button>
                 {showArchived && (
-                  <div className="plans-grid animate-fade-in">
-                    {filteredArchived.map((plan, i) => (
+                  <div className="animate-fade-in">
+                    {allCompletedPlans.map((plan, i) => (
                       <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
                     ))}
                   </div>
@@ -648,7 +680,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* If no active plans but only archived */}
+            {/* If nothing to show */}
             {filteredActive.length === 0 && filteredArchived.length === 0 && searchQuery.trim() && (
               <div className="empty-state">
                 <div className="empty-icon animate-bounce-slow" style={{ color: "var(--foreground-muted)" }}><Search size={48} /></div>

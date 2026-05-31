@@ -7,7 +7,7 @@ import { useTasks, useCreateTask, useToggleTask, useDeleteTask, useUpdateTask } 
 import { TaskItem } from "@/components/features/task-item"
 import { KAWAII_ICON_REGISTRY, KawaiiIcon } from "@/components/ui/kawaii-icon"
 import type { Task } from "@/types"
-import { ArrowLeft, Plus, Edit2, X, Trash2, Star, Image, Calendar, Tag, Upload, Archive } from "lucide-react"
+import { ArrowLeft, Plus, Edit2, X, Trash2, Star, Image, Calendar, Tag, Upload, Archive, CheckCircle2, ChevronDown } from "lucide-react"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
@@ -25,6 +25,29 @@ import {
   arrayMove,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
+
+function planGradient(id: string): string {
+  const gradients = [
+    "linear-gradient(135deg, #8B5CF6, #EC4899)",
+    "linear-gradient(135deg, #06B6D4, #10B981)",
+    "linear-gradient(135deg, #F59E0B, #EF4444)",
+    "linear-gradient(135deg, #EC4899, #A78BFA)",
+    "linear-gradient(135deg, #10B981, #3B82F6)",
+    "linear-gradient(135deg, #3B82F6, #8B5CF6)",
+  ]
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash)
+  return gradients[Math.abs(hash) % gradients.length]
+}
+
+function relativeDate(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000)
+  if (diff === 0) return "hoy"
+  if (diff === 1) return "ayer"
+  if (diff < 30) return `hace ${diff}d`
+  if (diff < 365) return `hace ${Math.floor(diff / 30)}m`
+  return `hace ${Math.floor(diff / 365)}a`
+}
 
 export default function PlanDetailPage() {
   const params = useParams<{ id: string }>()
@@ -62,7 +85,29 @@ export default function PlanDetailPage() {
 
   // Local optimistic task order for drag-and-drop
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null)
+  const [showCompletedTasks, setShowCompletedTasks] = useState(false)
   const displayTasks = localTasks ?? tasks ?? []
+
+  const pendingTasks = displayTasks.filter((t) => !t.completed)
+  const completedTasksList = displayTasks.filter((t) => t.completed)
+
+  function handleToggle(task: Task) {
+    const prevDone = done
+    const newDone = task.completed ? done - 1 : done + 1
+    const prevPct = total > 0 ? Math.floor((prevDone / total) * 100) : 0
+    const newPct = total > 0 ? Math.floor((newDone / total) * 100) : 0
+    for (const milestone of [25, 50, 75, 100]) {
+      if (prevPct < milestone && newPct >= milestone) {
+        if (milestone === 100) {
+          toast.success("¡Plan completado! 🎊", { duration: 3000 })
+        } else {
+          toast.success(`¡${milestone}% completado! 🎉`, { duration: 2000 })
+        }
+        break
+      }
+    }
+    toggleTask.mutate({ taskId: task.id, planId: params.id, completed: task.completed })
+  }
 
   const iconEntries = Object.keys(KAWAII_ICON_REGISTRY)
 
@@ -214,45 +259,80 @@ export default function PlanDetailPage() {
           </svg>
         </div>
       )}
-      {/* Sub-header */}
+      {/* Plan hero header */}
       <header
         style={{
           position: "sticky",
           top: "53px",
           zIndex: 30,
-          background: "rgba(253,252,254,0.92)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid var(--border)",
-          padding: "0.625rem 1rem",
+          overflow: "hidden",
+          borderBottom: "1px solid rgba(255,255,255,0.2)",
+          ...(plan?.cover_image
+            ? { backgroundImage: `url(${plan.cover_image})`, backgroundSize: "cover", backgroundPosition: "center" }
+            : { background: planGradient(params.id) }),
         }}
       >
-        <div style={{ maxWidth: "800px", margin: "0 auto", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <button className="btn-icon" onClick={() => router.push("/dashboard")}>
-            <ArrowLeft size={20} />
-          </button>
-          <div style={{ flex: 1, minWidth: 0 }}>
+        {plan?.cover_image && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)" }} />
+        )}
+        <div style={{ position: "relative", maxWidth: "800px", margin: "0 auto", padding: "0.75rem 1rem 0.875rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.5rem" }}>
+            <button
+              onClick={() => router.push("/dashboard")}
+              style={{
+                background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%",
+                width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", color: "white", flexShrink: 0, backdropFilter: "blur(4px)",
+              }}
+            >
+              <ArrowLeft size={18} />
+            </button>
             <h1
               style={{
-                fontFamily: "'Fredoka', sans-serif",
-                fontSize: "1.125rem",
-                fontWeight: 700,
-                color: "var(--foreground)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                flex: 1, fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700,
+                color: "white", textShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}
             >
               {plan?.title ?? "..."}
             </h1>
-            {plan?.description && (
-              <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginTop: "1px" }}>
-                {plan.description}
-              </p>
-            )}
+            <button
+              onClick={openEdit}
+              title="Editar plan"
+              style={{
+                background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%",
+                width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", color: "white", flexShrink: 0, backdropFilter: "blur(4px)",
+              }}
+            >
+              <Edit2 size={15} />
+            </button>
           </div>
-          <button className="btn-icon" onClick={openEdit} title="Editar plan">
-            <Edit2 size={16} />
-          </button>
+          {/* Stats pills */}
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "0.625rem", fontWeight: 600, background: "rgba(255,255,255,0.22)", color: "white", borderRadius: "999px", padding: "2px 8px" }}>
+              {total} tarea{total !== 1 ? "s" : ""}
+            </span>
+            <span style={{ fontSize: "0.625rem", fontWeight: 600, background: "rgba(255,255,255,0.22)", color: "white", borderRadius: "999px", padding: "2px 8px" }}>
+              {done} completada{done !== 1 ? "s" : ""}
+            </span>
+            {plan?.created_at && (
+              <span style={{ fontSize: "0.625rem", fontWeight: 600, background: "rgba(255,255,255,0.22)", color: "white", borderRadius: "999px", padding: "2px 8px" }}>
+                Creado {relativeDate(plan.created_at)}
+              </span>
+            )}
+            {plan?.due_date && (() => {
+              const today = new Date(); today.setHours(0,0,0,0)
+              const due = new Date(plan.due_date + "T00:00:00")
+              const days = Math.ceil((due.getTime() - today.getTime()) / 86_400_000)
+              const isOverdue = days < 0
+              return (
+                <span style={{ fontSize: "0.625rem", fontWeight: 600, background: isOverdue ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.22)", color: "white", borderRadius: "999px", padding: "2px 8px" }}>
+                  {isOverdue ? "Vencido" : days === 0 ? "¡Hoy!" : `${days}d restantes`}
+                </span>
+              )
+            })()}
+          </div>
         </div>
       </header>
 
@@ -363,90 +443,157 @@ export default function PlanDetailPage() {
             </button>
           </div>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={displayTasks.map((t) => t.id)}
-              strategy={verticalListSortingStrategy}
-            >
-          <div>
-            {displayTasks.map((task, i) => (
-              <div key={task.id}>
-                <TaskItem
-                  task={task}
-                  onToggle={() => toggleTask.mutate({ taskId: task.id, planId: params.id, completed: task.completed })}
-                  onDelete={() => deleteTask.mutate({ taskId: task.id, planId: params.id })}
-                  onEdit={() => {
-                    setEditingTaskId(task.id)
-                    setEditTaskTitle(task.title)
-                    setEditTaskIcon(task.icon ?? "heart")
-                    setEditTaskNotes(task.notes ?? "")
-                    setEditTaskDueDate(task.due_date ?? "")
-                  }}
-                  currentUserId={user?.uid}
-                />
-                {editingTaskId === task.id && (
-                  <div className="card animate-fade-in" style={{ marginBottom: "0.75rem", marginTop: "-0.25rem", borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "2px solid var(--primary-lighter)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.625rem" }}>
-                      <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)", display: "flex", alignItems: "center", gap: "0.375rem" }}><Edit2 size={14} /> Editar Tarea</h3>
-                      <button className="btn-icon" onClick={() => setEditingTaskId(null)}><X size={14} /></button>
-                    </div>
-                    <input
-                      className="input"
-                      type="text"
-                      value={editTaskTitle}
-                      onChange={(e) => setEditTaskTitle(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSaveTaskEdit()}
-                      style={{ marginBottom: "0.625rem" }}
-                      autoFocus
-                    />
-                    <textarea
-                      className="textarea"
-                      rows={2}
-                      placeholder="Nota opcional..."
-                      value={editTaskNotes}
-                      onChange={(e) => setEditTaskNotes(e.target.value)}
-                      style={{ marginBottom: "0.625rem" }}
-                    />
-                    <input
-                      type="date"
-                      className="input"
-                      value={editTaskDueDate}
-                      onChange={(e) => setEditTaskDueDate(e.target.value)}
-                      style={{ marginBottom: "0.625rem" }}
-                    />
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.625rem" }}>
-                      {iconEntries.map((key) => (
-                        <button
-                          key={key}
-                          onClick={() => setEditTaskIcon(key)}
-                          style={{
-                            width: "32px", height: "32px", borderRadius: "8px",
-                            border: editTaskIcon === key ? "2px solid var(--primary)" : "2px solid transparent",
-                            background: editTaskIcon === key ? "var(--primary-lighter)" : "var(--muted)",
-                            cursor: "pointer",
-                            display: "flex", alignItems: "center", justifyContent: "center",
+          <>
+            {/* Pending tasks — drag to reorder */}
+            {pendingTasks.length > 0 && (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={pendingTasks.map((t) => t.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div>
+                    {pendingTasks.map((task) => (
+                      <div key={task.id}>
+                        <TaskItem
+                          task={task}
+                          onToggle={() => handleToggle(task)}
+                          onDelete={() => deleteTask.mutate({ taskId: task.id, planId: params.id })}
+                          onEdit={() => {
+                            setEditingTaskId(task.id)
+                            setEditTaskTitle(task.title)
+                            setEditTaskIcon(task.icon ?? "heart")
+                            setEditTaskNotes(task.notes ?? "")
+                            setEditTaskDueDate(task.due_date ?? "")
                           }}
-                        ><KawaiiIcon name={key} size={16} color={editTaskIcon === key ? "var(--primary)" : "var(--foreground-muted)"} /></button>
-                      ))}
-                    </div>
-                    <div className="form-actions">
-                      <button className="btn btn-primary" onClick={handleSaveTaskEdit} disabled={updateTask.isPending}>
-                        {updateTask.isPending ? "Guardando..." : "Guardar"}
-                      </button>
-                      <button className="btn btn-outline" onClick={() => setEditingTaskId(null)}>Cancelar</button>
-                    </div>
+                          currentUserId={user?.uid}
+                        />
+                        {editingTaskId === task.id && (
+                          <div className="card animate-fade-in" style={{ marginBottom: "0.75rem", marginTop: "-0.25rem", borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "2px solid var(--primary-lighter)" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.625rem" }}>
+                              <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)", display: "flex", alignItems: "center", gap: "0.375rem" }}><Edit2 size={14} /> Editar Tarea</h3>
+                              <button className="btn-icon" onClick={() => setEditingTaskId(null)}><X size={14} /></button>
+                            </div>
+                            <input className="input" type="text" value={editTaskTitle} onChange={(e) => setEditTaskTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSaveTaskEdit()} style={{ marginBottom: "0.625rem" }} autoFocus />
+                            <textarea className="textarea" rows={2} placeholder="Nota opcional..." value={editTaskNotes} onChange={(e) => setEditTaskNotes(e.target.value)} style={{ marginBottom: "0.625rem" }} />
+                            <input type="date" className="input" value={editTaskDueDate} onChange={(e) => setEditTaskDueDate(e.target.value)} style={{ marginBottom: "0.625rem" }} />
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.625rem" }}>
+                              {iconEntries.map((key) => (
+                                <button key={key} onClick={() => setEditTaskIcon(key)} style={{ width: "32px", height: "32px", borderRadius: "8px", border: editTaskIcon === key ? "2px solid var(--primary)" : "2px solid transparent", background: editTaskIcon === key ? "var(--primary-lighter)" : "var(--muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  <KawaiiIcon name={key} size={16} color={editTaskIcon === key ? "var(--primary)" : "var(--foreground-muted)"} />
+                                </button>
+                              ))}
+                            </div>
+                            <div className="form-actions">
+                              <button className="btn btn-primary" onClick={handleSaveTaskEdit} disabled={updateTask.isPending}>{updateTask.isPending ? "Guardando..." : "Guardar"}</button>
+                              <button className="btn btn-outline" onClick={() => setEditingTaskId(null)}>Cancelar</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            )}
+
+            {/* Completed tasks — collapsable */}
+            {completedTasksList.length > 0 && (
+              <div style={{ marginTop: pendingTasks.length > 0 ? "0.75rem" : 0 }}>
+                <button
+                  onClick={() => setShowCompletedTasks((v) => !v)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "0.5rem", width: "100%",
+                    background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius-md)",
+                    padding: "0.5rem 0.75rem", cursor: "pointer", fontFamily: "inherit",
+                    fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground-light)",
+                    marginBottom: showCompletedTasks ? "0.5rem" : 0,
+                  }}
+                >
+                  <CheckCircle2 size={14} color="var(--success-dark)" />
+                  <span>Completadas ({completedTasksList.length})</span>
+                  <ChevronDown size={14} style={{ marginLeft: "auto", transition: "transform 0.2s", transform: showCompletedTasks ? "rotate(180deg)" : "none" }} />
+                </button>
+                {showCompletedTasks && (
+                  <div className="animate-fade-in">
+                    {completedTasksList.map((task) => (
+                      <div key={task.id}>
+                        <TaskItem
+                          task={task}
+                          onToggle={() => handleToggle(task)}
+                          onDelete={() => deleteTask.mutate({ taskId: task.id, planId: params.id })}
+                          onEdit={() => {
+                            setEditingTaskId(task.id)
+                            setEditTaskTitle(task.title)
+                            setEditTaskIcon(task.icon ?? "heart")
+                            setEditTaskNotes(task.notes ?? "")
+                            setEditTaskDueDate(task.due_date ?? "")
+                          }}
+                          currentUserId={user?.uid}
+                        />
+                        {editingTaskId === task.id && (
+                          <div className="card animate-fade-in" style={{ marginBottom: "0.75rem", marginTop: "-0.25rem", borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "2px solid var(--primary-lighter)" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.625rem" }}>
+                              <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)", display: "flex", alignItems: "center", gap: "0.375rem" }}><Edit2 size={14} /> Editar Tarea</h3>
+                              <button className="btn-icon" onClick={() => setEditingTaskId(null)}><X size={14} /></button>
+                            </div>
+                            <input className="input" type="text" value={editTaskTitle} onChange={(e) => setEditTaskTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSaveTaskEdit()} style={{ marginBottom: "0.625rem" }} autoFocus />
+                            <textarea className="textarea" rows={2} placeholder="Nota opcional..." value={editTaskNotes} onChange={(e) => setEditTaskNotes(e.target.value)} style={{ marginBottom: "0.625rem" }} />
+                            <input type="date" className="input" value={editTaskDueDate} onChange={(e) => setEditTaskDueDate(e.target.value)} style={{ marginBottom: "0.625rem" }} />
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.625rem" }}>
+                              {iconEntries.map((key) => (
+                                <button key={key} onClick={() => setEditTaskIcon(key)} style={{ width: "32px", height: "32px", borderRadius: "8px", border: editTaskIcon === key ? "2px solid var(--primary)" : "2px solid transparent", background: editTaskIcon === key ? "var(--primary-lighter)" : "var(--muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  <KawaiiIcon name={key} size={16} color={editTaskIcon === key ? "var(--primary)" : "var(--foreground-muted)"} />
+                                </button>
+                              ))}
+                            </div>
+                            <div className="form-actions">
+                              <button className="btn btn-primary" onClick={handleSaveTaskEdit} disabled={updateTask.isPending}>{updateTask.isPending ? "Guardando..." : "Guardar"}</button>
+                              <button className="btn btn-outline" onClick={() => setEditingTaskId(null)}>Cancelar</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-            </SortableContext>
-          </DndContext>
+            )}
+          </>
         )}
+      </div>
+
+      {/* Sticky add-task bar */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: "calc(64px + env(safe-area-inset-bottom, 0px))",
+          left: 0, right: 0,
+          padding: "0.5rem 1rem",
+          background: "rgba(253,252,254,0.95)",
+          backdropFilter: "blur(10px)",
+          borderTop: "1px solid var(--border)",
+          zIndex: 40,
+        }}
+      >
+        <button
+          className="btn btn-outline"
+          onClick={() => setShowTaskForm(true)}
+          style={{
+            width: "100%",
+            justifyContent: "flex-start",
+            color: "var(--foreground-muted)",
+            fontWeight: 400,
+            fontSize: "0.875rem",
+            gap: "0.5rem",
+          }}
+        >
+          <Plus size={16} color="var(--primary)" />
+          Añadir tarea...
+        </button>
       </div>
 
       {/* Edit modal */}
