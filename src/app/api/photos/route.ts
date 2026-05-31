@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
   const thumbUrl: string = imgbbData.data.thumb?.url ?? imageUrl
   const deleteUrl: string | null = imgbbData.data.delete_url ?? null
 
-  // Save to Supabase photos table
+  // Try Supabase photos table first
   const { data: photoData, error: photoError } = await supabase
     .from("photos")
     .insert({
@@ -139,6 +139,37 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (photoError) return NextResponse.json({ error: photoError.message }, { status: 500 })
+  // If Supabase fails (e.g. migration not applied yet), fall back to Firestore
+  if (photoError) {
+    const now = new Date().toISOString()
+    const firestoreBody = {
+      fields: {
+        imageUrl: { stringValue: imageUrl },
+        thumbUrl: { stringValue: thumbUrl },
+        ...(deleteUrl ? { deleteUrl: { stringValue: deleteUrl } } : {}),
+        ...(captionStr ? { caption: { stringValue: captionStr } } : {}),
+        fileName: { stringValue: (file as File).name },
+        source: { stringValue: "thingstodo" },
+        timestamp: { timestampValue: now },
+      },
+    }
+    const firestoreRes = await fetch(`${FIRESTORE_BASE}/memories?key=${FIREBASE_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(firestoreBody),
+    })
+    if (!firestoreRes.ok) return NextResponse.json({ error: "Upload failed" }, { status: 502 })
+    const firestoreData = await firestoreRes.json()
+    return NextResponse.json({
+      id: "firestore-" + firestoreData.name?.split("/").pop(),
+      image_url: imageUrl,
+      thumb_url: thumbUrl,
+      delete_url: deleteUrl,
+      caption: captionStr,
+      source: "thingstodo",
+      created_at: now,
+    }, { status: 201 })
+  }
+
   return NextResponse.json(photoData, { status: 201 })
 }
