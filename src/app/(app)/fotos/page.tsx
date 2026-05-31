@@ -604,7 +604,7 @@ export default function FotosPage() {
           onClick={() => fileInputRef.current?.click()}
           style={{
             position: "fixed",
-            bottom: 24,
+            bottom: "calc(72px + env(safe-area-inset-bottom, 0px))",
             right: 24,
             background: "linear-gradient(135deg, var(--primary), var(--secondary))",
             border: "none",
