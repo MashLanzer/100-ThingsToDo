@@ -54,6 +54,12 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
   const [swipeX, setSwipeX] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const touchStartX = useRef<number>(0)
+  const touchStartY = useRef<number>(0)
+  const isHorizontalSwipe = useRef<boolean | null>(null)
+
+  // Long-press to edit
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressTriggered = useRef(false)
 
   // Reactions state
   const [reactions, setReactions] = useState<Reaction[]>([])
@@ -120,27 +126,67 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
     onToggle()
   }
 
+  // ── Swipe-to-delete ──────────────────────────────────────────
   function handleTouchStart(e: React.TouchEvent) {
+    // Don't start swipe if already showing delete (let next tap reset or trigger)
     touchStartX.current = e.touches[0].clientX
-    setIsSwiping(true)
+    touchStartY.current = e.touches[0].clientY
+    isHorizontalSwipe.current = null
+    setIsSwiping(false)
   }
 
   function handleTouchMove(e: React.TouchEvent) {
-    const delta = e.touches[0].clientX - touchStartX.current
-    if (delta < 0) {
-      setSwipeX(Math.max(delta, -80))
-    } else {
-      setSwipeX(0)
+    const dx = e.touches[0].clientX - touchStartX.current
+    const dy = Math.abs(e.touches[0].clientY - touchStartY.current)
+
+    // Determine gesture direction on first significant move
+    if (isHorizontalSwipe.current === null && (Math.abs(dx) > 5 || dy > 5)) {
+      isHorizontalSwipe.current = Math.abs(dx) > dy
+    }
+
+    if (!isHorizontalSwipe.current) return
+
+    // Cancel long press on move
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null }
+
+    if (dx < 0) {
+      setIsSwiping(true)
+      setSwipeX(Math.max(dx, -80))
+    } else if (swipeX < 0) {
+      setSwipeX(Math.min(0, swipeX + dx))
     }
   }
 
   function handleTouchEnd() {
     setIsSwiping(false)
-    if (swipeX < -50) {
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null }
+    if (swipeX < -40) {
       setSwipeX(-80)
     } else {
       setSwipeX(0)
     }
+  }
+
+  // ── Long-press to edit ────────────────────────────────────────
+  function startLongPress() {
+    if (!onEdit) return
+    longPressTriggered.current = false
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true
+      navigator.vibrate?.(40)
+      onEdit()
+    }, 500)
+  }
+
+  function cancelLongPress() {
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null }
+  }
+
+  function handleContentClick() {
+    // If swipe is open, close it on tap instead of toggling
+    if (swipeX < -10) { setSwipeX(0); return }
+    // If long press was triggered, don't toggle
+    if (longPressTriggered.current) return
   }
 
   // Group reactions by emoji
@@ -159,14 +205,14 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
 
   return (
     <div ref={setNodeRef} style={{ ...style, position: "relative", marginBottom: "0.5rem" }}>
-      {/* Outer wrapper with overflow hidden for swipe delete */}
+      {/* Outer wrapper — clips the slide animation */}
       <div style={{ position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
         {/* Red delete panel behind */}
         <div
           style={{
             position: "absolute", right: 0, top: 0, bottom: 0, width: 80,
             background: "#ef4444", display: "flex", alignItems: "center",
-            justifyContent: "center", cursor: "pointer",
+            justifyContent: "center", cursor: "pointer", borderRadius: "0 var(--radius-lg) var(--radius-lg) 0",
           }}
           onClick={() => { onDelete(); setSwipeX(0) }}
         >
@@ -178,12 +224,14 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
           className={`task-item animate-fade-in ${task.completed ? "completed" : ""}`}
           style={{
             transform: `translateX(${swipeX}px)`,
-            transition: isSwiping ? "none" : "transform 0.25s ease",
+            transition: isSwiping ? "none" : "transform 0.22s ease",
             marginBottom: 0,
+            touchAction: "pan-y",
           }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          onTouchStart={(e) => { startLongPress(); handleTouchStart(e) }}
+          onTouchMove={(e) => { cancelLongPress(); handleTouchMove(e) }}
+          onTouchEnd={(e) => { cancelLongPress(); handleTouchEnd(); }}
+          onClick={handleContentClick}
         >
           {/* Drag handle — only for incomplete tasks */}
           {!task.completed && (
@@ -207,7 +255,7 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
 
           <button
             className={`task-checkbox ${task.completed ? "checked" : ""} ${popping ? "animate-task-pop" : ""}`}
-            onClick={handleToggle}
+            onClick={(e) => { e.stopPropagation(); if (swipeX < -10) { setSwipeX(0); return } if (!longPressTriggered.current) handleToggle() }}
             title={task.completed ? "Marcar como pendiente" : "Marcar como completada"}
             style={{ position: "relative" }}
           >
@@ -220,16 +268,11 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
           </button>
 
           <div style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "50%",
+            width: "32px", height: "32px", borderRadius: "50%",
             background: task.completed
               ? "linear-gradient(135deg, var(--primary), var(--secondary))"
               : "var(--primary-lighter)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
           }}>
             <KawaiiIcon name={task.icon} size={18} color={task.completed ? "white" : "var(--primary)"} />
           </div>
@@ -237,13 +280,13 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
           <span
             className="task-title"
             style={{
-              flex: 1,
-              fontSize: "0.9rem",
-              fontWeight: 600,
-              color: "var(--foreground)",
+              flex: 1, fontSize: "0.9rem", fontWeight: 600, color: "var(--foreground)",
               textDecoration: task.completed ? "line-through" : "none",
               opacity: task.completed ? 0.6 : 1,
             }}
+            onPointerDown={startLongPress}
+            onPointerUp={cancelLongPress}
+            onPointerLeave={cancelLongPress}
           >
             {task.title}
             {task.completed && task.completed_by_name && (
@@ -278,7 +321,7 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
           {/* Edit button */}
           {onEdit && (
             <button
-              onClick={onEdit}
+              onClick={(e) => { e.stopPropagation(); onEdit() }}
               style={{ background: "none", border: "none", cursor: "pointer", padding: "3px 4px", color: "var(--foreground-muted)", lineHeight: 1, flexShrink: 0, display: "flex", alignItems: "center" }}
               title="Editar tarea"
             ><Edit2 size={14} /></button>
@@ -288,13 +331,8 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
 
       {/* Reactions row */}
       <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "0.25rem",
-        paddingLeft: "0.5rem",
-        paddingTop: "0.2rem",
-        flexWrap: "wrap",
-        minHeight: hasReactions || showPicker ? undefined : "0px",
+        display: "flex", alignItems: "center", gap: "0.25rem",
+        paddingLeft: "0.5rem", paddingTop: "0.2rem", flexWrap: "wrap",
       }}>
         {Object.entries(reactionGroups).map(([emojiChar, { count, mine }]) => (
           <button
@@ -304,19 +342,14 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
             style={{
               background: mine ? "var(--primary-lighter)" : "var(--muted)",
               border: mine ? "1px solid var(--primary)" : "1px solid var(--border)",
-              borderRadius: "20px",
-              padding: "1px 7px",
-              fontSize: "0.7rem",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "3px",
-              color: "var(--foreground)",
-              transition: "transform 0.1s",
+              borderRadius: "20px", padding: "1px 7px", fontSize: "0.7rem",
+              cursor: "pointer", display: "flex", alignItems: "center", gap: "3px",
+              color: "var(--foreground)", transition: "transform 0.1s",
             }}
             title={mine ? "Quitar reacción" : "Reaccionar"}
           >
-            {REACTION_ICONS[emojiChar] ?? emojiChar} <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>{count}</span>
+            {REACTION_ICONS[emojiChar] ?? emojiChar}
+            <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>{count}</span>
           </button>
         ))}
 
@@ -325,31 +358,18 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
           <button
             onClick={() => setShowPicker((v) => !v)}
             style={{
-              background: "var(--muted)",
-              border: "1px solid var(--border)",
-              borderRadius: "20px",
-              padding: "1px 7px",
-              fontSize: "0.7rem",
-              cursor: "pointer",
-              color: "var(--foreground-muted)",
-              lineHeight: 1.4,
+              background: "var(--muted)", border: "1px solid var(--border)",
+              borderRadius: "20px", padding: "1px 7px", fontSize: "0.7rem",
+              cursor: "pointer", color: "var(--foreground-muted)", lineHeight: 1.4,
             }}
             title="Añadir reacción"
-          >
-            +
-          </button>
+          >+</button>
           {showPicker && (
             <div style={{
-              position: "absolute",
-              bottom: "calc(100% + 4px)",
-              left: 0,
-              background: "var(--card-bg, white)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-md)",
-              padding: "6px 8px",
-              display: "flex",
-              gap: "6px",
-              zIndex: 50,
+              position: "absolute", bottom: "calc(100% + 4px)", left: 0,
+              background: "var(--card-bg, white)", border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)", padding: "6px 8px",
+              display: "flex", gap: "6px", zIndex: 50,
               boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
             }}>
               {REACTION_EMOJIS.map((e) => (
@@ -358,15 +378,9 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
                   onClick={() => handleReact(e)}
                   disabled={reactLoading}
                   style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: "4px",
-                    borderRadius: "6px",
-                    transition: "transform 0.1s",
-                    display: "flex",
-                    alignItems: "center",
-                    color: "var(--foreground)",
+                    background: "none", border: "none", cursor: "pointer",
+                    padding: "4px", borderRadius: "6px", transition: "transform 0.1s",
+                    display: "flex", alignItems: "center", color: "var(--foreground)",
                   }}
                   title={e}
                 >
