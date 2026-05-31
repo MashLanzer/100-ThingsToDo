@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useCallback, useEffect } from "react"
-import { usePhotos, useUploadPhoto, useDeletePhoto } from "@/hooks/use-photos"
+import { usePhotos, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption } from "@/hooks/use-photos"
 import type { Photo } from "@/types"
 import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar, LayoutGrid, Rows3, Download, Share2 } from "lucide-react"
 import { toast } from "sonner"
@@ -137,21 +137,44 @@ function Lightbox({
   initialIndex,
   onClose,
   onDelete,
+  onUpdateCaption,
   deleting,
 }: {
   photos: Photo[]
   initialIndex: number
   onClose: () => void
   onDelete: (id: string) => void
+  onUpdateCaption: (id: string, caption: string | null) => Promise<void>
   deleting: boolean
 }) {
   const [index, setIndex] = useState(initialIndex)
+  const [editingCaption, setEditingCaption] = useState(false)
+  const [captionDraft, setCaptionDraft] = useState("")
+  const [savingCaption, setSavingCaption] = useState(false)
+  const captionInputRef = useRef<HTMLInputElement>(null)
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
   const photo = photos[index]
 
-  function prev() { setIndex((i) => (i > 0 ? i - 1 : photos.length - 1)) }
-  function next() { setIndex((i) => (i < photos.length - 1 ? i + 1 : 0)) }
+  function prev() { setIndex((i) => (i > 0 ? i - 1 : photos.length - 1)); setEditingCaption(false) }
+  function next() { setIndex((i) => (i < photos.length - 1 ? i + 1 : 0)); setEditingCaption(false) }
+
+  function startEdit() {
+    setCaptionDraft(photo.caption ?? "")
+    setEditingCaption(true)
+    setTimeout(() => captionInputRef.current?.focus(), 50)
+  }
+
+  async function saveCaption() {
+    if (savingCaption) return
+    setSavingCaption(true)
+    try {
+      await onUpdateCaption(photo.id, captionDraft.trim() || null)
+    } finally {
+      setSavingCaption(false)
+      setEditingCaption(false)
+    }
+  }
 
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX
@@ -309,14 +332,40 @@ function Lightbox({
         <img
           src={photo.image_url}
           alt={photo.caption ?? "Foto"}
-          style={{ width: "100%", maxHeight: "70vh", objectFit: "contain", borderRadius: "var(--radius-lg)", display: "block" }}
+          style={{ width: "100%", maxHeight: "68vh", objectFit: "contain", borderRadius: "var(--radius-lg)", display: "block" }}
         />
-        {photo.caption && (
-          <p style={{ fontFamily: "'Caveat', cursive", color: "rgba(255,255,255,0.9)", textAlign: "center", marginTop: "0.75rem", fontSize: "1.125rem" }}>
-            {photo.caption}
-          </p>
-        )}
-        <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", marginTop: "0.25rem", fontSize: "0.75rem" }}>
+        {/* Editable caption */}
+        <div style={{ marginTop: "0.625rem", textAlign: "center" }}>
+          {editingCaption ? (
+            <div style={{ display: "flex", gap: "0.375rem", alignItems: "center", justifyContent: "center" }}>
+              <input
+                ref={captionInputRef}
+                value={captionDraft}
+                onChange={(e) => setCaptionDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveCaption(); if (e.key === "Escape") setEditingCaption(false) }}
+                maxLength={120}
+                placeholder="Pie de foto..."
+                style={{
+                  background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)",
+                  borderRadius: "var(--radius-md)", color: "white", padding: "4px 10px",
+                  fontFamily: "'Caveat', cursive", fontSize: "1rem", textAlign: "center",
+                  outline: "none", width: "min(280px, 70vw)",
+                }}
+              />
+              <button onClick={saveCaption} disabled={savingCaption}
+                style={{ background: "var(--primary)", border: "none", borderRadius: "var(--radius-md)", color: "white", padding: "4px 12px", cursor: "pointer", fontSize: "0.8125rem", fontWeight: 600 }}>
+                {savingCaption ? "..." : "OK"}
+              </button>
+            </div>
+          ) : (
+            <button onClick={startEdit} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>
+              <p style={{ fontFamily: "'Caveat', cursive", color: photo.caption ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)", fontSize: "1.125rem", borderBottom: "1px dashed rgba(255,255,255,0.2)" }}>
+                {photo.caption ?? "Toca para añadir pie de foto ✏️"}
+              </p>
+            </button>
+          )}
+        </div>
+        <p style={{ color: "rgba(255,255,255,0.35)", textAlign: "center", marginTop: "0.25rem", fontSize: "0.6875rem" }}>
           {photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"}
         </p>
       </div>
@@ -394,6 +443,7 @@ export default function FotosPage() {
   const { data: photos, isLoading } = usePhotos()
   const uploadPhoto = useUploadPhoto()
   const deletePhoto = useDeletePhoto()
+  const updateCaption = useUpdatePhotoCaption()
 
   const [filter, setFilter] = useState<FilterType>("all")
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -655,6 +705,10 @@ export default function FotosPage() {
           initialIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
           onDelete={handleDelete}
+          onUpdateCaption={async (id, caption) => {
+            await updateCaption.mutateAsync({ id, caption })
+            toast.success("Caption actualizado")
+          }}
           deleting={deletePhoto.isPending}
         />
       )}

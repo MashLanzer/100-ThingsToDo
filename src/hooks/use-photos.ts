@@ -68,3 +68,15 @@ export function useDeletePhoto() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["photos"] }),
   })
 }
+
+export function useUpdatePhotoCaption() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, caption }: { id: string; caption: string | null }) =>
+      authFetch(`/api/photos/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ caption }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["photos"] }),
+  })
+}
