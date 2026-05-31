@@ -6,7 +6,7 @@ import { useCoupleStatus } from "@/hooks/use-couple"
 import { PlanCard } from "@/components/features/plan-card"
 import { useAppStore } from "@/stores/app-store"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
-import { Plus, X, Trash2, Search, GripVertical, Tag, Image, Calendar, Heart, Mail, CheckCircle2, ClipboardList } from "lucide-react"
+import { Plus, X, Trash2, Search, GripVertical, Tag, Image, Calendar, Heart, Mail, CheckCircle2, ClipboardList, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import type { Plan } from "@/types"
@@ -143,12 +143,30 @@ export default function DashboardPage() {
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"grid" | "calendar">("grid")
   const [localPlanOrder, setLocalPlanOrder] = useState<string[] | null>(null)
+  const [showSortMenu, setShowSortMenu] = useState(false)
+  const sortMenuRef = useRef<HTMLDivElement>(null)
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (typeof window === "undefined") return false
     return !localStorage.getItem("ttd_onboarding_done_v1")
   })
 
   const hasCouple = !!coupleData?.couple
+
+  // Close sort menu when clicking outside
+  useEffect(() => {
+    if (!showSortMenu) return
+    function handle(e: MouseEvent | TouchEvent) {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+        setShowSortMenu(false)
+      }
+    }
+    document.addEventListener("mousedown", handle)
+    document.addEventListener("touchstart", handle)
+    return () => {
+      document.removeEventListener("mousedown", handle)
+      document.removeEventListener("touchstart", handle)
+    }
+  }, [showSortMenu])
 
   // Restore scroll position on mount, save on unmount
   useEffect(() => {
@@ -434,34 +452,86 @@ export default function DashboardPage() {
       {/* Sort dropdown + view toggle */}
       {hasAnyPlans && (
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
-          <select
-            value={sortBy}
-            onChange={(e) => { setSortBy(e.target.value as SortBy); setLocalPlanOrder(null) }}
-            style={{
-              flex: 1,
-              height: "30px",
-              borderRadius: "999px",
-              border: "1px solid var(--border)",
-              background: "var(--muted)",
-              color: "var(--foreground-muted)",
-              fontFamily: "inherit",
-              fontSize: "0.6875rem",
-              fontWeight: 600,
-              paddingLeft: "0.75rem",
-              paddingRight: "1.5rem",
-              cursor: "pointer",
-              appearance: "none" as const,
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 0.5rem center",
-              WebkitAppearance: "none",
-            }}
-          >
-            <option value="newest">↓ Recientes</option>
-            <option value="oldest">↑ Antiguos</option>
-            <option value="progress_desc">▲ Más avanzados</option>
-            <option value="progress_asc">▼ Menos avanzados</option>
-          </select>
+          {/* Custom sort dropdown */}
+          <div ref={sortMenuRef} style={{ flex: 1, position: "relative" }}>
+            <button
+              onClick={() => setShowSortMenu((v) => !v)}
+              style={{
+                width: "100%",
+                height: "30px",
+                borderRadius: "999px",
+                border: "1px solid var(--border)",
+                background: "var(--muted)",
+                color: "var(--foreground-muted)",
+                fontFamily: "inherit",
+                fontSize: "0.6875rem",
+                fontWeight: 600,
+                paddingLeft: "0.75rem",
+                paddingRight: "0.75rem",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "0.25rem",
+              }}
+            >
+              <span>
+                {sortBy === "newest" && "↓ Recientes"}
+                {sortBy === "oldest" && "↑ Antiguos"}
+                {sortBy === "progress_desc" && "▲ Más avanzados"}
+                {sortBy === "progress_asc" && "▼ Menos avanzados"}
+              </span>
+              <ChevronDown size={12} style={{ transition: "transform 0.2s", transform: showSortMenu ? "rotate(180deg)" : "none", flexShrink: 0 }} />
+            </button>
+            {showSortMenu && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 6px)",
+                  left: 0, right: 0,
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-lg)",
+                  boxShadow: "var(--shadow-lg)",
+                  overflow: "hidden",
+                  zIndex: 100,
+                  animation: "modalIn 0.15s ease",
+                }}
+              >
+                {([
+                  { key: "newest",       label: "↓ Recientes" },
+                  { key: "oldest",       label: "↑ Antiguos" },
+                  { key: "progress_desc", label: "▲ Más avanzados" },
+                  { key: "progress_asc", label: "▼ Menos avanzados" },
+                ] as { key: SortBy; label: string }[]).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => { setSortBy(key); setLocalPlanOrder(null); setShowSortMenu(false) }}
+                    style={{
+                      width: "100%",
+                      padding: "0.625rem 0.875rem",
+                      border: "none",
+                      borderBottom: "1px solid var(--border)",
+                      background: sortBy === key ? "var(--primary-lighter)" : "transparent",
+                      color: sortBy === key ? "var(--primary)" : "var(--foreground)",
+                      fontFamily: "inherit",
+                      fontSize: "0.8125rem",
+                      fontWeight: sortBy === key ? 700 : 500,
+                      cursor: "pointer",
+                      textAlign: "left" as const,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    {label}
+                    {sortBy === key && <span style={{ fontSize: "0.75rem", color: "var(--primary)" }}>✓</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* View mode toggle */}
           <div style={{ display: "flex", borderRadius: "999px", border: "1px solid var(--border)", overflow: "hidden", flexShrink: 0 }}>
             {([
               { key: "grid", icon: "▦", title: "Planes" },
