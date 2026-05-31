@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Play, Pause, SkipForward, SkipBack, Plus, Trash2, ListMusic } from "lucide-react"
 import { useAppStore } from "@/stores/app-store"
 
@@ -114,7 +114,7 @@ function formatTime(s: number): string {
 }
 
 export function MusicApp({ onBack }: { onBack: () => void }) {
-  const { setNowPlayingTrack } = useAppStore()
+  const { setNowPlayingTrack, setMusicIsPlaying } = useAppStore()
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [playlistIdx, setPlaylistIdx] = useState(0)
   const [trackIdx, setTrackIdx] = useState(0)
@@ -247,28 +247,36 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
     else if (trackIdx === swapIdx) setTrackIdx(idx)
   }
 
-  function togglePlay() {
+  const togglePlay = useCallback(() => {
     if (!track) return
-    // YouTube: visual only (iframe handles audio)
     if (isYouTube(track.url || "")) {
       const next = !isPlaying
       setIsPlaying(next)
+      setMusicIsPlaying(next)
       if (next) setNowPlayingTrack({ title: track.title, artist: track.artist, emoji: track.emoji, color: track.color })
       return
     }
     const audio = audioRef.current
     if (!audio) return
-    if (!track.url) { setIsPlaying((p) => !p); return }  // no URL → visual demo
+    if (!track.url) { setIsPlaying((p) => !p); return }
     if (isPlaying) {
-      audio.pause(); setIsPlaying(false)
+      audio.pause(); setIsPlaying(false); setMusicIsPlaying(false)
     } else {
       if (audio.src !== track.url) audio.src = track.url
       audio.play().then(() => {
         setIsPlaying(true)
+        setMusicIsPlaying(true)
         setNowPlayingTrack({ title: track.title, artist: track.artist, emoji: track.emoji, color: track.color })
       }).catch(() => setIsPlaying(true))
     }
-  }
+  }, [track, isPlaying, setNowPlayingTrack, setMusicIsPlaying])
+
+  // Listen for toggle from mini-player (must be after togglePlay declaration)
+  useEffect(() => {
+    const handler = () => togglePlay()
+    window.addEventListener("ttd:music:toggle", handler)
+    return () => window.removeEventListener("ttd:music:toggle", handler)
+  }, [togglePlay])
 
   function addTrack() {
     if (!newTitle.trim()) return

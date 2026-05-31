@@ -6,7 +6,7 @@ import { useCoupleStatus } from "@/hooks/use-couple"
 import { PlanCard } from "@/components/features/plan-card"
 import { useAppStore } from "@/stores/app-store"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
-import { Plus, X, Trash2, Search, GripVertical, Tag, Image, Calendar, Heart, Mail, CheckCircle2, ClipboardList, ChevronDown } from "lucide-react"
+import { Plus, X, Trash2, Search, GripVertical, Tag, ImagePlus, Calendar, Heart, Mail, CheckCircle2, ClipboardList, ChevronDown, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import type { Plan } from "@/types"
@@ -130,10 +130,12 @@ export default function DashboardPage() {
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
   )
 
+  const coverInputRef = useRef<HTMLInputElement>(null)
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
   const [newCoverImage, setNewCoverImage] = useState("")
+  const [coverUploading, setCoverUploading] = useState(false)
   const [newDueDate, setNewDueDate] = useState("")
   const [newTagInput, setNewTagInput] = useState("")
   const [newTags, setNewTags] = useState<string[]>([])
@@ -245,6 +247,24 @@ export default function DashboardPage() {
     } catch { toast.error("Error al eliminar") }
   }
 
+  async function handleCoverUpload(file: File) {
+    setCoverUploading(true)
+    try {
+      const auth = getFirebaseAuth()
+      const token = await auth.currentUser?.getIdToken()
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch("/api/upload/cover", { method: "POST", headers: { Authorization: `Bearer ${token ?? ""}` }, body: fd })
+      if (!res.ok) throw new Error("Error")
+      const data = await res.json()
+      setNewCoverImage(data.url)
+    } catch {
+      toast.error("Error al subir la imagen")
+    } finally {
+      setCoverUploading(false)
+    }
+  }
+
   async function handleCreate() {
     if (!title.trim()) {
       toast.error("El título no puede estar vacío")
@@ -261,6 +281,7 @@ export default function DashboardPage() {
       setTitle("")
       setDesc("")
       setNewCoverImage("")
+      setCoverUploading(false)
       setNewDueDate("")
       setNewTags([])
       setNewTagInput("")
@@ -585,20 +606,51 @@ export default function DashboardPage() {
             />
             <div>
               <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
-                <Image size={13} /> URL de portada (opcional)
+                <ImagePlus size={13} /> Portada (opcional)
               </label>
               <input
-                className="input"
-                type="url"
-                placeholder="https://..."
-                value={newCoverImage}
-                onChange={(e) => setNewCoverImage(e.target.value)}
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCoverUpload(f) }}
               />
-              {newCoverImage.trim() && (
-                <div style={{ marginTop: "0.375rem", borderRadius: "var(--radius-md)", overflow: "hidden", height: "60px" }}>
+              {newCoverImage ? (
+                <div style={{ position: "relative", borderRadius: "var(--radius-md)", overflow: "hidden", height: "72px" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={newCoverImage.trim()} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <img src={newCoverImage} alt="portada" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <button
+                    type="button"
+                    onClick={() => { setNewCoverImage(""); if (coverInputRef.current) coverInputRef.current.value = "" }}
+                    style={{
+                      position: "absolute", top: 4, right: 4,
+                      background: "rgba(0,0,0,0.55)", border: "none", borderRadius: "50%",
+                      width: 22, height: 22, cursor: "pointer", color: "white",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <X size={12} />
+                  </button>
                 </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={coverUploading}
+                  style={{
+                    width: "100%", height: "56px", border: "2px dashed var(--border)",
+                    borderRadius: "var(--radius-md)", background: "var(--muted)",
+                    cursor: coverUploading ? "wait" : "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
+                    fontSize: "0.8125rem", color: "var(--foreground-muted)", fontFamily: "inherit",
+                    transition: "border-color 0.15s, color 0.15s",
+                  }}
+                >
+                  {coverUploading
+                    ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Subiendo...</>
+                    : <><ImagePlus size={15} /> Subir foto de portada</>
+                  }
+                </button>
               )}
             </div>
             <div>

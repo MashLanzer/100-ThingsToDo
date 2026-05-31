@@ -114,7 +114,6 @@ function PolaroidCard({ photo, onClick, index, isNew, reactions, myUid, onReact,
       onClick={selectionMode ? onSelect : onClick}
       onMouseDown={!selectionMode ? startPress : undefined}
       onMouseUp={cancelPress}
-      onMouseLeave={cancelPress}
       onTouchStart={!selectionMode ? startPress : undefined}
       onTouchEnd={cancelPress}
       style={{
@@ -129,11 +128,13 @@ function PolaroidCard({ photo, onClick, index, isNew, reactions, myUid, onReact,
         ;(e.currentTarget as HTMLDivElement).style.transform = "rotate(0deg) scale(1.06)"
         ;(e.currentTarget as HTMLDivElement).style.boxShadow = "0 12px 40px rgba(0,0,0,0.28)"
       } : undefined}
-      onMouseLeave={!selectionMode ? (e) => {
+      onMouseLeave={(e) => {
         cancelPress()
-        ;(e.currentTarget as HTMLDivElement).style.transform = `rotate(${rotation}deg)`
-        ;(e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.1)"
-      } : undefined}
+        if (!selectionMode) {
+          ;(e.currentTarget as HTMLDivElement).style.transform = `rotate(${rotation}deg)`
+          ;(e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.1)"
+        }
+      }}
     >
       <div style={{ position: "relative" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -2,7 +2,7 @@
 
 import { useAppStore } from "@/stores/app-store"
 import { useShallow } from "zustand/react/shallow"
-import { X, BookOpen, Dices, Map, Clock, Wallet, Wifi, Battery, Sun, Flower2, Moon, Music2 } from "lucide-react"
+import { X, BookOpen, Dices, Map, Clock, Wallet, Wifi, Battery, Sun, Flower2, Moon, Music2, Play, Pause } from "lucide-react"
 import { JournalApp } from "@/components/features/journal-app"
 import { TimeCapsuleApp } from "@/components/features/time-capsule-app"
 import { SavingsGoalsApp } from "@/components/features/savings-goals-app"
@@ -29,13 +29,14 @@ const GREETING_DEFS: Record<string, GreetingDef> = {
 }
 
 export function PhoneModal() {
-  const { showPhoneModal, closePhoneModal, activePhoneApp, setActivePhoneApp, nowPlayingTrack } = useAppStore(
+  const { showPhoneModal, closePhoneModal, activePhoneApp, setActivePhoneApp, nowPlayingTrack, musicIsPlaying } = useAppStore(
     useShallow((s) => ({
       showPhoneModal: s.showPhoneModal,
       closePhoneModal: s.closePhoneModal,
       activePhoneApp: s.activePhoneApp,
       setActivePhoneApp: s.setActivePhoneApp,
       nowPlayingTrack: s.nowPlayingTrack,
+      musicIsPlaying: s.musicIsPlaying,
     }))
   )
   const [time, setTime] = useState("")
@@ -169,11 +170,10 @@ export function PhoneModal() {
                   <JournalApp onBack={goHome} />
                 </div>
               )}
-              {activePhoneApp === "music" && (
-                <div className="phone-app-view active">
-                  <MusicApp onBack={goHome} />
-                </div>
-              )}
+              {/* MusicApp always mounted so audio persists when navigating away */}
+              <div className="phone-app-view active" style={{ display: activePhoneApp === "music" ? "flex" : "none" }}>
+                <MusicApp onBack={goHome} />
+              </div>
               {activePhoneApp === "desafios" && (
                 <div className="phone-app-view active">
                   <ChallengesFavorsApp onBack={goHome} />
@@ -195,25 +195,40 @@ export function PhoneModal() {
                 </div>
               )}
             </div>
-            {/* Mini player bar — shown when music is playing and user is in another app */}
+            {/* Mini player bar — shown when track is set and not in music app */}
             {activePhoneApp !== "music" && nowPlayingTrack && (
               <div
                 style={{
                   position: "absolute", bottom: "40px", left: 0, right: 0,
                   background: "linear-gradient(135deg, var(--primary), var(--secondary))",
-                  padding: "0.5rem 0.75rem",
+                  padding: "0.375rem 0.625rem",
                   display: "flex", alignItems: "center", gap: "0.5rem",
-                  cursor: "pointer",
                   zIndex: 10,
                 }}
-                onClick={() => setActivePhoneApp("music")}
               >
-                <Music2 size={16} color="white" />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "white", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nowPlayingTrack.title}</div>
-                  <div style={{ fontSize: "0.5625rem", color: "rgba(255,255,255,0.8)" }}>{nowPlayingTrack.artist}</div>
+                <div
+                  style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}
+                  onClick={() => setActivePhoneApp("music")}
+                >
+                  <Music2 size={15} color="white" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "white", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nowPlayingTrack.title}</div>
+                    <div style={{ fontSize: "0.5625rem", color: "rgba(255,255,255,0.8)" }}>{nowPlayingTrack.artist}</div>
+                  </div>
                 </div>
-                <Music2 size={14} color="white" />
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent("ttd:music:toggle"))}
+                  style={{
+                    background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%",
+                    width: "28px", height: "28px", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}
+                >
+                  {musicIsPlaying
+                    ? <Pause size={13} color="white" fill="white" />
+                    : <Play size={13} color="white" fill="white" />
+                  }
+                </button>
               </div>
             )}
           </div>
