@@ -96,6 +96,22 @@ function applyFontSize(size: "normal" | "large") {
   saveThemeSettings({ fontSize: size })
 }
 
+// ── Avatar gradient helper ────────────────────────────────────────────────────
+
+function getAvatarGradient(name: string): string {
+  const hash = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  const gradients = [
+    "linear-gradient(135deg, #8B5CF6, #EC4899)",
+    "linear-gradient(135deg, #06B6D4, #10B981)",
+    "linear-gradient(135deg, #F59E0B, #EF4444)",
+    "linear-gradient(135deg, #EC4899, #A78BFA)",
+    "linear-gradient(135deg, #10B981, #3B82F6)",
+    "linear-gradient(135deg, #3B82F6, #8B5CF6)",
+    "linear-gradient(135deg, #A78BFA, #F59E0B)",
+  ]
+  return gradients[Math.abs(hash) % gradients.length]
+}
+
 // ── Toggle component ──────────────────────────────────────────────────────────
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -462,7 +478,7 @@ export function SettingsModal() {
                   ) : (
                     <div style={{
                       width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
-                      background: "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)",
+                      background: getAvatarGradient(user.displayName ?? user.email ?? "?"),
                       display: "flex", alignItems: "center", justifyContent: "center",
                       color: "white", fontWeight: 700, fontSize: "1.125rem",
                       fontFamily: "'Fredoka', sans-serif",

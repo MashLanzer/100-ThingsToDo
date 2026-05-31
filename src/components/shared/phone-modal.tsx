@@ -40,6 +40,7 @@ export function PhoneModal() {
   )
   const [time, setTime] = useState("")
   const [hiddenApps, setHiddenApps] = useState<string[]>([])
+  const [lastJournalDate, setLastJournalDate] = useState<string | null>(null)
 
   useEffect(() => {
     const updateTime = () => {
@@ -62,6 +63,7 @@ export function PhoneModal() {
           setHiddenApps([])
         }
       } catch { setHiddenApps([]) }
+      setLastJournalDate(localStorage.getItem("ttd_last_journal_date"))
     }
   }, [showPhoneModal])
 
@@ -73,7 +75,7 @@ export function PhoneModal() {
 
   return (
     <div className="phone-modal-overlay" onClick={closePhoneModal}>
-      <div style={{ position: "relative" }}>
+      <div style={{ position: "relative" }} className="phone-slide-in">
         {/* Close button outside the phone */}
         <button
           onClick={closePhoneModal}
@@ -146,6 +148,14 @@ export function PhoneModal() {
                             <app.Icon size={26} color={app.iconColor} />
                           </div>
                           <span className="app-icon-name">{app.name}</span>
+                          {app.id === "journal" && lastJournalDate && (
+                            <span style={{ fontSize: "0.45rem", color: "var(--foreground-muted)", textAlign: "center", lineHeight: 1.1, marginTop: 1 }}>
+                              {(() => {
+                                const days = Math.floor((Date.now() - new Date(lastJournalDate).getTime()) / 86_400_000)
+                                return days === 0 ? "hoy" : days === 1 ? "ayer" : `hace ${days}d`
+                              })()}
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>

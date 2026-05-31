@@ -298,6 +298,30 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Completion counter */}
+      {hasCouple && allPlans.length > 0 && (() => {
+        const totalDone = allPlans.reduce((s, p) => s + (p.completed_count ?? 0), 0)
+        const totalTasks = allPlans.reduce((s, p) => s + (p.task_count ?? 0), 0)
+        if (totalDone === 0) return null
+        return (
+          <div style={{
+            marginBottom: "0.875rem", borderRadius: "var(--radius-lg)", padding: "0.75rem 1rem",
+            background: "linear-gradient(135deg, var(--primary-lighter) 0%, var(--pink-light) 100%)",
+            border: "1px solid var(--primary-light)", display: "flex", alignItems: "center", gap: "0.75rem",
+          }}>
+            <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "2rem", fontWeight: 700, color: "var(--primary)", lineHeight: 1 }}>
+              {totalDone}
+            </span>
+            <div>
+              <p style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--foreground)" }}>cosas hechas juntos</p>
+              <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
+                {totalTasks} en total · {Math.round((totalDone / (totalTasks || 1)) * 100)}% completado
+              </p>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Actions */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
         <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.5rem" }}>

@@ -79,7 +79,7 @@ export function PlanCard({ plan, index = 0 }: Props) {
     >
       {/* Cover image or gradient strip */}
       {hasCover ? (
-        <div style={{ position: "relative", height: "100px", margin: 0, overflow: "hidden", borderRadius: "var(--radius-lg) var(--radius-lg) 0 0" }}>
+        <div style={{ position: "relative", height: "160px", margin: 0, overflow: "hidden", borderRadius: "var(--radius-lg) var(--radius-lg) 0 0" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={plan.cover_image!}
@@ -96,9 +96,22 @@ export function PlanCard({ plan, index = 0 }: Props) {
       {/* Card body */}
       <div style={{ padding: "0.875rem 1rem 1rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.375rem" }}>
-          <h3 style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)", flex: 1, marginRight: "0.5rem" }}>
-            {plan.title}
-          </h3>
+          <div style={{ flex: 1, marginRight: "0.5rem", display: "flex", alignItems: "flex-start", gap: "0.375rem", flexWrap: "wrap" }}>
+            <h3 style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)" }}>
+              {plan.title}
+            </h3>
+            {plan.updated_at && plan.updated_at !== plan.created_at &&
+              (Date.now() - new Date(plan.updated_at).getTime()) < 86_400_000 && (
+              <span style={{
+                fontSize: "0.5625rem", fontWeight: 700,
+                background: "linear-gradient(135deg, var(--primary), var(--secondary))",
+                color: "white", borderRadius: "999px", padding: "2px 7px", flexShrink: 0,
+                animation: "heartBeat 2s ease-in-out infinite",
+              }}>
+                Nuevo
+              </span>
+            )}
+          </div>
           <span
             style={{
               fontSize: "0.8125rem",

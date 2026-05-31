@@ -213,6 +213,7 @@ export function JournalApp({ onBack }: Props) {
       })
       if (!res.ok) throw new Error("Error al guardar")
       toast.success(isEditing ? "Entrada actualizada ✏️" : "Entrada guardada 💕")
+      try { localStorage.setItem("ttd_last_journal_date", new Date().toISOString()) } catch { /* */ }
       await loadEntries()
       setView("calendar")
     } catch (e: unknown) {
