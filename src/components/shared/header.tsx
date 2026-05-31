@@ -3,10 +3,10 @@
 import { signOut } from "firebase/auth"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { useAppStore } from "@/stores/app-store"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { toast } from "sonner"
 import { useState, useEffect } from "react"
-import { Heart, HeartCrack } from "lucide-react"
+import { Heart, HeartCrack, Images } from "lucide-react"
 
 function LogoutDialog({ onConfirm, onCancel, loading }: { onConfirm: () => void; onCancel: () => void; loading: boolean }) {
   return (
@@ -67,6 +67,7 @@ function LogoutDialog({ onConfirm, onCancel, loading }: { onConfirm: () => void;
 
 export function AppHeader() {
   const router = useRouter()
+  const pathname = usePathname()
   const { openPhoneModal, openSettingsModal, coupleName, setCoupleName } = useAppStore()
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -125,6 +126,16 @@ export function AppHeader() {
             <span className="header-title header-title-gradient">{coupleName}</span>
           </div>
           <div className="header-right">
+            {/* Photos */}
+            <button
+              className="btn-icon"
+              title="Nuestras Fotos"
+              onClick={() => router.push("/fotos")}
+              style={{ color: pathname === "/fotos" ? "var(--primary)" : undefined }}
+            >
+              <Images size={18} />
+            </button>
+
             {/* Settings */}
             <button className="btn-icon" title="Configuración" onClick={openSettingsModal}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

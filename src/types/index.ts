@@ -165,6 +165,18 @@ export interface ChallengeData {
   difficultyLabel: string
 }
 
+export interface Photo {
+  id: string
+  collection_key: string
+  image_url: string
+  thumb_url?: string | null
+  delete_url?: string | null
+  caption?: string | null
+  uploaded_by_name?: string | null
+  source: string
+  created_at: string
+}
+
 export const KAWAII_ICONS: Record<string, string> = {
   clipboard: "Lista",
   heart: "Corazón",
