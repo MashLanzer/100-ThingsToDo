@@ -4,6 +4,8 @@ import { useAppStore } from "@/stores/app-store"
 import { useCoupleStatus } from "@/hooks/use-couple"
 import { usePathname } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
+import { Smartphone, Settings2 } from "lucide-react"
+import { getFirebaseAuth } from "@/lib/firebase/client"
 
 const CONFETTI_COLORS = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#A78BFA"]
 
@@ -47,10 +49,27 @@ function getPageTitle(path: string, coupleName: string): string {
 }
 
 export function AppHeader() {
-  const { coupleName, setCoupleName } = useAppStore()
+  const { coupleName, setCoupleName, openPhoneModal, openSettingsModal } = useAppStore()
   const pathname = usePathname()
   const { data } = useCoupleStatus()
   const [isAnniversary, setIsAnniversary] = useState(false)
+  const [partnerActive, setPartnerActive] = useState(false)
+
+  useEffect(() => {
+    async function check() {
+      try {
+        const token = await getFirebaseAuth().currentUser?.getIdToken()
+        if (!token) return
+        const res = await fetch("/api/activity/partner", { headers: { Authorization: `Bearer ${token}` } })
+        if (!res.ok) return
+        const { lastActive } = await res.json()
+        if (lastActive) setPartnerActive((Date.now() - new Date(lastActive).getTime()) / 3_600_000 < 24)
+      } catch { /* ignore */ }
+    }
+    check()
+    const id = setInterval(check, 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   useEffect(() => {
     try {
@@ -88,6 +107,30 @@ export function AppHeader() {
               ¡Aniversario!
             </span>
           )}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            <button
+              className="btn-icon"
+              onClick={() => openPhoneModal("home")}
+              title="Apps"
+              style={{ position: "relative" }}
+            >
+              <Smartphone size={20} />
+              {partnerActive && (
+                <span style={{
+                  position: "absolute", top: 4, right: 4,
+                  width: 7, height: 7, borderRadius: "50%",
+                  background: "#10B981", border: "1.5px solid white",
+                }} />
+              )}
+            </button>
+            <button
+              className="btn-icon"
+              onClick={() => openSettingsModal()}
+              title="Ajustes"
+            >
+              <Settings2 size={20} />
+            </button>
+          </div>
         </div>
       </header>
     </>
