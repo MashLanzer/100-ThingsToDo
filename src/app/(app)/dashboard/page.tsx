@@ -6,7 +6,7 @@ import { useCoupleStatus } from "@/hooks/use-couple"
 import { PlanCard } from "@/components/features/plan-card"
 import { useAppStore } from "@/stores/app-store"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
-import { Plus, X, Trash2, Search, GripVertical, Clock, TrendingUp, TrendingDown, Tag, Image, Calendar, Heart, Mail, CheckCircle2, ClipboardList } from "lucide-react"
+import { Plus, X, Trash2, Search, GripVertical, Tag, Image, Calendar, Heart, Mail, CheckCircle2, ClipboardList } from "lucide-react"
 import { toast } from "sonner"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import type { Plan } from "@/types"
@@ -431,47 +431,41 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Sort pills + view toggle */}
+      {/* Sort dropdown + view toggle */}
       {hasAnyPlans && (
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
-          {/* Scrollable sort pills */}
-          <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", flex: 1, paddingBottom: "2px", scrollbarWidth: "none" }}>
-            {([
-              { key: "newest", Icon: Clock, label: "Recientes" },
-              { key: "oldest", Icon: Clock, label: "Antiguos" },
-              { key: "progress_desc", Icon: TrendingUp, label: "Más progreso" },
-              { key: "progress_asc", Icon: TrendingDown, label: "Menos progreso" },
-            ] as { key: SortBy; Icon: React.FC<{size?: number}>; label: string }[]).map(({ key, Icon, label }) => (
-              <button
-                key={key}
-                onClick={() => { setSortBy(key); setLocalPlanOrder(null) }}
-                style={{
-                  padding: "3px 10px",
-                  borderRadius: "999px",
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  fontSize: "0.6875rem",
-                  fontWeight: 600,
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                  background: sortBy === key ? "var(--primary)" : "var(--muted)",
-                  color: sortBy === key ? "white" : "var(--foreground-muted)",
-                  transition: "background 0.15s, color 0.15s",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                <Icon size={11} /> {label}
-              </button>
-            ))}
-          </div>
-          {/* View mode toggle — always visible on the right */}
+          <select
+            value={sortBy}
+            onChange={(e) => { setSortBy(e.target.value as SortBy); setLocalPlanOrder(null) }}
+            style={{
+              flex: 1,
+              height: "30px",
+              borderRadius: "999px",
+              border: "1px solid var(--border)",
+              background: "var(--muted)",
+              color: "var(--foreground-muted)",
+              fontFamily: "inherit",
+              fontSize: "0.6875rem",
+              fontWeight: 600,
+              paddingLeft: "0.75rem",
+              paddingRight: "1.5rem",
+              cursor: "pointer",
+              appearance: "none" as const,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 0.5rem center",
+              WebkitAppearance: "none",
+            }}
+          >
+            <option value="newest">↓ Recientes</option>
+            <option value="oldest">↑ Antiguos</option>
+            <option value="progress_desc">▲ Más avanzados</option>
+            <option value="progress_asc">▼ Menos avanzados</option>
+          </select>
           <div style={{ display: "flex", borderRadius: "999px", border: "1px solid var(--border)", overflow: "hidden", flexShrink: 0 }}>
             {([
-              { key: "grid", icon: "▦", title: "Vista planes" },
-              { key: "calendar", icon: "Cal", title: "Vista calendario" },
+              { key: "grid", icon: "▦", title: "Planes" },
+              { key: "calendar", icon: "Cal", title: "Calendario" },
             ] as { key: "grid" | "calendar"; icon: string; title: string }[]).map(({ key, icon, title }) => (
               <button
                 key={key}
@@ -482,7 +476,7 @@ export default function DashboardPage() {
                   border: "none",
                   cursor: "pointer",
                   fontFamily: "inherit",
-                  fontSize: "0.75rem",
+                  fontSize: "0.6875rem",
                   background: viewMode === key ? "var(--primary)" : "var(--muted)",
                   color: viewMode === key ? "white" : "var(--foreground-muted)",
                   transition: "background 0.15s, color 0.15s",
