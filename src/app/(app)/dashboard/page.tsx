@@ -727,28 +727,52 @@ export default function DashboardPage() {
       {/* Plans grid */}
       {viewMode === "grid" && (
         isLoading ? (
-          <div className="empty-state">
-            <svg className="animate-heartbeat" width="40" height="40" viewBox="0 0 24 24" fill="#8B5CF6">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
+          <div>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="skeleton-card" style={{ animationDelay: `${i * 120}ms` }}>
+                <div className="skeleton" style={{ height: "88px", borderRadius: 0 }} />
+                <div style={{ padding: "0.75rem 0.875rem 0.875rem", display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+                  <div className="skeleton" style={{ height: "14px", width: "65%" }} />
+                  <div className="skeleton" style={{ height: "8px", width: "100%", borderRadius: "999px" }} />
+                  <div style={{ display: "flex", gap: "0.375rem" }}>
+                    <div className="skeleton" style={{ height: "18px", width: "50px", borderRadius: "999px" }} />
+                    <div className="skeleton" style={{ height: "18px", width: "40px", borderRadius: "999px" }} />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : !hasAnyPlans || noResults ? (
-          <div className="empty-state">
-            <div className="empty-icon animate-bounce-slow" style={{ color: "var(--primary)" }}>
-              {hasCouple ? <Heart size={48} /> : <Mail size={48} />}
+          <div className="empty-state" style={{ padding: "2.5rem 1rem" }}>
+            {/* D3: Kawaii SVG illustration */}
+            <div className="animate-bounce-slow" style={{ marginBottom: "1rem" }}>
+              <svg width="120" height="100" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Heart */}
+                <path d="M60 85 C60 85 20 58 20 35 C20 22 30 15 40 15 C48 15 55 20 60 27 C65 20 72 15 80 15 C90 15 100 22 100 35 C100 58 60 85 60 85Z" fill="#EC4899" opacity="0.9" />
+                {/* Sparkles */}
+                <circle cx="18" cy="20" r="3" fill="#F59E0B" opacity="0.7" />
+                <circle cx="102" cy="22" r="2.5" fill="#8B5CF6" opacity="0.7" />
+                <circle cx="12" cy="55" r="2" fill="#EC4899" opacity="0.6" />
+                <circle cx="108" cy="50" r="2" fill="#F59E0B" opacity="0.6" />
+                {/* List lines below heart */}
+                <rect x="30" y="92" width="60" height="5" rx="2.5" fill="#8B5CF6" opacity="0.25" />
+                {/* Small stars */}
+                <text x="14" y="16" fontSize="10" opacity="0.6">✨</text>
+                <text x="96" y="18" fontSize="10" opacity="0.6">✨</text>
+              </svg>
             </div>
-            <h2 className="empty-title" style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem" }}>
-              {hasCouple ? "¡Sin planes aún!" : "¡Conecta con tu pareja!"}
+            <h2 className="empty-title" style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", color: "var(--primary)" }}>
+              {searchQuery.trim() ? "Nada por aquí..." : hasCouple ? "¡Aún no hay planes!" : "¡Conecta con tu pareja!"}
             </h2>
-            <p className="empty-text">
+            <p className="empty-text" style={{ maxWidth: "260px", margin: "0 auto" }}>
               {searchQuery.trim()
-                ? "No hay planes que coincidan con tu búsqueda"
+                ? "Prueba con otras palabras 🔍"
                 : hasCouple
-                ? "Crea vuestro primer plan romántico y empieza la aventura juntos"
-                : "Vincula a tu pareja para empezar a crear recuerdos juntos"}
+                ? "Crea vuestro primer plan y empieza la aventura juntos 💕"
+                : "Vincula a tu pareja para empezar a crear recuerdos"}
             </p>
-            {hasCouple && (
-              <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => setShowForm(true)}>
+            {hasCouple && !searchQuery.trim() && (
+              <button className="btn btn-primary" style={{ marginTop: "1rem" }} onClick={() => setShowForm(true)}>
                 <Plus size={16} /> Crear primer plan
               </button>
             )}

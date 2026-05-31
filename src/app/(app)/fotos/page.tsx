@@ -321,14 +321,28 @@ function Lightbox({
         position: "fixed",
         inset: 0,
         zIndex: 200,
-        background: "rgba(0,0,0,0.92)",
+        background: "rgba(0,0,0,0.88)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         padding: "1rem",
+        animation: "lightboxIn 0.22s cubic-bezier(0.34,1.56,0.64,1) both",
       }}
     >
+      {/* C1: Blurred photo backdrop */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photo.thumb_url ?? photo.image_url}
+        alt=""
+        aria-hidden
+        style={{
+          position: "absolute", inset: 0, width: "100%", height: "100%",
+          objectFit: "cover", filter: "blur(28px) saturate(1.4)",
+          opacity: 0.3, transform: "scale(1.08)",
+          pointerEvents: "none",
+        }}
+      />
       {/* Top controls */}
       <div
         onClick={(e) => e.stopPropagation()}
@@ -419,9 +433,10 @@ function Lightbox({
       <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: "min(90vw, 700px)", width: "100%" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          key={photo.id}
           src={photo.image_url}
           alt={photo.caption ?? "Foto"}
-          style={{ width: "100%", maxHeight: "68vh", objectFit: "contain", borderRadius: "var(--radius-lg)", display: "block" }}
+          style={{ width: "100%", maxHeight: "68vh", objectFit: "contain", borderRadius: "var(--radius-lg)", display: "block", animation: "lightboxImgIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both" }}
         />
         {/* Editable caption */}
         <div style={{ marginTop: "0.625rem", textAlign: "center" }}>

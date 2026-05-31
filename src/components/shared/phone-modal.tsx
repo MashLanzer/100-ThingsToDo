@@ -42,6 +42,8 @@ export function PhoneModal() {
   const [time, setTime] = useState("")
   const [hiddenApps, setHiddenApps] = useState<string[]>([])
   const [lastJournalDate, setLastJournalDate] = useState<string | null>(null)
+  // E1: Boot animation — brief dark flash when modal opens
+  const [booting, setBooting] = useState(false)
 
   useEffect(() => {
     const updateTime = () => {
@@ -52,6 +54,13 @@ export function PhoneModal() {
     const interval = setInterval(updateTime, 60_000)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (showPhoneModal) {
+      setBooting(true)
+      setTimeout(() => setBooting(false), 350)
+    }
+  }, [showPhoneModal])
 
   useEffect(() => {
     if (showPhoneModal) {
@@ -104,13 +113,50 @@ export function PhoneModal() {
         <div className="phone-container" onClick={(e) => e.stopPropagation()}>
           <div className="phone-notch" />
           <div className="phone-screen">
+            {/* E1: Boot flash overlay */}
+            {booting && (
+              <div style={{
+                position: "absolute", inset: 0, zIndex: 999,
+                background: "#0a0a0a",
+                animation: "phoneBoot 0.35s ease forwards",
+                borderRadius: "inherit",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{ fontSize: "1.5rem", opacity: 0.6, animation: "phoneBoot 0.35s ease forwards" }}>💕</span>
+              </div>
+            )}
             <div className="phone-app-container">
               {/* Homescreen */}
               {activePhoneApp === "home" && (
                 <div className="phone-app-view active">
                   <div className="phone-homescreen" style={{
-                    background: "linear-gradient(160deg, #fdf4ff 0%, #fce7f3 60%, #ede9fe 100%)",
+                    background: "linear-gradient(160deg, #fdf4ff 0%, #fce7f3 55%, #ede9fe 100%)",
+                    position: "relative",
+                    overflow: "hidden",
                   }}>
+                    {/* E2: Kawaii wallpaper decorations */}
+                    <svg
+                      aria-hidden
+                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.45 }}
+                      viewBox="0 0 220 380"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      {/* Floating hearts */}
+                      <path d="M30 60 C30 60 14 48 14 38 C14 30 22 26 30 33 C38 26 46 30 46 38 C46 48 30 60 30 60Z" fill="#EC4899" opacity="0.5" />
+                      <path d="M190 140 C190 140 178 131 178 124 C178 118 184 115 190 120 C196 115 202 118 202 124 C202 131 190 140 190 140Z" fill="#8B5CF6" opacity="0.45" />
+                      <path d="M50 310 C50 310 38 301 38 294 C38 288 44 285 50 290 C56 285 62 288 62 294 C62 301 50 310 50 310Z" fill="#EC4899" opacity="0.4" />
+                      <path d="M170 300 C170 300 162 294 162 289 C162 285 166 283 170 286 C174 283 178 285 178 289 C178 294 170 300 170 300Z" fill="#F59E0B" opacity="0.45" />
+                      {/* Stars */}
+                      <text x="160" y="65" fontSize="14" fill="#F59E0B" opacity="0.6">✨</text>
+                      <text x="10" y="200" fontSize="10" fill="#8B5CF6" opacity="0.5">⭐</text>
+                      <text x="190" y="250" fontSize="11" fill="#EC4899" opacity="0.5">✨</text>
+                      <text x="80" y="350" fontSize="10" fill="#F59E0B" opacity="0.4">⭐</text>
+                      {/* Bubbles */}
+                      <circle cx="105" cy="18" r="5" fill="#8B5CF6" opacity="0.15" />
+                      <circle cx="180" cy="180" r="8" fill="#EC4899" opacity="0.1" />
+                      <circle cx="20" cy="280" r="6" fill="#F59E0B" opacity="0.13" />
+                    </svg>
                     <div className="phone-status-bar">
                       <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600 }}>{time}</span>
                       <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
