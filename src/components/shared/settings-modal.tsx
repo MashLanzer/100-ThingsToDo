@@ -1,12 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { signOut } from "firebase/auth"
+import { getFirebaseAuth } from "@/lib/firebase/client"
+import { useRouter } from "next/navigation"
 import { useAppStore } from "@/stores/app-store"
 import { useCoupleStatus, useLinkPartner, useUnlinkPartner } from "@/hooks/use-couple"
 import { useAuth } from "@/hooks/use-auth"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
 import { toast } from "sonner"
-import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload } from "lucide-react"
+import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload, LogOut } from "lucide-react"
 
 const THEMES = [
   { id: "purple",   name: "Morado",   primary: "#8B5CF6", lighter: "#EDE9FE", border: "#F3E8FF", muted: "#F5F3FF" },
@@ -132,11 +135,13 @@ const PIN_KEY = "ttd_journal_pin_v1"
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function SettingsModal() {
+  const router = useRouter()
   const { showSettingsModal, closeSettingsModal, setCoupleName: setStoreCoupleName } = useAppStore()
   const { data, isLoading } = useCoupleStatus()
   const { user } = useAuth()
   const linkMutation = useLinkPartner()
   const unlinkMutation = useUnlinkPartner()
+  const [loggingOut, setLoggingOut] = useState(false)
   const { subscribe: subscribePush, subscribing: pushSubscribing, isSubscribed: pushSubscribed, isSupported: pushSupported, permission: pushPermission } = usePushNotifications()
   const [code, setCode] = useState("")
   const [copied, setCopied] = useState(false)
@@ -269,6 +274,19 @@ export function SettingsModal() {
     saveThemeSettings({ ...ts, darkMode: v })
     if (v) document.documentElement.setAttribute("data-dark", "true")
     else document.documentElement.removeAttribute("data-dark")
+  }
+
+  async function handleLogout() {
+    if (!confirm("¿Seguro que quieres cerrar sesión?")) return
+    setLoggingOut(true)
+    try {
+      await signOut(getFirebaseAuth())
+      closeSettingsModal()
+      router.replace("/login")
+    } catch {
+      toast.error("Error al cerrar sesión")
+      setLoggingOut(false)
+    }
   }
 
   async function handleEnablePush() {
@@ -541,6 +559,19 @@ export function SettingsModal() {
                   </div>
                 )}
               </section>
+
+              {/* ── Logout ── */}
+              <div style={{ paddingTop: "0.5rem", borderTop: "1px solid var(--border)" }}>
+                <button
+                  className="btn btn-outline btn-danger"
+                  style={{ width: "100%", justifyContent: "center", gap: "0.5rem" }}
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                >
+                  <LogOut size={15} />
+                  {loggingOut ? "Cerrando sesión..." : "Cerrar Sesión"}
+                </button>
+              </div>
             </>
           )}
 

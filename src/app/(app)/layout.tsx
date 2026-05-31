@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { AppHeader } from "@/components/shared/header"
+import { BottomNav } from "@/components/shared/bottom-nav"
 import { CoupleModal } from "@/components/shared/couple-modal"
 import { PhoneModal } from "@/components/shared/phone-modal"
 import { FavorsModal } from "@/components/features/favors-modal"
@@ -36,6 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <>
       <AppHeader />
       <main>{children}</main>
+      <BottomNav />
       <CoupleModal />
       <SettingsModal />
       <PhoneModal />
