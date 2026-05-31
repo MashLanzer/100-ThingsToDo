@@ -80,3 +80,30 @@ export function useUpdatePhotoCaption() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["photos"] }),
   })
 }
+
+export interface PhotoReaction {
+  photo_id: string
+  user_id: string
+  emoji: string
+}
+
+export function usePhotoReactions(photoIds: string[]) {
+  return useQuery<PhotoReaction[]>({
+    queryKey: ["photo-reactions", photoIds.join(",")],
+    queryFn: () => authFetch(`/api/photos/reactions?photo_ids=${photoIds.join(",")}`),
+    enabled: photoIds.length > 0,
+    staleTime: 15_000,
+  })
+}
+
+export function useTogglePhotoReaction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ photoId, emoji }: { photoId: string; emoji: string }) =>
+      authFetch("/api/photos/reactions", {
+        method: "POST",
+        body: JSON.stringify({ photo_id: photoId, emoji }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["photo-reactions"] }),
+  })
+}

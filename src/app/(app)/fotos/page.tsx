@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState, useRef, useCallback, useEffect } from "react"
-import { usePhotos, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption } from "@/hooks/use-photos"
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
+import { usePhotos, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption, usePhotoReactions, useTogglePhotoReaction, type PhotoReaction } from "@/hooks/use-photos"
 import type { Photo } from "@/types"
 import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar, LayoutGrid, Rows3, Download, Share2 } from "lucide-react"
 import { toast } from "sonner"
@@ -48,7 +48,53 @@ function SkeletonCard() {
   )
 }
 
-function PolaroidCard({ photo, onClick, index, isNew }: { photo: Photo; onClick: () => void; index: number; isNew?: boolean }) {
+const REACTION_EMOJIS = ["❤️", "🔥", "✨"] as const
+
+function ReactionStrip({ photoId, reactions, myUid, onToggle }: {
+  photoId: string
+  reactions: PhotoReaction[]
+  myUid: string
+  onToggle: (emoji: string) => void
+}) {
+  const photoReactions = reactions.filter((r) => r.photo_id === photoId)
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{ display: "flex", gap: "0.25rem", justifyContent: "center", marginTop: "4px" }}
+    >
+      {REACTION_EMOJIS.map((emoji) => {
+        const mine = photoReactions.some((r) => r.emoji === emoji && r.user_id === myUid)
+        const count = photoReactions.filter((r) => r.emoji === emoji).length
+        return (
+          <button
+            key={emoji}
+            onClick={() => onToggle(emoji)}
+            style={{
+              background: mine ? "rgba(139,92,246,0.12)" : "rgba(0,0,0,0.04)",
+              border: mine ? "1px solid rgba(139,92,246,0.3)" : "1px solid transparent",
+              borderRadius: "999px",
+              padding: "1px 6px",
+              cursor: "pointer",
+              fontSize: "0.75rem",
+              display: "flex", alignItems: "center", gap: "2px",
+              transition: "transform 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.18)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+          >
+            <span>{emoji}</span>
+            {count > 0 && <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "#6d4d9e" }}>{count}</span>}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function PolaroidCard({ photo, onClick, index, isNew, reactions, myUid, onReact }: {
+  photo: Photo; onClick: () => void; index: number; isNew?: boolean
+  reactions: PhotoReaction[]; myUid: string; onReact: (emoji: string) => void
+}) {
   const rotation = polaroidRotation(photo.id, index)
   const date = new Date(photo.created_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" })
 
@@ -80,6 +126,7 @@ function PolaroidCard({ photo, onClick, index, isNew }: { photo: Photo; onClick:
         <p style={{ fontFamily: "'Caveat', cursive", fontSize: "0.6875rem", marginTop: "2px", color: photo.source === "14feb" ? "#EC4899" : "#8B5CF6" }}>
           {photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"}
         </p>
+        <ReactionStrip photoId={photo.id} reactions={reactions} myUid={myUid} onToggle={onReact} />
       </div>
     </div>
   )
@@ -444,6 +491,7 @@ export default function FotosPage() {
   const uploadPhoto = useUploadPhoto()
   const deletePhoto = useDeletePhoto()
   const updateCaption = useUpdatePhotoCaption()
+  const toggleReaction = useTogglePhotoReaction()
 
   const [filter, setFilter] = useState<FilterType>("all")
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -465,6 +513,18 @@ export default function FotosPage() {
     filter === "all" ? allPhotos
     : filter === "thingstodo" ? allPhotos.filter((p) => p.source === "thingstodo")
     : allPhotos.filter((p) => p.source === "14feb")
+
+  const allPhotoIds = useMemo(() => allPhotos.map((p) => p.id), [allPhotos])
+  const { data: reactions = [] } = usePhotoReactions(allPhotoIds)
+
+  // Get current user UID from Firebase auth
+  const [myUid, setMyUid] = useState("")
+  useEffect(() => {
+    import("@/lib/firebase/client").then(({ getFirebaseAuth }) => {
+      const auth = getFirebaseAuth()
+      setMyUid(auth.currentUser?.uid ?? "")
+    })
+  }, [])
 
   function toggleView() {
     const next: ViewMode = viewMode === "polaroid" ? "masonry" : "polaroid"
@@ -644,6 +704,9 @@ export default function FotosPage() {
                       photo={photo}
                       index={group.startIndex + i}
                       isNew={newPhotoIds.has(photo.id)}
+                      reactions={reactions}
+                      myUid={myUid}
+                      onReact={(emoji) => toggleReaction.mutate({ photoId: photo.id, emoji })}
                       onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))}
                     />
                   ))}
