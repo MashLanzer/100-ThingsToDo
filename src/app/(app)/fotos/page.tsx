@@ -48,15 +48,15 @@ function SkeletonCard() {
   )
 }
 
-function PolaroidCard({ photo, onClick, index }: { photo: Photo; onClick: () => void; index: number }) {
+function PolaroidCard({ photo, onClick, index, isNew }: { photo: Photo; onClick: () => void; index: number; isNew?: boolean }) {
   const rotation = polaroidRotation(photo.id, index)
   const date = new Date(photo.created_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" })
 
   return (
     <div
-      className="polaroid-card"
+      className={`polaroid-card${isNew ? " polaroid-new-entry" : ""}`}
       onClick={onClick}
-      style={{ padding: "10px 10px 32px", transform: `rotate(${rotation}deg)` }}
+      style={{ padding: "10px 10px 32px", transform: `rotate(${rotation}deg)`, "--final-rot": `${rotation}deg` } as React.CSSProperties}
       onMouseEnter={(e) => {
         ;(e.currentTarget as HTMLDivElement).style.transform = "rotate(0deg) scale(1.06)"
         ;(e.currentTarget as HTMLDivElement).style.boxShadow = "0 12px 40px rgba(0,0,0,0.28)"
@@ -350,6 +350,7 @@ export default function FotosPage() {
   })
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
+  const [newPhotoIds, setNewPhotoIds] = useState<Set<string>>(new Set())
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const allPhotos = photos ?? []
@@ -377,15 +378,27 @@ export default function FotosPage() {
   async function handleUploadConfirm(caption: string) {
     if (!pendingFiles) return
     let successCount = 0
+    const freshIds: string[] = []
     for (const file of pendingFiles) {
       try {
-        await uploadPhoto.mutateAsync({ file, caption: caption || undefined })
+        const result = await uploadPhoto.mutateAsync({ file, caption: caption || undefined })
         successCount++
+        if (result?.id) freshIds.push(result.id)
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : "Error al subir foto")
       }
     }
-    if (successCount > 0) toast.success(successCount === 1 ? "Foto subida!" : `${successCount} fotos subidas!`)
+    if (successCount > 0) {
+      toast.success(successCount === 1 ? "Foto subida!" : `${successCount} fotos subidas!`)
+      if (freshIds.length > 0) {
+        setNewPhotoIds((prev) => new Set([...prev, ...freshIds]))
+        setTimeout(() => setNewPhotoIds((prev) => {
+          const next = new Set(prev)
+          freshIds.forEach((id) => next.delete(id))
+          return next
+        }), 1500)
+      }
+    }
     setPendingFiles(null)
   }
 
@@ -526,6 +539,7 @@ export default function FotosPage() {
                       key={photo.id}
                       photo={photo}
                       index={group.startIndex + i}
+                      isNew={newPhotoIds.has(photo.id)}
                       onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))}
                     />
                   ))}
