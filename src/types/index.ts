@@ -28,6 +28,9 @@ export interface Plan {
   task_count?: number
   completed_count?: number
   archived?: boolean
+  cover_image?: string | null
+  due_date?: string | null
+  tags?: string[]
 }
 
 export interface Task {
@@ -86,6 +89,7 @@ export interface TimeCapsule {
   message: string
   type: CapsuleType
   unlock_date: string
+  unlock_at: string | null
   is_opened: boolean
   attachments: string[]
   created_by: string
@@ -162,45 +166,56 @@ export interface ChallengeData {
   difficultyLabel: string
 }
 
+export interface Photo {
+  id: string
+  image_url: string
+  thumb_url: string | null
+  delete_url: string | null
+  file_name: string | null
+  caption: string | null
+  source: string   // 'thingstodo' | '14feb'
+  created_at: string
+}
+
 export const KAWAII_ICONS: Record<string, string> = {
-  clipboard: "📋",
-  heart: "💕",
-  gift: "🎁",
-  skewers: "🍢",
-  cup: "☕",
-  brush: "🪮",
-  notepad: "📝",
-  tv: "📺",
-  guitar: "🎸",
-  phone: "📱",
-  gift_box: "🎀",
-  gamepad: "🎮",
-  laptop: "💻",
-  envelope: "💌",
-  flower: "🌸",
-  pizza: "🍕",
-  movie: "🎬",
-  travel: "✈️",
-  book: "📚",
-  music: "🎶",
-  camera: "📸",
-  bath: "🛁",
-  game: "🎲",
-  money: "💰",
-  house: "🏠",
-  car: "🚗",
-  star: "⭐",
-  ring: "💍",
-  balloon: "🎈",
-  cat: "🐈",
-  dog: "🐕",
-  bear: "🐻",
-  bunny: "🐰",
-  cloud: "☁️",
-  sun: "☀️",
-  rainbow: "🌈",
-  ice_cream: "🍦",
-  sushi: "🍣",
-  cactus: "🌵",
-  estrellas: "✨",
+  clipboard: "Lista",
+  heart: "Corazón",
+  gift: "Regalo",
+  skewers: "Comida",
+  cup: "Café",
+  brush: "Arte",
+  notepad: "Nota",
+  tv: "TV",
+  guitar: "Música",
+  phone: "Teléfono",
+  gift_box: "Caja",
+  gamepad: "Juego",
+  laptop: "Laptop",
+  envelope: "Carta",
+  flower: "Flor",
+  pizza: "Pizza",
+  movie: "Película",
+  travel: "Viaje",
+  book: "Libro",
+  music: "Notas",
+  camera: "Cámara",
+  bath: "Spa",
+  game: "Dados",
+  money: "Dinero",
+  house: "Casa",
+  car: "Auto",
+  star: "Estrella",
+  ring: "Anillo",
+  balloon: "Globo",
+  cat: "Gato",
+  dog: "Perro",
+  bear: "Oso",
+  bunny: "Conejo",
+  cloud: "Nube",
+  sun: "Sol",
+  rainbow: "Arcoíris",
+  ice_cream: "Helado",
+  sushi: "Sushi",
+  cactus: "Cactus",
+  estrellas: "Destellos",
 }

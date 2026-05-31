@@ -310,13 +310,36 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.25rem 0;
+  padding: 1.125rem 1.25rem 1rem;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  gap: 0.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .modal-title {
-  font-size: 1.125rem;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.0625rem;
   font-weight: 700;
-  color: var(--foreground);
+  color: white;
+  flex: 1;
+}
+
+.modal-close-btn {
+  background: rgba(255,255,255,0.18) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  width: 30px !important;
+  height: 30px !important;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white !important;
+  padding: 0 !important;
 }
 
 .modal-body {

@@ -7,6 +7,31 @@ import type { SavingsGoal } from "@/types"
 import { PhoneLoader } from "@/components/features/phone-loader"
 import { formatDate } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
+import { Plane, Home, Car, Gem, Baby, GraduationCap, Laptop, Umbrella, Target, Wallet, Moon, Tent, Gift, PiggyBank, Sparkles, Trash2, Pencil, ClipboardList } from "lucide-react"
+import { showConfirm } from "@/lib/confirm"
+import type { LucideProps } from "lucide-react"
+
+type GoalIcon = { key: string; Icon: React.FC<LucideProps>; label: string }
+const GOAL_ICONS: GoalIcon[] = [
+  { key: "piggy",   Icon: PiggyBank,     label: "Alcancía" },
+  { key: "travel",  Icon: Plane,         label: "Viaje" },
+  { key: "home",    Icon: Home,          label: "Casa" },
+  { key: "car",     Icon: Car,           label: "Auto" },
+  { key: "ring",    Icon: Gem,           label: "Anillo" },
+  { key: "baby",    Icon: Baby,          label: "Bebé" },
+  { key: "school",  Icon: GraduationCap, label: "Educación" },
+  { key: "laptop",  Icon: Laptop,        label: "Tecnología" },
+  { key: "beach",   Icon: Umbrella,      label: "Playa" },
+  { key: "goal",    Icon: Target,        label: "Meta" },
+  { key: "savings", Icon: Wallet,        label: "Ahorros" },
+  { key: "moon",    Icon: Moon,          label: "Sueño" },
+  { key: "camp",    Icon: Tent,          label: "Camping" },
+  { key: "gift",    Icon: Gift,          label: "Regalo" },
+  { key: "other",   Icon: Sparkles,      label: "Otro" },
+]
+function getGoalIcon(key: string | undefined): React.FC<LucideProps> {
+  return GOAL_ICONS.find(g => g.key === key)?.Icon ?? PiggyBank
+}
 
 interface Contribution { id: string; amount: number; contributed_by: string; created_at: string }
 interface Props { onBack: () => void }
@@ -132,7 +157,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
 
   async function handleDeleteGoal() {
     if (!selected) return
-    if (!confirm("¿Eliminar esta meta y todas sus aportaciones?")) return
+    if (!await showConfirm({ title: "Eliminar meta", message: "Se borrarán la meta y todas las aportaciones.", danger: true })) return
     try {
       await authFetch(`/api/goals/${selected.id}`, { method: "DELETE" })
       toast.success("Meta eliminada")
@@ -142,7 +167,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
   }
 
   async function handleDeleteContribution(goalId: string, contribId: string) {
-    if (!confirm("¿Eliminar esta aportación?")) return
+    if (!await showConfirm({ title: "Eliminar aportación", danger: true })) return
     try {
       await authFetch(`/api/goals/${goalId}/contributions?contributionId=${contribId}`, { method: "DELETE" })
       toast.success("Aportación eliminada")

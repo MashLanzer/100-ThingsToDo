@@ -9,6 +9,44 @@ import { KAWAII_ICONS } from "@/types"
 import { ArrowLeft, Plus, Edit2, X, Trash2 } from "lucide-react"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
 import { toast } from "sonner"
+import { showConfirm } from "@/lib/confirm"
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  arrayMove,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+
+function planGradient(id: string): string {
+  const gradients = [
+    "linear-gradient(135deg, #8B5CF6, #EC4899)",
+    "linear-gradient(135deg, #06B6D4, #10B981)",
+    "linear-gradient(135deg, #F59E0B, #EF4444)",
+    "linear-gradient(135deg, #EC4899, #A78BFA)",
+    "linear-gradient(135deg, #10B981, #3B82F6)",
+    "linear-gradient(135deg, #3B82F6, #8B5CF6)",
+  ]
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash)
+  return gradients[Math.abs(hash) % gradients.length]
+}
+
+function relativeDate(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000)
+  if (diff === 0) return "hoy"
+  if (diff === 1) return "ayer"
+  if (diff < 30) return `hace ${diff}d`
+  if (diff < 365) return `hace ${Math.floor(diff / 30)}m`
+  return `hace ${Math.floor(diff / 365)}a`
+}
 
 export default function PlanDetailPage() {
   const params = useParams<{ id: string }>()
@@ -120,7 +158,7 @@ export default function PlanDetailPage() {
   }
 
   async function handleDeletePlan() {
-    if (!confirm("¿Seguro que quieres eliminar este plan?")) return
+    if (!await showConfirm({ title: "Eliminar plan", message: "Se borrarán el plan y todas sus tareas.", danger: true })) return
     try {
       await deletePlan.mutateAsync(params.id)
       router.push("/dashboard")
@@ -389,7 +427,7 @@ export default function PlanDetailPage() {
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">✏️ Editar Plan</h2>
-              <button className="btn-icon" onClick={() => setShowEditModal(false)}><X size={18} /></button>
+              <button className="modal-close-btn" onClick={() => setShowEditModal(false)}><X size={14} /></button>
             </div>
             <div className="modal-body">
               <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>

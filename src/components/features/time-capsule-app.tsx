@@ -6,7 +6,9 @@ import { toast } from "sonner"
 import type { TimeCapsule, CapsuleType } from "@/types"
 import { formatDate } from "@/lib/utils"
 import { PhoneLoader } from "@/components/features/phone-loader"
-import { Trash2 } from "lucide-react"
+import { Trash2, Heart, Star, Trophy, HelpCircle, MessageSquare, Calendar, Timer, Lock, MailOpen, Gem, Sparkles, Upload, Mail, Pencil, Clock } from "lucide-react"
+import { showConfirm } from "@/lib/confirm"
+import type { LucideProps } from "lucide-react"
 
 const CAPSULE_TYPES: { id: CapsuleType; icon: string; label: string; desc: string }[] = [
   { id: "memory",      icon: "💙", label: "Recuerdo",   desc: "Momentos especiales" },
@@ -88,7 +90,13 @@ export function TimeCapsuleApp({ onBack }: Props) {
 
   async function handleOpen(capsule: TimeCapsule) {
     if (capsule.is_opened) { setSelected(capsule); setView("read"); return }
-    if (!confirm("¿Abrir esta cápsula ahora?")) return
+    const now = new Date().toISOString().split("T")[0]
+    if (capsule.unlock_date > now) {
+      toast.error(`🔒 Aún no puedes abrir esta cápsula. Se abre el ${formatDate(capsule.unlock_date)}`)
+      return
+    }
+    if (!await showConfirm({ title: "Abrir cápsula ⏳", message: "Una vez abierta no podrás volver a cerrarla.", danger: false, confirmLabel: "Abrir" })) return
+
     try {
       await authFetch(`/api/capsules/${capsule.id}/open`, { method: "PATCH" })
       await loadCapsules()
@@ -114,7 +122,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
   }
 
   async function handleDelete(capsule: TimeCapsule) {
-    if (!confirm("¿Eliminar esta cápsula?")) return
+    if (!await showConfirm({ title: "Eliminar cápsula", danger: true })) return
     try {
       await authFetch(`/api/capsules/${capsule.id}`, { method: "DELETE" })
       toast.success("Cápsula eliminada")

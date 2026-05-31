@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { useCoupleStatus, useLinkPartner, useUnlinkPartner } from "@/hooks/use-couple"
 import { toast } from "sonner"
-import { Copy, Check } from "lucide-react"
+import { Copy, Check, Heart, Users, Sparkles } from "lucide-react"
+import { showConfirm } from "@/lib/confirm"
 
 interface Props { onBack: () => void }
 
@@ -36,7 +37,7 @@ export function CoupleApp({ onBack }: Props) {
   }
 
   async function handleUnlink() {
-    if (!confirm("¿Seguro que quieres desvincular a tu pareja?")) return
+    if (!await showConfirm({ title: "Desvincular pareja", message: "Se romperá el vínculo con tu pareja. Podréis volver a vincularos usando el código.", danger: true, confirmLabel: "Desvincular" })) return
     try {
       await unlinkMutation.mutateAsync()
       toast.success("Pareja desvinculada")
