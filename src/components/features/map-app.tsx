@@ -5,12 +5,17 @@ import { getFirebaseAuth } from "@/lib/firebase/client"
 import { useAppStore } from "@/stores/app-store"
 import { toast } from "sonner"
 import type { Place } from "@/types"
-import { Plus, Trash2, Search, Globe } from "lucide-react"
+import { Plus, Trash2, Search, Globe, MapPin, Star, Sparkles, Map, Plane, type LucideProps } from "lucide-react"
 import { PhoneLoader } from "@/components/features/phone-loader"
 
 type PlaceStatus = "visited" | "wishlist"
 
 interface Props { onBack: () => void }
+
+const STATUS_OPTIONS: { id: PlaceStatus; Icon: React.FC<LucideProps>; iconColor: string; label: string; bg: string; border: string }[] = [
+  { id: "visited",  Icon: MapPin, iconColor: "#059669", label: "Ya visitamos",    bg: "#d1fae5", border: "#6ee7b7" },
+  { id: "wishlist", Icon: Star,   iconColor: "#d97706", label: "En nuestra lista", bg: "#fef9c3", border: "#fde047" },
+]
 
 export function MapApp({ onBack }: Props) {
   const { openMapModal, closePhoneModal } = useAppStore()
@@ -70,7 +75,7 @@ export function MapApp({ onBack }: Props) {
           const parts = r.display_name.split(",")
           setCountry(parts[parts.length - 1].trim())
         }
-        toast.success("Ubicación encontrada 📍")
+        toast.success("Ubicación encontrada")
       } else {
         toast.error("No se encontró la ubicación")
       }
@@ -88,7 +93,7 @@ export function MapApp({ onBack }: Props) {
         method: "POST",
         body: JSON.stringify({ name: name.trim(), country: country.trim(), lat: latN, lng: lngN, status, note: note.trim() }),
       })
-      toast.success("Lugar guardado 🗺️")
+      toast.success("Lugar guardado")
       setName(""); setCountry(""); setLat(""); setLng(""); setNote(""); setSearchQuery("")
       setStatus("wishlist")
       setFormStep(1)
@@ -127,13 +132,17 @@ export function MapApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => formStep === 2 ? setFormStep(1) : setView("list")}>‹</button>
-          <span>{formStep === 1 ? "📍 Paso 1 · Ubicación" : "✨ Paso 2 · Detalles"}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {formStep === 1
+              ? <><MapPin size={14} /> Paso 1 · Ubicación</>
+              : <><Sparkles size={14} /> Paso 2 · Detalles</>
+            }
+          </span>
           <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", fontWeight: 500 }}>{formStep}/2</span>
         </div>
         <div className="app-content-body">
           {formStep === 1 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-              {/* Search */}
               <div style={{ display: "flex", gap: "0.375rem" }}>
                 <input
                   className="input"
@@ -176,7 +185,7 @@ export function MapApp({ onBack }: Props) {
                 background: "var(--primary-lighter)", borderRadius: "var(--radius-md)",
                 padding: "0.625rem 0.875rem", display: "flex", alignItems: "center", gap: "0.5rem",
               }}>
-                <span style={{ fontSize: "1.25rem" }}>📍</span>
+                <MapPin size={20} color="var(--primary)" />
                 <div>
                   <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)" }}>{name}</p>
                   <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>{country}</p>
@@ -186,10 +195,7 @@ export function MapApp({ onBack }: Props) {
               <div>
                 <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground-light)", marginBottom: "0.5rem" }}>Estado</p>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
-                  {([
-                    { id: "visited" as PlaceStatus,  emoji: "📍", label: "Ya visitamos",  bg: "#d1fae5", border: "#6ee7b7" },
-                    { id: "wishlist" as PlaceStatus, emoji: "⭐", label: "En nuestra lista", bg: "#fef9c3", border: "#fde047" },
-                  ]).map((s) => (
+                  {STATUS_OPTIONS.map((s) => (
                     <button
                       key={s.id}
                       onClick={() => setStatus(s.id)}
@@ -201,7 +207,7 @@ export function MapApp({ onBack }: Props) {
                         color: "var(--foreground)", display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
                       }}
                     >
-                      <span style={{ fontSize: "1.25rem" }}>{s.emoji}</span>
+                      <s.Icon size={20} color={s.iconColor} />
                       {s.label}
                     </button>
                   ))}
@@ -221,7 +227,7 @@ export function MapApp({ onBack }: Props) {
                   ← Volver
                 </button>
                 <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSave} disabled={saving}>
-                  {saving ? "Guardando..." : "Guardar lugar 🗺️"}
+                  {saving ? "Guardando..." : "Guardar lugar"}
                 </button>
               </div>
             </div>
@@ -235,7 +241,7 @@ export function MapApp({ onBack }: Props) {
     <>
       <div className="app-content-header">
         <button className="back-btn-phone" onClick={onBack}>‹</button>
-        <span>🗺️ Aventuras</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Map size={14} /> Aventuras</span>
         <button
           onClick={openGlobe}
           style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}
@@ -247,12 +253,12 @@ export function MapApp({ onBack }: Props) {
 
       {/* Counter */}
       <div style={{ padding: "0.5rem 1rem 0", display: "flex", gap: "0.5rem", alignItems: "center" }}>
-        <span style={{ fontSize: "0.75rem", color: "var(--foreground-light)", fontWeight: 600 }}>
-          🗺️ <strong style={{ color: "var(--foreground)" }}>{visitedCount}</strong> visitados
+        <span style={{ fontSize: "0.75rem", color: "var(--foreground-light)", fontWeight: 600, display: "flex", alignItems: "center", gap: 3 }}>
+          <Map size={12} /> <strong style={{ color: "var(--foreground)" }}>{visitedCount}</strong> visitados
         </span>
         <span style={{ color: "var(--border)", fontSize: "0.75rem" }}>·</span>
-        <span style={{ fontSize: "0.75rem", color: "var(--foreground-light)", fontWeight: 600 }}>
-          ⭐ <strong style={{ color: "var(--foreground)" }}>{wishlistCount}</strong> en lista
+        <span style={{ fontSize: "0.75rem", color: "var(--foreground-light)", fontWeight: 600, display: "flex", alignItems: "center", gap: 3 }}>
+          <Star size={12} /> <strong style={{ color: "var(--foreground)" }}>{wishlistCount}</strong> en lista
         </span>
       </div>
 
@@ -264,9 +270,14 @@ export function MapApp({ onBack }: Props) {
               key={t}
               onClick={() => setTab(t)}
               className={`pill-tab-btn${tab === t ? " active" : ""}`}
-              style={{ fontSize: "0.6875rem" }}
+              style={{ fontSize: "0.6875rem", display: "flex", alignItems: "center", gap: 3 }}
             >
-              {t === "all" ? "Todos" : t === "visited" ? "📍 Visitados" : "⭐ Deseos"}
+              {t === "all"
+                ? "Todos"
+                : t === "visited"
+                  ? <><MapPin size={10} /> Visitados</>
+                  : <><Star size={10} /> Deseos</>
+              }
             </button>
           ))}
         </div>
@@ -281,14 +292,24 @@ export function MapApp({ onBack }: Props) {
           <PhoneLoader />
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
-            <div className="animate-bounce-slow" style={{ fontSize: "2.25rem" }}>
-              {tab === "visited" ? "🌍" : tab === "wishlist" ? "⭐" : "🗺️"}
+            <div className="animate-bounce-slow">
+              {tab === "visited"
+                ? <Globe size={36} color="var(--foreground-muted)" />
+                : tab === "wishlist"
+                  ? <Star size={36} color="var(--foreground-muted)" />
+                  : <Map size={36} color="var(--foreground-muted)" />
+              }
             </div>
             <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--foreground)" }}>
               {tab === "visited" ? "¡Aún por explorar!" : tab === "wishlist" ? "¡La lista está vacía!" : "¡Sin aventuras aún!"}
             </p>
             <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
-              {tab === "visited" ? "Añade los lugares que habéis visitado juntos 💕" : tab === "wishlist" ? "¿Adónde queréis ir? ✈️" : "Empieza a guardar vuestros destinos 🌸"}
+              {tab === "visited"
+                ? "Añade los lugares que habéis visitado juntos"
+                : tab === "wishlist"
+                  ? <><Plane size={12} style={{ display: "inline", verticalAlign: "middle" }} /> ¿Adónde queréis ir?</>
+                  : "Empieza a guardar vuestros destinos"
+              }
             </p>
           </div>
         ) : (
@@ -311,7 +332,12 @@ export function MapApp({ onBack }: Props) {
                     transition: "transform 0.12s ease",
                   }}
                 >
-                  <span style={{ fontSize: "1.25rem", flexShrink: 0, marginTop: "1px" }}>{isVisited ? "📍" : "⭐"}</span>
+                  <div style={{ flexShrink: 0, marginTop: "1px" }}>
+                    {isVisited
+                      ? <MapPin size={18} color="#059669" />
+                      : <Star size={18} color="#d97706" />
+                    }
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.125rem" }}>
                       <p style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -323,7 +349,7 @@ export function MapApp({ onBack }: Props) {
                         color: isVisited ? "#064e3b" : "#713f12",
                         flexShrink: 0,
                       }}>
-                        {isVisited ? "✓ Visitado" : "💫 Pendiente"}
+                        {isVisited ? "Visitado" : "Pendiente"}
                       </span>
                     </div>
                     <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{p.country}</p>
