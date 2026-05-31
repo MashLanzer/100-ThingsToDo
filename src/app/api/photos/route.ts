@@ -26,16 +26,30 @@ function parseDoc(doc: FirestoreDoc) {
   }
 }
 
+async function fetchAllMemories(): Promise<FirestoreDoc[]> {
+  const docs: FirestoreDoc[] = []
+  let pageToken: string | undefined
+
+  do {
+    const params = new URLSearchParams({ key: FIREBASE_API_KEY, pageSize: "300" })
+    if (pageToken) params.set("pageToken", pageToken)
+
+    const res = await fetch(`${FIRESTORE_BASE}/memories?${params}`)
+    if (!res.ok) break
+
+    const data = await res.json()
+    if (data.documents) docs.push(...(data.documents as FirestoreDoc[]))
+    pageToken = data.nextPageToken
+  } while (pageToken)
+
+  return docs
+}
+
 export async function GET(req: NextRequest) {
   const user = await verifyFirebaseToken(req)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const url = `${FIRESTORE_BASE}/memories?key=${FIREBASE_API_KEY}&pageSize=200`
-  const res = await fetch(url)
-  if (!res.ok) return NextResponse.json({ error: "Firestore error" }, { status: 502 })
-
-  const data = await res.json()
-  const docs: FirestoreDoc[] = data.documents ?? []
+  const docs = await fetchAllMemories()
 
   const photos = docs
     .map(parseDoc)
