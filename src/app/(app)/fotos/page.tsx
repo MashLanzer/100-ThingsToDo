@@ -280,6 +280,14 @@ function CaptionDialog({
   )
 }
 
+function calcMonthsTogether(photos: Photo[]): number {
+  if (photos.length === 0) return 0
+  const oldest = photos.reduce((a, b) => a.created_at < b.created_at ? a : b)
+  const start = new Date(oldest.created_at)
+  const now = new Date()
+  return (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth())
+}
+
 export default function FotosPage() {
   const { data: photos, isLoading } = usePhotos()
   const uploadPhoto = useUploadPhoto()
@@ -292,6 +300,7 @@ export default function FotosPage() {
 
   const allPhotos = photos ?? []
   const has14Feb = allPhotos.some((p) => p.source === "14feb")
+  const monthsCount = calcMonthsTogether(allPhotos)
 
   const filteredPhotos =
     filter === "all" ? allPhotos
@@ -338,17 +347,41 @@ export default function FotosPage() {
 
   return (
     <div className="page-container">
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.875rem" }}>
-        <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <Camera size={22} />
-          Nuestras Fotos
-        </h1>
-        {allPhotos.length > 0 && (
-          <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", background: "var(--muted)", borderRadius: "999px", padding: "3px 10px" }}>
-            {allPhotos.length} foto{allPhotos.length !== 1 ? "s" : ""}
-          </span>
-        )}
+      {/* Hero Header */}
+      <div style={{
+        background: "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)",
+        borderRadius: "var(--radius-xl)",
+        padding: "1.25rem 1.375rem 1.125rem",
+        marginBottom: "1rem",
+        color: "white",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        <div style={{ position: "absolute", top: -24, right: -24, width: 110, height: 110, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
+        <div style={{ position: "absolute", bottom: -28, right: 50, width: 72, height: 72, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", position: "relative", zIndex: 1 }}>
+          <div>
+            <p style={{ fontSize: "0.6875rem", fontWeight: 700, opacity: 0.8, letterSpacing: "0.08em", marginBottom: "0.2rem", textTransform: "uppercase" }}>
+              Galería
+            </p>
+            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.75rem", fontWeight: 700, lineHeight: 1.1, marginBottom: "0.75rem" }}>
+              Nuestros<br />Recuerdos ✨
+            </h1>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "rgba(255,255,255,0.22)", borderRadius: "999px", padding: "3px 10px" }}>
+                📷 {allPhotos.length} foto{allPhotos.length !== 1 ? "s" : ""}
+              </span>
+              {monthsCount > 0 && (
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "rgba(255,255,255,0.22)", borderRadius: "999px", padding: "3px 10px" }}>
+                  💕 {monthsCount} {monthsCount === 1 ? "mes" : "meses"} juntos
+                </span>
+              )}
+            </div>
+          </div>
+          <div style={{ fontSize: "3rem", lineHeight: 1, marginTop: "0.25rem", filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.18))" }}>
+            📷
+          </div>
+        </div>
       </div>
 
       {/* Filter pills */}
