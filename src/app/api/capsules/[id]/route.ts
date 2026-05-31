@@ -16,6 +16,7 @@ export async function PATCH(req: NextRequest, { params }: Context) {
   const updates: Record<string, unknown> = {}
   if (body.message) updates.message = body.message
   if (body.unlock_date) updates.unlock_date = body.unlock_date
+  if (body.unlock_at !== undefined) updates.unlock_at = body.unlock_at ?? null
   if (body.type) updates.type = body.type
   const { data, error } = await supabase
     .from("time_capsules")

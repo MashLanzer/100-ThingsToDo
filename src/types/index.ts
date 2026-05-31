@@ -89,6 +89,7 @@ export interface TimeCapsule {
   message: string
   type: CapsuleType
   unlock_date: string
+  unlock_at: string | null
   is_opened: boolean
   attachments: string[]
   created_by: string

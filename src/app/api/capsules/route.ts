@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   const { data: me } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
   if (!me?.couple_id) return NextResponse.json({ error: "Not in a couple" }, { status: 403 })
 
-  const { message, type, unlock_date } = await req.json()
+  const { message, type, unlock_date, unlock_at } = await req.json()
   if (!message?.trim() || !unlock_date) {
     return NextResponse.json({ error: "message and unlock_date required" }, { status: 400 })
   }
@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
     .insert({
       couple_id: me.couple_id,
       message: message.trim(),
+      ...(unlock_at ? { unlock_at } : {}),
       type: type ?? "memory",
       unlock_date,
       created_by: user.uid,

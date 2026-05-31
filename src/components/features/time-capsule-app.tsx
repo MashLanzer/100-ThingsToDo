@@ -41,10 +41,12 @@ export function TimeCapsuleApp({ onBack }: Props) {
   const [capsuleType, setCapsuleType] = useState<CapsuleType>("memory")
   const [unlockDays, setUnlockDays] = useState(30)
   const [customDate, setCustomDate] = useState("")
+  const [customTime, setCustomTime] = useState("")
   const [useCustom, setUseCustom] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editMessage, setEditMessage] = useState("")
   const [editDate, setEditDate] = useState("")
+  const [editTime, setEditTime] = useState("")
 
   useEffect(() => { loadCapsules() }, [])
 
@@ -72,11 +74,16 @@ export function TimeCapsuleApp({ onBack }: Props) {
     const unlock_date = useCustom && customDate
       ? customDate
       : new Date(Date.now() + unlockDays * 86_400_000).toISOString().split("T")[0]
+    // If custom time is set, compute the full unlock_at timestamp in local time
+    let unlock_at: string | undefined
+    if (useCustom && customDate && customTime) {
+      unlock_at = new Date(`${customDate}T${customTime}:00`).toISOString()
+    }
     setSaving(true)
     try {
       await authFetch("/api/capsules", {
         method: "POST",
-        body: JSON.stringify({ message: message.trim(), type: capsuleType, unlock_date }),
+        body: JSON.stringify({ message: message.trim(), type: capsuleType, unlock_date, unlock_at }),
       })
       toast.success("Cápsula creada 💎")
       setMessage("")
@@ -89,6 +96,13 @@ export function TimeCapsuleApp({ onBack }: Props) {
 
   async function handleOpen(capsule: TimeCapsule) {
     if (capsule.is_opened) { setSelected(capsule); setView("read"); return }
+    if (!canOpenCapsule(capsule)) {
+      const label = capsule.unlock_at
+        ? `Se abre el ${formatDateTime(capsule.unlock_at)}`
+        : `Se abre el ${formatDate(capsule.unlock_date)}`
+      toast.error(`🔒 Aún no puedes abrir esta cápsula. ${label}`)
+      return
+    }
     if (!confirm("¿Abrir esta cápsula ahora?")) return
     try {
       await authFetch(`/api/capsules/${capsule.id}/open`, { method: "PATCH" })
@@ -97,16 +111,23 @@ export function TimeCapsuleApp({ onBack }: Props) {
       setSelected(updated)
       setView("read")
       toast.success("¡Cápsula abierta! ✨")
-    } catch { toast.error("Error al abrir") }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : ""
+      if (msg.includes("not_ready")) toast.error("🔒 Esta cápsula aún no está lista para abrir")
+      else toast.error("Error al abrir")
+    }
   }
 
   async function handleEditSave(capsule: TimeCapsule) {
     if (!editMessage.trim()) return
     setSaving(true)
+    const newDate = editDate || capsule.unlock_date
+    let newUnlockAt: string | null = null
+    if (editTime && editDate) newUnlockAt = new Date(`${editDate}T${editTime}:00`).toISOString()
     try {
       await authFetch(`/api/capsules/${capsule.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ message: editMessage.trim(), unlock_date: editDate || capsule.unlock_date }),
+        body: JSON.stringify({ message: editMessage.trim(), unlock_date: newDate, unlock_at: newUnlockAt }),
       })
       toast.success("Cápsula actualizada ✨")
       setEditingId(null)
@@ -126,16 +147,37 @@ export function TimeCapsuleApp({ onBack }: Props) {
   const nowDate = new Date()
   const now = `${nowDate.getFullYear()}-${String(nowDate.getMonth()+1).padStart(2,"0")}-${String(nowDate.getDate()).padStart(2,"0")}`
 
-  function daysUntil(dateStr: string): number {
-    const unlock = new Date(dateStr + "T00:00:00")
-    const today = new Date(now + "T00:00:00")
-    return Math.ceil((unlock.getTime() - today.getTime()) / 86_400_000)
+  function canOpenCapsule(c: TimeCapsule): boolean {
+    if (c.unlock_at) return new Date() >= new Date(c.unlock_at)
+    return c.unlock_date <= now
+  }
+
+  function formatDateTime(isoStr: string): string {
+    const d = new Date(isoStr)
+    return d.toLocaleString("es-ES", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+  }
+
+  function timeUntil(c: TimeCapsule): string {
+    const target = c.unlock_at ? new Date(c.unlock_at) : new Date(c.unlock_date + "T00:00:00")
+    const diffMs = target.getTime() - nowDate.getTime()
+    if (diffMs <= 0) return "¡Lista!"
+    const days = Math.floor(diffMs / 86_400_000)
+    const hours = Math.floor((diffMs % 86_400_000) / 3_600_000)
+    const mins = Math.floor((diffMs % 3_600_000) / 60_000)
+    if (days > 0) return `${days}d ${hours}h`
+    if (hours > 0) return `${hours}h ${mins}m`
+    return `${mins}m`
+  }
+
+  function daysUntil(c: TimeCapsule): number {
+    const target = c.unlock_at ? new Date(c.unlock_at) : new Date(c.unlock_date + "T00:00:00")
+    return Math.max(0, Math.ceil((target.getTime() - nowDate.getTime()) / 86_400_000))
   }
 
   const filteredCapsules = capsules.filter((c) => {
-    const canOpen = c.unlock_date <= now
-    if (filter === "waiting") return !c.is_opened && !canOpen
-    if (filter === "ready")   return !c.is_opened && canOpen
+    const ready = canOpenCapsule(c)
+    if (filter === "waiting") return !c.is_opened && !ready
+    if (filter === "ready")   return !c.is_opened && ready
     if (filter === "opened")  return c.is_opened
     return true
   })
@@ -305,14 +347,27 @@ export function TimeCapsuleApp({ onBack }: Props) {
               </button>
             </div>
             {useCustom && (
-              <input
-                type="date"
-                className="input"
-                style={{ marginTop: "0.5rem" }}
-                value={customDate}
-                min={now}
-                onChange={(e) => setCustomDate(e.target.value)}
-              />
+              <div style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+                <input
+                  type="date"
+                  className="input"
+                  value={customDate}
+                  min={now}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                />
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <input
+                    type="time"
+                    className="input"
+                    value={customTime}
+                    onChange={(e) => setCustomTime(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+                    hora exacta (opcional)
+                  </span>
+                </div>
+              </div>
             )}
           </div>
 
@@ -366,7 +421,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
 
         {/* Ready banner */}
         {(() => {
-          const readyCount = capsules.filter(c => !c.is_opened && c.unlock_date <= now).length
+          const readyCount = capsules.filter(c => !c.is_opened && canOpenCapsule(c)).length
           if (!readyCount) return null
           return (
             <div className="animate-glow-pulse" style={{
@@ -403,8 +458,9 @@ export function TimeCapsuleApp({ onBack }: Props) {
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {filteredCapsules.map((c) => {
               const t = CAPSULE_TYPES.find((t) => t.id === c.type)
-              const canOpen = c.unlock_date <= now
-              const days = daysUntil(c.unlock_date)
+              const canOpen = canOpenCapsule(c)
+              const days = daysUntil(c)
+              const countdown = timeUntil(c)
               return (
                 <div key={c.id}>
                 <div
@@ -447,8 +503,8 @@ export function TimeCapsuleApp({ onBack }: Props) {
                         )
                       })()}
                       <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.5rem", fontWeight: 700, color: "var(--primary)", lineHeight: 1 }}>
-                          {days > 99 ? "99+" : days}d
+                        <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.5rem", fontWeight: 700, color: "var(--primary)", lineHeight: 1, textAlign: "center" }}>
+                          {countdown}
                         </span>
                       </div>
                     </div>
@@ -464,7 +520,9 @@ export function TimeCapsuleApp({ onBack }: Props) {
                         ? `Abierta el ${formatDate(c.unlock_date)}`
                         : canOpen
                         ? "¡Lista para abrir!"
-                        : `Se abre en ${days} día${days !== 1 ? "s" : ""}`}
+                        : c.unlock_at
+                        ? `Se abre el ${formatDateTime(c.unlock_at)}`
+                        : `Se abre en ${countdown}`}
                     </div>
                     {canOpen && !c.is_opened && (
                       <div style={{ fontSize: "0.625rem", fontWeight: 700, color: "#059669", marginTop: "0.125rem" }}>
@@ -477,7 +535,16 @@ export function TimeCapsuleApp({ onBack }: Props) {
                   {!c.is_opened && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "2px", flexShrink: 0 }}>
                       <button
-                        onClick={(e) => { e.stopPropagation(); setEditingId(c.id); setEditMessage(c.message); setEditDate(c.unlock_date) }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingId(c.id)
+                          setEditMessage(c.message)
+                          setEditDate(c.unlock_date)
+                          if (c.unlock_at) {
+                            const d = new Date(c.unlock_at)
+                            setEditTime(`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`)
+                          } else { setEditTime("") }
+                        }}
                         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "4px", display: "flex", alignItems: "center" }}
                       ><Pencil size={13} /></button>
                       <button
@@ -509,7 +576,10 @@ export function TimeCapsuleApp({ onBack }: Props) {
                       maxLength={2000}
                       autoFocus
                     />
-                    <input type="date" className="input" value={editDate} min={now} onChange={(e) => setEditDate(e.target.value)} />
+                    <div style={{ display: "flex", gap: "0.375rem" }}>
+                      <input type="date" className="input" value={editDate} min={now} onChange={(e) => setEditDate(e.target.value)} style={{ flex: 1 }} />
+                      <input type="time" className="input" value={editTime} onChange={(e) => setEditTime(e.target.value)} style={{ flex: "0 0 100px" }} />
+                    </div>
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <button className="btn btn-primary" onClick={() => handleEditSave(c)} disabled={saving} style={{ flex: 1, fontSize: "0.75rem" }}>
                         {saving ? "..." : "Guardar"}
