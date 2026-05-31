@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { usePhotos, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption, usePhotoReactions, useTogglePhotoReaction, type PhotoReaction } from "@/hooks/use-photos"
 import type { Photo } from "@/types"
-import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar, LayoutGrid, Rows3, Download, Share2 } from "lucide-react"
+import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar, LayoutGrid, Rows3, Download, Share2, CheckCircle2, Circle } from "lucide-react"
 import { toast } from "sonner"
 
 type FilterType = "all" | "thingstodo" | "14feb"
@@ -91,34 +91,63 @@ function ReactionStrip({ photoId, reactions, myUid, onToggle }: {
   )
 }
 
-function PolaroidCard({ photo, onClick, index, isNew, reactions, myUid, onReact }: {
+function PolaroidCard({ photo, onClick, index, isNew, reactions, myUid, onReact, selectionMode, selected, onSelect }: {
   photo: Photo; onClick: () => void; index: number; isNew?: boolean
   reactions: PhotoReaction[]; myUid: string; onReact: (emoji: string) => void
+  selectionMode: boolean; selected: boolean; onSelect: () => void
 }) {
   const rotation = polaroidRotation(photo.id, index)
   const date = new Date(photo.created_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" })
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function startPress() {
+    longPressTimer.current = setTimeout(() => onSelect(), 500)
+  }
+  function cancelPress() {
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null }
+  }
 
   return (
     <div
       className={`polaroid-card${isNew ? " polaroid-new-entry" : ""}`}
-      onClick={onClick}
-      style={{ padding: "10px 10px 32px", transform: `rotate(${rotation}deg)`, "--final-rot": `${rotation}deg` } as React.CSSProperties}
-      onMouseEnter={(e) => {
+      onClick={selectionMode ? onSelect : onClick}
+      onMouseDown={!selectionMode ? startPress : undefined}
+      onMouseUp={cancelPress}
+      onMouseLeave={cancelPress}
+      onTouchStart={!selectionMode ? startPress : undefined}
+      onTouchEnd={cancelPress}
+      style={{
+        padding: "10px 10px 32px",
+        transform: selected ? "rotate(0deg) scale(0.95)" : `rotate(${rotation}deg)`,
+        "--final-rot": `${rotation}deg`,
+        outline: selected ? "3px solid var(--primary)" : "none",
+        outlineOffset: "2px",
+        transition: selectionMode ? "transform 0.15s, outline 0.15s" : undefined,
+      } as React.CSSProperties}
+      onMouseEnter={!selectionMode ? (e) => {
         ;(e.currentTarget as HTMLDivElement).style.transform = "rotate(0deg) scale(1.06)"
         ;(e.currentTarget as HTMLDivElement).style.boxShadow = "0 12px 40px rgba(0,0,0,0.28)"
-      }}
-      onMouseLeave={(e) => {
+      } : undefined}
+      onMouseLeave={!selectionMode ? (e) => {
+        cancelPress()
         ;(e.currentTarget as HTMLDivElement).style.transform = `rotate(${rotation}deg)`
         ;(e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.1)"
-      }}
+      } : undefined}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={photo.thumb_url ?? photo.image_url}
-        alt={photo.caption ?? "Foto"}
-        style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }}
-        loading="lazy"
-      />
+      <div style={{ position: "relative" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={photo.thumb_url ?? photo.image_url}
+          alt={photo.caption ?? "Foto"}
+          style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }}
+          loading="lazy"
+        />
+        {selectionMode && (
+          <div style={{ position: "absolute", top: 6, right: 6, color: selected ? "var(--primary)" : "rgba(255,255,255,0.8)", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))" }}>
+            {selected ? <CheckCircle2 size={22} fill="white" /> : <Circle size={22} />}
+          </div>
+        )}
+      </div>
       <div style={{ paddingTop: "8px", textAlign: "center" }}>
         <p style={{ fontFamily: "'Caveat', cursive", fontSize: "0.9375rem", color: "#2a1a1a", lineHeight: 1.2, minHeight: "1.1rem" }}>
           {photo.caption || date}
@@ -126,7 +155,7 @@ function PolaroidCard({ photo, onClick, index, isNew, reactions, myUid, onReact 
         <p style={{ fontFamily: "'Caveat', cursive", fontSize: "0.6875rem", marginTop: "2px", color: photo.source === "14feb" ? "#EC4899" : "#8B5CF6" }}>
           {photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"}
         </p>
-        <ReactionStrip photoId={photo.id} reactions={reactions} myUid={myUid} onToggle={onReact} />
+        {!selectionMode && <ReactionStrip photoId={photo.id} reactions={reactions} myUid={myUid} onToggle={onReact} />}
       </div>
     </div>
   )
@@ -503,7 +532,36 @@ export default function FotosPage() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
   const [newPhotoIds, setNewPhotoIds] = useState<Set<string>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const selectionMode = selectedIds.size > 0
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return
+    setBulkDeleting(true)
+    let deleted = 0
+    for (const id of selectedIds) {
+      try {
+        await deletePhoto.mutateAsync(id)
+        deleted++
+      } catch {
+        // continue
+      }
+    }
+    toast.success(`${deleted} foto${deleted !== 1 ? "s" : ""} eliminada${deleted !== 1 ? "s" : ""}`)
+    setSelectedIds(new Set())
+    setBulkDeleting(false)
+  }
 
   const allPhotos = photos ?? []
   const has14Feb = allPhotos.some((p) => p.source === "14feb")
@@ -707,7 +765,13 @@ export default function FotosPage() {
                       reactions={reactions}
                       myUid={myUid}
                       onReact={(emoji) => toggleReaction.mutate({ photoId: photo.id, emoji })}
-                      onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))}
+                      selectionMode={selectionMode}
+                      selected={selectedIds.has(photo.id)}
+                      onSelect={() => toggleSelect(photo.id)}
+                      onClick={() => {
+                        if (selectionMode) { toggleSelect(photo.id); return }
+                        setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))
+                      }}
                     />
                   ))}
                 </div>
@@ -730,8 +794,35 @@ export default function FotosPage() {
       {/* Hidden file input */}
       <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleFileChange} />
 
+      {/* Bulk delete bar */}
+      {selectionMode && (
+        <div style={{
+          position: "fixed",
+          bottom: "calc(64px + env(safe-area-inset-bottom, 0px))",
+          left: "50%", transform: "translateX(-50%)",
+          background: "var(--foreground)", color: "white",
+          borderRadius: "999px", padding: "0.75rem 1.5rem",
+          display: "flex", alignItems: "center", gap: "1rem",
+          zIndex: 60, boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+          fontFamily: "inherit",
+        }}>
+          <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>
+            {selectedIds.size} seleccionada{selectedIds.size !== 1 ? "s" : ""}
+          </span>
+          <button onClick={() => setSelectedIds(new Set())}
+            style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "999px", padding: "4px 12px", color: "white", cursor: "pointer", fontSize: "0.8125rem", fontFamily: "inherit" }}>
+            Cancelar
+          </button>
+          <button onClick={handleBulkDelete} disabled={bulkDeleting}
+            style={{ background: "rgba(239,68,68,0.85)", border: "none", borderRadius: "999px", padding: "4px 14px", color: "white", cursor: "pointer", fontSize: "0.8125rem", fontWeight: 700, fontFamily: "inherit", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+            <Trash2 size={14} />
+            {bulkDeleting ? "Eliminando..." : "Eliminar"}
+          </button>
+        </div>
+      )}
+
       {/* FAB */}
-      {!isLoading && (
+      {!isLoading && !selectionMode && (
         <button
           onClick={() => fileInputRef.current?.click()}
           style={{
