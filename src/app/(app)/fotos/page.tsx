@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react"
 import { usePhotos, useUploadPhoto, useDeletePhoto } from "@/hooks/use-photos"
 import type { Photo } from "@/types"
-import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar, LayoutGrid, Rows3 } from "lucide-react"
+import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar, LayoutGrid, Rows3, Download, Share2 } from "lucide-react"
 import { toast } from "sonner"
 
 type FilterType = "all" | "thingstodo" | "14feb"
@@ -166,6 +166,38 @@ function Lightbox({
     }
   }
 
+  async function handleDownload() {
+    try {
+      const res = await fetch(photo.image_url)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = photo.caption ? `${photo.caption}.jpg` : `foto-${photo.id.slice(0, 8)}.jpg`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error("No se pudo descargar la foto")
+    }
+  }
+
+  async function handleShare() {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: photo.caption ?? "Nuestra foto",
+          text: photo.caption ?? "Mira esta foto 📷",
+          url: photo.image_url,
+        })
+      } else {
+        await navigator.clipboard.writeText(photo.image_url)
+        toast.success("Enlace copiado al portapapeles")
+      }
+    } catch {
+      // user cancelled share — no error needed
+    }
+  }
+
   if (!photo) return null
 
   return (
@@ -207,18 +239,40 @@ function Lightbox({
         <span style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.8125rem" }}>
           {index + 1} / {photos.length}
         </span>
-        <button
-          onClick={() => onDelete(photo.id)}
-          disabled={deleting}
-          style={{
-            background: deleting ? "rgba(239,68,68,0.4)" : "rgba(239,68,68,0.7)",
-            border: "none", borderRadius: "50%",
-            width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: deleting ? "not-allowed" : "pointer", color: "white",
-          }}
-        >
-          <Trash2 size={18} />
-        </button>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button
+            onClick={handleShare}
+            style={{
+              background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%",
+              width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: "white",
+            }}
+          >
+            <Share2 size={17} />
+          </button>
+          <button
+            onClick={handleDownload}
+            style={{
+              background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%",
+              width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: "white",
+            }}
+          >
+            <Download size={17} />
+          </button>
+          <button
+            onClick={() => onDelete(photo.id)}
+            disabled={deleting}
+            style={{
+              background: deleting ? "rgba(239,68,68,0.4)" : "rgba(239,68,68,0.7)",
+              border: "none", borderRadius: "50%",
+              width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: deleting ? "not-allowed" : "pointer", color: "white",
+            }}
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Prev / Next */}
