@@ -1,12 +1,13 @@
 "use client"
 
-import React, { useState, useRef, useCallback } from "react"
+import React, { useState, useRef, useCallback, useEffect } from "react"
 import { usePhotos, useUploadPhoto, useDeletePhoto } from "@/hooks/use-photos"
 import type { Photo } from "@/types"
-import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar } from "lucide-react"
+import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar, LayoutGrid, Rows3 } from "lucide-react"
 import { toast } from "sonner"
 
 type FilterType = "all" | "thingstodo" | "14feb"
+type ViewMode = "polaroid" | "masonry"
 
 function polaroidRotation(id: string, index: number): number {
   const sum = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
@@ -77,6 +78,53 @@ function PolaroidCard({ photo, onClick, index }: { photo: Photo; onClick: () => 
           {photo.caption || date}
         </p>
         <p style={{ fontFamily: "'Caveat', cursive", fontSize: "0.6875rem", marginTop: "2px", color: photo.source === "14feb" ? "#EC4899" : "#8B5CF6" }}>
+          {photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function MasonryCard({ photo, onClick }: { photo: Photo; onClick: () => void }) {
+  const date = new Date(photo.created_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        borderRadius: "var(--radius-lg)",
+        overflow: "hidden",
+        cursor: "pointer",
+        position: "relative",
+        breakInside: "avoid",
+        marginBottom: "0.625rem",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+        transition: "transform 0.2s, box-shadow 0.2s",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLDivElement).style.transform = "scale(1.025)"
+        ;(e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px rgba(0,0,0,0.22)"
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLDivElement).style.transform = "scale(1)"
+        ;(e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.12)"
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photo.thumb_url ?? photo.image_url}
+        alt={photo.caption ?? "Foto"}
+        style={{ width: "100%", display: "block", objectFit: "cover" }}
+        loading="lazy"
+      />
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0,
+        background: "linear-gradient(transparent, rgba(0,0,0,0.55))",
+        padding: "1.25rem 0.625rem 0.5rem",
+      }}>
+        <p style={{ color: "white", fontSize: "0.75rem", fontWeight: 600, lineHeight: 1.2 }}>
+          {photo.caption || date}
+        </p>
+        <p style={{ color: photo.source === "14feb" ? "#f9a8d4" : "#c4b5fd", fontSize: "0.625rem", marginTop: "1px" }}>
           {photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"}
         </p>
       </div>
@@ -294,6 +342,12 @@ export default function FotosPage() {
   const deletePhoto = useDeletePhoto()
 
   const [filter, setFilter] = useState<FilterType>("all")
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("fotosView") as ViewMode) ?? "polaroid"
+    }
+    return "polaroid"
+  })
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -306,6 +360,12 @@ export default function FotosPage() {
     filter === "all" ? allPhotos
     : filter === "thingstodo" ? allPhotos.filter((p) => p.source === "thingstodo")
     : allPhotos.filter((p) => p.source === "14feb")
+
+  function toggleView() {
+    const next: ViewMode = viewMode === "polaroid" ? "masonry" : "polaroid"
+    setViewMode(next)
+    localStorage.setItem("fotosView", next)
+  }
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
@@ -384,24 +444,38 @@ export default function FotosPage() {
         </div>
       </div>
 
-      {/* Filter pills */}
-      {(allPhotos.length > 0 || isLoading) && filterPills.length > 1 && (
-        <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: "0.875rem", alignItems: "center" }}>
-          {filterPills.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              style={{
-                padding: "3px 12px", borderRadius: "999px", border: "none", cursor: "pointer",
-                fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
-                background: filter === key ? "var(--primary)" : "var(--muted)",
-                color: filter === key ? "white" : "var(--foreground-muted)",
-                transition: "background 0.15s, color 0.15s",
-              }}
-            >
-              {label}
-            </button>
-          ))}
+      {/* Filter pills + view toggle */}
+      {(allPhotos.length > 0 || isLoading) && (
+        <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.875rem", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", flex: 1 }}>
+            {filterPills.length > 1 && filterPills.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                style={{
+                  padding: "3px 12px", borderRadius: "999px", border: "none", cursor: "pointer",
+                  fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
+                  background: filter === key ? "var(--primary)" : "var(--muted)",
+                  color: filter === key ? "white" : "var(--foreground-muted)",
+                  transition: "background 0.15s, color 0.15s",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={toggleView}
+            title={viewMode === "polaroid" ? "Vista cuadrícula" : "Vista polaroid"}
+            style={{
+              width: 32, height: 32, borderRadius: "var(--radius-md)", border: "1px solid var(--border)",
+              background: "var(--surface)", cursor: "pointer", display: "flex", alignItems: "center",
+              justifyContent: "center", color: "var(--foreground-muted)", flexShrink: 0,
+              transition: "background 0.15s, color 0.15s",
+            }}
+          >
+            {viewMode === "polaroid" ? <LayoutGrid size={15} /> : <Rows3 size={15} />}
+          </button>
         </div>
       )}
 
@@ -436,7 +510,7 @@ export default function FotosPage() {
         </div>
       )}
 
-      {/* Polaroid photo grid grouped by month */}
+      {/* Photo grid grouped by month */}
       {!isLoading && filteredPhotos.length > 0 && (
         <div style={{ paddingBottom: "6rem" }}>
           {groupPhotosByMonth(filteredPhotos).map((group) => (
@@ -445,19 +519,28 @@ export default function FotosPage() {
                 <Calendar size={14} />
                 {group.monthLabel}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1.5rem", padding: "0.5rem 0.5rem 1rem" }}>
-                {group.photos.map((photo, i) => (
-                  <PolaroidCard
-                    key={photo.id}
-                    photo={photo}
-                    index={group.startIndex + i}
-                    onClick={() => {
-                      const globalIdx = filteredPhotos.findIndex((p) => p.id === photo.id)
-                      setLightboxIndex(globalIdx)
-                    }}
-                  />
-                ))}
-              </div>
+              {viewMode === "polaroid" ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1.5rem", padding: "0.5rem 0.5rem 1rem" }}>
+                  {group.photos.map((photo, i) => (
+                    <PolaroidCard
+                      key={photo.id}
+                      photo={photo}
+                      index={group.startIndex + i}
+                      onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ columns: 2, columnGap: "0.625rem", padding: "0.25rem 0 0.75rem" }}>
+                  {group.photos.map((photo) => (
+                    <MasonryCard
+                      key={photo.id}
+                      photo={photo}
+                      onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
