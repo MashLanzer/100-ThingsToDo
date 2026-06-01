@@ -156,6 +156,10 @@ function useVoiceRecorder() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const startRecording = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast.error("Tu navegador no soporta grabación. Usa Chrome o Safari actualizado.")
+      return
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mr = new MediaRecorder(stream)
@@ -171,8 +175,15 @@ function useVoiceRecorder() {
       setIsRecording(true)
       setRecordingSeconds(0)
       timerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000)
-    } catch {
-      toast.error("No se pudo acceder al micrófono")
+    } catch (err) {
+      const name = err instanceof Error ? err.name : ""
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        toast.error("Permiso denegado. Activa el micrófono en la configuración del navegador.", { duration: 5000 })
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        toast.error("No se encontró micrófono en este dispositivo.")
+      } else {
+        toast.error("No se pudo acceder al micrófono.")
+      }
     }
   }, [])
 
@@ -214,8 +225,9 @@ export function JournalApp({ onBack }: Props) {
   const [privateJournal, setPrivateJournal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [photoUrls, setPhotoUrls] = useState<string[]>([])
-  const [photoInput, setPhotoInput] = useState("")
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [viewingPartner, setViewingPartner] = useState(false)
+  const photoFileRef = useRef<HTMLInputElement>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [dismissedOnThisDay, setDismissedOnThisDay] = useState(false)
 
@@ -305,7 +317,6 @@ export function JournalApp({ onBack }: Props) {
       setWriteContent("")
       setWriteMood("happy")
       setPhotoUrls([])
-      setPhotoInput("")
       setAudioUrl(null)
       voice.discard()
       setView("write")
@@ -316,7 +327,6 @@ export function JournalApp({ onBack }: Props) {
     setWriteContent(entry.content)
     setWriteMood(entry.mood ?? "happy")
     setPhotoUrls(entry.photos ?? [])
-    setPhotoInput("")
     setAudioUrl(entry.audio_url ?? null)
     voice.discard()
     setIsEditing(true)
@@ -386,6 +396,36 @@ export function JournalApp({ onBack }: Props) {
     } catch {
       toast.error("Error al subir el audio")
     } finally { voice.setUploading(false) }
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    setUploadingPhoto(true)
+    try {
+      const token = await getToken()
+      if (!token) throw new Error("No auth")
+      const urls: string[] = []
+      for (const file of files) {
+        const fd = new FormData()
+        fd.append("file", file)
+        const res = await fetch("/api/photos", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        })
+        if (!res.ok) throw new Error("Error al subir foto")
+        const data = await res.json()
+        urls.push(data.image_url)
+      }
+      setPhotoUrls(prev => [...prev, ...urls])
+      toast.success(`${urls.length} foto${urls.length > 1 ? "s" : ""} añadida${urls.length > 1 ? "s" : ""} 📷`)
+    } catch {
+      toast.error("Error al subir foto")
+    } finally {
+      setUploadingPhoto(false)
+      if (photoFileRef.current) photoFileRef.current.value = ""
+    }
   }
 
   async function sendLetter() {
@@ -1043,13 +1083,32 @@ export function JournalApp({ onBack }: Props) {
             style={{ minHeight: "120px", fontFamily: "'Caveat', cursive", fontSize: "1rem", lineHeight: 1.7, marginBottom: "0.625rem" }}
           />
 
-          {/* Feature 11: photo URL input */}
+          {/* Photo file upload */}
           <div style={{ marginBottom: "0.625rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Camera size={14} /> Fotos (URL)</label>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <input className="input" placeholder="https://..." value={photoInput} onChange={(e) => setPhotoInput(e.target.value)} style={{ flex: 1 }} />
-              <button className="btn btn-outline" style={{ flexShrink: 0, padding: "0 0.75rem" }} onClick={() => { if (photoInput.trim()) { setPhotoUrls(prev => [...prev, photoInput.trim()]); setPhotoInput("") } }}>+</button>
-            </div>
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Camera size={14} /> Fotos</label>
+            <input
+              ref={photoFileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: "none" }}
+              onChange={handlePhotoUpload}
+            />
+            <button
+              type="button"
+              onClick={() => photoFileRef.current?.click()}
+              disabled={uploadingPhoto}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: "0.375rem",
+                padding: "0.5rem 0.875rem", borderRadius: "999px",
+                border: "1.5px solid var(--primary-light)", background: "var(--primary-lighter)",
+                cursor: uploadingPhoto ? "wait" : "pointer",
+                fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 600, color: "var(--primary)",
+              }}
+            >
+              <Camera size={14} />
+              {uploadingPhoto ? "Subiendo..." : "📷 Añadir fotos"}
+            </button>
             {photoUrls.length > 0 && (
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
                 {photoUrls.map((url, i) => (

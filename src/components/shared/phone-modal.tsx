@@ -91,31 +91,6 @@ export function PhoneModal() {
           <div className="phone-notch" />
           <div className="phone-screen">
 
-            {/* Permanent kawaii wallpaper — always behind everything */}
-            <svg
-              aria-hidden
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.3, zIndex: 0 }}
-              viewBox="0 0 220 480"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M30 60 C30 60 14 48 14 38 C14 30 22 26 30 33 C38 26 46 30 46 38 C46 48 30 60 30 60Z" fill="#EC4899" opacity="0.6" />
-              <path d="M190 140 C190 140 178 131 178 124 C178 118 184 115 190 120 C196 115 202 118 202 124 C202 131 190 140 190 140Z" fill="#8B5CF6" opacity="0.55" />
-              <path d="M50 390 C50 390 38 381 38 374 C38 368 44 365 50 370 C56 365 62 368 62 374 C62 381 50 390 50 390Z" fill="#EC4899" opacity="0.5" />
-              <path d="M170 420 C170 420 162 414 162 409 C162 405 166 403 170 406 C174 403 178 405 178 409 C178 414 170 420 170 420Z" fill="#F59E0B" opacity="0.55" />
-              <path d="M15 240 C15 240 6 233 6 228 C6 224 10 222 15 225 C20 222 24 224 24 228 C24 233 15 240 15 240Z" fill="#8B5CF6" opacity="0.4" />
-              <path d="M205 320 C205 320 197 314 197 309 C197 305 200 303 205 306 C210 303 213 305 213 309 C213 314 205 320 205 320Z" fill="#EC4899" opacity="0.45" />
-              <text x="160" y="75" fontSize="14" fill="#F59E0B" opacity="0.6">✨</text>
-              <text x="8"   y="190" fontSize="10" fill="#8B5CF6" opacity="0.5">⭐</text>
-              <text x="192" y="260" fontSize="11" fill="#EC4899" opacity="0.5">✨</text>
-              <text x="75"  y="450" fontSize="10" fill="#F59E0B" opacity="0.45">⭐</text>
-              <text x="130" y="340" fontSize="9"  fill="#8B5CF6" opacity="0.4">✦</text>
-              <circle cx="105" cy="18"  r="5" fill="#8B5CF6" opacity="0.15" />
-              <circle cx="180" cy="200" r="8" fill="#EC4899" opacity="0.1" />
-              <circle cx="20"  cy="350" r="6" fill="#F59E0B" opacity="0.13" />
-              <circle cx="210" cy="90"  r="4" fill="#EC4899" opacity="0.12" />
-            </svg>
-
             {/* X close button — inside phone, top-right overlay */}
             <button
               onClick={closePhoneModal}

@@ -584,16 +584,15 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
             transform: "scale(1.1)",
           }} />
         )}
-        {!coverThumb && track && (
-          <div aria-hidden style={{
-            position: "absolute", inset: 0, zIndex: 0,
-            background: `linear-gradient(160deg, ${track.color}55, #f3e8ff66, ${track.color}22)`,
-          }} />
-        )}
 
         <div className="app-content-body" style={{
           alignItems: "center", padding: "0.625rem 0.75rem 0.5rem",
-          gap: 0, position: "relative", zIndex: 1, background: "transparent",
+          gap: 0, position: "relative", zIndex: 1,
+          background: coverThumb
+            ? "transparent"
+            : track
+            ? `linear-gradient(160deg, ${track.color}40 0%, #fdf4ff 55%, #fce7f3 100%)`
+            : "linear-gradient(160deg, #ede9fe 0%, #fdf4ff 60%, #fce7f3 100%)",
         }}>
           {/* Vinyl + M2 visualizer */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
