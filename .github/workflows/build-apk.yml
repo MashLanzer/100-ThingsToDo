@@ -7,7 +7,11 @@ on:
     paths:
       - 'android/**'
       - 'capacitor.config.json'
+      - 'src/**'
       - '.github/workflows/build-apk.yml'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: write
@@ -30,11 +34,12 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Install npm dependencies and sync Capacitor
+      - name: Install Android SDK 36 + build-tools
         run: |
-          npm ci
-          mkdir -p www && echo '<!DOCTYPE html><html><body></body></html>' > www/index.html
-          npx cap sync android
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "platform-tools" || true
 
       - name: Cache Gradle
         uses: actions/cache@v4.2.3
@@ -42,25 +47,28 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle.properties') }}
+          key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Sync Capacitor (generates capacitor-cordova-android-plugins)
+        run: |
+          mkdir -p www
+          echo '<!DOCTYPE html><html><body></body></html>' > www/index.html
+          npx cap sync android --no-build
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Fix Java home in gradle.properties
-        run: |
-          sed -i "s|org.gradle.java.home=.*|org.gradle.java.home=$JAVA_HOME|" android/gradle.properties
-
       - name: Build release APK
         env:
-          ANDROID_HOME: /usr/local/lib/android/sdk
-          KEYSTORE_PASSWORD: "Ttd@2025#Kawaii!"
-          KEY_PASSWORD: "Ttd@2025#Kawaii!"
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           VERSION_CODE: ${{ github.run_number }}
-        run: |
-          cd android
-          ./gradlew assembleRelease
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Rename APK
         run: |
@@ -84,8 +92,8 @@ jobs:
           body: |
             APK lista para instalar en Android.
 
-            Descarga `ThingsToDo-v1.${{ github.run_number }}.apk` e instala en tu dispositivo.
-            *(Es posible que necesites activar "Instalar apps de fuentes desconocidas" en Ajustes → Seguridad)*
+            Descarga `ThingsToDo-v1.${{ github.run_number }}.apk` e instálala en tu dispositivo.
+            *(Puede que necesites activar "Instalar apps de fuentes desconocidas" en Ajustes → Seguridad)*
 
             La app carga la web en vivo — cualquier actualización de código se refleja automáticamente sin reinstalar.
           files: out/ThingsToDo-v1.${{ github.run_number }}.apk
