@@ -33,13 +33,18 @@ export async function POST(req: NextRequest) {
 
   const { data: me } = await supabase
     .from("users")
-    .select("couple_id, couple:couples(user1_id, user2_id)")
+    .select("couple_id")
     .eq("id", user.uid)
     .single()
 
   if (!me?.couple_id) return NextResponse.json({ error: "Not in a couple" }, { status: 403 })
 
-  const couple = (me.couple as unknown) as { user1_id: string; user2_id: string } | null
+  const { data: couple } = await supabase
+    .from("couples")
+    .select("user1_id, user2_id")
+    .eq("id", me.couple_id)
+    .single()
+
   if (!couple) return NextResponse.json({ error: "Couple not found" }, { status: 404 })
 
   const partnerId = couple.user1_id === user.uid ? couple.user2_id : couple.user1_id
