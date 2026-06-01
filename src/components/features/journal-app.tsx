@@ -1164,8 +1164,8 @@ export function JournalApp({ onBack }: Props) {
             )}
           </div>
 
-          {/* Nota de voz — grabación en la app */}
-          <div style={{ marginBottom: "0.75rem" }}>
+          {/* Nota de voz — oculto */}
+          <div style={{ display: "none" }}>
             <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Mic size={14} /> Nota de voz</label>
 
             {showMicHelp && (

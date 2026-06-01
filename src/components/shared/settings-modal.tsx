@@ -343,11 +343,18 @@ export function SettingsModal() {
   }
 
   async function handleEnablePush() {
-    await subscribePush()
-    if (Notification.permission === "denied") {
-      toast.error("Notificaciones bloqueadas en tu navegador")
-    } else {
+    try {
+      await subscribePush()
       toast.success("¡Notificaciones activadas! 🔔")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : ""
+      if (msg === "permission_denied") {
+        toast.error("Notificaciones bloqueadas — actívalas en Ajustes del dispositivo")
+      } else if (msg.includes("not supported")) {
+        toast.error("Tu navegador no soporta notificaciones push")
+      } else {
+        toast.error("No se pudo activar — intenta de nuevo")
+      }
     }
   }
 

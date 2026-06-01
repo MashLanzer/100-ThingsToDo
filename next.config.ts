@@ -3,6 +3,9 @@ import withPWA from "@ducanh2912/next-pwa";
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  env: {
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "BFPCPbItkIpQEnI076hKOcCNWRNiN09o1H3O5D4fvORHT33dv0qrumQu-HphMT_MVrZNUeJpISXOuFbZE611Wg0",
+  },
   async headers() {
     return [
       {

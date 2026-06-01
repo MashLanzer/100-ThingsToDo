@@ -33,12 +33,12 @@ export function usePushNotifications() {
   }, [])
 
   const subscribe = useCallback(async () => {
-    if (!isSupported) return
+    if (!isSupported) throw new Error("Push notifications not supported in this browser")
     setSubscribing(true)
     try {
       const perm = await Notification.requestPermission()
       setPermission(perm)
-      if (perm !== "granted") return
+      if (perm !== "granted") throw new Error("permission_denied")
 
       const reg = await navigator.serviceWorker.ready
       const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -53,7 +53,7 @@ export function usePushNotifications() {
       const token = await auth.currentUser?.getIdToken()
       if (!token) throw new Error("Not authenticated")
 
-      await fetch("/api/push/subscribe", {
+      const res = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -65,6 +65,7 @@ export function usePushNotifications() {
           auth: btoa(String.fromCharCode(...new Uint8Array(sub.getKey("auth")!))),
         }),
       })
+      if (!res.ok) throw new Error("Failed to save subscription")
 
       setIsSubscribed(true)
     } finally {

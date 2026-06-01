@@ -581,11 +581,30 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* New plan form */}
+      {/* New plan modal */}
       {showForm && (
-        <div className="card animate-fade-in" style={{ marginBottom: "1rem" }}>
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 200,
+            background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)",
+            display: "flex", alignItems: "flex-end",
+          }}
+          onClick={() => setShowForm(false)}
+        >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: "100%", maxHeight: "92dvh", overflowY: "auto",
+            background: "var(--bg)", borderRadius: "1.5rem 1.5rem 0 0",
+            padding: "1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom, 0px))",
+            animation: "sheetUp 0.28s cubic-bezier(0.34,1.3,0.64,1)",
+            boxShadow: "0 -8px 40px rgba(0,0,0,0.18)",
+          }}
+        >
+          {/* drag handle */}
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 1rem" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-            <h2 style={{ fontWeight: 700, fontSize: "1rem", color: "var(--foreground)" }}>Nuevo Plan</h2>
+            <h2 style={{ fontWeight: 700, fontSize: "1.0625rem", color: "var(--foreground)", fontFamily: "'Fredoka', sans-serif" }}>Nuevo Plan</h2>
             <button className="btn-icon" onClick={() => setShowForm(false)}><X size={16} /></button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
@@ -715,6 +734,7 @@ export default function DashboardPage() {
               <button className="btn btn-outline" onClick={() => setShowForm(false)}>Cancelar</button>
             </div>
           </div>
+        </div>
         </div>
       )}
 
