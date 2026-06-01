@@ -5,6 +5,7 @@ import {
   usePhotos, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption,
   usePhotoReactions, useTogglePhotoReaction, type PhotoReaction,
   useMarkPhotoViewed, usePhotoViews, type PhotoViewData,
+  usePhotoAlbums, useCreatePhotoAlbum, useDeletePhotoAlbum, useUpdatePhotoAlbum, type PhotoAlbum,
 } from "@/hooks/use-photos"
 import type { Photo } from "@/types"
 import {
@@ -13,12 +14,12 @@ import {
 import {
   Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar,
   LayoutGrid, Rows3, Download, Share2, CheckCircle2, Circle, Newspaper,
-  Heart, MessageCircle, Send, Search, CornerDownRight,
+  Heart, MessageCircle, Send, Search, CornerDownRight, FolderOpen, Plus, Folder,
 } from "lucide-react"
 import { toast } from "sonner"
 
 type FilterType = "all" | "thingstodo" | "14feb"
-type ViewMode = "polaroid" | "masonry" | "feed"
+type ViewMode = "polaroid" | "masonry" | "feed" | "albums"
 
 function timeAgoEs(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -1458,6 +1459,15 @@ export default function FotosPage() {
   const toggleReaction = useTogglePhotoReaction()
   const markViewed = useMarkPhotoViewed()
 
+  // F3: albums
+  const { data: albums = [] } = usePhotoAlbums()
+  const createAlbum = useCreatePhotoAlbum()
+  const deleteAlbum = useDeletePhotoAlbum()
+  const updateAlbum = useUpdatePhotoAlbum()
+  const [showAlbumForm, setShowAlbumForm] = useState(false)
+  const [newAlbumName, setNewAlbumName] = useState("")
+  const [activeAlbumId, setActiveAlbumId] = useState<string | null>(null)
+
   const [filter, setFilter] = useState<FilterType>("all")
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
@@ -1530,11 +1540,16 @@ export default function FotosPage() {
     : sourceFilteredPhotos
 
   // F2: Filter by search query (client-side, caption text)
-  const filteredPhotos = searchQuery.trim()
+  const searchFilteredPhotos = searchQuery.trim()
     ? monthFilteredPhotos.filter((p) =>
         (p.caption ?? "").toLowerCase().includes(searchQuery.trim().toLowerCase())
       )
     : monthFilteredPhotos
+
+  // F3: Filter by active album
+  const filteredPhotos = activeAlbumId
+    ? searchFilteredPhotos.filter((p) => (p as any).album_id === activeAlbumId)
+    : searchFilteredPhotos
 
   // F1: progressive loading — show first 30 photos, "Ver más" loads 30 more
   const [visibleCount, setVisibleCount] = useState(30)
@@ -1578,7 +1593,7 @@ export default function FotosPage() {
   }, [allPhotos, monthsCount])
 
   function toggleView() {
-    const cycle: ViewMode[] = ["polaroid", "masonry", "feed"]
+    const cycle: ViewMode[] = ["polaroid", "masonry", "feed", "albums"]
     const next = cycle[(cycle.indexOf(viewMode) + 1) % cycle.length]
     setViewMode(next)
     localStorage.setItem("fotosView", next)
@@ -1771,15 +1786,16 @@ export default function FotosPage() {
           </div>
           <button
             onClick={toggleView}
-            title={viewMode === "polaroid" ? "Vista cuadrícula" : viewMode === "masonry" ? "Vista feed" : "Vista polaroid"}
+            title={viewMode === "polaroid" ? "Vista cuadrícula" : viewMode === "masonry" ? "Vista feed" : viewMode === "feed" ? "Álbumes" : "Vista polaroid"}
             style={{
               width: 32, height: 32, borderRadius: "var(--radius-md)", border: "1px solid var(--border)",
-              background: "var(--surface)", cursor: "pointer", display: "flex", alignItems: "center",
-              justifyContent: "center", color: "var(--foreground-muted)", flexShrink: 0,
+              background: viewMode === "albums" ? "var(--primary-lighter)" : "var(--surface)",
+              cursor: "pointer", display: "flex", alignItems: "center",
+              justifyContent: "center", color: viewMode === "albums" ? "var(--primary)" : "var(--foreground-muted)", flexShrink: 0,
               transition: "background 0.15s, color 0.15s",
             }}
           >
-            {viewMode === "polaroid" ? <LayoutGrid size={15} /> : viewMode === "masonry" ? <Newspaper size={15} /> : <Rows3 size={15} />}
+            {viewMode === "polaroid" ? <LayoutGrid size={15} /> : viewMode === "masonry" ? <Newspaper size={15} /> : viewMode === "feed" ? <FolderOpen size={15} /> : <Rows3 size={15} />}
           </button>
         </div>
       )}
@@ -1870,16 +1886,208 @@ export default function FotosPage() {
         </div>
       )}
 
+      {/* F3: Active album banner */}
+      {activeAlbumId && viewMode !== "albums" && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: "0.5rem",
+          background: "var(--primary-lighter)", border: "1px solid var(--primary-light)",
+          borderRadius: "var(--radius-md)", padding: "0.5rem 0.75rem", marginBottom: "0.75rem",
+        }}>
+          <Folder size={14} style={{ color: "var(--primary)", flexShrink: 0 }} />
+          <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--primary)", flex: 1 }}>
+            {albums.find((a) => a.id === activeAlbumId)?.name ?? "Álbum"}
+          </span>
+          <button
+            onClick={() => setActiveAlbumId(null)}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: 2 }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Filtered empty state */}
-      {!isLoading && allPhotos.length > 0 && filteredPhotos.length === 0 && (
+      {!isLoading && allPhotos.length > 0 && filteredPhotos.length === 0 && viewMode !== "albums" && (
         <div className="empty-state">
           <div className="empty-icon" style={{ color: "var(--foreground-muted)" }}><Images size={36} /></div>
           <p className="empty-text">No hay fotos con este filtro</p>
         </div>
       )}
 
+      {/* F3: Albums view */}
+      {viewMode === "albums" && !isLoading && (
+        <div style={{ paddingBottom: "6rem" }}>
+          {/* Header row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+            <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", margin: 0 }}>
+              {albums.length} álbum{albums.length !== 1 ? "es" : ""}
+            </p>
+            <button
+              onClick={() => setShowAlbumForm((v) => !v)}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.375rem",
+                background: "var(--primary)", color: "white", border: "none",
+                borderRadius: "999px", padding: "0.375rem 0.875rem",
+                fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 700,
+                cursor: "pointer", transition: "opacity 0.15s",
+              }}
+            >
+              <Plus size={14} /> Nuevo álbum
+            </button>
+          </div>
+
+          {/* Create album form */}
+          {showAlbumForm && (
+            <div style={{
+              background: "var(--surface)", border: "1px solid var(--border)",
+              borderRadius: "var(--radius-lg)", padding: "1rem", marginBottom: "1rem",
+              boxShadow: "0 2px 12px rgba(139,92,246,0.08)",
+            }}>
+              <p style={{ fontSize: "0.875rem", fontWeight: 700, margin: "0 0 0.75rem", fontFamily: "'Fredoka', sans-serif", color: "var(--foreground)" }}>
+                Nuevo álbum
+              </p>
+              <input
+                value={newAlbumName}
+                onChange={(e) => setNewAlbumName(e.target.value)}
+                placeholder="Nombre del álbum..."
+                style={{
+                  width: "100%", padding: "0.625rem 0.875rem", borderRadius: "var(--radius-md)",
+                  border: "1.5px solid var(--border)", fontFamily: "inherit", fontSize: "0.9375rem",
+                  background: "var(--bg)", color: "var(--foreground)", marginBottom: "0.75rem",
+                  outline: "none", boxSizing: "border-box",
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newAlbumName.trim()) {
+                    createAlbum.mutate({ name: newAlbumName.trim() }, {
+                      onSuccess: () => { setNewAlbumName(""); setShowAlbumForm(false) },
+                    })
+                  }
+                }}
+              />
+              <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => { setShowAlbumForm(false); setNewAlbumName("") }}
+                  style={{
+                    background: "var(--muted)", border: "none", borderRadius: "var(--radius-md)",
+                    padding: "0.5rem 1rem", fontFamily: "inherit", fontSize: "0.8125rem",
+                    color: "var(--foreground-muted)", cursor: "pointer",
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  disabled={!newAlbumName.trim() || createAlbum.isPending}
+                  onClick={() => {
+                    if (!newAlbumName.trim()) return
+                    createAlbum.mutate({ name: newAlbumName.trim() }, {
+                      onSuccess: () => { setNewAlbumName(""); setShowAlbumForm(false) },
+                    })
+                  }}
+                  style={{
+                    background: "var(--primary)", color: "white", border: "none",
+                    borderRadius: "var(--radius-md)", padding: "0.5rem 1rem",
+                    fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 700,
+                    cursor: "pointer", opacity: (!newAlbumName.trim() || createAlbum.isPending) ? 0.5 : 1,
+                  }}
+                >
+                  Crear
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Albums grid */}
+          {albums.length === 0 && (
+            <div className="empty-state" style={{ paddingTop: "2rem" }}>
+              <div className="empty-icon" style={{ color: "var(--foreground-muted)" }}><Folder size={40} /></div>
+              <p className="empty-text">Aún no tienes álbumes</p>
+              <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", textAlign: "center", margin: "0.25rem 0 0" }}>
+                Organiza tus fotos en colecciones
+              </p>
+            </div>
+          )}
+
+          {albums.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.875rem" }}>
+              {albums.map((album) => {
+                const albumPhotos = allPhotos.filter((p) => (p as any).album_id === album.id)
+                const coverUrl = album.cover_image ?? albumPhotos[0]?.thumb_url ?? albumPhotos[0]?.image_url ?? null
+                const isActive = activeAlbumId === album.id
+                return (
+                  <div
+                    key={album.id}
+                    onClick={() => {
+                      setActiveAlbumId(isActive ? null : album.id)
+                      if (!isActive) setViewMode("polaroid")
+                    }}
+                    style={{
+                      borderRadius: "var(--radius-lg)", overflow: "hidden",
+                      background: "var(--surface)", border: `2px solid ${isActive ? "var(--primary)" : "var(--border)"}`,
+                      cursor: "pointer", boxShadow: isActive ? "0 4px 20px rgba(139,92,246,0.2)" : "0 2px 8px rgba(0,0,0,0.06)",
+                      transition: "border-color 0.15s, box-shadow 0.15s",
+                    }}
+                  >
+                    {/* Cover image */}
+                    <div style={{ position: "relative", aspectRatio: "4/3", background: "var(--muted)", overflow: "hidden" }}>
+                      {coverUrl ? (
+                        <img
+                          src={coverUrl}
+                          alt={album.name}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Folder size={32} style={{ color: "var(--foreground-muted)", opacity: 0.4 }} />
+                        </div>
+                      )}
+                      {/* Delete button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (confirm(`¿Eliminar álbum "${album.name}"?`)) {
+                            deleteAlbum.mutate(album.id)
+                            if (activeAlbumId === album.id) setActiveAlbumId(null)
+                          }
+                        }}
+                        style={{
+                          position: "absolute", top: 6, right: 6,
+                          background: "rgba(0,0,0,0.55)", border: "none", borderRadius: "50%",
+                          width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center",
+                          cursor: "pointer", color: "white",
+                        }}
+                      >
+                        <X size={13} />
+                      </button>
+                      {/* Photo count badge */}
+                      <div style={{
+                        position: "absolute", bottom: 6, left: 6,
+                        background: "rgba(0,0,0,0.55)", borderRadius: "999px",
+                        padding: "2px 8px", fontSize: "0.6875rem", fontWeight: 700,
+                        color: "white",
+                      }}>
+                        {albumPhotos.length} foto{albumPhotos.length !== 1 ? "s" : ""}
+                      </div>
+                    </div>
+                    {/* Album name */}
+                    <div style={{ padding: "0.625rem 0.75rem" }}>
+                      <p style={{
+                        margin: 0, fontSize: "0.875rem", fontWeight: 700,
+                        fontFamily: "'Fredoka', sans-serif", color: "var(--foreground)",
+                        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                      }}>
+                        {album.name}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Photo grid grouped by month */}
-      {!isLoading && filteredPhotos.length > 0 && (
+      {!isLoading && filteredPhotos.length > 0 && viewMode !== "albums" && (
         <div style={{ paddingBottom: "6rem" }}>
           {groupedPhotos.map((group) => (
             <div key={group.monthLabel}>
@@ -1945,7 +2153,7 @@ export default function FotosPage() {
       )}
 
       {/* F1: Load more button */}
-      {!isLoading && hiddenCount > 0 && (
+      {!isLoading && hiddenCount > 0 && viewMode !== "albums" && (
         <div style={{ textAlign: "center", padding: "1rem 0 0.5rem" }}>
           <button
             onClick={() => setVisibleCount((v) => v + 30)}
