@@ -7,6 +7,7 @@ import { useTasks, useCreateTask, useToggleTask, useDeleteTask, useUpdateTask } 
 import { useCoupleStatus } from "@/hooks/use-couple"
 import { TaskItem } from "@/components/features/task-item"
 import { KAWAII_ICON_REGISTRY, KawaiiIcon } from "@/components/ui/kawaii-icon"
+import { Modal } from "@/components/ui/modal"
 import type { Task } from "@/types"
 import { ArrowLeft, Plus, Edit2, X, Trash2, Star, Image, Calendar, Tag, Upload, Archive, CheckCircle2, ChevronDown, Pencil, Bell, User, ImageIcon, Loader2 } from "lucide-react"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
@@ -698,31 +699,19 @@ export default function PlanDetailPage() {
         </div>
 
         {/* Task form modal */}
-        {showTaskForm && (
-          <div
-            style={{
-              position: "fixed", inset: 0, zIndex: 200,
-              background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)",
-              display: "flex", alignItems: "flex-end",
-            }}
-            onClick={() => setShowTaskForm(false)}
-          >
-          <div
-            className="animate-fade-in"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "100%", maxHeight: "92dvh", overflowY: "auto",
-              background: "var(--bg)", borderRadius: "1.5rem 1.5rem 0 0",
-              padding: "1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom, 0px))",
-              animation: "sheetUp 0.28s cubic-bezier(0.34,1.3,0.64,1)",
-              boxShadow: "0 -8px 40px rgba(0,0,0,0.18)",
-            }}
-          >
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 1rem" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-              <h2 style={{ fontWeight: 700, fontSize: "1.0625rem", fontFamily: "'Fredoka', sans-serif" }}>Nueva Tarea</h2>
-              <button className="btn-icon" onClick={() => setShowTaskForm(false)}><X size={16} /></button>
+        <Modal
+          open={showTaskForm}
+          onClose={() => setShowTaskForm(false)}
+          title="Nueva Tarea"
+          footer={
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleAddTask} disabled={createTask.isPending}>
+                {createTask.isPending ? "Creando..." : "Crear tarea"}
+              </button>
+              <button className="btn btn-outline" onClick={() => setShowTaskForm(false)}>Cancelar</button>
             </div>
+          }
+        >
             <input
               className="input"
               type="text"
@@ -865,15 +854,7 @@ export default function PlanDetailPage() {
                 ))}
               </div>
             </div>
-            <div className="form-actions">
-              <button className="btn btn-primary" onClick={handleAddTask} disabled={createTask.isPending}>
-                {createTask.isPending ? "Creando..." : "Crear"}
-              </button>
-              <button className="btn btn-outline" onClick={() => setShowTaskForm(false)}>Cancelar</button>
-            </div>
-          </div>
-          </div>
-        )}
+        </Modal>
 
         {/* Tasks list */}
         {tasksLoading ? (

@@ -62,6 +62,19 @@ export function useToggleSubtask() {
   })
 }
 
+export function useUpdateSubtask() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ taskId, subtaskId, title }: { taskId: string; subtaskId: string; title: string }) =>
+      authFetch(`/api/tasks/${taskId}/subtasks?subtaskId=${subtaskId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ title }),
+      }),
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({ queryKey: ["subtasks", vars.taskId] }),
+  })
+}
+
 export function useDeleteSubtask() {
   const qc = useQueryClient()
   return useMutation({

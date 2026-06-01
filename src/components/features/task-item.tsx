@@ -2,12 +2,13 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import type { Task } from "@/types"
-import { Trash2, Check, GripVertical, Heart, Flame, Laugh, Star, Zap, AlertTriangle, Calendar, CheckCircle2, Sparkles, Edit2, Bell, User, ChevronRight, ChevronDown, Plus, X, Loader2, ImageIcon } from "lucide-react"
+import { Trash2, Check, GripVertical, Heart, Flame, Laugh, Star, Zap, AlertTriangle, Calendar, CheckCircle2, Sparkles, Edit2, Bell, User, Plus, X, Loader2, ListChecks, SmilePlus, Pencil } from "lucide-react"
 import { KawaiiIcon } from "@/components/ui/kawaii-icon"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { getFirebaseAuth } from "@/lib/firebase/client"
-import { useSubtasks, useCreateSubtask, useToggleSubtask, useDeleteSubtask } from "@/hooks/use-subtasks"
+import { useSubtasks, useCreateSubtask, useToggleSubtask, useDeleteSubtask, useUpdateSubtask } from "@/hooks/use-subtasks"
+import { Modal } from "@/components/ui/modal"
 
 const REACTIONS: Array<{ key: string; icon: React.ReactNode; label: string }> = [
   { key: "heart", icon: <Heart  size={13} />, label: "Me encanta" },
@@ -51,147 +52,170 @@ function ReminderBadge({ reminderAt }: { reminderAt: string }) {
   const label = diffDays < 0.042 ? "ahora" : diffDays < 1 ? "hoy" : `${Math.ceil(diffDays)}d`
   return (
     <span style={{
-      display: "inline-flex", alignItems: "center", gap: 2,
-      fontSize: "0.5rem", fontWeight: 700,
+      display: "inline-flex", alignItems: "center", gap: 3,
+      fontSize: "0.5625rem", fontWeight: 700,
       background: "#fef3c7", color: "#d97706",
-      borderRadius: 4, padding: "1px 4px",
-      marginTop: 2, textDecoration: "none",
+      borderRadius: 5, padding: "1px 6px", textDecoration: "none",
     }}>
-      <Bell size={8} /> {label}
+      <Bell size={9} /> {label}
     </span>
   )
 }
 
-// Subtasks sub-component
-function SubtasksSection({ task, currentUserId }: { task: Task; currentUserId?: string }) {
-  const [expanded, setExpanded] = useState(false)
-  const [newTitle, setNewTitle] = useState("")
-  const [adding, setAdding] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-
+// ─────────────────────────────────────────────────────────────────────────────
+// Subtasks management modal — full CRUD in a dedicated dialog
+// ─────────────────────────────────────────────────────────────────────────────
+function SubtasksModal({ task, open, onClose }: { task: Task; open: boolean; onClose: () => void }) {
   const { data: subtasks = [], isLoading } = useSubtasks(task.id)
   const createSubtask = useCreateSubtask()
   const toggleSubtask = useToggleSubtask()
+  const updateSubtask = useUpdateSubtask()
   const deleteSubtask = useDeleteSubtask()
+
+  const [newTitle, setNewTitle] = useState("")
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState("")
+  const newInputRef = useRef<HTMLInputElement>(null)
 
   const total = subtasks.length
   const done = subtasks.filter((s) => s.completed).length
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0
 
   async function handleAdd() {
-    if (!newTitle.trim()) return
-    await createSubtask.mutateAsync({ taskId: task.id, title: newTitle.trim(), sort_order: total })
+    const t = newTitle.trim()
+    if (!t) return
+    await createSubtask.mutateAsync({ taskId: task.id, title: t, sort_order: total })
     setNewTitle("")
-    setAdding(false)
+    setTimeout(() => newInputRef.current?.focus(), 30)
   }
 
-  if (!expanded && total === 0 && !adding) {
-    return (
-      <div style={{ paddingLeft: "0.5rem", paddingBottom: "0.25rem" }}>
-        <button
-          onClick={() => { setExpanded(true); setAdding(true); setTimeout(() => inputRef.current?.focus(), 50) }}
-          style={{
-            background: "none", border: "none", cursor: "pointer",
-            fontSize: "0.6875rem", color: "var(--foreground-muted)",
-            display: "flex", alignItems: "center", gap: 3, padding: "2px 0",
-          }}
-        >
-          <Plus size={11} /> Añadir subtarea
-        </button>
-      </div>
-    )
+  async function handleSaveEdit(subtaskId: string) {
+    const t = editTitle.trim()
+    if (t) await updateSubtask.mutateAsync({ taskId: task.id, subtaskId, title: t })
+    setEditingId(null)
+    setEditTitle("")
   }
 
   return (
-    <div style={{ background: "var(--muted)", borderRadius: "0 0 var(--radius-lg) var(--radius-lg)", paddingBottom: "0.375rem" }}>
-      {/* Toggle header */}
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        style={{
-          width: "100%", background: "none", border: "none", cursor: "pointer",
-          display: "flex", alignItems: "center", gap: 4,
-          padding: "0.25rem 0.625rem",
-          fontSize: "0.6875rem", fontWeight: 600, color: "var(--foreground-light)",
-        }}
-      >
-        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        {isLoading ? "Subtareas..." : total === 0 ? "Subtareas" : done === total ? `✓ ${total}/${total} hechas` : `${done}/${total} subtareas`}
-      </button>
+    <Modal open={open} onClose={onClose} title="Subtareas">
+      {/* Progress header */}
+      <div style={{ marginBottom: "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)" }}>{task.title}</span>
+          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: total > 0 && done === total ? "var(--primary)" : "var(--foreground-muted)" }}>
+            {total > 0 ? `${done}/${total}` : "0"}
+          </span>
+        </div>
+        <div style={{ height: 7, borderRadius: 999, background: "var(--muted)", overflow: "hidden" }}>
+          <div style={{
+            height: "100%", width: `${pct}%`,
+            background: "linear-gradient(90deg, var(--primary), var(--secondary))",
+            borderRadius: 999, transition: "width 0.35s ease",
+          }} />
+        </div>
+      </div>
 
-      {expanded && (
-        <div style={{ paddingLeft: "0.625rem", paddingRight: "0.5rem" }}>
+      {/* Subtask list */}
+      {isLoading ? (
+        <div style={{ textAlign: "center", padding: "1rem", color: "var(--foreground-muted)", fontSize: "0.8125rem" }}>
+          Cargando...
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: "1rem" }}>
+          {subtasks.length === 0 && (
+            <div style={{ textAlign: "center", padding: "1.25rem 0.5rem", color: "var(--foreground-muted)" }}>
+              <ListChecks size={28} style={{ opacity: 0.4, marginBottom: 6 }} />
+              <p style={{ fontSize: "0.8125rem", margin: 0 }}>Divide esta tarea en pasos más pequeños</p>
+            </div>
+          )}
           {subtasks.map((sub) => (
-            <div key={sub.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0" }}>
+            <div
+              key={sub.id}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                background: "var(--surface)", border: "1px solid var(--border)",
+                borderRadius: "var(--radius-md)", padding: "0.5rem 0.625rem",
+              }}
+            >
               <button
                 onClick={() => toggleSubtask.mutate({ taskId: task.id, subtask: sub })}
                 style={{
-                  width: 16, height: 16, borderRadius: 4, flexShrink: 0, cursor: "pointer",
-                  border: "1.5px solid var(--primary)", background: sub.completed ? "var(--primary)" : "transparent",
+                  width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: "pointer",
+                  border: "2px solid var(--primary)", background: sub.completed ? "var(--primary)" : "transparent",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}
               >
-                {sub.completed && <Check size={9} color="white" strokeWidth={3} />}
+                {sub.completed && <Check size={12} color="white" strokeWidth={3} />}
               </button>
-              <span style={{
-                flex: 1, fontSize: "0.75rem", color: "var(--foreground)",
-                textDecoration: sub.completed ? "line-through" : "none",
-                opacity: sub.completed ? 0.55 : 1,
-              }}>
-                {sub.title}
-              </span>
+
+              {editingId === sub.id ? (
+                <input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(sub.id); if (e.key === "Escape") { setEditingId(null); setEditTitle("") } }}
+                  onBlur={() => handleSaveEdit(sub.id)}
+                  autoFocus
+                  style={{
+                    flex: 1, fontSize: "0.875rem", border: "1px solid var(--primary)", borderRadius: 6,
+                    padding: "3px 6px", outline: "none", background: "var(--bg)", fontFamily: "inherit",
+                    color: "var(--foreground)",
+                  }}
+                />
+              ) : (
+                <span
+                  onClick={() => { setEditingId(sub.id); setEditTitle(sub.title) }}
+                  style={{
+                    flex: 1, fontSize: "0.875rem", color: "var(--foreground)", cursor: "text",
+                    textDecoration: sub.completed ? "line-through" : "none",
+                    opacity: sub.completed ? 0.5 : 1,
+                  }}
+                >
+                  {sub.title}
+                </span>
+              )}
+
+              {editingId !== sub.id && (
+                <button
+                  onClick={() => { setEditingId(sub.id); setEditTitle(sub.title) }}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--foreground-muted)", display: "flex", flexShrink: 0 }}
+                  title="Editar"
+                >
+                  <Pencil size={13} />
+                </button>
+              )}
               <button
                 onClick={() => deleteSubtask.mutate({ taskId: task.id, subtaskId: sub.id })}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--foreground-muted)", display: "flex" }}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--foreground-muted)", display: "flex", flexShrink: 0 }}
+                title="Eliminar"
               >
-                <X size={11} />
+                <Trash2 size={13} />
               </button>
             </div>
           ))}
-
-          {/* Add row */}
-          {adding ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
-              <input
-                ref={inputRef}
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); if (e.key === "Escape") { setAdding(false); setNewTitle("") } }}
-                placeholder="Nueva subtarea..."
-                style={{
-                  flex: 1, fontSize: "0.75rem", border: "1px solid var(--border)", borderRadius: 6,
-                  padding: "3px 6px", outline: "none", background: "var(--surface)", fontFamily: "inherit",
-                  color: "var(--foreground)",
-                }}
-                autoFocus
-              />
-              <button
-                onClick={handleAdd}
-                disabled={createSubtask.isPending}
-                style={{ background: "var(--primary)", border: "none", borderRadius: 5, padding: "3px 6px", cursor: "pointer", color: "white", display: "flex", alignItems: "center" }}
-              >
-                {createSubtask.isPending ? <Loader2 size={11} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={11} />}
-              </button>
-              <button
-                onClick={() => { setAdding(false); setNewTitle("") }}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--foreground-muted)", display: "flex" }}
-              >
-                <X size={11} />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => { setAdding(true); setTimeout(() => inputRef.current?.focus(), 50) }}
-              style={{
-                background: "none", border: "none", cursor: "pointer", marginTop: 3,
-                fontSize: "0.6875rem", color: "var(--foreground-muted)",
-                display: "flex", alignItems: "center", gap: 3, padding: "2px 0",
-              }}
-            >
-              <Plus size={11} /> Añadir subtarea
-            </button>
-          )}
         </div>
       )}
-    </div>
+
+      {/* Add new subtask */}
+      <div style={{ display: "flex", gap: 6 }}>
+        <input
+          ref={newInputRef}
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleAdd() }}
+          placeholder="Añadir subtarea..."
+          className="input"
+          style={{ flex: 1 }}
+        />
+        <button
+          onClick={handleAdd}
+          disabled={!newTitle.trim() || createSubtask.isPending}
+          className="btn btn-primary"
+          style={{ flexShrink: 0, padding: "0 1rem", opacity: !newTitle.trim() ? 0.5 : 1 }}
+        >
+          {createSubtask.isPending ? <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> : <Plus size={16} />}
+        </button>
+      </div>
+    </Modal>
   )
 }
 
@@ -202,6 +226,12 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, show
   const [reactions, setReactions] = useState<Reaction[]>([])
   const [showPicker, setShowPicker] = useState(false)
   const [reactLoading, setReactLoading] = useState(false)
+  const [subtasksOpen, setSubtasksOpen] = useState(false)
+
+  // Subtask counts (lightweight; cached by react-query so shared with modal)
+  const { data: subtaskList = [] } = useSubtasks(showSubtasks ? task.id : "")
+  const subtaskTotal = subtaskList.length
+  const subtaskDone = subtaskList.filter((s) => s.completed).length
 
   // Refs for swipe (non-passive listeners needed for preventDefault)
   const swipeContainerRef = useRef<HTMLDivElement>(null)
@@ -263,6 +293,7 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, show
     if (group.length > 0) acc[key] = { count: group.length, mine: group.some((r) => r.user_id === currentUserId) }
     return acc
   }, {})
+  const hasReactions = Object.keys(reactionGroups).length > 0
 
   // ── Toggle with sound/haptic ──────────────────────────────────
   function handleToggle() {
@@ -325,9 +356,6 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, show
         const newX = swipeXRef.current + dx - (isSwiping ? 0 : 0)
         const clamped = Math.max(-80, Math.min(0, newX < 0 ? newX : swipeXRef.current + dx))
         if (dx < 0 || swipeXRef.current < 0) {
-          const target = swipeXRef.current === -80
-            ? Math.min(0, -80 + (dx > 0 ? dx : 0))
-            : Math.max(-80, dx < 0 ? dx : 0)
           swipeXRef.current = clamped
           setSwipeX(clamped)
         }
@@ -386,12 +414,18 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, show
   // Photo strip: up to 3 thumbnails
   const photos = task.task_photos ?? []
 
+  // Whether the meta row should render at all
+  const showMetaRow = showSubtasks || hasReactions || !task.completed
+
   return (
-    <div ref={setNodeRef} style={{ ...dndStyle, position: "relative", marginBottom: "0.5rem" }}>
+    <div ref={setNodeRef} style={{ ...dndStyle, position: "relative", marginBottom: "0.625rem" }}>
       {/* Outer clip wrapper — swipe touch handlers live here */}
       <div
         ref={swipeContainerRef}
-        style={{ position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden" }}
+        style={{
+          position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden",
+          boxShadow: "0 1px 3px rgba(45,27,62,0.06)",
+        }}
       >
         {/* Red delete panel (revealed on swipe) */}
         <div
@@ -406,230 +440,279 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, show
           <Trash2 size={20} color="white" />
         </div>
 
-        {/* Sliding content */}
+        {/* Sliding content — single card surface containing everything */}
         <div
-          className={`task-item animate-fade-in ${task.completed ? "completed" : ""}`}
           style={{
             transform: `translateX(${swipeX}px)`,
             transition: "transform 0.22s ease",
-            marginBottom: 0,
+            background: "var(--surface)",
+            border: task.completed ? "1px solid var(--border)" : "1px solid var(--border)",
+            borderRadius: "var(--radius-lg)",
+            overflow: "hidden",
           }}
           onClick={() => { if (swipeX < -10) { swipeXRef.current = 0; setSwipeX(0) } }}
         >
-          {/* Drag handle */}
-          {!task.completed && (
-            <div
-              {...attributes}
-              {...listeners}
-              style={{ cursor: "grab", padding: "4px 2px", color: "var(--border)", display: "flex", alignItems: "center", touchAction: "none", flexShrink: 0 }}
-              title="Arrastrar para reordenar"
-            >
-              <GripVertical size={16} />
-            </div>
-          )}
-
-          {/* Checkbox */}
-          <button
-            className={`task-checkbox ${task.completed ? "checked" : ""} ${popping ? "animate-task-pop" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation()
-              if (swipeX < -10) { swipeXRef.current = 0; setSwipeX(0); return }
-              if (!longPressTriggered.current) handleToggle()
+          {/* ── Top row ── */}
+          <div
+            className={`animate-fade-in ${task.completed ? "completed" : ""}`}
+            style={{
+              display: "flex", alignItems: "center", gap: "0.5rem",
+              padding: "0.625rem 0.75rem",
             }}
-            title={task.completed ? "Marcar como pendiente" : "Marcar como completada"}
-            style={{ position: "relative", flexShrink: 0 }}
           >
-            {task.completed && <Check size={13} color="white" strokeWidth={3} />}
-            {sparkle && (
-              <span className="animate-sparkle" style={{ top: "-8px", left: "50%", transform: "translateX(-50%)", display: "flex" }}>
-                <Sparkles size={12} />
-              </span>
+            {/* Drag handle */}
+            {!task.completed && (
+              <div
+                {...attributes}
+                {...listeners}
+                style={{ cursor: "grab", color: "var(--border)", display: "flex", alignItems: "center", touchAction: "none", flexShrink: 0 }}
+                title="Arrastrar para reordenar"
+              >
+                <GripVertical size={16} />
+              </div>
             )}
-          </button>
 
-          {/* Icon bubble */}
-          <div style={{
-            width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-            background: task.completed
-              ? "linear-gradient(135deg, var(--primary), var(--secondary))"
-              : "var(--primary-lighter)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <KawaiiIcon name={task.icon} size={18} color={task.completed ? "white" : "var(--primary)"} />
+            {/* Checkbox */}
+            <button
+              className={`task-checkbox ${task.completed ? "checked" : ""} ${popping ? "animate-task-pop" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (swipeX < -10) { swipeXRef.current = 0; setSwipeX(0); return }
+                if (!longPressTriggered.current) handleToggle()
+              }}
+              title={task.completed ? "Marcar como pendiente" : "Marcar como completada"}
+              style={{ position: "relative", flexShrink: 0 }}
+            >
+              {task.completed && <Check size={13} color="white" strokeWidth={3} />}
+              {sparkle && (
+                <span className="animate-sparkle" style={{ top: "-8px", left: "50%", transform: "translateX(-50%)", display: "flex" }}>
+                  <Sparkles size={12} />
+                </span>
+              )}
+            </button>
+
+            {/* Icon bubble */}
+            <div style={{
+              width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+              background: task.completed
+                ? "linear-gradient(135deg, var(--primary), var(--secondary))"
+                : "var(--primary-lighter)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <KawaiiIcon name={task.icon} size={19} color={task.completed ? "white" : "var(--primary)"} />
+            </div>
+
+            {/* Title block — long-press target */}
+            <div
+              style={{
+                flex: 1, minWidth: 0,
+                userSelect: "none", WebkitUserSelect: "none",
+              }}
+              onPointerDown={() => startLongPress()}
+              onPointerUp={() => cancelLongPress()}
+              onPointerCancel={() => cancelLongPress()}
+              onPointerMove={() => cancelLongPress()}
+              onDoubleClick={() => onEdit?.()}
+            >
+              <span
+                className="task-title"
+                style={{
+                  display: "block", fontSize: "0.9375rem", fontWeight: 600, color: "var(--foreground)",
+                  textDecoration: task.completed ? "line-through" : "none",
+                  opacity: task.completed ? 0.55 : 1,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}
+              >
+                {task.title}
+              </span>
+
+              {task.notes && (
+                <span style={{ display: "block", fontSize: "0.6875rem", color: "var(--foreground-muted)", fontWeight: 400, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {task.notes}
+                </span>
+              )}
+
+              {/* Inline badges row: due date · reminder · completed-by */}
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, marginTop: (task.due_date || showReminderBadge || (task.completed && task.completed_by_name)) ? 4 : 0 }}>
+                {task.completed && task.completed_by_name && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.5625rem", color: "var(--foreground-muted)", fontWeight: 500 }}>
+                    <CheckCircle2 size={9} /> {task.completed_by_name}
+                  </span>
+                )}
+                {task.due_date && (() => {
+                  const today = new Date().toISOString().split("T")[0]
+                  const diffDays = Math.ceil((new Date(task.due_date).getTime() - new Date(today).getTime()) / 86_400_000)
+                  const base = { display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.5625rem", borderRadius: 5, padding: "1px 6px", fontWeight: 700 } as React.CSSProperties
+                  if (task.due_date < today)
+                    return <span style={{ ...base, background: "#fef2f2", color: "#dc2626" }}><AlertTriangle size={9} /> Vencida</span>
+                  if (task.due_date === today)
+                    return <span style={{ ...base, background: "#fff7ed", color: "#ea580c" }}><Calendar size={9} /> Hoy</span>
+                  if (diffDays <= 3)
+                    return <span style={{ ...base, background: "#fefce8", color: "#ca8a04" }}><Calendar size={9} /> {diffDays}d</span>
+                  const [, m, d] = task.due_date.split("-")
+                  return <span style={{ ...base, background: "var(--muted)", color: "var(--foreground-muted)" }}><Calendar size={9} /> {d}/{m}</span>
+                })()}
+                {showReminderBadge && task.reminder_at && <ReminderBadge reminderAt={task.reminder_at} />}
+              </div>
+            </div>
+
+            {/* Assigned-to badge */}
+            {assignedColor && (
+              <div
+                title={task.assigned_to === currentUserId ? "Asignada a ti" : "Asignada a tu pareja"}
+                style={{
+                  width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
+                  background: assignedColor, display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >
+                <User size={12} color="white" />
+              </div>
+            )}
+
+            {/* Edit button */}
+            {onEdit && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit() }}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "var(--foreground-muted)", lineHeight: 1, flexShrink: 0, display: "flex", alignItems: "center" }}
+                title="Editar (o doble toque en el texto)"
+              >
+                <Edit2 size={15} />
+              </button>
+            )}
           </div>
 
-          {/* Title — long-press target */}
-          <span
-            className="task-title"
-            style={{
-              flex: 1, fontSize: "0.9rem", fontWeight: 600, color: "var(--foreground)",
-              textDecoration: task.completed ? "line-through" : "none",
-              opacity: task.completed ? 0.6 : 1,
-              userSelect: "none", WebkitUserSelect: "none",
-            }}
-            onPointerDown={() => startLongPress()}
-            onPointerUp={() => cancelLongPress()}
-            onPointerCancel={() => cancelLongPress()}
-            onPointerMove={() => cancelLongPress()}
-            onDoubleClick={() => onEdit?.()}
-          >
-            {task.title}
-            {task.completed && task.completed_by_name && (
-              <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "0.625rem", color: "var(--foreground-muted)", fontWeight: 400, textDecoration: "none" }}>
-                <CheckCircle2 size={10} style={{ flexShrink: 0 }} /> {task.completed_by_name}
-              </span>
-            )}
-            {task.notes && (
-              <span style={{ display: "block", fontSize: "0.625rem", color: "var(--foreground-muted)", fontWeight: 400, marginTop: 1 }}>
-                {task.notes}
-              </span>
-            )}
-            {task.due_date && (() => {
-              const today = new Date().toISOString().split("T")[0]
-              const diffDays = Math.ceil((new Date(task.due_date).getTime() - new Date(today).getTime()) / 86_400_000)
-              let badge: React.ReactNode
-              if (task.due_date < today)
-                badge = <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.5625rem", background: "#fef2f2", color: "#dc2626", borderRadius: 4, padding: "1px 5px", fontWeight: 600, marginTop: 2, textDecoration: "none" }}><AlertTriangle size={9} /> Vencida</span>
-              else if (task.due_date === today)
-                badge = <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.5625rem", background: "#fff7ed", color: "#ea580c", borderRadius: 4, padding: "1px 5px", fontWeight: 600, marginTop: 2, textDecoration: "none" }}><Calendar size={9} /> Hoy</span>
-              else if (diffDays <= 3)
-                badge = <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.5625rem", background: "#fefce8", color: "#ca8a04", borderRadius: 4, padding: "1px 5px", fontWeight: 600, marginTop: 2, textDecoration: "none" }}><Calendar size={9} /> En {diffDays} días</span>
-              else {
-                const [, m, d] = task.due_date.split("-")
-                badge = <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.5625rem", background: "var(--muted)", color: "var(--foreground-muted)", borderRadius: 4, padding: "1px 5px", fontWeight: 600, marginTop: 2, textDecoration: "none" }}><Calendar size={9} /> {d}/{m}</span>
-              }
-              return <span style={{ display: "block" }}>{badge}</span>
-            })()}
-            {showReminderBadge && task.reminder_at && (
-              <span style={{ display: "block" }}>
-                <ReminderBadge reminderAt={task.reminder_at} />
-              </span>
-            )}
-          </span>
-
-          {/* Assigned-to badge */}
-          {assignedColor && (
-            <div
-              title={task.assigned_to === currentUserId ? "Asignada a ti" : "Asignada a tu pareja"}
-              style={{
-                width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
-                background: assignedColor, display: "flex", alignItems: "center", justifyContent: "center",
-                opacity: 0.85,
-              }}
-            >
-              <User size={12} color="white" />
+          {/* ── Photo strip ── */}
+          {photos.length > 0 && (
+            <div style={{ display: "flex", gap: 5, padding: "0 0.75rem 0.5rem 0.75rem" }}>
+              {photos.slice(0, 3).map((url, i) => (
+                <div key={i} style={{ position: "relative" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`foto ${i + 1}`}
+                    style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 8, display: "block" }}
+                  />
+                  {i === 2 && photos.length > 3 && (
+                    <div style={{
+                      position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)",
+                      borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
+                      color: "white", fontSize: "0.75rem", fontWeight: 700,
+                    }}>
+                      +{photos.length - 3}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Edit button */}
-          {onEdit && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onEdit() }}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: "3px 4px", color: "var(--foreground-muted)", lineHeight: 1, flexShrink: 0, display: "flex", alignItems: "center" }}
-              title="Editar (o doble toque en el texto)"
-            >
-              <Edit2 size={14} />
-            </button>
+          {/* ── Meta row: subtasks chip + reaction chips + add-reaction ── */}
+          {showMetaRow && (
+            <div style={{
+              position: "relative",
+              display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap",
+              padding: "0 0.75rem 0.5rem",
+              paddingLeft: !task.completed ? "2.25rem" : "0.75rem", // align under title past handle+checkbox
+            }}>
+              {/* Subtasks chip */}
+              {showSubtasks && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSubtasksOpen(true) }}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    background: subtaskTotal > 0 && subtaskDone === subtaskTotal ? "var(--primary-lighter)" : "var(--muted)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 999, padding: "2px 9px", cursor: "pointer",
+                    fontSize: "0.6875rem", fontWeight: 700,
+                    color: subtaskTotal > 0 && subtaskDone === subtaskTotal ? "var(--primary)" : "var(--foreground-muted)",
+                  }}
+                  title="Administrar subtareas"
+                >
+                  <ListChecks size={12} />
+                  {subtaskTotal > 0 ? `${subtaskDone}/${subtaskTotal}` : "Subtareas"}
+                </button>
+              )}
+
+              {/* Reaction chips */}
+              {Object.entries(reactionGroups).map(([key, { count, mine }]) => (
+                <button
+                  key={key}
+                  onClick={(e) => { e.stopPropagation(); handleReact(key) }}
+                  disabled={reactLoading}
+                  style={{
+                    background: mine ? "var(--primary-lighter)" : "var(--muted)",
+                    border: mine ? "1px solid var(--primary)" : "1px solid var(--border)",
+                    borderRadius: 999, padding: "2px 9px", fontSize: "0.6875rem",
+                    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4,
+                    color: mine ? "var(--primary)" : "var(--foreground-muted)", fontWeight: 700,
+                  }}
+                  title={mine ? "Quitar reacción" : "Reaccionar"}
+                >
+                  {REACTION_ICON_MAP[key]}
+                  {count}
+                </button>
+              ))}
+
+              {/* Add-reaction button */}
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowPicker((v) => !v) }}
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 24, height: 22, borderRadius: 999,
+                  background: "transparent", border: "1px dashed var(--border)",
+                  cursor: "pointer", color: "var(--foreground-muted)",
+                }}
+                title="Añadir reacción"
+              >
+                <SmilePlus size={13} />
+              </button>
+
+              {/* Reaction picker popover */}
+              {showPicker && (
+                <>
+                  <div onClick={() => setShowPicker(false)} style={{ position: "fixed", inset: 0, zIndex: 49 }} />
+                  <div style={{
+                    position: "absolute", bottom: "calc(100% + 2px)", left: !task.completed ? "2.25rem" : "0.75rem",
+                    background: "var(--surface)", border: "1px solid var(--border)",
+                    borderRadius: "999px", padding: "6px 8px",
+                    display: "flex", gap: 4, zIndex: 50,
+                    boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+                    animation: "modalIn 0.15s ease",
+                  }}>
+                    {REACTIONS.map(({ key, icon, label }) => {
+                      const mine = reactions.some((r) => r.emoji === key && r.user_id === currentUserId)
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => { handleReact(key); setShowPicker(false) }}
+                          disabled={reactLoading}
+                          title={label}
+                          style={{
+                            background: mine ? "var(--primary-lighter)" : "transparent",
+                            border: "none", cursor: "pointer", padding: "6px 8px", borderRadius: "50%",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            color: mine ? "var(--primary)" : "var(--foreground-muted)",
+                            transition: "transform 0.1s, background 0.15s",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.25)")}
+                          onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                        >
+                          {icon}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
-
-        {/* Photo strip */}
-        {photos.length > 0 && (
-          <div style={{
-            display: "flex", gap: 4, padding: "0 0.625rem 0.375rem",
-            background: "var(--surface)",
-            transform: `translateX(${swipeX}px)`,
-            transition: "transform 0.22s ease",
-          }}>
-            {photos.slice(0, 3).map((url, i) => (
-              <div key={i} style={{ position: "relative" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={url}
-                  alt={`foto ${i + 1}`}
-                  style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 6, display: "block" }}
-                />
-                {i === 2 && photos.length > 3 && (
-                  <div style={{
-                    position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)",
-                    borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "white", fontSize: "0.75rem", fontWeight: 700,
-                  }}>
-                    +{photos.length - 3}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Reactions row */}
-      <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "0.25rem", paddingLeft: "0.5rem", paddingBottom: "0.25rem", minHeight: "0.5rem", flexWrap: "wrap", background: "var(--surface)" }}>
-        {Object.entries(reactionGroups).map(([key, { count, mine }]) => (
-          <button
-            key={key}
-            onClick={() => handleReact(key)}
-            disabled={reactLoading}
-            style={{
-              background: mine ? "var(--primary-lighter)" : "var(--muted)",
-              border: mine ? "1px solid var(--primary)" : "1px solid var(--border)",
-              borderRadius: 20, padding: "2px 8px", fontSize: "0.7rem",
-              cursor: "pointer", display: "flex", alignItems: "center", gap: 3,
-              color: mine ? "var(--primary)" : "var(--foreground-muted)", transition: "transform 0.1s",
-            }}
-            title={mine ? "Quitar reacción" : "Reaccionar"}
-          >
-            {REACTION_ICON_MAP[key]}
-            <span style={{ fontSize: "0.65rem", fontWeight: 700 }}>{count}</span>
-          </button>
-        ))}
-
-        {/* Long-press reaction picker — appears when holding the task */}
-        {showPicker && (
-          <>
-            {/* Backdrop to close */}
-            <div
-              onClick={() => setShowPicker(false)}
-              style={{ position: "fixed", inset: 0, zIndex: 49 }}
-            />
-            <div style={{
-              position: "absolute", bottom: "calc(100% + 6px)", left: "0.5rem",
-              background: "var(--surface)", border: "1px solid var(--border)",
-              borderRadius: "999px", padding: "6px 8px",
-              display: "flex", gap: 4, zIndex: 50,
-              boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
-              animation: "modalIn 0.15s ease",
-            }}>
-              {REACTIONS.map(({ key, icon, label }) => {
-                const mine = reactions.some((r) => r.emoji === key && r.user_id === currentUserId)
-                return (
-                  <button
-                    key={key}
-                    onClick={() => { handleReact(key); setShowPicker(false) }}
-                    disabled={reactLoading}
-                    title={label}
-                    style={{
-                      background: mine ? "var(--primary-lighter)" : "transparent",
-                      border: "none", cursor: "pointer", padding: "6px 8px", borderRadius: "50%",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      color: mine ? "var(--primary)" : "var(--foreground-muted)",
-                      transition: "transform 0.1s, background 0.15s",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.25)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                  >
-                    {icon}
-                  </button>
-                )
-              })}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Subtasks section */}
-      {showSubtasks && <SubtasksSection task={task} currentUserId={currentUserId} />}
+      {/* Subtasks management modal */}
+      {showSubtasks && (
+        <SubtasksModal task={task} open={subtasksOpen} onClose={() => setSubtasksOpen(false)} />
+      )}
     </div>
   )
 }

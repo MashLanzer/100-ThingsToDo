@@ -13,6 +13,7 @@ import { showConfirm } from "@/lib/confirm"
 import type { Plan } from "@/types"
 import { OnboardingModal } from "@/components/shared/onboarding-modal"
 import { PlanCalendar } from "@/components/features/plan-calendar"
+import { Modal } from "@/components/ui/modal"
 import {
   DndContext,
   closestCenter,
@@ -582,31 +583,19 @@ export default function DashboardPage() {
       )}
 
       {/* New plan modal */}
-      {showForm && (
-        <div
-          style={{
-            position: "fixed", inset: 0, zIndex: 200,
-            background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)",
-            display: "flex", alignItems: "flex-end",
-          }}
-          onClick={() => setShowForm(false)}
-        >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            width: "100%", maxHeight: "92dvh", overflowY: "auto",
-            background: "var(--bg)", borderRadius: "1.5rem 1.5rem 0 0",
-            padding: "1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom, 0px))",
-            animation: "sheetUp 0.28s cubic-bezier(0.34,1.3,0.64,1)",
-            boxShadow: "0 -8px 40px rgba(0,0,0,0.18)",
-          }}
-        >
-          {/* drag handle */}
-          <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 1rem" }} />
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-            <h2 style={{ fontWeight: 700, fontSize: "1.0625rem", color: "var(--foreground)", fontFamily: "'Fredoka', sans-serif" }}>Nuevo Plan</h2>
-            <button className="btn-icon" onClick={() => setShowForm(false)}><X size={16} /></button>
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title="Nuevo Plan"
+        footer={
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleCreate} disabled={createPlan.isPending}>
+              {createPlan.isPending ? "Creando..." : "Crear plan"}
+            </button>
+            <button className="btn btn-outline" onClick={() => setShowForm(false)}>Cancelar</button>
           </div>
+        }
+      >
           <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
             <input
               className="input"
@@ -727,16 +716,8 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <div className="form-actions">
-              <button className="btn btn-primary" onClick={handleCreate} disabled={createPlan.isPending}>
-                {createPlan.isPending ? "Creando..." : "Crear"}
-              </button>
-              <button className="btn btn-outline" onClick={() => setShowForm(false)}>Cancelar</button>
-            </div>
           </div>
-        </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Calendar view */}
       {viewMode === "calendar" && !isLoading && (
