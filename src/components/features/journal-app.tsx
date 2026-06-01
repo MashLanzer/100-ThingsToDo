@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import type { JournalEntry, Letter } from "@/types"
@@ -218,8 +218,7 @@ export function JournalApp({ onBack }: Props) {
   }, [])
 
   async function getToken() {
-    const auth = getFirebaseAuth()
-    return await auth.currentUser?.getIdToken()
+    return getFirebaseToken()
   }
 
   async function loadEntries() {

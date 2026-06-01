@@ -29,3 +29,12 @@ export function getFirebaseAuth(): Auth {
   if (!_auth) _auth = getAuth(ensureApp())
   return _auth
 }
+
+// Returns a valid Firebase ID token, waiting for auth state to be restored.
+// Using auth.authStateReady() prevents the race condition where currentUser
+// is null on page load before Firebase has finished restoring the session.
+export async function getFirebaseToken(): Promise<string | null> {
+  const auth = getFirebaseAuth()
+  await auth.authStateReady()
+  return (await auth.currentUser?.getIdToken()) ?? null
+}

@@ -14,7 +14,7 @@ import { useWindowPTR } from "@/hooks/use-window-ptr"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { showConfirm } from "@/lib/confirm"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 import {
   DndContext,
   closestCenter,
@@ -54,8 +54,7 @@ function relativeDate(dateStr: string): string {
 }
 
 async function authFetch(path: string, init?: RequestInit) {
-  const auth = getFirebaseAuth()
-  const token = await auth.currentUser?.getIdToken()
+  const token = await getFirebaseToken()
   if (!token) throw new Error("Not authenticated")
   const res = await fetch(path, {
     ...init,
@@ -197,8 +196,7 @@ export default function PlanDetailPage() {
   async function uploadTaskPhoto(file: File, setPhotos: (fn: (prev: string[]) => string[]) => void, setUploading: (v: boolean) => void) {
     setUploading(true)
     try {
-      const auth = getFirebaseAuth()
-      const token = await auth.currentUser?.getIdToken()
+      const token = await getFirebaseToken()
       if (!token) throw new Error("Not authenticated")
       const fd = new FormData()
       fd.append("file", file)
@@ -345,8 +343,7 @@ export default function PlanDetailPage() {
   async function handleCoverFileUpload(file: File) {
     setCoverUploading(true)
     try {
-      const auth = getFirebaseAuth()
-      const token = await auth.currentUser?.getIdToken()
+      const token = await getFirebaseToken()
       if (!token) throw new Error("Not authenticated")
       const fd = new FormData()
       fd.append("file", file)

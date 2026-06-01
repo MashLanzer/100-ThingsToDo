@@ -5,7 +5,7 @@ import { useCoupleStatus } from "@/hooks/use-couple"
 import { usePathname } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { Smartphone, Settings2 } from "lucide-react"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 
 const CONFETTI_COLORS = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#A78BFA"]
 
@@ -58,7 +58,7 @@ export function AppHeader() {
   useEffect(() => {
     async function check() {
       try {
-        const token = await getFirebaseAuth().currentUser?.getIdToken()
+        const token = await getFirebaseToken()
         if (!token) return
         const res = await fetch("/api/activity/partner", { headers: { Authorization: `Bearer ${token}` } })
         if (!res.ok) return

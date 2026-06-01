@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAppStore } from "@/stores/app-store"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import type { Favor, FavorDifficulty, FavorCategory } from "@/types"
 import { X, Plus, RefreshCw } from "lucide-react"
@@ -43,8 +43,7 @@ export function FavorsModal() {
   }, [showFavorsModal])
 
   async function authFetch(path: string, init?: RequestInit) {
-    const auth = getFirebaseAuth()
-    const token = await auth.currentUser?.getIdToken()
+    const token = await getFirebaseToken()
     if (!token) throw new Error("Not authenticated")
     const res = await fetch(path, {
       ...init,

@@ -433,8 +433,8 @@ export function SettingsModal() {
   }
 
   async function getAuthToken() {
-    const { getFirebaseAuth } = await import("@/lib/firebase/client")
-    return getFirebaseAuth().currentUser?.getIdToken()
+    const { getFirebaseToken } = await import("@/lib/firebase/client")
+    return getFirebaseToken()
   }
 
   async function handleExportPlans() {

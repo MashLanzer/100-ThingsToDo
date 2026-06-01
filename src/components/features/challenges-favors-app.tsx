@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo, useEffect } from "react"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import { CheckCircle, Trophy, Trash2, Heart, Map, Moon, Palette, Star, Sparkles, Gift, Layers, Shuffle, Users } from "lucide-react"
 import { showConfirm } from "@/lib/confirm"
@@ -193,8 +193,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
 
   // ── Auth helper ───────────────────────────────────────────────────────────
   async function authFetch(path: string, init?: RequestInit) {
-    const auth = getFirebaseAuth()
-    const token = await auth.currentUser?.getIdToken()
+    const token = await getFirebaseToken()
     if (!token) throw new Error("Not authenticated")
     const res = await fetch(path, {
       ...init,

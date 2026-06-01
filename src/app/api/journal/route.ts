@@ -29,8 +29,12 @@ export async function GET(req: NextRequest) {
   }
 
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  if (error) {
+    console.error("[journal GET]", error.message)
+    // Return empty array instead of 500 so the app degrades gracefully
+    return NextResponse.json([])
+  }
+  return NextResponse.json(data ?? [])
 }
 
 // POST /api/journal

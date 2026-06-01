@@ -186,8 +186,8 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   }, [])
 
   async function getToken() {
-    const { getFirebaseAuth } = await import("@/lib/firebase/client")
-    return await getFirebaseAuth().currentUser?.getIdToken()
+    const { getFirebaseToken } = await import("@/lib/firebase/client")
+    return await getFirebaseToken()
   }
 
   async function loadFromServer() {

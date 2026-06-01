@@ -1,12 +1,11 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 import type { Photo } from "@/types"
 
 async function authFetch(path: string, init?: RequestInit) {
-  const auth = getFirebaseAuth()
-  const token = await auth.currentUser?.getIdToken()
+  const token = await getFirebaseToken()
   if (!token) throw new Error("Not authenticated")
   const res = await fetch(path, {
     ...init,
@@ -24,8 +23,7 @@ async function authFetch(path: string, init?: RequestInit) {
 }
 
 async function authFetchFormData(path: string, formData: FormData) {
-  const auth = getFirebaseAuth()
-  const token = await auth.currentUser?.getIdToken()
+  const token = await getFirebaseToken()
   if (!token) throw new Error("Not authenticated")
   const res = await fetch(path, {
     method: "POST",

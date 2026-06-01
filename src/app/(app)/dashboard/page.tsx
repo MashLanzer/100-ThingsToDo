@@ -8,7 +8,7 @@ import { useAppStore } from "@/stores/app-store"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
 import { Plus, X, Trash2, Search, GripVertical, Tag, ImagePlus, Calendar, Heart, Mail, CheckCircle2, ClipboardList, ChevronDown, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 import { showConfirm } from "@/lib/confirm"
 import type { Plan } from "@/types"
 import { OnboardingModal } from "@/components/shared/onboarding-modal"
@@ -240,8 +240,7 @@ export default function DashboardPage() {
   async function handleDeletePlan(id: string) {
     if (!await showConfirm({ title: "Eliminar plan", message: "Se borrarán el plan y todas sus tareas. Esta acción no se puede deshacer.", danger: true })) return
     try {
-      const auth = getFirebaseAuth()
-      const token = await auth.currentUser?.getIdToken()
+      const token = await getFirebaseToken()
       const res = await fetch(`/api/plans/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token ?? ""}` } })
       if (!res.ok) throw new Error("Error")
       toast.success("Plan eliminado 🗑")
@@ -252,8 +251,7 @@ export default function DashboardPage() {
   async function handleCoverUpload(file: File) {
     setCoverUploading(true)
     try {
-      const auth = getFirebaseAuth()
-      const token = await auth.currentUser?.getIdToken()
+      const token = await getFirebaseToken()
       const fd = new FormData()
       fd.append("file", file)
       const res = await fetch("/api/upload/cover", { method: "POST", headers: { Authorization: `Bearer ${token ?? ""}` }, body: fd })

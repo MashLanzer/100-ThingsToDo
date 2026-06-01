@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import { RefreshCw, CheckCircle, Trophy } from "lucide-react"
 
@@ -157,8 +157,7 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
   async function loadActiveChallenge() {
     setLoadingDb(true)
     try {
-      const auth = getFirebaseAuth()
-      const token = await auth.currentUser?.getIdToken()
+      const token = await getFirebaseToken()
       if (!token) { setLoadingDb(false); return }
       const res = await fetch("/api/challenges/daily", { headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) {
@@ -181,8 +180,7 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
 
   async function postChallengeToServer(c: ChallengeTask) {
     try {
-      const auth = getFirebaseAuth()
-      const token = await auth.currentUser?.getIdToken()
+      const token = await getFirebaseToken()
       if (!token) return
       await fetch("/api/challenges/daily", {
         method: "POST",
@@ -213,8 +211,7 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
     if (!challenge || saving) return
     setSaving(true)
     try {
-      const auth = getFirebaseAuth()
-      const token = await auth.currentUser?.getIdToken()
+      const token = await getFirebaseToken()
       if (token) {
         if (dbChallenge?.id) {
           // Mark the existing DB challenge as completed via PATCH

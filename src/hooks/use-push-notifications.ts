@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
@@ -49,8 +49,7 @@ export function usePushNotifications() {
         applicationServerKey: urlBase64ToUint8Array(vapidKey),
       })
 
-      const auth = getFirebaseAuth()
-      const token = await auth.currentUser?.getIdToken()
+      const token = await getFirebaseToken()
       if (!token) throw new Error("Not authenticated")
 
       const res = await fetch("/api/push/subscribe", {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 
 export interface Subtask {
   id: string
@@ -13,8 +13,7 @@ export interface Subtask {
 }
 
 async function authFetch(path: string, init?: RequestInit) {
-  const auth = getFirebaseAuth()
-  const token = await auth.currentUser?.getIdToken()
+  const token = await getFirebaseToken()
   if (!token) throw new Error("Not authenticated")
   const res = await fetch(path, {
     ...init,

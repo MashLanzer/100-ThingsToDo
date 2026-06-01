@@ -6,7 +6,7 @@ import { Trash2, Check, GripVertical, Heart, Flame, Laugh, Star, Zap, AlertTrian
 import { KawaiiIcon } from "@/components/ui/kawaii-icon"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 import { useSubtasks, useCreateSubtask, useToggleSubtask, useDeleteSubtask, useUpdateSubtask } from "@/hooks/use-subtasks"
 import { Modal } from "@/components/ui/modal"
 
@@ -31,8 +31,7 @@ interface Props {
 }
 
 async function authFetch(path: string, init?: RequestInit) {
-  const auth = getFirebaseAuth()
-  const token = await auth.currentUser?.getIdToken()
+  const token = await getFirebaseToken()
   if (!token) throw new Error("Not authenticated")
   const res = await fetch(path, {
     ...init,

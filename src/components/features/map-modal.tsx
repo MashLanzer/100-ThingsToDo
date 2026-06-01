@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useAppStore } from "@/stores/app-store"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import type { Place } from "@/types"
 import { X, Plus, Trash2, Search, MapPin } from "lucide-react"
@@ -84,8 +84,7 @@ export function MapModal() {
   }
 
   async function authFetch(path: string, init?: RequestInit) {
-    const auth = getFirebaseAuth()
-    const token = await auth.currentUser?.getIdToken()
+    const token = await getFirebaseToken()
     if (!token) throw new Error("Not authenticated")
     const res = await fetch(path, {
       ...init,

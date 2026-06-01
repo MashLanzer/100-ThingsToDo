@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { getFirebaseAuth } from "@/lib/firebase/client"
+import { getFirebaseToken } from "@/lib/firebase/client"
 import { useAppStore } from "@/stores/app-store"
 import { toast } from "sonner"
 import type { Place } from "@/types"
@@ -39,8 +39,7 @@ export function MapApp({ onBack }: Props) {
   useEffect(() => { loadPlaces() }, [])
 
   async function authFetch(path: string, init?: RequestInit) {
-    const auth = getFirebaseAuth()
-    const token = await auth.currentUser?.getIdToken()
+    const token = await getFirebaseToken()
     if (!token) throw new Error("Not authenticated")
     const res = await fetch(path, {
       ...init,

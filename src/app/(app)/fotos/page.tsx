@@ -803,8 +803,8 @@ function Lightbox({
 
   async function handleDownload() {
     try {
-      const { getFirebaseAuth } = await import("@/lib/firebase/client")
-      const token = await getFirebaseAuth().currentUser?.getIdToken()
+      const { getFirebaseToken } = await import("@/lib/firebase/client")
+      const token = await getFirebaseToken()
       const proxyUrl = `/api/photos/download?url=${encodeURIComponent(photo.image_url)}`
       const res = await fetch(proxyUrl, { headers: { Authorization: `Bearer ${token ?? ""}` } })
       if (!res.ok) throw new Error("Download failed")
@@ -1588,9 +1588,10 @@ export default function FotosPage() {
   // Get current user UID from Firebase auth
   const [myUid, setMyUid] = useState("")
   useEffect(() => {
-    import("@/lib/firebase/client").then(({ getFirebaseAuth }) => {
-      const auth = getFirebaseAuth()
-      setMyUid(auth.currentUser?.uid ?? "")
+    import("@/lib/firebase/client").then(({ getFirebaseToken, getFirebaseAuth }) => {
+      getFirebaseAuth().authStateReady().then(() => {
+        setMyUid(getFirebaseAuth().currentUser?.uid ?? "")
+      })
     })
   }, [])
 
