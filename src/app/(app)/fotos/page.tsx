@@ -1536,6 +1536,13 @@ export default function FotosPage() {
       )
     : monthFilteredPhotos
 
+  // F1: progressive loading — show first 30 photos, "Ver más" loads 30 more
+  const [visibleCount, setVisibleCount] = useState(30)
+  // Reset visibleCount when filter changes
+  useEffect(() => { setVisibleCount(30) }, [filter, selectedMonth, searchQuery])
+  const visiblePhotos = filteredPhotos.slice(0, visibleCount)
+  const hiddenCount = filteredPhotos.length - visibleCount
+
   // Stats
   const now = new Date()
   const thisMonth = allPhotos.filter((p) => {
@@ -1650,8 +1657,8 @@ export default function FotosPage() {
     ...(has14Feb ? [{ key: "14feb" as FilterType, label: "14-Febrero" }] : []),
   ]
 
-  // Determine which photos to show in groups
-  const groupedPhotos = useMemo(() => groupPhotosByMonth(filteredPhotos), [filteredPhotos])
+  // F1: show visible slice in groups (filteredPhotos for lightbox navigation)
+  const groupedPhotos = useMemo(() => groupPhotosByMonth(visiblePhotos), [visiblePhotos])
 
   return (
     <div className="page-container">
@@ -1934,6 +1941,26 @@ export default function FotosPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* F1: Load more button */}
+      {!isLoading && hiddenCount > 0 && (
+        <div style={{ textAlign: "center", padding: "1rem 0 0.5rem" }}>
+          <button
+            onClick={() => setVisibleCount((v) => v + 30)}
+            style={{
+              background: "var(--primary-lighter)", border: "1px solid var(--primary-light)",
+              borderRadius: "999px", padding: "0.625rem 1.75rem",
+              fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 700,
+              color: "var(--primary)", cursor: "pointer",
+              transition: "background 0.15s, transform 0.1s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.color = "white" }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "var(--primary-lighter)"; e.currentTarget.style.color = "var(--primary)" }}
+          >
+            Ver más ({hiddenCount} foto{hiddenCount !== 1 ? "s" : ""})
+          </button>
         </div>
       )}
 
