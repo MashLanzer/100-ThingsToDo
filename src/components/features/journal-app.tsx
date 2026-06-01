@@ -309,12 +309,9 @@ export function JournalApp({ onBack }: Props) {
   async function startRecording() {
     setShowMicHelp(false)
     try {
-      if (typeof navigator?.permissions?.query === "function") {
-        try {
-          const perm = await navigator.permissions.query({ name: "microphone" as PermissionName })
-          if (perm.state === "denied") { setShowMicHelp(true); return }
-        } catch { /* permissions API not supported, proceed */ }
-      }
+      // Don't pre-check permissions API — in Capacitor WebView it can return 'denied'
+      // incorrectly even when the system permission is granted. Just call getUserMedia
+      // directly and let the WebView/browser show its native permission dialog.
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
       streamRef.current = stream
       const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find(t => {
