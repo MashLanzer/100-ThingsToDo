@@ -1,5 +1,12 @@
 // ThingsToDo Kawaii — Service Worker
 
+// Activate new SW immediately and take control of open tabs so users always
+// run the latest deployment (prevents stale-bundle "X is not a function" errors)
+self.addEventListener('install', () => { self.skipWaiting() })
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
 // Handle push events
 self.addEventListener('push', (event) => {
   const data = event.data?.json() ?? {}

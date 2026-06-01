@@ -230,14 +230,17 @@ export function JournalApp({ onBack }: Props) {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) return
-      const data: JournalEntry[] = await res.json()
-      setEntries(data)
+      const data: unknown = await res.json()
+      setEntries(Array.isArray(data) ? (data as JournalEntry[]) : [])
 
       // Feature 4: load last year's same month for "on this day"
       const lyRes = await fetch(`/api/journal?year=${year - 1}&month=${month + 1}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (lyRes.ok) setLastYearEntries(await lyRes.json())
+      if (lyRes.ok) {
+        const ly: unknown = await lyRes.json()
+        setLastYearEntries(Array.isArray(ly) ? (ly as JournalEntry[]) : [])
+      }
     } catch { /* silently fail */ }
   }
 
