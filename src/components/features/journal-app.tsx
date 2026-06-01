@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
-import type { JournalEntry } from "@/types"
-import { Lock, Unlock, Flame, Smile, Heart, Laugh, Frown, Meh, Moon, User, Camera, Mail, FileText, CheckCircle2, PenLine, Search as SearchIcon } from "lucide-react"
+import type { JournalEntry, Letter } from "@/types"
+import { Lock, Unlock, Flame, Smile, Heart, Laugh, Frown, Meh, Moon, User, Camera, Mail, FileText, CheckCircle2, PenLine, Search as SearchIcon, BarChart2, Mic, MicOff, Trash2, Upload } from "lucide-react"
 
 const MOODS = [
   { id: "happy",    Icon: Smile,  label: "Feliz",       accent: "#FEF3C7", accentBorder: "#F59E0B", accentText: "#92400E" },
@@ -16,7 +16,6 @@ const MOODS = [
   { id: "sad",      Icon: Frown,  label: "Triste",      accent: "#DBEAFE", accentBorder: "#3B82F6", accentText: "#1E40AF" },
 ]
 
-// Mood emoji to id mapping (for DB storage backward compat — kept as-is)
 const MOOD_EMOJI_TO_ID: Record<string, string> = {
   "😊": "happy", "🥰": "love", "😄": "fun", "💕": "romantic", "😌": "chill", "😢": "sad",
 }
@@ -36,7 +35,7 @@ function readJournalSettings() {
   } catch { return { weekStartsMonday: false, privateJournal: false } }
 }
 
-// ── Streak calculation helpers ────────────────────────────────────────────────
+// ── Date helpers ──────────────────────────────────────────────────────────────
 
 function toLocalDateStr(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
@@ -48,39 +47,67 @@ function subtractDay(dateStr: string, days: number): string {
   return toLocalDateStr(d)
 }
 
+const ES_DAYS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"]
+const ES_MONTHS = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+
+function formatDateEs(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00")
+  const dow = ES_DAYS[d.getDay()]
+  const day = d.getDate()
+  const month = ES_MONTHS[d.getMonth()]
+  const year = d.getFullYear()
+  return `${dow.charAt(0).toUpperCase() + dow.slice(1)}, ${day} de ${month} ${year}`
+}
+
+function formatDateShortEs(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00")
+  const dow = ES_DAYS[d.getDay()]
+  const day = d.getDate()
+  const month = ES_MONTHS[d.getMonth()]
+  return `${dow.charAt(0).toUpperCase() + dow.slice(1)}, ${day} de ${month}`
+}
+
+// ── Streak calculation helpers ────────────────────────────────────────────────
+
 function calculateStreak(entries: JournalEntry[], myUid: string): number {
   if (!myUid) return 0
-
-  // Build sets of dates per user
   const myDates = new Set<string>()
   const partnerDates = new Set<string>()
   for (const e of entries) {
     if (e.created_by === myUid) myDates.add(e.date)
     else partnerDates.add(e.date)
   }
-
-  // Dates where BOTH wrote
   const bothDates = new Set<string>()
-  for (const d of myDates) {
-    if (partnerDates.has(d)) bothDates.add(d)
-  }
-
+  for (const d of myDates) { if (partnerDates.has(d)) bothDates.add(d) }
   if (bothDates.size === 0) return 0
-
   const todayStr = toLocalDateStr(new Date())
   const yesterdayStr = subtractDay(todayStr, 1)
-
-  // Start from today if both wrote today, otherwise start from yesterday
   const startDate = bothDates.has(todayStr) ? todayStr : yesterdayStr
   if (!bothDates.has(startDate)) return 0
-
   let streak = 0
   let current = startDate
-  while (bothDates.has(current)) {
-    streak++
-    current = subtractDay(current, 1)
-  }
+  while (bothDates.has(current)) { streak++; current = subtractDay(current, 1) }
   return streak
+}
+
+function calculateMaxStreak(entries: JournalEntry[], myUid: string): number {
+  if (!myUid || entries.length === 0) return 0
+  const myDates = new Set<string>()
+  const partnerDates = new Set<string>()
+  for (const e of entries) {
+    if (e.created_by === myUid) myDates.add(e.date)
+    else partnerDates.add(e.date)
+  }
+  const bothDates = Array.from(myDates).filter(d => partnerDates.has(d)).sort()
+  if (bothDates.length === 0) return 0
+  let max = 1, cur = 1
+  for (let i = 1; i < bothDates.length; i++) {
+    const prev = new Date(bothDates[i-1] + "T12:00:00")
+    const curr = new Date(bothDates[i] + "T12:00:00")
+    const diff = (curr.getTime() - prev.getTime()) / 86400000
+    if (diff === 1) { cur++; max = Math.max(max, cur) } else { cur = 1 }
+  }
+  return max
 }
 
 function getTodayStatus(entries: JournalEntry[], myUid: string): "both" | "onlyme" | "none" {
@@ -100,8 +127,74 @@ function getStoredPin(): string | null {
   try { return localStorage.getItem(PIN_KEY) } catch { return null }
 }
 
+// ── Writing prompts ──────────────────────────────────────────────────────────
+
+const PROMPTS = [
+  "¿Cuál fue el mejor momento de hoy?",
+  "¿Qué te hizo sonreír hoy?",
+  "¿Qué aprendiste de ti mismo/a hoy?",
+  "¿Qué quieres recordar de este día?",
+  "¿Cómo te hizo sentir tu pareja hoy?",
+  "¿Qué hicieron juntos hoy?",
+  "¿Qué es lo que más aprecias de tu relación?",
+  "Describe el día en 3 palabras...",
+]
+
 interface Props { onBack: () => void }
-type View = "calendar" | "read" | "write"
+type View = "calendar" | "read" | "write" | "timeline" | "letters" | "letters-compose" | "letter-read" | "stats"
+
+// ── Voice recording hook ──────────────────────────────────────────────────────
+
+function useVoiceRecorder() {
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
+  const [audioDuration, setAudioDuration] = useState(0)
+  const [uploading, setUploading] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream)
+      mediaRecorderRef.current = mr
+      chunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      mr.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" })
+        setAudioBlob(blob)
+        stream.getTracks().forEach(t => t.stop())
+      }
+      mr.start()
+      setIsRecording(true)
+      setRecordingSeconds(0)
+      timerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000)
+    } catch {
+      toast.error("No se pudo acceder al micrófono")
+    }
+  }, [])
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isRecording) {
+      setAudioDuration(recordingSeconds)
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [isRecording, recordingSeconds])
+
+  const discard = useCallback(() => {
+    setAudioBlob(null)
+    setRecordingSeconds(0)
+    setAudioDuration(0)
+  }, [])
+
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current) }, [])
+
+  return { isRecording, recordingSeconds, audioBlob, audioDuration, uploading, setUploading, startRecording, stopRecording, discard }
+}
 
 export function JournalApp({ onBack }: Props) {
   const { user } = useAuth()
@@ -109,6 +202,7 @@ export function JournalApp({ onBack }: Props) {
   const [view, setView] = useState<View>("calendar")
   const [currentDate, setCurrentDate] = useState(new Date())
   const [entries, setEntries] = useState<JournalEntry[]>([])
+  const [lastYearEntries, setLastYearEntries] = useState<JournalEntry[]>([])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null)
   const [writeContent, setWriteContent] = useState("")
@@ -118,13 +212,22 @@ export function JournalApp({ onBack }: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const [weekStartsMonday, setWeekStartsMonday] = useState(false)
   const [privateJournal, setPrivateJournal] = useState(false)
-  // Feature 10: search
   const [searchQuery, setSearchQuery] = useState("")
-  // Feature 11: photos
   const [photoUrls, setPhotoUrls] = useState<string[]>([])
   const [photoInput, setPhotoInput] = useState("")
-  // Feature 12: view partner entries
   const [viewingPartner, setViewingPartner] = useState(false)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [dismissedOnThisDay, setDismissedOnThisDay] = useState(false)
+
+  // Letters state
+  const [letters, setLetters] = useState<Letter[]>([])
+  const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null)
+  const [letterSubject, setLetterSubject] = useState("")
+  const [letterContent, setLetterContent] = useState("")
+  const [sendingLetter, setSendingLetter] = useState(false)
+
+  // Voice recorder
+  const voice = useVoiceRecorder()
 
   // ── PIN state ──────────────────────────────────────────────────────────────
   const [pinRequired, setPinRequired] = useState(false)
@@ -141,26 +244,43 @@ export function JournalApp({ onBack }: Props) {
     const s = readJournalSettings()
     setWeekStartsMonday(s.weekStartsMonday)
     setPrivateJournal(s.privateJournal)
-
-    // Check PIN on mount
     const stored = getStoredPin()
-    if (stored) {
-      setPinRequired(true)
-    }
+    if (stored) setPinRequired(true)
   }, [])
 
   useEffect(() => { loadEntries() }, [month, year])
 
+  async function getToken() {
+    const auth = getFirebaseAuth()
+    return await auth.currentUser?.getIdToken()
+  }
+
   async function loadEntries() {
     try {
-      const auth = getFirebaseAuth()
-      const token = await auth.currentUser?.getIdToken()
+      const token = await getToken()
       if (!token) return
       const res = await fetch(`/api/journal?year=${year}&month=${month + 1}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) return
-      setEntries(await res.json())
+      const data: JournalEntry[] = await res.json()
+      setEntries(data)
+
+      // Feature 4: load last year's same month for "on this day"
+      const lyRes = await fetch(`/api/journal?year=${year - 1}&month=${month + 1}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (lyRes.ok) setLastYearEntries(await lyRes.json())
+    } catch { /* silently fail */ }
+  }
+
+  async function loadLetters() {
+    try {
+      const token = await getToken()
+      if (!token) return
+      const res = await fetch("/api/letters", { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) return
+      setLetters(await res.json())
     } catch { /* silently fail */ }
   }
 
@@ -186,6 +306,8 @@ export function JournalApp({ onBack }: Props) {
       setWriteMood("happy")
       setPhotoUrls([])
       setPhotoInput("")
+      setAudioUrl(null)
+      voice.discard()
       setView("write")
     }
   }
@@ -195,6 +317,8 @@ export function JournalApp({ onBack }: Props) {
     setWriteMood(entry.mood ?? "happy")
     setPhotoUrls(entry.photos ?? [])
     setPhotoInput("")
+    setAudioUrl(entry.audio_url ?? null)
+    voice.discard()
     setIsEditing(true)
     setView("write")
   }
@@ -203,13 +327,32 @@ export function JournalApp({ onBack }: Props) {
     if (!selectedDate || !writeContent.trim()) return
     setSaving(true)
     try {
-      const auth = getFirebaseAuth()
-      const token = await auth.currentUser?.getIdToken()
+      const token = await getToken()
       if (!token) throw new Error("Not authenticated")
+
+      let finalAudioUrl = audioUrl
+      // If there's a recorded blob not yet uploaded, upload it now
+      if (voice.audioBlob && !audioUrl) {
+        voice.setUploading(true)
+        const fd = new FormData()
+        fd.append("file", voice.audioBlob, "audio.webm")
+        fd.append("date", selectedDate)
+        const upRes = await fetch("/api/upload/audio", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        })
+        voice.setUploading(false)
+        if (upRes.ok) {
+          const { url } = await upRes.json()
+          finalAudioUrl = url
+        }
+      }
+
       const res = await fetch("/api/journal", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ date: selectedDate, content: writeContent.trim(), mood: writeMood, photos: photoUrls }),
+        body: JSON.stringify({ date: selectedDate, content: writeContent.trim(), mood: writeMood, photos: photoUrls, audio_url: finalAudioUrl }),
       })
       if (!res.ok) throw new Error("Error al guardar")
       toast.success(isEditing ? "Entrada actualizada ✏️" : "Entrada guardada 💕")
@@ -221,8 +364,81 @@ export function JournalApp({ onBack }: Props) {
     } finally { setSaving(false) }
   }
 
-  // ── PIN handlers ──────────────────────────────────────────────────────────
+  async function uploadVoice() {
+    if (!voice.audioBlob || !selectedDate) return
+    voice.setUploading(true)
+    try {
+      const token = await getToken()
+      if (!token) throw new Error("No auth")
+      const fd = new FormData()
+      fd.append("file", voice.audioBlob, "audio.webm")
+      fd.append("date", selectedDate)
+      const res = await fetch("/api/upload/audio", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      })
+      if (!res.ok) throw new Error("Upload failed")
+      const { url } = await res.json()
+      setAudioUrl(url)
+      voice.discard()
+      toast.success("Audio guardado 🎙️")
+    } catch {
+      toast.error("Error al subir el audio")
+    } finally { voice.setUploading(false) }
+  }
 
+  async function sendLetter() {
+    if (!letterContent.trim()) return
+    setSendingLetter(true)
+    try {
+      const token = await getToken()
+      if (!token) throw new Error("No auth")
+      const res = await fetch("/api/letters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ subject: letterSubject, content: letterContent }),
+      })
+      if (!res.ok) throw new Error("Error al enviar")
+      toast.success("Carta enviada 💌")
+      setLetterSubject("")
+      setLetterContent("")
+      await loadLetters()
+      setView("letters")
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error")
+    } finally { setSendingLetter(false) }
+  }
+
+  async function openLetter(letter: Letter) {
+    setSelectedLetter(letter)
+    setView("letter-read")
+    if (!letter.is_read && letter.from_user_id !== myUid) {
+      try {
+        const token = await getToken()
+        if (!token) return
+        await fetch(`/api/letters/${letter.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ is_read: true }),
+        })
+        setLetters(prev => prev.map(l => l.id === letter.id ? { ...l, is_read: true } : l))
+      } catch { /* silently */ }
+    }
+  }
+
+  async function deleteLetter(id: string) {
+    try {
+      const token = await getToken()
+      if (!token) return
+      await fetch(`/api/letters/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+      setLetters(prev => prev.filter(l => l.id !== id))
+      setView("letters")
+      toast.success("Carta eliminada")
+    } catch { toast.error("Error al eliminar") }
+  }
+
+  // ── PIN handlers ──────────────────────────────────────────────────────────
   function handlePinKeyPress(digit: string) {
     if (pinInput.length >= 4) return
     const next = pinInput + digit
@@ -231,25 +447,15 @@ export function JournalApp({ onBack }: Props) {
       const stored = getStoredPin()
       if (next === stored) {
         setPinSuccess(true)
-        setTimeout(() => {
-          setPinUnlocked(true)
-          setPinRequired(false)
-          setPinInput("")
-          setPinSuccess(false)
-        }, 600)
+        setTimeout(() => { setPinUnlocked(true); setPinRequired(false); setPinInput(""); setPinSuccess(false) }, 600)
       } else {
         setPinShake(true)
-        setTimeout(() => {
-          setPinShake(false)
-          setPinInput("")
-        }, 700)
+        setTimeout(() => { setPinShake(false); setPinInput("") }, 700)
       }
     }
   }
 
-  function handlePinBackspace() {
-    setPinInput(prev => prev.slice(0, -1))
-  }
+  function handlePinBackspace() { setPinInput(prev => prev.slice(0, -1)) }
 
   // ── PIN lock screen ────────────────────────────────────────────────────────
   if (pinRequired && !pinUnlocked) {
@@ -257,18 +463,11 @@ export function JournalApp({ onBack }: Props) {
       <>
         <style>{`
           @keyframes pinShake {
-            0%,100%{transform:translateX(0)}
-            15%{transform:translateX(-8px)}
-            30%{transform:translateX(8px)}
-            45%{transform:translateX(-6px)}
-            60%{transform:translateX(6px)}
-            75%{transform:translateX(-4px)}
-            90%{transform:translateX(4px)}
+            0%,100%{transform:translateX(0)} 15%{transform:translateX(-8px)} 30%{transform:translateX(8px)}
+            45%{transform:translateX(-6px)} 60%{transform:translateX(6px)} 75%{transform:translateX(-4px)} 90%{transform:translateX(4px)}
           }
           @keyframes pinPop {
-            0%{transform:scale(0.8);opacity:0}
-            60%{transform:scale(1.15)}
-            100%{transform:scale(1);opacity:1}
+            0%{transform:scale(0.8);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1}
           }
         `}</style>
         <div className="app-content-header">
@@ -276,136 +475,51 @@ export function JournalApp({ onBack }: Props) {
           <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Lock size={16} /> Diario Privado</span>
         </div>
         <div className="app-content-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1.5rem", paddingTop: "2rem" }}>
-          {/* Lock icon */}
           <div style={{ animation: pinSuccess ? "pinPop 0.5s ease" : undefined, color: pinSuccess ? "#10b981" : "var(--primary)" }}>
             {pinSuccess ? <Unlock size={56} /> : <Lock size={56} />}
           </div>
           <div style={{ textAlign: "center" }}>
-            <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.25rem" }}>
-              Diario privado
-            </p>
+            <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.25rem" }}>Diario privado</p>
             <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)" }}>Ingresa tu PIN para continuar</p>
           </div>
-
-          {/* Dot indicators */}
-          <div
-            style={{
-              display: "flex", gap: "0.875rem",
-              animation: pinShake ? "pinShake 0.7s ease" : undefined,
-            }}
-          >
+          <div style={{ display: "flex", gap: "0.875rem", animation: pinShake ? "pinShake 0.7s ease" : undefined }}>
             {[0, 1, 2, 3].map(i => (
-              <div
-                key={i}
-                style={{
-                  width: 16, height: 16, borderRadius: "50%",
-                  border: "2px solid",
-                  borderColor: pinShake ? "#ef4444" : pinSuccess ? "#10b981" : "var(--primary)",
-                  background: pinInput.length > i
-                    ? (pinShake ? "#ef4444" : pinSuccess ? "#10b981" : "var(--primary)")
-                    : "transparent",
-                  transition: "background 0.15s, border-color 0.15s",
-                }}
-              />
+              <div key={i} style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid", borderColor: pinShake ? "#ef4444" : pinSuccess ? "#10b981" : "var(--primary)", background: pinInput.length > i ? (pinShake ? "#ef4444" : pinSuccess ? "#10b981" : "var(--primary)") : "transparent", transition: "background 0.15s, border-color 0.15s" }} />
             ))}
           </div>
-
-          {/* Hidden input for mobile keyboard fallback (not shown) */}
-          <input
-            ref={pinHiddenRef}
-            type="tel"
-            inputMode="numeric"
-            maxLength={4}
-            value={pinInput}
+          <input ref={pinHiddenRef} type="tel" inputMode="numeric" maxLength={4} value={pinInput}
             onChange={e => {
               const val = e.target.value.replace(/\D/g, "").slice(0, 4)
               setPinInput(val)
               if (val.length === 4) {
                 const stored = getStoredPin()
-                if (val === stored) {
-                  setPinSuccess(true)
-                  setTimeout(() => { setPinUnlocked(true); setPinRequired(false); setPinInput(""); setPinSuccess(false) }, 600)
-                } else {
-                  setPinShake(true)
-                  setTimeout(() => { setPinShake(false); setPinInput("") }, 700)
-                }
+                if (val === stored) { setPinSuccess(true); setTimeout(() => { setPinUnlocked(true); setPinRequired(false); setPinInput(""); setPinSuccess(false) }, 600) }
+                else { setPinShake(true); setTimeout(() => { setPinShake(false); setPinInput("") }, 700) }
               }
             }}
             style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 1, height: 1 }}
           />
-
-          {/* Numeric keypad */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.625rem", width: "100%", maxWidth: 240 }}>
             {[1,2,3,4,5,6,7,8,9].map(n => (
-              <button
-                key={n}
-                onClick={() => handlePinKeyPress(String(n))}
-                style={{
-                  aspectRatio: "1", borderRadius: "50%",
-                  border: "2px solid var(--border)",
-                  background: "white",
-                  cursor: "pointer", fontFamily: "'Fredoka', sans-serif",
-                  fontSize: "1.375rem", fontWeight: 600,
-                  color: "var(--foreground)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-                  transition: "background 0.1s, transform 0.1s",
-                }}
+              <button key={n} onClick={() => handlePinKeyPress(String(n))}
+                style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid var(--border)", background: "white", cursor: "pointer", fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 600, color: "var(--foreground)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.06)", transition: "background 0.1s, transform 0.1s" }}
                 onMouseDown={e => (e.currentTarget.style.transform = "scale(0.92)")}
                 onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
-              >
-                {n}
-              </button>
+              >{n}</button>
             ))}
-            {/* Row: [empty] [0] [backspace] */}
             <div />
-            <button
-              onClick={() => handlePinKeyPress("0")}
-              style={{
-                aspectRatio: "1", borderRadius: "50%",
-                border: "2px solid var(--border)",
-                background: "white",
-                cursor: "pointer", fontFamily: "'Fredoka', sans-serif",
-                fontSize: "1.375rem", fontWeight: 600,
-                color: "var(--foreground)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-                transition: "background 0.1s, transform 0.1s",
-              }}
+            <button onClick={() => handlePinKeyPress("0")}
+              style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid var(--border)", background: "white", cursor: "pointer", fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 600, color: "var(--foreground)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.06)", transition: "background 0.1s, transform 0.1s" }}
               onMouseDown={e => (e.currentTarget.style.transform = "scale(0.92)")}
               onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
-            >
-              0
-            </button>
-            <button
-              onClick={handlePinBackspace}
-              style={{
-                aspectRatio: "1", borderRadius: "50%",
-                border: "2px solid var(--border)",
-                background: "white",
-                cursor: "pointer",
-                fontSize: "1.125rem",
-                color: "var(--foreground-light)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-                transition: "background 0.1s, transform 0.1s",
-              }}
+            >0</button>
+            <button onClick={handlePinBackspace}
+              style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid var(--border)", background: "white", cursor: "pointer", fontSize: "1.125rem", color: "var(--foreground-light)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.06)", transition: "background 0.1s, transform 0.1s" }}
               onMouseDown={e => (e.currentTarget.style.transform = "scale(0.92)")}
               onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
-            >
-              ⌫
-            </button>
+            >⌫</button>
           </div>
-
-          {/* Cancel */}
-          <button
-            onClick={onBack}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              fontSize: "0.8125rem", color: "var(--foreground-muted)",
-              fontFamily: "inherit", textDecoration: "underline", marginTop: "0.25rem",
-            }}
-          >
+          <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.8125rem", color: "var(--foreground-muted)", fontFamily: "inherit", textDecoration: "underline", marginTop: "0.25rem" }}>
             Cancelar
           </button>
         </div>
@@ -413,8 +527,8 @@ export function JournalApp({ onBack }: Props) {
     )
   }
 
-  // Calendar calculations with weekStartsMonday support
-  const rawFirstDay = new Date(year, month, 1).getDay() // 0=Sun
+  // ── Calendar calculations ──────────────────────────────────────────────────
+  const rawFirstDay = new Date(year, month, 1).getDay()
   const firstDay = weekStartsMonday ? (rawFirstDay + 6) % 7 : rawFirstDay
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const monthLabel = `${currentDate.toLocaleString("es-ES", { month: "long" })} ${year}`
@@ -422,14 +536,342 @@ export function JournalApp({ onBack }: Props) {
     ? ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"]
     : ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"]
 
-  // ── Streak calculation ─────────────────────────────────────────────────────
   const streak = calculateStreak(entries, myUid)
   const todayStatus = getTodayStatus(entries, myUid)
 
-  // ── Read view ──────────────────────────────────────────────────────────────
+  // Feature 4: "On this day" — find entry from last year same month+day
+  const todayStr = toLocalDateStr(new Date())
+  const todayMMDD = todayStr.slice(5) // MM-DD
+  const onThisDayEntry = lastYearEntries.find(e => e.date.slice(5) === todayMMDD && e.created_by === myUid) ?? null
+
+  // Feature 2: unread count
+  const unreadCount = letters.filter(l => !l.is_read && l.from_user_id !== myUid).length
+
+  // ── STATS view ─────────────────────────────────────────────────────────────
+  if (view === "stats") {
+    const myEntries = entries.filter(e => e.created_by === myUid)
+    const partnerEntries = entries.filter(e => e.created_by !== myUid)
+
+    // Mood counts for my entries
+    const moodCounts: Record<string, number> = {}
+    for (const m of MOODS) moodCounts[m.id] = 0
+    for (const e of myEntries) {
+      const mid = MOOD_EMOJI_TO_ID[e.mood ?? ""] ?? e.mood ?? ""
+      if (moodCounts[mid] !== undefined) moodCounts[mid]++
+    }
+    const maxMoodCount = Math.max(...Object.values(moodCounts), 1)
+
+    // Max streak
+    const maxStreak = calculateMaxStreak(entries, myUid)
+
+    // Most active month — from all loaded entries
+    const monthCounts: Record<string, number> = {}
+    for (const e of entries) {
+      const m = e.date.slice(0, 7)
+      monthCounts[m] = (monthCounts[m] ?? 0) + 1
+    }
+    const mostActiveMonth = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0]
+    const mostActiveMonthLabel = mostActiveMonth
+      ? (() => { const d = new Date(mostActiveMonth[0] + "-01T12:00:00"); return `${ES_MONTHS[d.getMonth()].charAt(0).toUpperCase() + ES_MONTHS[d.getMonth()].slice(1)} ${d.getFullYear()}` })()
+      : "—"
+
+    // Favorite weekday
+    const dowCounts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+    for (const e of myEntries) {
+      const d = new Date(e.date + "T12:00:00").getDay()
+      dowCounts[d]++
+    }
+    const favDow = Number(Object.entries(dowCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 0)
+    const favDowLabel = ES_DAYS[favDow].charAt(0).toUpperCase() + ES_DAYS[favDow].slice(1)
+
+    const statCard = (emoji: string, label: string, value: string) => (
+      <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+        <span style={{ fontSize: "1.25rem" }}>{emoji}</span>
+        <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", fontWeight: 600 }}>{label}</span>
+        <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "var(--primary)" }}>{value}</span>
+      </div>
+    )
+
+    return (
+      <>
+        <div className="app-content-header">
+          <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
+          <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><BarChart2 size={14} /> Estadísticas</span>
+        </div>
+        <div className="app-content-body">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.625rem", marginBottom: "1rem" }}>
+            {statCard("🔥", "Racha máxima", `${maxStreak} día${maxStreak !== 1 ? "s" : ""}`)}
+            {statCard("📝", "Mis entradas", `${myEntries.length}`)}
+            {statCard("💑", "Entradas pareja", `${partnerEntries.length}`)}
+            {statCard("📅", "Mes más activo", mostActiveMonthLabel)}
+            {statCard("⭐", "Día favorito", favDowLabel)}
+            {statCard("📖", "Total juntos", `${entries.length}`)}
+          </div>
+
+          <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem" }}>
+            <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.9375rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.75rem" }}>Mis estados de ánimo</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+              {MOODS.map(m => {
+                const count = moodCounts[m.id] ?? 0
+                const pct = maxMoodCount > 0 ? (count / maxMoodCount) * 100 : 0
+                return (
+                  <div key={m.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <m.Icon size={16} style={{ color: m.accentBorder, flexShrink: 0 }} />
+                    <span style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--foreground-light)", width: 72, flexShrink: 0 }}>{m.label}</span>
+                    <div style={{ flex: 1, height: 14, background: "var(--muted)", borderRadius: "999px", overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: m.accentBorder, borderRadius: "999px", transition: "width 0.5s ease" }} />
+                    </div>
+                    <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", width: 20, textAlign: "right", flexShrink: 0 }}>{count}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // ── TIMELINE view ──────────────────────────────────────────────────────────
+  if (view === "timeline") {
+    const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date))
+    return (
+      <>
+        <style>{`
+          @keyframes recordingPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        `}</style>
+        <div className="app-content-header">
+          <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
+          <span>📜 Timeline</span>
+        </div>
+        <div className="app-content-body">
+          {sorted.length === 0 && (
+            <div style={{ textAlign: "center", padding: "2rem 0", color: "var(--foreground-muted)" }}>
+              <p style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📖</p>
+              <p style={{ fontSize: "0.875rem" }}>Aún no hay entradas este mes</p>
+            </div>
+          )}
+          <div style={{ position: "relative", paddingLeft: "1.5rem" }}>
+            {/* Vertical line */}
+            {sorted.length > 0 && (
+              <div style={{ position: "absolute", left: "0.4375rem", top: "1rem", bottom: "1rem", width: 2, background: "linear-gradient(to bottom, var(--primary), var(--secondary))", borderRadius: 1 }} />
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {sorted.map((entry, idx) => {
+                const isMe = entry.created_by === myUid
+                const mood = getMoodById(entry.mood)
+                const firstPhoto = entry.photos?.[0] ?? null
+                return (
+                  <div key={entry.id} style={{ position: "relative" }}>
+                    {/* Dot on the line */}
+                    <div style={{ position: "absolute", left: -20, top: "1rem", width: 10, height: 10, borderRadius: "50%", background: isMe ? "var(--primary)" : "var(--secondary)", border: "2px solid white", boxShadow: "0 0 0 2px " + (isMe ? "var(--primary)" : "var(--secondary)"), zIndex: 1 }} />
+                    <button
+                      onClick={() => {
+                        setSelectedDate(entry.date)
+                        setSelectedEntry(entry)
+                        setShowPartnerEntry(!isMe)
+                        if (!isMe) {
+                          const myE = getMyEntry(entry.date)
+                          if (myE) { setSelectedEntry(myE); setShowPartnerEntry(true) }
+                        }
+                        setView("read")
+                      }}
+                      style={{ width: "100%", textAlign: "left", background: "white", border: `1.5px solid ${isMe ? "var(--primary-light)" : "var(--secondary-light)"}`, borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", boxShadow: "var(--shadow-sm)", display: "flex", gap: "0.75rem", alignItems: "flex-start" }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {/* Date + author badge */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.25rem", flexWrap: "wrap" }}>
+                          <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: isMe ? "var(--primary)" : "var(--secondary)" }}>{formatDateEs(entry.date)}</span>
+                          <span style={{ fontSize: "0.5625rem", fontWeight: 700, padding: "0.125rem 0.375rem", borderRadius: "999px", background: isMe ? "var(--primary-lighter)" : "#fce7f3", color: isMe ? "var(--primary)" : "var(--secondary)" }}>
+                            {isMe ? "Tú" : "Pareja"}
+                          </span>
+                          {entry.audio_url && <span style={{ fontSize: "0.6875rem" }}>🎙️</span>}
+                        </div>
+                        {/* Mood pill */}
+                        {mood && (
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.125rem 0.5rem", borderRadius: "999px", background: mood.accent, border: `1px solid ${mood.accentBorder}`, marginBottom: "0.375rem" }}>
+                            <mood.Icon size={11} style={{ color: mood.accentBorder }} />
+                            <span style={{ fontSize: "0.6rem", fontWeight: 700, color: mood.accentText }}>{mood.label}</span>
+                          </div>
+                        )}
+                        {/* Preview */}
+                        <p style={{ fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.55, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
+                          {entry.content}
+                        </p>
+                      </div>
+                      {/* Photo thumbnail */}
+                      {firstPhoto && (
+                        <img src={firstPhoto} alt="" style={{ width: 56, height: 56, borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
+                      )}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // ── LETTER READ view ───────────────────────────────────────────────────────
+  if (view === "letter-read" && selectedLetter) {
+    const isFromMe = selectedLetter.from_user_id === myUid
+    return (
+      <>
+        <div className="app-content-header">
+          <button className="back-btn-phone" onClick={() => setView("letters")}>‹</button>
+          <span>💌 Carta</span>
+          {isFromMe && (
+            <button onClick={() => deleteLetter(selectedLetter.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: "0.25rem" }}>
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
+        <div className="app-content-body">
+          <div style={{ background: "linear-gradient(135deg, #fffbf0 0%, #fff8e8 100%)", border: "1.5px solid #f5e6c8", borderRadius: "var(--radius-lg)", padding: "1.25rem", boxShadow: "0 4px 16px rgba(245,158,11,0.12)" }}>
+            {/* Header */}
+            <div style={{ borderBottom: "1px solid #f5e6c8", paddingBottom: "0.75rem", marginBottom: "0.875rem" }}>
+              {selectedLetter.subject && (
+                <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "#92400e", marginBottom: "0.25rem" }}>{selectedLetter.subject}</p>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "#a16207", fontWeight: 600 }}>
+                  {isFromMe ? "✍️ De ti para tu pareja" : "💌 De tu pareja para ti"}
+                </span>
+                <span style={{ fontSize: "0.6875rem", color: "#92400e" }}>
+                  {new Date(selectedLetter.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                </span>
+              </div>
+            </div>
+            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1.0625rem", lineHeight: 1.75, color: "#3d2000", whiteSpace: "pre-wrap" }}>
+              {selectedLetter.content}
+            </p>
+            <div style={{ marginTop: "1rem", textAlign: "right" }}>
+              <span style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "#92400e" }}>Con cariño, {isFromMe ? "tú 💜" : "tu pareja 💕"}</span>
+            </div>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // ── LETTERS COMPOSE view ───────────────────────────────────────────────────
+  if (view === "letters-compose") {
+    return (
+      <>
+        <div className="app-content-header">
+          <button className="back-btn-phone" onClick={() => setView("letters")}>‹</button>
+          <span>✏️ Escribir carta</span>
+        </div>
+        <div className="app-content-body">
+          <div style={{ background: "linear-gradient(135deg, #fffbf0 0%, #fff8e8 100%)", border: "1.5px solid #f5e6c8", borderRadius: "var(--radius-lg)", padding: "1rem", marginBottom: "1rem" }}>
+            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "#92400e", marginBottom: "0.625rem" }}>A mi amor...</p>
+            <input
+              className="input"
+              placeholder="Asunto (opcional)"
+              value={letterSubject}
+              onChange={e => setLetterSubject(e.target.value)}
+              style={{ marginBottom: "0.625rem", background: "rgba(255,255,255,0.7)", borderColor: "#f5e6c8", fontFamily: "'Quicksand', sans-serif" }}
+            />
+            <textarea
+              className="textarea"
+              rows={8}
+              placeholder="Escribe tu carta aquí... sé libre de expresar lo que sientes 💜"
+              value={letterContent}
+              onChange={e => setLetterContent(e.target.value)}
+              style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", lineHeight: 1.75, background: "rgba(255,255,255,0.7)", borderColor: "#f5e6c8", color: "#3d2000" }}
+            />
+          </div>
+          <button className="btn btn-primary" onClick={sendLetter} disabled={sendingLetter || !letterContent.trim()}>
+            {sendingLetter ? "Enviando..." : "💌 Enviar carta"}
+          </button>
+        </div>
+      </>
+    )
+  }
+
+  // ── LETTERS view ───────────────────────────────────────────────────────────
+  if (view === "letters") {
+    const received = letters.filter(l => l.from_user_id !== myUid)
+    const sent = letters.filter(l => l.from_user_id === myUid)
+    return (
+      <>
+        <div className="app-content-header">
+          <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
+          <span>💌 Cartas</span>
+          <button
+            onClick={() => setView("letters-compose")}
+            style={{ fontSize: "0.6875rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none", background: "var(--secondary)", color: "white", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}
+          >
+            ✏️ Escribir
+          </button>
+        </div>
+        <div className="app-content-body">
+          {letters.length === 0 && (
+            <div style={{ textAlign: "center", padding: "2rem 0" }}>
+              <p style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>💌</p>
+              <p style={{ color: "var(--foreground-muted)", fontSize: "0.875rem" }}>Aún no hay cartas</p>
+              <button className="btn btn-primary" style={{ marginTop: "1rem" }} onClick={() => setView("letters-compose")}>
+                ✏️ Escribir primera carta
+              </button>
+            </div>
+          )}
+
+          {received.length > 0 && (
+            <div style={{ marginBottom: "1rem" }}>
+              <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.5rem" }}>RECIBIDAS</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {received.map(l => (
+                  <button key={l.id} onClick={() => openLetter(l)}
+                    style={{ width: "100%", textAlign: "left", background: l.is_read ? "white" : "linear-gradient(135deg, #fff0fb, #fffbf0)", border: `1.5px solid ${l.is_read ? "var(--border)" : "#f5e6c8"}`, borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
+                  >
+                    <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>{l.is_read ? "📩" : "💌"}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.125rem" }}>
+                        {!l.is_read && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ec4899", flexShrink: 0, display: "inline-block" }} />}
+                        <span style={{ fontSize: "0.8125rem", fontWeight: l.is_read ? 600 : 700, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {l.subject ?? "Sin asunto"}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{l.content}</p>
+                      <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>{new Date(l.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {sent.length > 0 && (
+            <div>
+              <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.5rem" }}>ENVIADAS</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {sent.map(l => (
+                  <button key={l.id} onClick={() => openLetter(l)}
+                    style={{ width: "100%", textAlign: "left", background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
+                  >
+                    <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>📤</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground-light)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
+                        {l.subject ?? "Sin asunto"}
+                      </span>
+                      <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{l.content}</p>
+                      <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>{l.is_read ? "✅ Leída" : "⏳ Sin leer"} · {new Date(l.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </>
+    )
+  }
+
+  // ── READ view ──────────────────────────────────────────────────────────────
   if (view === "read" && selectedEntry && selectedDate) {
     const partnerEntry = getPartnerEntry(selectedDate)
-    // If private journal mode and I haven't written yet: don't show partner entry
     const partnerVisible = partnerEntry && !(privateJournal && !selectedEntry)
     const displayEntry = showPartnerEntry ? partnerEntry : selectedEntry
     const displayMood = displayEntry ? getMoodById(displayEntry.mood) : null
@@ -443,45 +885,51 @@ export function JournalApp({ onBack }: Props) {
         <div className="app-content-body">
           {partnerVisible && (
             <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.75rem" }}>
-              {[
-                { label: "Tu entrada", isPartner: false },
-                { label: "Pareja", isPartner: true },
-              ].map(({ label, isPartner }) => (
-                <button
-                  key={label}
-                  onClick={() => setShowPartnerEntry(isPartner)}
-                  style={{
-                    flex: 1, padding: "0.375rem 0.5rem", borderRadius: "999px", border: "none",
-                    cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600,
-                    background: showPartnerEntry === isPartner ? "var(--primary)" : "var(--muted)",
-                    color: showPartnerEntry === isPartner ? "white" : "var(--foreground-light)",
-                  }}
-                >
-                  {label}
-                </button>
+              {[{ label: "Tu entrada", isPartner: false }, { label: "Pareja", isPartner: true }].map(({ label, isPartner }) => (
+                <button key={label} onClick={() => setShowPartnerEntry(isPartner)}
+                  style={{ flex: 1, padding: "0.375rem 0.5rem", borderRadius: "999px", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, background: showPartnerEntry === isPartner ? "var(--primary)" : "var(--muted)", color: showPartnerEntry === isPartner ? "white" : "var(--foreground-light)" }}
+                >{label}</button>
               ))}
             </div>
           )}
 
+          {/* D2: Diary page aesthetic — date heading */}
+          <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.0625rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.375rem" }}>
+            {formatDateShortEs(selectedDate)}
+          </p>
+
+          {/* D2: Mood as large pill */}
           {displayMood && (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-              <span style={{ color: "var(--primary)" }}><displayMood.Icon size={24} /></span>
-              <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground-light)" }}>{displayMood.label}</span>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", padding: "0.375rem 0.875rem", borderRadius: "999px", background: displayMood.accent, border: `1.5px solid ${displayMood.accentBorder}`, marginBottom: "0.75rem" }}>
+              <displayMood.Icon size={18} style={{ color: displayMood.accentBorder }} />
+              <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: displayMood.accentText }}>{displayMood.label}</span>
               {showPartnerEntry && (
-                <span style={{ marginLeft: "auto", fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", background: "var(--muted)", padding: "0.125rem 0.5rem", borderRadius: "999px" }}>
-                  SOLO LECTURA
-                </span>
+                <span style={{ marginLeft: "0.25rem", fontSize: "0.5625rem", fontWeight: 700, color: "var(--foreground-muted)", background: "rgba(0,0,0,0.07)", padding: "0.0625rem 0.375rem", borderRadius: "999px" }}>PAREJA</span>
               )}
             </div>
           )}
 
-          <p style={{ fontSize: "0.875rem", color: "var(--foreground)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
-            {displayEntry?.content ?? ""}
-          </p>
+          {/* D2: Ruled lines background on content area */}
+          <div style={{
+            background: "repeating-linear-gradient(transparent, transparent 27px, #e5e7eb 27px, #e5e7eb 28px)",
+            borderRadius: "var(--radius-md)", padding: "0.75rem 0.75rem 0.75rem 1rem",
+            border: "1px solid var(--border)", marginBottom: "0.75rem",
+          }}>
+            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1.0625rem", color: "var(--foreground)", lineHeight: "28px", whiteSpace: "pre-wrap" }}>
+              {displayEntry?.content ?? ""}
+            </p>
+          </div>
 
-          {/* Feature 11: show photos in read view */}
+          {/* Audio player */}
+          {displayEntry?.audio_url && (
+            <div style={{ marginBottom: "0.75rem", background: "var(--primary-lighter)", border: "1px solid var(--primary-light)", borderRadius: "var(--radius-md)", padding: "0.625rem 0.875rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)" }}>🎙️ Nota de voz</span>
+              <audio controls src={displayEntry.audio_url} style={{ width: "100%", height: 36, borderRadius: "999px", accentColor: "var(--primary)" }} />
+            </div>
+          )}
+
           {displayEntry?.photos && displayEntry.photos.length > 0 && (
-            <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", marginTop: "0.75rem" }}>
+            <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", marginBottom: "0.75rem" }}>
               {displayEntry.photos.map((url, i) => (
                 <img key={i} src={url} alt="" style={{ height: 120, width: "auto", borderRadius: "10px", flexShrink: 0, objectFit: "cover" }} />
               ))}
@@ -489,34 +937,35 @@ export function JournalApp({ onBack }: Props) {
           )}
 
           {!showPartnerEntry && (
-            <button className="btn btn-outline" style={{ marginTop: "1rem", fontSize: "0.8125rem", display: "inline-flex", alignItems: "center", gap: "0.375rem" }} onClick={() => startEdit(selectedEntry)}>
+            <button className="btn btn-outline" style={{ fontSize: "0.8125rem", display: "inline-flex", alignItems: "center", gap: "0.375rem" }} onClick={() => startEdit(selectedEntry)}>
               <FileText size={14} /> Editar entrada
             </button>
           )}
 
-          {/* Partner entry below (if not toggled) */}
+          {/* Partner section */}
           {partnerVisible && !showPartnerEntry && (
             <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
                 <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground-muted)" }}>Entrada de pareja</span>
-                <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", background: "var(--muted)", padding: "0.125rem 0.5rem", borderRadius: "999px" }}>
-                  SOLO LECTURA
-                </span>
+                <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", background: "var(--muted)", padding: "0.125rem 0.5rem", borderRadius: "999px" }}>SOLO LECTURA</span>
               </div>
               {(() => {
                 const pm = getMoodById(partnerEntry?.mood)
                 return (
                   <>
                     {pm && (
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.375rem" }}>
-                        <span style={{ color: "var(--primary)" }}><pm.Icon size={20} /></span>
-                        <span style={{ fontSize: "0.75rem", color: "var(--foreground-light)" }}>{pm.label}</span>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.25rem 0.625rem", borderRadius: "999px", background: pm.accent, border: `1px solid ${pm.accentBorder}`, marginBottom: "0.5rem" }}>
+                        <pm.Icon size={14} style={{ color: pm.accentBorder }} />
+                        <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: pm.accentText }}>{pm.label}</span>
                       </div>
                     )}
-                    <p style={{ fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
-                      {partnerEntry?.content}
-                    </p>
-                    {/* Feature 11: partner photos in read view */}
+                    <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "var(--foreground)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{partnerEntry?.content}</p>
+                    {partnerEntry?.audio_url && (
+                      <div style={{ marginTop: "0.5rem", background: "#fce7f3", border: "1px solid #fbcfe8", borderRadius: "var(--radius-md)", padding: "0.5rem 0.75rem" }}>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--secondary)", display: "block", marginBottom: "0.25rem" }}>🎙️ Nota de voz (pareja)</span>
+                        <audio controls src={partnerEntry.audio_url} style={{ width: "100%", height: 36, accentColor: "var(--secondary)" }} />
+                      </div>
+                    )}
                     {partnerEntry?.photos && partnerEntry.photos.length > 0 && (
                       <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", marginTop: "0.75rem" }}>
                         {partnerEntry.photos.map((url, i) => (
@@ -534,34 +983,30 @@ export function JournalApp({ onBack }: Props) {
     )
   }
 
-  // ── Write view ─────────────────────────────────────────────────────────────
+  // ── WRITE view ─────────────────────────────────────────────────────────────
   if (view === "write") {
+    const fmtSecs = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
+
     return (
       <>
+        <style>{`
+          @keyframes recordingPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+          @keyframes waveBar { 0%,100%{height:4px} 50%{height:18px} }
+        `}</style>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => { setIsEditing(false); setView(selectedEntry ? "read" : "calendar") }}>‹</button>
           <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>{isEditing ? <><FileText size={14} /> Editando</> : <><PenLine size={14} /> Nueva entrada</>}</span>
         </div>
         <div className="app-content-body">
           <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.375rem" }}>{selectedDate}</p>
+
+          {/* Mood selector */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem", marginBottom: "0.625rem" }}>
             {MOODS.map((m) => {
               const isSelected = writeMood === m.id
               return (
-                <button
-                  key={m.id}
-                  onClick={() => setWriteMood(m.id)}
-                  style={{
-                    padding: "0.75rem 0.5rem", borderRadius: "var(--radius-md)",
-                    border: isSelected ? `2px solid ${m.accentBorder}` : "2px solid var(--border)",
-                    cursor: "pointer", fontFamily: "inherit",
-                    background: isSelected ? m.accent : "white",
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem",
-                    boxShadow: isSelected ? `0 2px 8px ${m.accentBorder}33` : "none",
-                    transform: isSelected ? "scale(1.03)" : "scale(1)",
-                    transition: "all 0.15s ease",
-                    color: isSelected ? m.accentText : "var(--foreground-light)",
-                  }}
+                <button key={m.id} onClick={() => setWriteMood(m.id)}
+                  style={{ padding: "0.75rem 0.5rem", borderRadius: "var(--radius-md)", border: isSelected ? `2px solid ${m.accentBorder}` : "2px solid var(--border)", cursor: "pointer", fontFamily: "inherit", background: isSelected ? m.accent : "white", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem", boxShadow: isSelected ? `0 2px 8px ${m.accentBorder}33` : "none", transform: isSelected ? "scale(1.03)" : "scale(1)", transition: "all 0.15s ease", color: isSelected ? m.accentText : "var(--foreground-light)" }}
                 >
                   <m.Icon size={28} />
                   <span style={{ fontSize: "0.6875rem", fontWeight: 700 }}>{m.label}</span>
@@ -570,14 +1015,40 @@ export function JournalApp({ onBack }: Props) {
             })}
           </div>
 
+          {/* D3: Writing prompts */}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "0.375rem" }}>
+            <button
+              onClick={() => {
+                const prompt = PROMPTS[Math.floor(Math.random() * PROMPTS.length)]
+                setWriteContent(prev => prev ? prev + "\n\n" + prompt : prompt)
+              }}
+              style={{ fontSize: "0.6875rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "1px solid var(--border)", background: "var(--muted)", cursor: "pointer", fontFamily: "inherit", color: "var(--foreground-muted)", fontWeight: 600 }}
+            >
+              💡 Inspiración
+            </button>
+          </div>
+
+          {/* Textarea */}
+          <textarea
+            className="textarea"
+            rows={6}
+            placeholder="¿Cómo fue vuestro día hoy?..."
+            value={writeContent}
+            onChange={(e) => {
+              setWriteContent(e.target.value)
+              e.target.style.height = "auto"
+              e.target.style.height = `${e.target.scrollHeight}px`
+            }}
+            autoFocus
+            style={{ minHeight: "120px", fontFamily: "'Caveat', cursive", fontSize: "1rem", lineHeight: 1.7, marginBottom: "0.625rem" }}
+          />
+
           {/* Feature 11: photo URL input */}
-          <div style={{ marginTop: "0.625rem" }}>
+          <div style={{ marginBottom: "0.625rem" }}>
             <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Camera size={14} /> Fotos (URL)</label>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <input className="input" placeholder="https://..." value={photoInput} onChange={(e) => setPhotoInput(e.target.value)} style={{ flex: 1 }} />
-              <button className="btn btn-outline" style={{ flexShrink: 0, padding: "0 0.75rem" }} onClick={() => {
-                if (photoInput.trim()) { setPhotoUrls(prev => [...prev, photoInput.trim()]); setPhotoInput("") }
-              }}>+</button>
+              <button className="btn btn-outline" style={{ flexShrink: 0, padding: "0 0.75rem" }} onClick={() => { if (photoInput.trim()) { setPhotoUrls(prev => [...prev, photoInput.trim()]); setPhotoInput("") } }}>+</button>
             </div>
             {photoUrls.length > 0 && (
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
@@ -592,20 +1063,62 @@ export function JournalApp({ onBack }: Props) {
             )}
           </div>
 
-          <textarea
-            className="textarea"
-            rows={6}
-            placeholder="¿Cómo fue vuestro día hoy?..."
-            value={writeContent}
-            onChange={(e) => {
-              setWriteContent(e.target.value)
-              e.target.style.height = "auto"
-              e.target.style.height = `${e.target.scrollHeight}px`
-            }}
-            autoFocus
-            style={{ minHeight: "120px", marginTop: "0.625rem" }}
-          />
-          <button className="btn btn-primary" style={{ marginTop: "0.5rem" }} onClick={saveEntry} disabled={saving || !writeContent.trim()}>
+          {/* Feature 5: Voice recording */}
+          <div style={{ marginBottom: "0.75rem" }}>
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Mic size={14} /> Nota de voz</label>
+
+            {/* Existing uploaded audio */}
+            {audioUrl && (
+              <div style={{ background: "var(--primary-lighter)", border: "1px solid var(--primary-light)", borderRadius: "var(--radius-md)", padding: "0.5rem 0.75rem", display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.375rem" }}>
+                <audio controls src={audioUrl} style={{ flex: 1, height: 34, accentColor: "var(--primary)" }} />
+                <button onClick={() => setAudioUrl(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: "0.25rem" }}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            )}
+
+            {!audioUrl && !voice.isRecording && !voice.audioBlob && (
+              <button onClick={voice.startRecording}
+                style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 0.875rem", borderRadius: "999px", border: "1.5px solid var(--primary-light)", background: "var(--primary-lighter)", cursor: "pointer", fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 600, color: "var(--primary)" }}
+              >
+                <Mic size={14} /> 🎙️ Grabar
+              </button>
+            )}
+
+            {voice.isRecording && (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0.875rem", borderRadius: "var(--radius-md)", background: "#fff0f0", border: "1.5px solid #fca5a5" }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", animation: "recordingPulse 1s infinite", flexShrink: 0 }} />
+                <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#ef4444" }}>Grabando... {fmtSecs(voice.recordingSeconds)}</span>
+                <button onClick={voice.stopRecording}
+                  style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none", background: "#ef4444", color: "white", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600 }}
+                >
+                  <MicOff size={12} /> Detener
+                </button>
+              </div>
+            )}
+
+            {voice.audioBlob && !voice.isRecording && !audioUrl && (
+              <div style={{ padding: "0.625rem 0.875rem", borderRadius: "var(--radius-md)", background: "var(--primary-lighter)", border: "1.5px solid var(--primary-light)", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                {/* Waveform bars */}
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 20, flexShrink: 0 }}>
+                  {[0, 80, 160, 240, 320].map((delay, i) => (
+                    <div key={i} style={{ width: 3, background: "var(--primary)", borderRadius: 2, animation: `waveBar 0.8s ease-in-out ${delay}ms infinite` }} />
+                  ))}
+                </div>
+                <span style={{ fontSize: "0.75rem", color: "var(--primary)", fontWeight: 600 }}>{fmtSecs(voice.audioDuration)}</span>
+                <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
+                  <button onClick={voice.discard} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.25rem 0.5rem", borderRadius: "999px", border: "1px solid #fca5a5", background: "white", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", color: "#ef4444" }}>
+                    <Trash2 size={11} /> Descartar
+                  </button>
+                  <button onClick={uploadVoice} disabled={voice.uploading} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.25rem 0.5rem", borderRadius: "999px", border: "none", background: "var(--primary)", color: "white", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600 }}>
+                    <Upload size={11} /> {voice.uploading ? "Subiendo..." : "Subir"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button className="btn btn-primary" style={{ marginTop: "0.25rem" }} onClick={saveEntry} disabled={saving || !writeContent.trim()}>
             {saving ? "Guardando..." : isEditing ? "Actualizar entrada" : "Guardar Recuerdo"}
           </button>
         </div>
@@ -613,62 +1126,73 @@ export function JournalApp({ onBack }: Props) {
     )
   }
 
-  // ── Calendar view ──────────────────────────────────────────────────────────
+  // ── CALENDAR view ──────────────────────────────────────────────────────────
   return (
     <>
+      <style>{`
+        @keyframes recordingPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+      `}</style>
       <div className="app-content-header">
         <button className="back-btn-phone" onClick={onBack}>‹</button>
         <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Heart size={14} /> Nuestro Diario</span>
-        {/* Feature 12: partner view toggle - only show if not privateJournal */}
-        {!privateJournal && (
-          <button
-            onClick={() => setViewingPartner(v => !v)}
-            style={{
-              fontSize: "0.6875rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none",
-              background: viewingPartner ? "var(--secondary)" : "var(--muted)",
-              color: viewingPartner ? "white" : "var(--foreground-muted)",
-              cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
-              display: "inline-flex", alignItems: "center", gap: "4px",
-            }}
-          >
-            {viewingPartner ? <><Heart size={12} /> Pareja</> : <><User size={12} /> Pareja</>}
+        <div style={{ display: "flex", gap: "0.375rem", alignItems: "center" }}>
+          {/* Feature 1: Timeline toggle */}
+          <button onClick={() => setView("timeline")}
+            style={{ fontSize: "0.6rem", padding: "0.25rem 0.5rem", borderRadius: "999px", border: "none", background: "var(--muted)", color: "var(--foreground-muted)", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
+            📜
           </button>
-        )}
+          {/* Feature 3: Stats toggle */}
+          <button onClick={() => setView("stats")}
+            style={{ fontSize: "0.6rem", padding: "0.25rem 0.5rem", borderRadius: "999px", border: "none", background: "var(--muted)", color: "var(--foreground-muted)", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
+            📊
+          </button>
+          {/* Feature 2: Letters */}
+          <button
+            onClick={() => { loadLetters(); setView("letters") }}
+            style={{ fontSize: "0.6rem", padding: "0.25rem 0.5rem", borderRadius: "999px", border: "none", background: unreadCount > 0 ? "var(--secondary)" : "var(--muted)", color: unreadCount > 0 ? "white" : "var(--foreground-muted)", cursor: "pointer", fontFamily: "inherit", fontWeight: 600, position: "relative" }}>
+            💌{unreadCount > 0 ? ` ${unreadCount}` : ""}
+          </button>
+          {/* Feature 12: partner view toggle */}
+          {!privateJournal && (
+            <button onClick={() => setViewingPartner(v => !v)}
+              style={{ fontSize: "0.6875rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none", background: viewingPartner ? "var(--secondary)" : "var(--muted)", color: viewingPartner ? "white" : "var(--foreground-muted)", cursor: "pointer", fontFamily: "inherit", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }}>
+              {viewingPartner ? <><Heart size={12} /> Pareja</> : <><User size={12} /> Pareja</>}
+            </button>
+          )}
+        </div>
       </div>
+
       <div className="app-content-body" style={{ gap: "0.5rem" }}>
 
-        {/* ── Streak banner ─────────────────────────────────────────────────── */}
+        {/* Feature 4: "On this day last year" banner */}
+        {!dismissedOnThisDay && onThisDayEntry && !viewingPartner && !searchQuery.trim() && (
+          <div
+            style={{ background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)", border: "1.5px solid #f59e0b", borderRadius: "var(--radius-md)", padding: "0.625rem 0.875rem", display: "flex", alignItems: "center", gap: "0.625rem", cursor: "pointer", marginBottom: "0.25rem" }}
+          >
+            <button style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}
+              onClick={() => { setSelectedDate(onThisDayEntry.date); setSelectedEntry(onThisDayEntry); setShowPartnerEntry(false); setView("read") }}
+            >
+              <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#92400e", display: "block", marginBottom: "0.125rem" }}>
+                📅 Hace un año...
+              </span>
+              <span style={{ fontSize: "0.75rem", color: "#78350f", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                {onThisDayEntry.content.slice(0, 80)}{onThisDayEntry.content.length > 80 ? "..." : ""}
+              </span>
+            </button>
+            <button onClick={() => setDismissedOnThisDay(true)} style={{ background: "none", border: "none", cursor: "pointer", color: "#92400e", fontSize: "1rem", padding: "0.125rem", flexShrink: 0 }}>×</button>
+          </div>
+        )}
+
+        {/* Streak banner */}
         {!viewingPartner && !searchQuery.trim() && (
           <div style={{ marginBottom: "0.25rem" }}>
-            {/* Main streak pill */}
-            <div style={{
-              background: streak > 0
-                ? "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)"
-                : "var(--muted)",
-              borderRadius: "999px",
-              padding: "0.5rem 1.125rem",
-              textAlign: "center",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem",
-              boxShadow: streak > 0 ? "0 3px 12px rgba(139,92,246,0.25)" : "none",
-            }}>
-              <span style={{
-                fontFamily: "'Fredoka', sans-serif",
-                fontSize: "1rem", fontWeight: 700,
-                color: streak > 0 ? "white" : "var(--foreground-muted)",
-              }}>
+            <div style={{ background: streak > 0 ? "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)" : "var(--muted)", borderRadius: "999px", padding: "0.5rem 1.125rem", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem", boxShadow: streak > 0 ? "0 3px 12px rgba(139,92,246,0.25)" : "none" }}>
+              <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 700, color: streak > 0 ? "white" : "var(--foreground-muted)" }}>
                 {streak > 0 ? <><Flame size={16} style={{ flexShrink: 0 }} /> {streak} día{streak === 1 ? "" : "s"} de racha juntos</> : <><Mail size={16} style={{ flexShrink: 0 }} /> Escribe hoy para empezar la racha</>}
               </span>
             </div>
-
-            {/* Today status */}
             <div style={{ textAlign: "center", marginTop: "0.375rem" }}>
-              <span style={{
-                fontSize: "0.75rem", fontWeight: 600,
-                color: todayStatus === "both" ? "#065f46" : todayStatus === "onlyme" ? "#92400e" : "var(--foreground-muted)",
-                background: todayStatus === "both" ? "#d1fae5" : todayStatus === "onlyme" ? "#fef3c7" : "transparent",
-                padding: todayStatus !== "none" ? "0.125rem 0.625rem" : undefined,
-                borderRadius: "999px",
-              }}>
+              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: todayStatus === "both" ? "#065f46" : todayStatus === "onlyme" ? "#92400e" : "var(--foreground-muted)", background: todayStatus === "both" ? "#d1fae5" : todayStatus === "onlyme" ? "#fef3c7" : "transparent", padding: todayStatus !== "none" ? "0.125rem 0.625rem" : undefined, borderRadius: "999px" }}>
                 {todayStatus === "both" && <><CheckCircle2 size={12} style={{ display: "inline", verticalAlign: "middle" }} /> Los dos escribieron hoy</>}
                 {todayStatus === "onlyme" && <><FileText size={12} style={{ display: "inline", verticalAlign: "middle" }} /> Solo tú escribiste hoy</>}
                 {todayStatus === "none" && <><Mail size={12} style={{ display: "inline", verticalAlign: "middle" }} /> Ninguno ha escrito hoy</>}
@@ -677,23 +1201,17 @@ export function JournalApp({ onBack }: Props) {
           </div>
         )}
 
-        {/* Feature 12: partner view */}
+        {/* Partner view */}
         {viewingPartner ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}><Heart size={12} /> Entradas de tu pareja</p>
-            {entries
-              .filter(e => e.created_by !== user?.uid)
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .map(e => (
-                <button key={e.id} onClick={() => { setSelectedDate(e.date); setViewingPartner(false) }}
-                  style={{ textAlign: "left", background: "linear-gradient(135deg, var(--primary-lighter), white)", border: "1px solid var(--primary-light)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
-                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>{e.date} <Heart size={10} /></div>
-                  <div style={{ fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                    {e.content}
-                  </div>
-                </button>
-              ))
-            }
+            {entries.filter(e => e.created_by !== user?.uid).sort((a, b) => b.date.localeCompare(a.date)).map(e => (
+              <button key={e.id} onClick={() => { setSelectedDate(e.date); setViewingPartner(false) }}
+                style={{ textAlign: "left", background: "linear-gradient(135deg, var(--primary-lighter), white)", border: "1px solid var(--primary-light)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>{e.date} <Heart size={10} /></div>
+                <div style={{ fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{e.content}</div>
+              </button>
+            ))}
             {entries.filter(e => e.created_by !== user?.uid).length === 0 && (
               <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
                 <div style={{ color: "var(--primary)", display: "flex", justifyContent: "center" }}><Heart size={32} /></div>
@@ -703,27 +1221,22 @@ export function JournalApp({ onBack }: Props) {
           </div>
         ) : (
           <>
-            {/* Feature 10: search bar */}
+            {/* Search bar */}
             <div style={{ position: "relative", marginBottom: "0.75rem" }}>
               <span style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--foreground-muted)" }}><SearchIcon size={14} /></span>
               <input className="input" type="search" placeholder="Buscar en el diario..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ paddingLeft: "2rem" }} />
             </div>
 
-            {/* Feature 10: search results vs calendar */}
+            {/* Search results vs calendar */}
             {searchQuery.trim() ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {entries
-                  .filter(e => e.content.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map(e => (
-                    <button key={e.id} onClick={() => { setSelectedDate(e.date); setSearchQuery("") }}
-                      style={{ textAlign: "left", background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
-                      <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem" }}>{e.date}</div>
-                      <div style={{ fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                        {e.content}
-                      </div>
-                    </button>
-                  ))
-                }
+                {entries.filter(e => e.content.toLowerCase().includes(searchQuery.toLowerCase())).map(e => (
+                  <button key={e.id} onClick={() => { setSelectedDate(e.date); setSearchQuery("") }}
+                    style={{ textAlign: "left", background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem" }}>{e.date}</div>
+                    <div style={{ fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{e.content}</div>
+                  </button>
+                ))}
                 {entries.filter(e => e.content.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
                   <p style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: "0.8125rem" }}>Sin resultados</p>
                 )}
@@ -732,9 +1245,7 @@ export function JournalApp({ onBack }: Props) {
               <>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <button className="back-btn-phone" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>‹</button>
-                  <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", textTransform: "capitalize" }}>
-                    {monthLabel}
-                  </span>
+                  <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", textTransform: "capitalize" }}>{monthLabel}</span>
                   <button className="back-btn-phone" style={{ transform: "rotate(180deg)" }} onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>‹</button>
                 </div>
 
@@ -755,37 +1266,20 @@ export function JournalApp({ onBack }: Props) {
                     const now = new Date()
                     const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
                     const isToday = dateStr === todayLocal
-                    const moodId = myEntry?.mood ?? ""
-                    const moodDotColor = myEntry
-                      ? (["happy","love"].includes(moodId) ? "var(--primary)" : ["sad"].includes(moodId) ? "#f87171" : "#94a3b8")
-                      : null
                     return (
                       <button
                         key={day}
                         onClick={() => openDay(dateStr)}
-                        style={{
-                          aspectRatio: "1", borderRadius: "10px",
-                          border: isToday ? "2px solid var(--primary)" : hasAny ? "1.5px solid var(--primary-light)" : "1px solid var(--border)",
-                          background: isToday
-                            ? "var(--primary-lighter)"
-                            : myEntry
-                            ? "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)"
-                            : partnerEntry
-                            ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)"
-                            : "white",
-                          cursor: "pointer",
-                          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                          fontSize: "0.6875rem",
-                          fontWeight: isToday ? 800 : hasAny ? 700 : 400,
-                          color: isToday ? "var(--primary)" : hasAny ? "var(--foreground)" : "var(--foreground-muted)",
-                          gap: "2px", padding: "3px 2px",
-                          boxShadow: isToday ? "0 2px 8px rgba(139,92,246,0.2)" : "none",
-                          transition: "transform 0.1s",
-                        }}
+                        style={{ aspectRatio: "1", borderRadius: "10px", border: isToday ? "2px solid var(--primary)" : hasAny ? "1.5px solid var(--primary-light)" : "1px solid var(--border)", background: isToday ? "var(--primary-lighter)" : myEntry ? "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)" : partnerEntry ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)" : "white", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontSize: "0.6875rem", fontWeight: isToday ? 800 : hasAny ? 700 : 400, color: isToday ? "var(--primary)" : hasAny ? "var(--foreground)" : "var(--foreground-muted)", gap: "2px", padding: "3px 2px", boxShadow: isToday ? "0 2px 8px rgba(139,92,246,0.2)" : "none", transition: "transform 0.1s" }}
                       >
                         <span style={{ lineHeight: 1 }}>{day}</span>
-                        {moodDotColor && <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: moodDotColor, flexShrink: 0 }} />}
-                        {!moodDotColor && partnerEntry && <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--secondary)", flexShrink: 0 }} />}
+                        {/* D1: Two dots — left purple (mine), right pink (partner) */}
+                        {(myEntry || partnerEntry) && (
+                          <div style={{ display: "flex", gap: "2px", alignItems: "center" }}>
+                            {myEntry && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--primary)", flexShrink: 0 }} />}
+                            {partnerEntry && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--secondary)", flexShrink: 0 }} />}
+                          </div>
+                        )}
                       </button>
                     )
                   })}

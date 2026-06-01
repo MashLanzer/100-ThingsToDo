@@ -71,7 +71,19 @@ export interface JournalEntry {
   content: string
   mood: string | null
   photos: string[]
+  audio_url: string | null
   created_by: string
+  created_at: string
+}
+
+export interface Letter {
+  id: string
+  couple_id: string
+  from_user_id: string
+  to_user_id: string
+  content: string
+  subject: string | null
+  is_read: boolean
   created_at: string
 }
 
