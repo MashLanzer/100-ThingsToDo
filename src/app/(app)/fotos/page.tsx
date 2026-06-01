@@ -1471,7 +1471,9 @@ export default function FotosPage() {
   const [filter, setFilter] = useState<FilterType>("all")
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("fotosView") as ViewMode) ?? "polaroid"
+      const stored = localStorage.getItem("fotosView") as ViewMode | null
+      // Never restore "albums" view — it's a management overlay, not a browsing mode
+      return (stored && stored !== "albums") ? stored : "polaroid"
     }
     return "polaroid"
   })
@@ -1919,9 +1921,18 @@ export default function FotosPage() {
         <div style={{ paddingBottom: "6rem" }}>
           {/* Header row */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-            <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", margin: 0 }}>
-              {albums.length} álbum{albums.length !== 1 ? "es" : ""}
-            </p>
+            <button
+              onClick={() => { setViewMode("polaroid"); localStorage.setItem("fotosView", "polaroid") }}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.375rem",
+                background: "var(--muted)", border: "none", borderRadius: "999px",
+                padding: "0.375rem 0.875rem", fontFamily: "inherit",
+                fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground-muted)",
+                cursor: "pointer",
+              }}
+            >
+              ← Ver fotos
+            </button>
             <button
               onClick={() => setShowAlbumForm((v) => !v)}
               style={{

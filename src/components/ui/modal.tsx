@@ -61,7 +61,7 @@ export function Modal({ open, onClose, title, children, variant = "sheet", foote
           maxWidth: isSheet ? 520 : 440,
           maxHeight: isSheet ? "92dvh" : "88dvh",
           display: "flex", flexDirection: "column",
-          background: "var(--bg)",
+          background: "white",
           borderRadius: isSheet ? "1.5rem 1.5rem 0 0" : "1.25rem",
           margin: isSheet ? 0 : "1rem",
           boxShadow: "0 -8px 50px rgba(0,0,0,0.28)",
@@ -112,7 +112,7 @@ export function Modal({ open, onClose, title, children, variant = "sheet", foote
         {footer && (
           <div style={{
             flexShrink: 0, padding: "0.875rem 1.25rem calc(0.875rem + env(safe-area-inset-bottom, 0px))",
-            borderTop: "1px solid var(--border)", background: "var(--surface)",
+            borderTop: "1px solid var(--border)", background: "white",
           }}>
             {footer}
           </div>
