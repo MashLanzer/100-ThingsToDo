@@ -178,11 +178,11 @@ function useVoiceRecorder() {
     } catch (err) {
       const name = err instanceof Error ? err.name : ""
       if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-        toast.error("Permiso denegado. Activa el micrófono en la configuración del navegador.", { duration: 5000 })
+        toast.error("Permiso de micrófono denegado. Ve a Ajustes del dispositivo → Apps → permisos de micrófono.", { duration: 6000 })
       } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
         toast.error("No se encontró micrófono en este dispositivo.")
       } else {
-        toast.error("No se pudo acceder al micrófono.")
+        toast.error("No se pudo acceder al micrófono. Asegúrate de usar HTTPS.")
       }
     }
   }, [])
