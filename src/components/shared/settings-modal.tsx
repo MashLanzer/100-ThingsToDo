@@ -159,7 +159,7 @@ export function SettingsModal() {
   const linkMutation = useLinkPartner()
   const unlinkMutation = useUnlinkPartner()
   const [loggingOut, setLoggingOut] = useState(false)
-  const { subscribe: subscribePush, subscribing: pushSubscribing, subscribed: pushSubscribed } = usePushNotifications()
+  const { subscribe: subscribePush, subscribing: pushSubscribing, isSubscribed: pushSubscribed } = usePushNotifications()
   const [code, setCode] = useState("")
   const [copied, setCopied] = useState(false)
   const [currentTheme, setCurrentTheme] = useState("purple")
