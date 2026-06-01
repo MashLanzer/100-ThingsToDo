@@ -2,11 +2,12 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import type { Task } from "@/types"
-import { Trash2, Check, GripVertical, Heart, Flame, Laugh, Star, Zap, AlertTriangle, Calendar, CheckCircle2, Sparkles, Edit2 } from "lucide-react"
+import { Trash2, Check, GripVertical, Heart, Flame, Laugh, Star, Zap, AlertTriangle, Calendar, CheckCircle2, Sparkles, Edit2, Bell, User, ChevronRight, ChevronDown, Plus, X, Loader2, ImageIcon } from "lucide-react"
 import { KawaiiIcon } from "@/components/ui/kawaii-icon"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { getFirebaseAuth } from "@/lib/firebase/client"
+import { useSubtasks, useCreateSubtask, useToggleSubtask, useDeleteSubtask } from "@/hooks/use-subtasks"
 
 const REACTIONS: Array<{ key: string; icon: React.ReactNode; label: string }> = [
   { key: "heart", icon: <Heart  size={13} />, label: "Me encanta" },
@@ -25,6 +26,7 @@ interface Props {
   onDelete: () => void
   onEdit?: () => void
   currentUserId?: string
+  showSubtasks?: boolean
 }
 
 async function authFetch(path: string, init?: RequestInit) {
@@ -39,7 +41,161 @@ async function authFetch(path: string, init?: RequestInit) {
   return res.json()
 }
 
-export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Props) {
+// Bell badge: shown if reminder is within the next 7 days
+function ReminderBadge({ reminderAt }: { reminderAt: string }) {
+  const date = new Date(reminderAt)
+  const now = new Date()
+  const diffMs = date.getTime() - now.getTime()
+  const diffDays = diffMs / 86_400_000
+  if (diffDays < 0 || diffDays > 7) return null
+  const label = diffDays < 0.042 ? "ahora" : diffDays < 1 ? "hoy" : `${Math.ceil(diffDays)}d`
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 2,
+      fontSize: "0.5rem", fontWeight: 700,
+      background: "#fef3c7", color: "#d97706",
+      borderRadius: 4, padding: "1px 4px",
+      marginTop: 2, textDecoration: "none",
+    }}>
+      <Bell size={8} /> {label}
+    </span>
+  )
+}
+
+// Subtasks sub-component
+function SubtasksSection({ task, currentUserId }: { task: Task; currentUserId?: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const [newTitle, setNewTitle] = useState("")
+  const [adding, setAdding] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const { data: subtasks = [], isLoading } = useSubtasks(task.id)
+  const createSubtask = useCreateSubtask()
+  const toggleSubtask = useToggleSubtask()
+  const deleteSubtask = useDeleteSubtask()
+
+  const total = subtasks.length
+  const done = subtasks.filter((s) => s.completed).length
+
+  async function handleAdd() {
+    if (!newTitle.trim()) return
+    await createSubtask.mutateAsync({ taskId: task.id, title: newTitle.trim(), sort_order: total })
+    setNewTitle("")
+    setAdding(false)
+  }
+
+  if (!expanded && total === 0 && !adding) {
+    return (
+      <div style={{ paddingLeft: "0.5rem", paddingBottom: "0.25rem" }}>
+        <button
+          onClick={() => { setExpanded(true); setAdding(true); setTimeout(() => inputRef.current?.focus(), 50) }}
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: "0.6875rem", color: "var(--foreground-muted)",
+            display: "flex", alignItems: "center", gap: 3, padding: "2px 0",
+          }}
+        >
+          <Plus size={11} /> Añadir subtarea
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ background: "var(--muted)", borderRadius: "0 0 var(--radius-lg) var(--radius-lg)", paddingBottom: "0.375rem" }}>
+      {/* Toggle header */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        style={{
+          width: "100%", background: "none", border: "none", cursor: "pointer",
+          display: "flex", alignItems: "center", gap: 4,
+          padding: "0.25rem 0.625rem",
+          fontSize: "0.6875rem", fontWeight: 600, color: "var(--foreground-light)",
+        }}
+      >
+        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        {isLoading ? "Subtareas..." : total === 0 ? "Subtareas" : done === total ? `✓ ${total}/${total} hechas` : `${done}/${total} subtareas`}
+      </button>
+
+      {expanded && (
+        <div style={{ paddingLeft: "0.625rem", paddingRight: "0.5rem" }}>
+          {subtasks.map((sub) => (
+            <div key={sub.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0" }}>
+              <button
+                onClick={() => toggleSubtask.mutate({ taskId: task.id, subtask: sub })}
+                style={{
+                  width: 16, height: 16, borderRadius: 4, flexShrink: 0, cursor: "pointer",
+                  border: "1.5px solid var(--primary)", background: sub.completed ? "var(--primary)" : "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >
+                {sub.completed && <Check size={9} color="white" strokeWidth={3} />}
+              </button>
+              <span style={{
+                flex: 1, fontSize: "0.75rem", color: "var(--foreground)",
+                textDecoration: sub.completed ? "line-through" : "none",
+                opacity: sub.completed ? 0.55 : 1,
+              }}>
+                {sub.title}
+              </span>
+              <button
+                onClick={() => deleteSubtask.mutate({ taskId: task.id, subtaskId: sub.id })}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--foreground-muted)", display: "flex" }}
+              >
+                <X size={11} />
+              </button>
+            </div>
+          ))}
+
+          {/* Add row */}
+          {adding ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
+              <input
+                ref={inputRef}
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); if (e.key === "Escape") { setAdding(false); setNewTitle("") } }}
+                placeholder="Nueva subtarea..."
+                style={{
+                  flex: 1, fontSize: "0.75rem", border: "1px solid var(--border)", borderRadius: 6,
+                  padding: "3px 6px", outline: "none", background: "var(--surface)", fontFamily: "inherit",
+                  color: "var(--foreground)",
+                }}
+                autoFocus
+              />
+              <button
+                onClick={handleAdd}
+                disabled={createSubtask.isPending}
+                style={{ background: "var(--primary)", border: "none", borderRadius: 5, padding: "3px 6px", cursor: "pointer", color: "white", display: "flex", alignItems: "center" }}
+              >
+                {createSubtask.isPending ? <Loader2 size={11} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={11} />}
+              </button>
+              <button
+                onClick={() => { setAdding(false); setNewTitle("") }}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--foreground-muted)", display: "flex" }}
+              >
+                <X size={11} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setAdding(true); setTimeout(() => inputRef.current?.focus(), 50) }}
+              style={{
+                background: "none", border: "none", cursor: "pointer", marginTop: 3,
+                fontSize: "0.6875rem", color: "var(--foreground-muted)",
+                display: "flex", alignItems: "center", gap: 3, padding: "2px 0",
+              }}
+            >
+              <Plus size={11} /> Añadir subtarea
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, showSubtasks = true }: Props) {
   const [popping, setPopping] = useState(false)
   const [sparkle, setSparkle] = useState(false)
   const [swipeX, setSwipeX] = useState(0)
@@ -58,6 +214,12 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
 
   const dndStyle = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }
+
+  // Reminder badge: in next 7 days?
+  const showReminderBadge = !!task.reminder_at && (() => {
+    const diff = new Date(task.reminder_at!).getTime() - Date.now()
+    return diff > 0 && diff <= 7 * 86_400_000
+  })()
 
   // ── Reactions ─────────────────────────────────────────────────
   const fetchReactions = useCallback(async () => {
@@ -216,6 +378,14 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
     }
   }
 
+  // Assigned-to badge color
+  const assignedColor = task.assigned_to
+    ? task.assigned_to === currentUserId ? "var(--primary)" : "var(--secondary)"
+    : null
+
+  // Photo strip: up to 3 thumbnails
+  const photos = task.task_photos ?? []
+
   return (
     <div ref={setNodeRef} style={{ ...dndStyle, position: "relative", marginBottom: "0.5rem" }}>
       {/* Outer clip wrapper — swipe touch handlers live here */}
@@ -330,7 +500,26 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
               }
               return <span style={{ display: "block" }}>{badge}</span>
             })()}
+            {showReminderBadge && task.reminder_at && (
+              <span style={{ display: "block" }}>
+                <ReminderBadge reminderAt={task.reminder_at} />
+              </span>
+            )}
           </span>
+
+          {/* Assigned-to badge */}
+          {assignedColor && (
+            <div
+              title={task.assigned_to === currentUserId ? "Asignada a ti" : "Asignada a tu pareja"}
+              style={{
+                width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+                background: assignedColor, display: "flex", alignItems: "center", justifyContent: "center",
+                opacity: 0.85,
+              }}
+            >
+              <User size={12} color="white" />
+            </div>
+          )}
 
           {/* Edit button */}
           {onEdit && (
@@ -343,6 +532,36 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
             </button>
           )}
         </div>
+
+        {/* Photo strip */}
+        {photos.length > 0 && (
+          <div style={{
+            display: "flex", gap: 4, padding: "0 0.625rem 0.375rem",
+            background: "var(--surface)",
+            transform: `translateX(${swipeX}px)`,
+            transition: "transform 0.22s ease",
+          }}>
+            {photos.slice(0, 3).map((url, i) => (
+              <div key={i} style={{ position: "relative" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt={`foto ${i + 1}`}
+                  style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 6, display: "block" }}
+                />
+                {i === 2 && photos.length > 3 && (
+                  <div style={{
+                    position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)",
+                    borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "white", fontSize: "0.75rem", fontWeight: 700,
+                  }}>
+                    +{photos.length - 3}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Reactions row */}
@@ -408,6 +627,9 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
           </>
         )}
       </div>
+
+      {/* Subtasks section */}
+      {showSubtasks && <SubtasksSection task={task} currentUserId={currentUserId} />}
     </div>
   )
 }

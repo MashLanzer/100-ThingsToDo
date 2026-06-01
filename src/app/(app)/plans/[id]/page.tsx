@@ -1,17 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { usePlan, useUpdatePlan, useDeletePlan } from "@/hooks/use-plans"
 import { useTasks, useCreateTask, useToggleTask, useDeleteTask, useUpdateTask } from "@/hooks/use-tasks"
+import { useCoupleStatus } from "@/hooks/use-couple"
 import { TaskItem } from "@/components/features/task-item"
 import { KAWAII_ICON_REGISTRY, KawaiiIcon } from "@/components/ui/kawaii-icon"
 import type { Task } from "@/types"
-import { ArrowLeft, Plus, Edit2, X, Trash2, Star, Image, Calendar, Tag, Upload, Archive, CheckCircle2, ChevronDown } from "lucide-react"
+import { ArrowLeft, Plus, Edit2, X, Trash2, Star, Image, Calendar, Tag, Upload, Archive, CheckCircle2, ChevronDown, Pencil, Bell, User, ImageIcon, Loader2 } from "lucide-react"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { showConfirm } from "@/lib/confirm"
+import { getFirebaseAuth } from "@/lib/firebase/client"
 import {
   DndContext,
   closestCenter,
@@ -50,12 +52,31 @@ function relativeDate(dateStr: string): string {
   return `hace ${Math.floor(diff / 365)}a`
 }
 
+async function authFetch(path: string, init?: RequestInit) {
+  const auth = getFirebaseAuth()
+  const token = await auth.currentUser?.getIdToken()
+  if (!token) throw new Error("Not authenticated")
+  const res = await fetch(path, {
+    ...init,
+    headers: {
+      ...(init?.headers ?? {}),
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? "Request failed")
+  }
+  return res.json()
+}
+
 export default function PlanDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const { user } = useAuth()
   const { data: plan, isLoading: planLoading } = usePlan(params.id)
   const { data: tasks, isLoading: tasksLoading, refetch: refetchTasks } = useTasks(params.id)
+  const { data: coupleStatus } = useCoupleStatus()
   const createTask = useCreateTask()
   const toggleTask = useToggleTask()
   const deleteTask = useDeleteTask()
@@ -64,11 +85,19 @@ export default function PlanDetailPage() {
   const deletePlan = useDeletePlan()
   const ptr = useWindowPTR(() => { refetchTasks() })
 
+  // ── New Task form state ──────────────────────────────────────
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [taskTitle, setTaskTitle] = useState("")
   const [taskNotes, setTaskNotes] = useState("")
   const [taskDueDate, setTaskDueDate] = useState("")
+  const [taskReminderAt, setTaskReminderAt] = useState("")
+  const [taskAssignedTo, setTaskAssignedTo] = useState<string | null>(null)
+  const [taskPhotos, setTaskPhotos] = useState<string[]>([])
+  const [taskPhotoUploading, setTaskPhotoUploading] = useState(false)
   const [selectedIcon, setSelectedIcon] = useState("heart")
+  const newTaskPhotoRef = useRef<HTMLInputElement>(null)
+
+  // ── Plan edit modal state ────────────────────────────────────
   const [showEditModal, setShowEditModal] = useState(false)
   const [editTitle, setEditTitle] = useState("")
   const [editDesc, setEditDesc] = useState("")
@@ -76,13 +105,28 @@ export default function PlanDetailPage() {
   const [editDueDate, setEditDueDate] = useState("")
   const [editTagInput, setEditTagInput] = useState("")
   const [editTags, setEditTags] = useState<string[]>([])
+  const [showGalleryPicker, setShowGalleryPicker] = useState(false)
+  const [galleryPhotos, setGalleryPhotos] = useState<Array<{ id: string; image_url: string; thumb_url: string | null }>>([])
+  const [galleryLoading, setGalleryLoading] = useState(false)
+  const coverFileRef = useRef<HTMLInputElement>(null)
+  const [coverUploading, setCoverUploading] = useState(false)
 
-  // Task editing state
+  // ── Inline description edit state ───────────────────────────
+  const [editingDesc, setEditingDesc] = useState(false)
+  const [inlineDesc, setInlineDesc] = useState("")
+  const [savingDesc, setSavingDesc] = useState(false)
+
+  // ── Task editing state ───────────────────────────────────────
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editTaskTitle, setEditTaskTitle] = useState("")
   const [editTaskIcon, setEditTaskIcon] = useState("heart")
   const [editTaskNotes, setEditTaskNotes] = useState("")
   const [editTaskDueDate, setEditTaskDueDate] = useState("")
+  const [editTaskReminderAt, setEditTaskReminderAt] = useState("")
+  const [editTaskAssignedTo, setEditTaskAssignedTo] = useState<string | null>(null)
+  const [editTaskPhotos, setEditTaskPhotos] = useState<string[]>([])
+  const [editTaskPhotoUploading, setEditTaskPhotoUploading] = useState(false)
+  const editTaskPhotoRef = useRef<HTMLInputElement>(null)
 
   // Local optimistic task order for drag-and-drop
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null)
@@ -91,6 +135,8 @@ export default function PlanDetailPage() {
 
   const pendingTasks = displayTasks.filter((t) => !t.completed)
   const completedTasksList = displayTasks.filter((t) => t.completed)
+
+  const partner = coupleStatus?.partner ?? null
 
   function handleToggle(task: Task) {
     const prevDone = done
@@ -138,11 +184,34 @@ export default function PlanDetailPage() {
           updateTask.mutateAsync({ taskId: t.id, planId: params.id, sort_order: i })
         )
       )
-      // After persistence, clear local override so server data takes over
       setLocalTasks(null)
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error al reordenar")
       setLocalTasks(null)
+    }
+  }
+
+  // ── Task photo upload ──────────────────────────────────────
+  async function uploadTaskPhoto(file: File, setPhotos: (fn: (prev: string[]) => string[]) => void, setUploading: (v: boolean) => void) {
+    setUploading(true)
+    try {
+      const auth = getFirebaseAuth()
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) throw new Error("Not authenticated")
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch("/api/upload/cover", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      })
+      if (!res.ok) throw new Error("Upload failed")
+      const data = await res.json()
+      setPhotos((prev) => [...prev, data.url as string])
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al subir foto")
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -156,6 +225,9 @@ export default function PlanDetailPage() {
         icon: editTaskIcon,
         notes: editTaskNotes.trim() || null,
         due_date: editTaskDueDate || null,
+        reminder_at: editTaskReminderAt || null,
+        assigned_to: editTaskAssignedTo ?? null,
+        task_photos: editTaskPhotos,
       })
       setEditingTaskId(null)
       toast.success("Tarea actualizada ✨")
@@ -177,10 +249,16 @@ export default function PlanDetailPage() {
         icon: selectedIcon,
         notes: taskNotes.trim() || undefined,
         due_date: taskDueDate || undefined,
+        reminder_at: taskReminderAt || null,
+        assigned_to: taskAssignedTo ?? null,
+        task_photos: taskPhotos,
       })
       setTaskTitle("")
       setTaskNotes("")
       setTaskDueDate("")
+      setTaskReminderAt("")
+      setTaskAssignedTo(null)
+      setTaskPhotos([])
       setSelectedIcon("heart")
       setShowTaskForm(false)
     } catch (e: unknown) {
@@ -231,6 +309,194 @@ export default function PlanDetailPage() {
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error al eliminar")
     }
+  }
+
+  // ── Inline description save ──────────────────────────────────
+  async function handleSaveInlineDesc() {
+    setSavingDesc(true)
+    try {
+      await updatePlan.mutateAsync({ id: params.id, description: inlineDesc.trim() || undefined })
+      setEditingDesc(false)
+      toast.success("Descripción guardada")
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al guardar")
+    } finally {
+      setSavingDesc(false)
+    }
+  }
+
+  // ── Gallery picker ───────────────────────────────────────────
+  async function openGallery() {
+    setShowGalleryPicker(true)
+    setGalleryLoading(true)
+    try {
+      const data = await authFetch("/api/photos")
+      setGalleryPhotos(Array.isArray(data) ? data : [])
+    } catch {
+      setGalleryPhotos([])
+    } finally {
+      setGalleryLoading(false)
+    }
+  }
+
+  // ── Cover file upload ────────────────────────────────────────
+  async function handleCoverFileUpload(file: File) {
+    setCoverUploading(true)
+    try {
+      const auth = getFirebaseAuth()
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) throw new Error("Not authenticated")
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch("/api/upload/cover", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      })
+      if (!res.ok) throw new Error("Upload failed")
+      const data = await res.json()
+      setEditCoverImage(data.url as string)
+      toast.success("Foto subida ✨")
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al subir imagen")
+    } finally {
+      setCoverUploading(false)
+    }
+  }
+
+  // ── Task edit open helper ────────────────────────────────────
+  function openTaskEdit(task: Task) {
+    setEditingTaskId(task.id)
+    setEditTaskTitle(task.title)
+    setEditTaskIcon(task.icon ?? "heart")
+    setEditTaskNotes(task.notes ?? "")
+    setEditTaskDueDate(task.due_date ?? "")
+    setEditTaskReminderAt(task.reminder_at ?? "")
+    setEditTaskAssignedTo(task.assigned_to ?? null)
+    setEditTaskPhotos(task.task_photos ?? [])
+  }
+
+  // ── Task edit form (reused for pending + completed) ──────────
+  function TaskEditForm({ task }: { task: Task }) {
+    if (editingTaskId !== task.id) return null
+    return (
+      <div className="card animate-fade-in" style={{ marginBottom: "0.75rem", marginTop: "-0.25rem", borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "2px solid var(--primary-lighter)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.625rem" }}>
+          <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)", display: "flex", alignItems: "center", gap: "0.375rem" }}><Edit2 size={14} /> Editar Tarea</h3>
+          <button className="btn-icon" onClick={() => setEditingTaskId(null)}><X size={14} /></button>
+        </div>
+        <input className="input" type="text" value={editTaskTitle} onChange={(e) => setEditTaskTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSaveTaskEdit()} style={{ marginBottom: "0.625rem" }} autoFocus />
+        <textarea className="textarea" rows={2} placeholder="Nota opcional..." value={editTaskNotes} onChange={(e) => setEditTaskNotes(e.target.value)} style={{ marginBottom: "0.625rem" }} />
+        <input type="date" className="input" value={editTaskDueDate} onChange={(e) => setEditTaskDueDate(e.target.value)} style={{ marginBottom: "0.625rem" }} />
+
+        {/* Reminder */}
+        <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
+          <Bell size={12} /> Recordatorio (opcional)
+        </label>
+        <input type="datetime-local" className="input" value={editTaskReminderAt} onChange={(e) => setEditTaskReminderAt(e.target.value)} style={{ marginBottom: "0.625rem" }} />
+
+        {/* Assign to */}
+        <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
+          <User size={12} /> Asignar a
+        </label>
+        <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.625rem" }}>
+          <button
+            type="button"
+            onClick={() => setEditTaskAssignedTo(null)}
+            style={{
+              fontSize: "0.75rem", padding: "3px 10px", borderRadius: 6, cursor: "pointer",
+              border: editTaskAssignedTo === null ? "2px solid var(--primary)" : "1px solid var(--border)",
+              background: editTaskAssignedTo === null ? "var(--primary-lighter)" : "var(--muted)",
+              color: editTaskAssignedTo === null ? "var(--primary)" : "var(--foreground-muted)",
+              fontWeight: 600,
+            }}
+          >Sin asignar</button>
+          <button
+            type="button"
+            onClick={() => setEditTaskAssignedTo(user?.uid ?? null)}
+            style={{
+              fontSize: "0.75rem", padding: "3px 10px", borderRadius: 6, cursor: "pointer",
+              border: editTaskAssignedTo === user?.uid ? "2px solid var(--primary)" : "1px solid var(--border)",
+              background: editTaskAssignedTo === user?.uid ? "var(--primary-lighter)" : "var(--muted)",
+              color: editTaskAssignedTo === user?.uid ? "var(--primary)" : "var(--foreground-muted)",
+              fontWeight: 600,
+            }}
+          >Yo</button>
+          {partner && (
+            <button
+              type="button"
+              onClick={() => setEditTaskAssignedTo(partner.id)}
+              style={{
+                fontSize: "0.75rem", padding: "3px 10px", borderRadius: 6, cursor: "pointer",
+                border: editTaskAssignedTo === partner.id ? "2px solid var(--secondary)" : "1px solid var(--border)",
+                background: editTaskAssignedTo === partner.id ? "#fce7f3" : "var(--muted)",
+                color: editTaskAssignedTo === partner.id ? "var(--secondary)" : "var(--foreground-muted)",
+                fontWeight: 600,
+              }}
+            >{partner.name ?? "Mi pareja"}</button>
+          )}
+        </div>
+
+        {/* Task photos */}
+        <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
+          <ImageIcon size={12} /> Fotos adjuntas
+        </label>
+        {editTaskPhotos.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "0.375rem" }}>
+            {editTaskPhotos.map((url, i) => (
+              <div key={i} style={{ position: "relative" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="foto" style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 6, display: "block" }} />
+                <button
+                  onClick={() => setEditTaskPhotos((prev) => prev.filter((_, j) => j !== i))}
+                  style={{
+                    position: "absolute", top: -4, right: -4, width: 16, height: 16,
+                    background: "#ef4444", border: "none", borderRadius: "50%",
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  <X size={9} color="white" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <input
+          ref={editTaskPhotoRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) uploadTaskPhoto(file, setEditTaskPhotos, setEditTaskPhotoUploading)
+            e.target.value = ""
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => editTaskPhotoRef.current?.click()}
+          disabled={editTaskPhotoUploading}
+          className="btn btn-outline"
+          style={{ fontSize: "0.75rem", marginBottom: "0.625rem", gap: 4 }}
+        >
+          {editTaskPhotoUploading ? <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> : <ImageIcon size={12} />}
+          {editTaskPhotoUploading ? "Subiendo..." : "Subir foto"}
+        </button>
+
+        {/* Icon picker */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.625rem" }}>
+          {iconEntries.map((key) => (
+            <button key={key} onClick={() => setEditTaskIcon(key)} style={{ width: "32px", height: "32px", borderRadius: "8px", border: editTaskIcon === key ? "2px solid var(--primary)" : "2px solid transparent", background: editTaskIcon === key ? "var(--primary-lighter)" : "var(--muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <KawaiiIcon name={key} size={16} color={editTaskIcon === key ? "var(--primary)" : "var(--foreground-muted)"} />
+            </button>
+          ))}
+        </div>
+        <div className="form-actions">
+          <button className="btn btn-primary" onClick={handleSaveTaskEdit} disabled={updateTask.isPending}>{updateTask.isPending ? "Guardando..." : "Guardar"}</button>
+          <button className="btn btn-outline" onClick={() => setEditingTaskId(null)}>Cancelar</button>
+        </div>
+      </div>
+    )
   }
 
   if (planLoading) {
@@ -353,6 +619,76 @@ export default function PlanDetailPage() {
           </div>
         </div>
 
+        {/* P12 — Inline description section */}
+        <div style={{ marginBottom: "1rem" }}>
+          {editingDesc ? (
+            <div className="animate-fade-in">
+              <textarea
+                className="textarea"
+                rows={3}
+                value={inlineDesc}
+                onChange={(e) => setInlineDesc(e.target.value)}
+                placeholder="Descripción del plan..."
+                autoFocus
+                style={{ marginBottom: "0.375rem" }}
+              />
+              <div style={{ display: "flex", gap: "0.375rem" }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSaveInlineDesc}
+                  disabled={savingDesc}
+                  style={{ fontSize: "0.8125rem", padding: "0.25rem 0.875rem" }}
+                >
+                  {savingDesc ? "Guardando..." : "Guardar"}
+                </button>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => setEditingDesc(false)}
+                  style={{ fontSize: "0.8125rem", padding: "0.25rem 0.875rem" }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : plan?.description ? (
+            <div
+              className="group"
+              onClick={() => { setInlineDesc(plan.description ?? ""); setEditingDesc(true) }}
+              style={{
+                position: "relative", cursor: "pointer",
+                padding: "0.5rem 0.625rem",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid transparent",
+                transition: "border-color 0.15s, background 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)"
+                ;(e.currentTarget as HTMLDivElement).style.background = "var(--muted)"
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLDivElement).style.borderColor = "transparent"
+                ;(e.currentTarget as HTMLDivElement).style.background = "transparent"
+              }}
+            >
+              <p style={{ fontSize: "0.875rem", color: "var(--foreground-light)", lineHeight: 1.5, margin: 0 }}>
+                {plan.description}
+              </p>
+              <Pencil size={12} style={{ position: "absolute", top: "0.5rem", right: "0.5rem", color: "var(--foreground-muted)", opacity: 0.6 }} />
+            </div>
+          ) : (tasks && tasks.length === 0) ? (
+            <button
+              onClick={() => { setInlineDesc(""); setEditingDesc(true) }}
+              style={{
+                background: "none", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)",
+                padding: "0.5rem 0.75rem", cursor: "pointer", width: "100%", textAlign: "left",
+                fontSize: "0.8125rem", color: "var(--foreground-muted)", fontFamily: "inherit",
+              }}
+            >
+              Toca para añadir una descripción...
+            </button>
+          ) : null}
+        </div>
+
         {/* Add task button */}
         <div style={{ marginBottom: "1rem" }}>
           <button className="btn btn-primary" onClick={() => setShowTaskForm(true)}>
@@ -393,6 +729,101 @@ export default function PlanDetailPage() {
               onChange={(e) => setTaskDueDate(e.target.value)}
               style={{ marginBottom: "0.75rem" }}
             />
+
+            {/* Reminder */}
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
+              <Bell size={12} /> Recordatorio (opcional)
+            </label>
+            <input
+              type="datetime-local"
+              className="input"
+              value={taskReminderAt}
+              onChange={(e) => setTaskReminderAt(e.target.value)}
+              style={{ marginBottom: "0.75rem" }}
+            />
+
+            {/* Assign to */}
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
+              <User size={12} /> Asignar a
+            </label>
+            <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.75rem" }}>
+              <button
+                type="button"
+                onClick={() => setTaskAssignedTo(null)}
+                style={{
+                  fontSize: "0.75rem", padding: "3px 10px", borderRadius: 6, cursor: "pointer",
+                  border: taskAssignedTo === null ? "2px solid var(--primary)" : "1px solid var(--border)",
+                  background: taskAssignedTo === null ? "var(--primary-lighter)" : "var(--muted)",
+                  color: taskAssignedTo === null ? "var(--primary)" : "var(--foreground-muted)", fontWeight: 600,
+                }}
+              >Sin asignar</button>
+              <button
+                type="button"
+                onClick={() => setTaskAssignedTo(user?.uid ?? null)}
+                style={{
+                  fontSize: "0.75rem", padding: "3px 10px", borderRadius: 6, cursor: "pointer",
+                  border: taskAssignedTo === user?.uid ? "2px solid var(--primary)" : "1px solid var(--border)",
+                  background: taskAssignedTo === user?.uid ? "var(--primary-lighter)" : "var(--muted)",
+                  color: taskAssignedTo === user?.uid ? "var(--primary)" : "var(--foreground-muted)", fontWeight: 600,
+                }}
+              >Yo</button>
+              {partner && (
+                <button
+                  type="button"
+                  onClick={() => setTaskAssignedTo(partner.id)}
+                  style={{
+                    fontSize: "0.75rem", padding: "3px 10px", borderRadius: 6, cursor: "pointer",
+                    border: taskAssignedTo === partner.id ? "2px solid var(--secondary)" : "1px solid var(--border)",
+                    background: taskAssignedTo === partner.id ? "#fce7f3" : "var(--muted)",
+                    color: taskAssignedTo === partner.id ? "var(--secondary)" : "var(--foreground-muted)", fontWeight: 600,
+                  }}
+                >{partner.name ?? "Mi pareja"}</button>
+              )}
+            </div>
+
+            {/* Photos for new task */}
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
+              <ImageIcon size={12} /> Fotos adjuntas
+            </label>
+            {taskPhotos.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "0.375rem" }}>
+                {taskPhotos.map((url, i) => (
+                  <div key={i} style={{ position: "relative" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="foto" style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 6, display: "block" }} />
+                    <button
+                      onClick={() => setTaskPhotos((prev) => prev.filter((_, j) => j !== i))}
+                      style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, background: "#ef4444", border: "none", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <X size={9} color="white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <input
+              ref={newTaskPhotoRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) uploadTaskPhoto(file, setTaskPhotos, setTaskPhotoUploading)
+                e.target.value = ""
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => newTaskPhotoRef.current?.click()}
+              disabled={taskPhotoUploading}
+              className="btn btn-outline"
+              style={{ fontSize: "0.75rem", marginBottom: "0.75rem", gap: 4 }}
+            >
+              {taskPhotoUploading ? <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> : <ImageIcon size={12} />}
+              {taskPhotoUploading ? "Subiendo..." : "Subir foto"}
+            </button>
+
+            {/* Icon picker */}
             <div style={{ marginBottom: "0.75rem" }}>
               <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground-light)", marginBottom: "0.5rem" }}>
                 Ícono personalizado
@@ -403,15 +834,10 @@ export default function PlanDetailPage() {
                     key={key}
                     onClick={() => setSelectedIcon(key)}
                     style={{
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "10px",
+                      width: "36px", height: "36px", borderRadius: "10px",
                       border: selectedIcon === key ? "2px solid var(--primary)" : "2px solid transparent",
                       background: selectedIcon === key ? "var(--primary-lighter)" : "var(--muted)",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                     }}
                     title={key}
                   >
@@ -463,37 +889,10 @@ export default function PlanDetailPage() {
                           task={task}
                           onToggle={() => handleToggle(task)}
                           onDelete={() => deleteTask.mutate({ taskId: task.id, planId: params.id })}
-                          onEdit={() => {
-                            setEditingTaskId(task.id)
-                            setEditTaskTitle(task.title)
-                            setEditTaskIcon(task.icon ?? "heart")
-                            setEditTaskNotes(task.notes ?? "")
-                            setEditTaskDueDate(task.due_date ?? "")
-                          }}
+                          onEdit={() => openTaskEdit(task)}
                           currentUserId={user?.uid}
                         />
-                        {editingTaskId === task.id && (
-                          <div className="card animate-fade-in" style={{ marginBottom: "0.75rem", marginTop: "-0.25rem", borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "2px solid var(--primary-lighter)" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.625rem" }}>
-                              <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)", display: "flex", alignItems: "center", gap: "0.375rem" }}><Edit2 size={14} /> Editar Tarea</h3>
-                              <button className="btn-icon" onClick={() => setEditingTaskId(null)}><X size={14} /></button>
-                            </div>
-                            <input className="input" type="text" value={editTaskTitle} onChange={(e) => setEditTaskTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSaveTaskEdit()} style={{ marginBottom: "0.625rem" }} autoFocus />
-                            <textarea className="textarea" rows={2} placeholder="Nota opcional..." value={editTaskNotes} onChange={(e) => setEditTaskNotes(e.target.value)} style={{ marginBottom: "0.625rem" }} />
-                            <input type="date" className="input" value={editTaskDueDate} onChange={(e) => setEditTaskDueDate(e.target.value)} style={{ marginBottom: "0.625rem" }} />
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.625rem" }}>
-                              {iconEntries.map((key) => (
-                                <button key={key} onClick={() => setEditTaskIcon(key)} style={{ width: "32px", height: "32px", borderRadius: "8px", border: editTaskIcon === key ? "2px solid var(--primary)" : "2px solid transparent", background: editTaskIcon === key ? "var(--primary-lighter)" : "var(--muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                  <KawaiiIcon name={key} size={16} color={editTaskIcon === key ? "var(--primary)" : "var(--foreground-muted)"} />
-                                </button>
-                              ))}
-                            </div>
-                            <div className="form-actions">
-                              <button className="btn btn-primary" onClick={handleSaveTaskEdit} disabled={updateTask.isPending}>{updateTask.isPending ? "Guardando..." : "Guardar"}</button>
-                              <button className="btn btn-outline" onClick={() => setEditingTaskId(null)}>Cancelar</button>
-                            </div>
-                          </div>
-                        )}
+                        <TaskEditForm task={task} />
                       </div>
                     ))}
                   </div>
@@ -526,37 +925,10 @@ export default function PlanDetailPage() {
                           task={task}
                           onToggle={() => handleToggle(task)}
                           onDelete={() => deleteTask.mutate({ taskId: task.id, planId: params.id })}
-                          onEdit={() => {
-                            setEditingTaskId(task.id)
-                            setEditTaskTitle(task.title)
-                            setEditTaskIcon(task.icon ?? "heart")
-                            setEditTaskNotes(task.notes ?? "")
-                            setEditTaskDueDate(task.due_date ?? "")
-                          }}
+                          onEdit={() => openTaskEdit(task)}
                           currentUserId={user?.uid}
                         />
-                        {editingTaskId === task.id && (
-                          <div className="card animate-fade-in" style={{ marginBottom: "0.75rem", marginTop: "-0.25rem", borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "2px solid var(--primary-lighter)" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.625rem" }}>
-                              <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)", display: "flex", alignItems: "center", gap: "0.375rem" }}><Edit2 size={14} /> Editar Tarea</h3>
-                              <button className="btn-icon" onClick={() => setEditingTaskId(null)}><X size={14} /></button>
-                            </div>
-                            <input className="input" type="text" value={editTaskTitle} onChange={(e) => setEditTaskTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSaveTaskEdit()} style={{ marginBottom: "0.625rem" }} autoFocus />
-                            <textarea className="textarea" rows={2} placeholder="Nota opcional..." value={editTaskNotes} onChange={(e) => setEditTaskNotes(e.target.value)} style={{ marginBottom: "0.625rem" }} />
-                            <input type="date" className="input" value={editTaskDueDate} onChange={(e) => setEditTaskDueDate(e.target.value)} style={{ marginBottom: "0.625rem" }} />
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.625rem" }}>
-                              {iconEntries.map((key) => (
-                                <button key={key} onClick={() => setEditTaskIcon(key)} style={{ width: "32px", height: "32px", borderRadius: "8px", border: editTaskIcon === key ? "2px solid var(--primary)" : "2px solid transparent", background: editTaskIcon === key ? "var(--primary-lighter)" : "var(--muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                  <KawaiiIcon name={key} size={16} color={editTaskIcon === key ? "var(--primary)" : "var(--foreground-muted)"} />
-                                </button>
-                              ))}
-                            </div>
-                            <div className="form-actions">
-                              <button className="btn btn-primary" onClick={handleSaveTaskEdit} disabled={updateTask.isPending}>{updateTask.isPending ? "Guardando..." : "Guardar"}</button>
-                              <button className="btn btn-outline" onClick={() => setEditingTaskId(null)}>Cancelar</button>
-                            </div>
-                          </div>
-                        )}
+                        <TaskEditForm task={task} />
                       </div>
                     ))}
                   </div>
@@ -621,24 +993,77 @@ export default function PlanDetailPage() {
                   onChange={(e) => setEditDesc(e.target.value)}
                   placeholder="Descripción (opcional)"
                 />
+
+                {/* P13 — Cover image section */}
                 <div>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
-                    <Image size={13} /> URL de portada (opcional)
+                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}>
+                    <Image size={13} /> Imagen de portada
                   </label>
-                  <input
-                    className="input"
-                    type="url"
-                    placeholder="https://..."
-                    value={editCoverImage}
-                    onChange={(e) => setEditCoverImage(e.target.value)}
-                  />
+
+                  {/* Current cover thumbnail */}
                   {editCoverImage.trim() && (
-                    <div style={{ marginTop: "0.375rem", borderRadius: "var(--radius-md)", overflow: "hidden", height: "60px" }}>
+                    <div style={{ marginBottom: "0.5rem", position: "relative", borderRadius: "var(--radius-md)", overflow: "hidden", height: "80px" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={editCoverImage.trim()} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img src={editCoverImage.trim()} alt="portada" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <button
+                        onClick={() => setEditCoverImage("")}
+                        style={{
+                          position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.6)",
+                          border: "none", borderRadius: "50%", width: 22, height: 22,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          cursor: "pointer", color: "white",
+                        }}
+                      >
+                        <X size={11} />
+                      </button>
                     </div>
                   )}
+
+                  {/* Buttons row */}
+                  <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+                    {/* Hidden file input */}
+                    <input
+                      ref={coverFileRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) handleCoverFileUpload(file)
+                        e.target.value = ""
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => coverFileRef.current?.click()}
+                      disabled={coverUploading}
+                      className="btn btn-outline"
+                      style={{ fontSize: "0.75rem", gap: 4 }}
+                    >
+                      {coverUploading ? <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={12} />}
+                      {coverUploading ? "Subiendo..." : "Subir nueva"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openGallery}
+                      className="btn btn-outline"
+                      style={{ fontSize: "0.75rem", gap: 4 }}
+                    >
+                      <ImageIcon size={12} /> Elegir del álbum
+                    </button>
+                    {editCoverImage.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => setEditCoverImage("")}
+                        className="btn btn-outline"
+                        style={{ fontSize: "0.75rem", gap: 4, color: "#ef4444", borderColor: "#ef4444" }}
+                      >
+                        <X size={12} /> Quitar
+                      </button>
+                    )}
+                  </div>
                 </div>
+
                 <div>
                   <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
                     <Calendar size={13} /> Fecha objetivo (opcional)
@@ -718,6 +1143,82 @@ export default function PlanDetailPage() {
                   {plan?.archived ? <><Upload size={14} /> Desarchivar</> : <><Archive size={14} /> Archivar</>}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* P13 — Gallery picker overlay */}
+      {showGalleryPicker && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 200,
+            background: "rgba(0,0,0,0.7)", display: "flex", flexDirection: "column",
+            alignItems: "stretch",
+          }}
+          onClick={() => setShowGalleryPicker(false)}
+        >
+          <div
+            style={{
+              position: "absolute", bottom: 0, left: 0, right: 0,
+              background: "white", borderRadius: "20px 20px 0 0",
+              maxHeight: "80vh", display: "flex", flexDirection: "column",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "1rem 1rem 0.75rem",
+              borderBottom: "1px solid var(--border)",
+              flexShrink: 0,
+            }}>
+              <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1.125rem", margin: 0 }}>
+                Elegir portada
+              </h3>
+              <button
+                onClick={() => setShowGalleryPicker(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--foreground-muted)", display: "flex" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Grid */}
+            <div style={{ overflowY: "auto", flex: 1, padding: "0.75rem" }}>
+              {galleryLoading ? (
+                <div style={{ textAlign: "center", padding: "2rem", color: "var(--foreground-muted)" }}>
+                  Cargando fotos...
+                </div>
+              ) : galleryPhotos.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "2rem", color: "var(--foreground-muted)" }}>
+                  No hay fotos en el álbum aún.
+                </div>
+              ) : (
+                <div style={{
+                  display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4,
+                }}>
+                  {galleryPhotos.map((photo) => (
+                    <button
+                      key={photo.id}
+                      onClick={() => { setEditCoverImage(photo.image_url); setShowGalleryPicker(false) }}
+                      style={{
+                        padding: 0, border: editCoverImage === photo.image_url ? "3px solid var(--primary)" : "3px solid transparent",
+                        borderRadius: 8, overflow: "hidden", cursor: "pointer", aspectRatio: "1",
+                        background: "var(--muted)",
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photo.thumb_url ?? photo.image_url}
+                        alt="foto"
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

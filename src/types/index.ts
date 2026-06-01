@@ -45,6 +45,9 @@ export interface Task {
   sort_order: number
   notes?: string | null
   due_date?: string | null
+  reminder_at?: string | null
+  assigned_to?: string | null
+  task_photos?: string[]
   created_by: string
   created_at: string
 }

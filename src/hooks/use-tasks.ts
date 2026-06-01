@@ -35,7 +35,7 @@ export function useTasks(planId: string) {
 export function useCreateTask() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ planId, ...data }: { planId: string; title: string; icon: string; notes?: string; due_date?: string }) =>
+    mutationFn: ({ planId, ...data }: { planId: string; title: string; icon: string; notes?: string; due_date?: string; reminder_at?: string | null; assigned_to?: string | null; task_photos?: string[] }) =>
       authFetch(`/api/plans/${planId}/tasks`, { method: "POST", body: JSON.stringify(data) }),
     onSuccess: (_data, vars) =>
       qc.invalidateQueries({ queryKey: ["tasks", vars.planId] }),
@@ -65,7 +65,7 @@ export function useDeleteTask() {
 export function useUpdateTask() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ taskId, planId, ...data }: { taskId: string; planId: string; title?: string; icon?: string; sort_order?: number; notes?: string | null; due_date?: string | null }) =>
+    mutationFn: ({ taskId, planId, ...data }: { taskId: string; planId: string; title?: string; icon?: string; sort_order?: number; notes?: string | null; due_date?: string | null; reminder_at?: string | null; assigned_to?: string | null; task_photos?: string[] }) =>
       authFetch(`/api/tasks/${taskId}`, { method: "PATCH", body: JSON.stringify(data) }),
     onSuccess: (_data, vars) =>
       qc.invalidateQueries({ queryKey: ["tasks", vars.planId] }),
