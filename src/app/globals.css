@@ -1141,3 +1141,9 @@ main {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ─── Music visualizer bars (M2) ─── */
+@keyframes vizBar {
+  from { transform: scaleY(0.25); }
+  to   { transform: scaleY(1); }
+}

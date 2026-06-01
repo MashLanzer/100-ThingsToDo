@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Play, Pause, SkipForward, SkipBack, Plus, Trash2, ListMusic } from "lucide-react"
+import { Play, Pause, SkipForward, SkipBack, Plus, Trash2, ListMusic, Heart, Moon, X } from "lucide-react"
 import { useAppStore } from "@/stores/app-store"
+import { toast } from "sonner"
 
 interface Track {
   id: string
@@ -11,6 +12,7 @@ interface Track {
   url: string
   emoji: string
   color: string
+  dedication?: string
 }
 
 interface Playlist {
@@ -26,8 +28,10 @@ const DEMO_PLAYLIST: Playlist = {
 }
 
 const STORAGE_KEY = "ttd_playlists_v2"
+const LIKED_KEY = "ttd_liked_tracks_v1"
 const EMOJI_OPTIONS = ["🎵", "🎸", "🎹", "🎺", "🎻", "🥁", "💕", "🌹", "💫", "⭐", "🌙", "✨", "🦋", "🌸", "🎶"]
 const COLOR_OPTIONS = ["#a2d2ff", "#ffdeeb", "#fce4ec", "#ede9fe", "#fde68a", "#c3e6cb", "#ffd6a5", "#caffbf", "#bde0fe", "#ffc8dd"]
+const SLEEP_OPTIONS = [15, 30, 45, 60]
 
 function loadPlaylists(): Playlist[] {
   try {
@@ -44,6 +48,17 @@ function savePlaylists(p: Playlist[]) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)) } catch { /* */ }
 }
 
+function loadLiked(): Set<string> {
+  try {
+    const raw = localStorage.getItem(LIKED_KEY)
+    return new Set(raw ? JSON.parse(raw) : [])
+  } catch { return new Set() }
+}
+
+function saveLiked(s: Set<string>) {
+  try { localStorage.setItem(LIKED_KEY, JSON.stringify([...s])) } catch { /* */ }
+}
+
 function isYouTube(url: string) {
   return url.includes("youtube.com") || url.includes("youtu.be")
 }
@@ -53,53 +68,72 @@ function getYouTubeId(url: string): string | null {
   return m?.[1] ?? null
 }
 
-function VinylRecord({ isPlaying, color, emoji }: { isPlaying: boolean; color: string; emoji: string }) {
+function getYtThumb(url: string): string | null {
+  const id = getYouTubeId(url)
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null
+}
+
+// M3: Vinyl with entrance animation when switching tracks
+function VinylRecord({ isPlaying, color, emoji, transitioning }: {
+  isPlaying: boolean; color: string; emoji: string; transitioning: boolean
+}) {
   return (
-    <div
-      style={{
-        width: "150px",
-        height: "150px",
-        borderRadius: "50%",
-        background: `radial-gradient(circle at center,
-          #111 0%, #111 13%,
-          ${color} 14%, ${color} 28%,
-          #1c1c1c 29%, #1c1c1c 33%,
-          #2e2e2e 34%, #2e2e2e 38%,
-          #1c1c1c 39%, #1c1c1c 44%,
-          #2e2e2e 45%, #2e2e2e 50%,
-          #1c1c1c 51%, #1c1c1c 56%,
-          #2e2e2e 57%, #2e2e2e 62%,
-          #1c1c1c 63%, #1c1c1c 68%,
-          #2e2e2e 69%, #2e2e2e 74%,
-          #1c1c1c 75%
-        )`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-        flexShrink: 0,
-        boxShadow: isPlaying
-          ? `0 0 0 5px rgba(139,92,246,0.25), 0 14px 44px rgba(0,0,0,0.55)`
-          : "0 10px 36px rgba(0,0,0,0.38)",
-        animation: isPlaying ? "vinylSpin 3s linear infinite" : "none",
-      }}
-    >
-      {/* Center label */}
+    <div style={{
+      width: "150px", height: "150px", borderRadius: "50%",
+      background: `radial-gradient(circle at center,
+        #111 0%, #111 13%,
+        ${color} 14%, ${color} 28%,
+        #1c1c1c 29%, #1c1c1c 33%,
+        #2e2e2e 34%, #2e2e2e 38%,
+        #1c1c1c 39%, #1c1c1c 44%,
+        #2e2e2e 45%, #2e2e2e 50%,
+        #1c1c1c 51%, #1c1c1c 56%,
+        #2e2e2e 57%, #2e2e2e 62%,
+        #1c1c1c 63%, #1c1c1c 68%,
+        #2e2e2e 69%, #2e2e2e 74%,
+        #1c1c1c 75%
+      )`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      position: "relative", flexShrink: 0,
+      boxShadow: isPlaying
+        ? `0 0 0 5px rgba(139,92,246,0.25), 0 14px 44px rgba(0,0,0,0.55)`
+        : "0 10px 36px rgba(0,0,0,0.38)",
+      animation: transitioning
+        ? "vinylEnter 0.35s ease"
+        : isPlaying
+        ? "vinylSpin 3s linear infinite"
+        : "none",
+      transition: "box-shadow 0.3s",
+    }}>
       <div style={{
-        width: "56px", height: "56px", borderRadius: "50%",
-        background: color,
+        width: "56px", height: "56px", borderRadius: "50%", background: color,
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "1.625rem",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-        zIndex: 1,
+        fontSize: "1.625rem", boxShadow: "0 2px 10px rgba(0,0,0,0.3)", zIndex: 1,
       }}>
         {emoji}
       </div>
-      {/* Spindle hole */}
-      <div style={{
-        position: "absolute", width: "8px", height: "8px",
-        borderRadius: "50%", background: "#050505", zIndex: 2,
-      }} />
+      <div style={{ position: "absolute", width: "8px", height: "8px", borderRadius: "50%", background: "#050505", zIndex: 2 }} />
+    </div>
+  )
+}
+
+// M2: Audio visualizer bars (CSS animation only)
+function AudioVisualizer({ isPlaying }: { isPlaying: boolean }) {
+  const delays = [0, 0.08, 0.16, 0.24, 0.06, 0.18, 0.10, 0.28, 0.04, 0.20]
+  const durations = [0.50, 0.65, 0.55, 0.70, 0.60, 0.48, 0.72, 0.53, 0.67, 0.58]
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: "2.5px", height: "20px", marginTop: "6px" }}>
+      {delays.map((delay, i) => (
+        <div key={i} style={{
+          width: "3px", borderRadius: "2px", height: "100%",
+          background: "linear-gradient(180deg, var(--primary), var(--secondary))",
+          transformOrigin: "bottom",
+          animation: isPlaying ? `vizBar ${durations[i]}s ease-in-out ${delay}s infinite alternate` : "none",
+          transform: isPlaying ? "scaleY(1)" : "scaleY(0.25)",
+          opacity: isPlaying ? 0.85 : 0.3,
+          transition: "opacity 0.4s, transform 0.4s",
+        }} />
+      ))}
     </div>
   )
 }
@@ -126,7 +160,14 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   const [isShuffle, setIsShuffle] = useState(false)
   const [view, setView] = useState<AppView>("player")
   const [loadingDb, setLoadingDb] = useState(true)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [likedTracks, setLikedTracks] = useState<Set<string>>(new Set())
+  const [sleepMinutesLeft, setSleepMinutesLeft] = useState<number | null>(null)
+  const [showSleepMenu, setShowSleepMenu] = useState(false)
+
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const sleepTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sleepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Add-track form
   const [newTitle, setNewTitle] = useState("")
@@ -134,12 +175,19 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   const [newUrl, setNewUrl] = useState("")
   const [newEmoji, setNewEmoji] = useState("🎵")
   const [newColor, setNewColor] = useState(COLOR_OPTIONS[0])
+  const [newDedication, setNewDedication] = useState("")
   const [newPlaylistName, setNewPlaylistName] = useState("")
+
+  useEffect(() => { setLikedTracks(loadLiked()) }, [])
+
+  useEffect(() => () => {
+    if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current)
+    if (sleepIntervalRef.current) clearInterval(sleepIntervalRef.current)
+  }, [])
 
   async function getToken() {
     const { getFirebaseAuth } = await import("@/lib/firebase/client")
-    const token = await getFirebaseAuth().currentUser?.getIdToken()
-    return token
+    return await getFirebaseAuth().currentUser?.getIdToken()
   }
 
   async function loadFromServer() {
@@ -151,10 +199,8 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
       if (res.ok) {
         const data = await res.json()
         if (Array.isArray(data) && data.length > 0) {
-          setPlaylists(data)
-          savePlaylists(data)
+          setPlaylists(data); savePlaylists(data)
         } else {
-          // Server returned empty — use localStorage if it has custom playlists, else empty
           const local = loadPlaylists()
           const hasCustom = local.some((pl) => pl.id !== "default")
           setPlaylists(hasCustom ? local : [{ id: "default", name: "Nuestra Música 💕", tracks: [] }])
@@ -174,20 +220,15 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(updated),
       })
-    } catch { /* silently fail */ }
+    } catch { /* */ }
   }
 
-  useEffect(() => {
-    loadFromServer()
-  }, [])
-
-  // Auto-refresh every 30s while in player view
+  useEffect(() => { loadFromServer() }, [])
   useEffect(() => {
     const t = setInterval(loadFromServer, 30_000)
     return () => clearInterval(t)
   }, [])
 
-  // Audio time tracking
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
@@ -207,21 +248,23 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   })
 
   function persist(updated: Playlist[]) {
-    setPlaylists(updated)
-    savePlaylists(updated)
-    saveToServer(updated)
+    setPlaylists(updated); savePlaylists(updated); saveToServer(updated)
   }
 
   const playlist = playlists[playlistIdx] ?? DEMO_PLAYLIST
   const tracks = playlist.tracks
   const track = tracks[trackIdx] ?? null
 
+  // M3: brief transition animation when changing tracks
   function goTo(idx: number) {
-    setTrackIdx(idx)
-    setIsPlaying(false)
-    setProgress(0)
-    const audio = audioRef.current
-    if (audio) { audio.pause(); audio.src = "" }
+    if (isTransitioning) return
+    setIsTransitioning(true)
+    setTimeout(() => {
+      setTrackIdx(idx); setIsPlaying(false); setProgress(0); setCurrentTime(0)
+      const audio = audioRef.current
+      if (audio) { audio.pause(); audio.src = "" }
+      setIsTransitioning(false)
+    }, 220)
   }
 
   function goPrev() { goTo((trackIdx - 1 + tracks.length) % tracks.length) }
@@ -247,13 +290,63 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
     else if (trackIdx === swapIdx) setTrackIdx(idx)
   }
 
+  // M4: toggle heart/like per track
+  function toggleLike(trackId: string, e?: React.MouseEvent) {
+    e?.stopPropagation()
+    setLikedTracks(prev => {
+      const next = new Set(prev)
+      if (next.has(trackId)) {
+        next.delete(trackId)
+        toast("💔 Quitado de favoritas", { duration: 1500 })
+      } else {
+        next.add(trackId)
+        toast("❤️ ¡Añadido a favoritas!", { duration: 1500 })
+      }
+      saveLiked(next)
+      return next
+    })
+  }
+
+  // M6: sleep timer
+  function startSleepTimer(minutes: number) {
+    if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current)
+    if (sleepIntervalRef.current) clearInterval(sleepIntervalRef.current)
+    setSleepMinutesLeft(minutes)
+    setShowSleepMenu(false)
+    toast(`🌙 Música se detendrá en ${minutes} min`, { duration: 2500 })
+
+    let remaining = minutes
+    sleepIntervalRef.current = setInterval(() => {
+      remaining -= 1
+      setSleepMinutesLeft(remaining)
+      if (remaining <= 0 && sleepIntervalRef.current) clearInterval(sleepIntervalRef.current)
+    }, 60_000)
+
+    sleepTimerRef.current = setTimeout(() => {
+      const audio = audioRef.current
+      if (audio) audio.pause()
+      setIsPlaying(false); setMusicIsPlaying(false); setSleepMinutesLeft(null)
+      toast("🌙 Música detenida. ¡Buenas noches! 💤", { duration: 4000 })
+    }, minutes * 60_000)
+  }
+
+  function cancelSleepTimer() {
+    if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current)
+    if (sleepIntervalRef.current) clearInterval(sleepIntervalRef.current)
+    setSleepMinutesLeft(null); setShowSleepMenu(false)
+    toast("⏰ Timer cancelado", { duration: 1500 })
+  }
+
   const togglePlay = useCallback(() => {
     if (!track) return
     if (isYouTube(track.url || "")) {
       const next = !isPlaying
-      setIsPlaying(next)
-      setMusicIsPlaying(next)
-      if (next) setNowPlayingTrack({ title: track.title, artist: track.artist, emoji: track.emoji, color: track.color })
+      setIsPlaying(next); setMusicIsPlaying(next)
+      if (next) {
+        setNowPlayingTrack({ title: track.title, artist: track.artist, emoji: track.emoji, color: track.color })
+        // M5: show dedication toast
+        if (track.dedication) setTimeout(() => toast(track.dedication!, { icon: "💌", duration: 5000 }), 800)
+      }
       return
     }
     const audio = audioRef.current
@@ -264,14 +357,14 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
     } else {
       if (audio.src !== track.url) audio.src = track.url
       audio.play().then(() => {
-        setIsPlaying(true)
-        setMusicIsPlaying(true)
+        setIsPlaying(true); setMusicIsPlaying(true)
         setNowPlayingTrack({ title: track.title, artist: track.artist, emoji: track.emoji, color: track.color })
+        // M5: show dedication toast
+        if (track.dedication) setTimeout(() => toast(track.dedication!, { icon: "💌", duration: 5000 }), 800)
       }).catch(() => setIsPlaying(true))
     }
   }, [track, isPlaying, setNowPlayingTrack, setMusicIsPlaying])
 
-  // Listen for toggle from mini-player (must be after togglePlay declaration)
   useEffect(() => {
     const handler = () => togglePlay()
     window.addEventListener("ttd:music:toggle", handler)
@@ -287,9 +380,11 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
       url: newUrl.trim(),
       emoji: newEmoji,
       color: newColor,
+      dedication: newDedication.trim() || undefined,
     }
     persist(playlists.map((pl, i) => i === playlistIdx ? { ...pl, tracks: [...pl.tracks, t] } : pl))
-    setNewTitle(""); setNewArtist(""); setNewUrl(""); setNewEmoji("🎵"); setNewColor(COLOR_OPTIONS[0])
+    setNewTitle(""); setNewArtist(""); setNewUrl(""); setNewEmoji("🎵")
+    setNewColor(COLOR_OPTIONS[0]); setNewDedication("")
     setView("player")
   }
 
@@ -320,6 +415,9 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   }
 
   const ytId = track?.url ? getYouTubeId(track.url) : null
+  // M1: extract YouTube thumbnail for cover art background
+  const coverThumb = track?.url ? getYtThumb(track.url) : null
+  const likedCount = tracks.filter(t => likedTracks.has(t.id)).length
 
   // ── PLAYLISTS VIEW ──────────────────────────────────────────────────────────
   if (view === "playlists") return (
@@ -341,29 +439,43 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
         >
           <Plus size={15} /> Nueva playlist
         </button>
-        {playlists.map((pl, i) => (
-          <button
-            key={pl.id} onClick={() => selectPlaylist(i)}
-            style={{
-              display: "flex", alignItems: "center", gap: "0.5rem", width: "100%",
-              padding: "0.625rem 0.75rem", textAlign: "left",
-              background: i === playlistIdx ? "var(--primary-lighter)" : "white",
-              border: `2px solid ${i === playlistIdx ? "var(--primary)" : "var(--border)"}`,
-              borderRadius: "var(--radius-md)", cursor: "pointer", fontFamily: "inherit",
-            }}
-          >
-            <span style={{ fontSize: "1.125rem" }}>🎵</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: i === playlistIdx ? "var(--primary)" : "var(--foreground)" }}>{pl.name}</div>
-              <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{pl.tracks.length} canciones</div>
-            </div>
-            {playlists.length > 1 && (
-              <span onClick={(e) => { e.stopPropagation(); deletePlaylist(i) }} style={{ cursor: "pointer", color: "var(--foreground-muted)", padding: "4px" }}>
-                <Trash2 size={13} />
-              </span>
-            )}
-          </button>
-        ))}
+        {playlists.map((pl, i) => {
+          const plLiked = pl.tracks.filter(t => likedTracks.has(t.id)).length
+          return (
+            <button
+              key={pl.id} onClick={() => selectPlaylist(i)}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.5rem", width: "100%",
+                padding: "0.625rem 0.75rem", textAlign: "left",
+                background: i === playlistIdx ? "var(--primary-lighter)" : "white",
+                border: `2px solid ${i === playlistIdx ? "var(--primary)" : "var(--border)"}`,
+                borderRadius: "var(--radius-md)", cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              <span style={{ fontSize: "1.125rem" }}>🎵</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: i === playlistIdx ? "var(--primary)" : "var(--foreground)" }}>{pl.name}</div>
+                <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
+                  {pl.tracks.length} canciones{plLiked > 0 ? ` · ❤️ ${plLiked}` : ""}
+                </div>
+              </div>
+              {playlists.length > 1 && (
+                <span onClick={(e) => { e.stopPropagation(); deletePlaylist(i) }} style={{ cursor: "pointer", color: "var(--foreground-muted)", padding: "4px" }}>
+                  <Trash2 size={13} />
+                </span>
+              )}
+            </button>
+          )
+        })}
+        {likedCount > 0 && (
+          <div style={{
+            padding: "0.625rem 0.75rem", borderRadius: "var(--radius-md)", marginTop: "0.25rem",
+            background: "linear-gradient(135deg, #fce4ec, #fdf4ff)",
+            border: "1.5px solid #EC489966", fontSize: "0.6875rem", color: "var(--foreground-muted)",
+          }}>
+            ❤️ Tienes <strong>{likedCount}</strong> canciones favoritas
+          </div>
+        )}
       </div>
     </>
   )
@@ -396,10 +508,17 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
         <input className="input" placeholder="Título *" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} maxLength={80} autoFocus />
         <input className="input" placeholder="Artista" value={newArtist} onChange={(e) => setNewArtist(e.target.value)} maxLength={60} />
         <input className="input" placeholder="URL de YouTube o MP3 (opcional)" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} />
+        {/* M5: dedication field */}
+        <input
+          className="input"
+          placeholder="💌 Dedicatoria (aparece al reproducir, opcional)"
+          value={newDedication}
+          onChange={(e) => setNewDedication(e.target.value)}
+          maxLength={120}
+        />
         <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", margin: 0 }}>
-          💡 Pega un enlace de YouTube o una URL directa de MP3 para reproducir. Sin URL la canción es solo visual.
+          💡 Pega un enlace de YouTube o una URL directa de MP3. Sin URL la canción es solo visual.
         </p>
-        {/* Emoji */}
         <div>
           <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-light)", marginBottom: "0.375rem" }}>Icono</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
@@ -413,7 +532,6 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
             ))}
           </div>
         </div>
-        {/* Color */}
         <div>
           <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-light)", marginBottom: "0.375rem" }}>Color del disco</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
@@ -436,201 +554,324 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   // ── PLAYER VIEW ─────────────────────────────────────────────────────────────
   return (
     <>
-      <div className="app-content-header">
-        <button className="back-btn-phone" onClick={onBack}>‹</button>
+      {/* M1: Header adapts to cover art */}
+      <div className="app-content-header" style={{
+        position: "relative", zIndex: 6,
+        background: coverThumb ? "rgba(8,4,20,0.70)" : "var(--surface)",
+        backdropFilter: coverThumb ? "blur(10px)" : "none",
+        color: coverThumb ? "white" : "var(--foreground)",
+        borderBottom: coverThumb ? "1px solid rgba(255,255,255,0.1)" : "1px solid var(--border)",
+      }}>
+        <button className="back-btn-phone" onClick={onBack} style={{ color: coverThumb ? "rgba(255,255,255,0.85)" : "var(--primary)" }}>‹</button>
         <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🎧 {playlist.name}</span>
         <button
           onClick={() => setView("playlists")}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "4px", display: "flex", flexShrink: 0 }}
+          style={{ background: "none", border: "none", cursor: "pointer", color: coverThumb ? "rgba(255,255,255,0.8)" : "var(--primary)", padding: "4px", display: "flex", flexShrink: 0 }}
         >
           <ListMusic size={18} />
         </button>
       </div>
 
-      <div className="app-content-body" style={{ alignItems: "center", padding: "0.625rem 0.75rem 0.5rem", gap: 0 }}>
-        {/* Vinyl */}
-        {loadingDb
-          ? <div style={{ width: "150px", height: "150px", borderRadius: "50%", background: "#1c1c1c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" }}>...</div>
-          : track
-            ? <VinylRecord isPlaying={isPlaying} color={track.color} emoji={track.emoji} />
-            : <div style={{ width: "150px", height: "150px", borderRadius: "50%", background: "#1c1c1c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" }}>🎵</div>
-        }
-
-        {/* Hidden YouTube iframe */}
-        {ytId && isPlaying && (
-          <iframe
-            key={ytId}
-            src={`https://www.youtube.com/embed/${ytId}?autoplay=1&controls=0`}
-            style={{ width: 1, height: 1, border: "none", position: "absolute", opacity: 0 }}
-            allow="autoplay"
-          />
+      {/* Content with cover art background */}
+      <div style={{ flex: 1, position: "relative", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        {/* M1: blurred cover art background */}
+        {coverThumb && (
+          <div aria-hidden style={{
+            position: "absolute", inset: 0, zIndex: 0,
+            backgroundImage: `url(${coverThumb})`,
+            backgroundSize: "cover", backgroundPosition: "center",
+            filter: "blur(18px) brightness(0.35)",
+            transform: "scale(1.1)",
+          }} />
+        )}
+        {!coverThumb && track && (
+          <div aria-hidden style={{
+            position: "absolute", inset: 0, zIndex: 0,
+            background: `linear-gradient(160deg, ${track.color}55, #f3e8ff66, ${track.color}22)`,
+          }} />
         )}
 
-        {/* Track info */}
-        <div style={{ textAlign: "center", marginTop: "0.75rem" }}>
-          <h3 style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)", fontFamily: "'Fredoka', sans-serif", margin: 0 }}>
-            {track?.title ?? "Sin canciones"}
-          </h3>
-          <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", margin: "2px 0 0" }}>{track?.artist ?? ""}</p>
-          {track?.url && (
-            <p style={{ fontSize: "0.5625rem", color: "var(--primary)", margin: "2px 0 0", fontWeight: 600 }}>
-              {isYouTube(track.url) ? "YouTube" : "Audio"}
-            </p>
-          )}
-        </div>
-
-        {/* Progress */}
-        <div style={{ width: "82%", marginTop: "0.75rem" }}>
-          <div style={{ height: "3px", background: "var(--muted)", borderRadius: "999px", overflow: "hidden" }}>
-            <div style={{
-              height: "100%",
-              width: (track?.url && !isYouTube(track.url)) ? `${progress}%` : (isPlaying ? "45%" : "0%"),
-              background: "linear-gradient(90deg, var(--primary), var(--secondary))",
-              borderRadius: "999px",
-              transition: isPlaying ? "width 0.5s linear" : "none",
-            }} />
+        <div className="app-content-body" style={{
+          alignItems: "center", padding: "0.625rem 0.75rem 0.5rem",
+          gap: 0, position: "relative", zIndex: 1, background: "transparent",
+        }}>
+          {/* Vinyl + M2 visualizer */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            {loadingDb
+              ? <div style={{ width: "150px", height: "150px", borderRadius: "50%", background: "#1c1c1c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" }}>...</div>
+              : track
+                ? <VinylRecord isPlaying={isPlaying} color={track.color} emoji={track.emoji} transitioning={isTransitioning} />
+                : <div style={{ width: "150px", height: "150px", borderRadius: "50%", background: "#1c1c1c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" }}>🎵</div>
+            }
+            <AudioVisualizer isPlaying={isPlaying} />
           </div>
-          {track?.url && !isYouTube(track.url) && duration > 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", width: "100%", fontSize: "0.5625rem", color: "var(--foreground-muted)", marginTop: "2px" }}>
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
+
+          {/* Hidden YouTube iframe */}
+          {ytId && isPlaying && (
+            <iframe
+              key={ytId}
+              src={`https://www.youtube.com/embed/${ytId}?autoplay=1&controls=0`}
+              style={{ width: 1, height: 1, border: "none", position: "absolute", opacity: 0 }}
+              allow="autoplay"
+            />
+          )}
+
+          {/* Track info + M4 like heart */}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", marginTop: "0.75rem", width: "88%" }}>
+            <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
+              <h3 style={{
+                fontWeight: 700, fontSize: "0.9375rem",
+                color: coverThumb ? "white" : "var(--foreground)",
+                fontFamily: "'Fredoka', sans-serif", margin: 0,
+                textShadow: coverThumb ? "0 1px 8px rgba(0,0,0,0.8)" : "none",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
+                {track?.title ?? "Sin canciones"}
+              </h3>
+              <p style={{
+                fontSize: "0.75rem",
+                color: coverThumb ? "rgba(255,255,255,0.75)" : "var(--foreground-muted)",
+                margin: "2px 0 0",
+                textShadow: coverThumb ? "0 1px 4px rgba(0,0,0,0.7)" : "none",
+              }}>{track?.artist ?? ""}</p>
+              {/* M5: dedication inline display */}
+              {track?.dedication && (
+                <p style={{
+                  fontSize: "0.5625rem",
+                  color: coverThumb ? "#ffc8dd" : "var(--secondary)",
+                  margin: "3px 0 0", fontStyle: "italic", lineHeight: 1.4,
+                }}>💌 {track.dedication}</p>
+              )}
+            </div>
+            {track && (
+              <button onClick={(e) => toggleLike(track.id, e)} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", flexShrink: 0, marginTop: "2px" }}>
+                <Heart size={22}
+                  fill={likedTracks.has(track.id) ? "#EC4899" : "none"}
+                  color={likedTracks.has(track.id) ? "#EC4899" : (coverThumb ? "rgba(255,255,255,0.55)" : "var(--foreground-muted)")}
+                />
+              </button>
+            )}
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ width: "82%", marginTop: "0.75rem" }}>
+            <div style={{ height: "3px", background: coverThumb ? "rgba(255,255,255,0.2)" : "var(--muted)", borderRadius: "999px", overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: (track?.url && !isYouTube(track.url)) ? `${progress}%` : (isPlaying ? "45%" : "0%"),
+                background: "linear-gradient(90deg, var(--primary), var(--secondary))",
+                borderRadius: "999px",
+                transition: isPlaying ? "width 0.5s linear" : "none",
+              }} />
+            </div>
+            {track?.url && !isYouTube(track.url) && duration > 0 && (
+              <div style={{
+                display: "flex", justifyContent: "space-between", width: "100%",
+                fontSize: "0.5625rem",
+                color: coverThumb ? "rgba(255,255,255,0.55)" : "var(--foreground-muted)",
+                marginTop: "2px",
+              }}>
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* M6: sleep timer badge */}
+          {sleepMinutesLeft !== null && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: "0.375rem", marginTop: "0.375rem",
+              background: coverThumb ? "rgba(255,255,255,0.15)" : "var(--muted)",
+              borderRadius: "999px", padding: "3px 10px 3px 8px",
+              fontSize: "0.625rem", color: coverThumb ? "rgba(255,255,255,0.9)" : "var(--foreground-muted)",
+            }}>
+              🌙 Para en {sleepMinutesLeft}m
+              <button onClick={cancelSleepTimer} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", color: "inherit", opacity: 0.7 }}>
+                <X size={11} />
+              </button>
             </div>
           )}
-        </div>
 
-        {/* Shuffle/Loop toggles */}
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.625rem" }}>
-          <button
-            onClick={() => setIsShuffle((s) => !s)}
-            style={{
-              padding: "4px 10px", borderRadius: "999px", border: "none", cursor: "pointer",
-              fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 700,
-              background: isShuffle ? "var(--primary)" : "var(--muted)",
-              color: isShuffle ? "white" : "var(--foreground-muted)",
-              transition: "background 0.2s, color 0.2s",
-            }}
-          >🔀 Aleatorio</button>
-          <button
-            onClick={() => setIsLoop((l) => !l)}
-            style={{
-              padding: "4px 10px", borderRadius: "999px", border: "none", cursor: "pointer",
-              fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 700,
-              background: isLoop ? "var(--primary)" : "var(--muted)",
-              color: isLoop ? "white" : "var(--foreground-muted)",
-              transition: "background 0.2s, color 0.2s",
-            }}
-          >🔁 Repetir</button>
-        </div>
+          {/* Shuffle / Loop / Sleep controls */}
+          <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.5rem", flexWrap: "wrap", justifyContent: "center" }}>
+            {(["shuffle", "loop"] as const).map((ctrl) => {
+              const active = ctrl === "shuffle" ? isShuffle : isLoop
+              return (
+                <button key={ctrl}
+                  onClick={() => ctrl === "shuffle" ? setIsShuffle(s => !s) : setIsLoop(l => !l)}
+                  style={{
+                    padding: "4px 10px", borderRadius: "999px", border: "none", cursor: "pointer",
+                    fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 700,
+                    background: active ? "var(--primary)" : (coverThumb ? "rgba(255,255,255,0.18)" : "var(--muted)"),
+                    color: active ? "white" : (coverThumb ? "rgba(255,255,255,0.85)" : "var(--foreground-muted)"),
+                    transition: "background 0.2s, color 0.2s",
+                  }}
+                >{ctrl === "shuffle" ? "🔀 Aleatorio" : "🔁 Repetir"}</button>
+              )
+            })}
+            {/* M6: sleep timer dropdown */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowSleepMenu(!showSleepMenu)}
+                style={{
+                  padding: "4px 10px", borderRadius: "999px", border: "none", cursor: "pointer",
+                  fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 700,
+                  display: "flex", alignItems: "center", gap: "4px",
+                  background: sleepMinutesLeft !== null ? "var(--primary)" : (coverThumb ? "rgba(255,255,255,0.18)" : "var(--muted)"),
+                  color: sleepMinutesLeft !== null ? "white" : (coverThumb ? "rgba(255,255,255,0.85)" : "var(--foreground-muted)"),
+                  transition: "background 0.2s, color 0.2s",
+                }}
+              >
+                <Moon size={11} />Timer
+              </button>
+              {showSleepMenu && (
+                <div style={{
+                  position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)",
+                  background: "white", borderRadius: "12px", padding: "0.5rem",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.18)", zIndex: 99,
+                  display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: "110px",
+                  border: "1.5px solid var(--border)",
+                }}>
+                  <p style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", margin: "0 0 2px", textAlign: "center" }}>
+                    Parar en...
+                  </p>
+                  {SLEEP_OPTIONS.map(m => (
+                    <button key={m} onClick={() => startSleepTimer(m)} style={{
+                      padding: "0.375rem 0.625rem", borderRadius: "8px", border: "none",
+                      background: "var(--muted)", cursor: "pointer", fontFamily: "inherit",
+                      fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground)", textAlign: "center",
+                    }}>{m} min</button>
+                  ))}
+                  {sleepMinutesLeft !== null && (
+                    <button onClick={cancelSleepTimer} style={{
+                      padding: "0.375rem 0.625rem", borderRadius: "8px", border: "none",
+                      background: "#FEE2E2", cursor: "pointer", fontFamily: "inherit",
+                      fontSize: "0.75rem", fontWeight: 600, color: "#DC2626",
+                    }}>Cancelar</button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
 
-        {/* Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", marginTop: "0.5rem" }}>
-          <button onClick={goPrev} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-light)", display: "flex" }}>
-            <SkipBack size={22} />
-          </button>
-          <button
-            onClick={togglePlay}
-            disabled={!track}
-            style={{
-              width: "50px", height: "50px", borderRadius: "50%",
-              background: "linear-gradient(135deg, var(--primary), var(--secondary))",
-              border: "none", cursor: "pointer", color: "white",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 18px rgba(139,92,246,0.45)",
-              opacity: track ? 1 : 0.5,
-            }}
-          >
-            {isPlaying ? <Pause size={20} /> : <Play size={20} fill="white" />}
-          </button>
-          <button onClick={goNext} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-light)", display: "flex" }}>
-            <SkipForward size={22} />
-          </button>
-        </div>
-
-        {/* Track list */}
-        <div style={{ width: "100%", marginTop: "0.875rem" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.375rem" }}>
-            <h4 style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Lista · {tracks.length} canciones
-            </h4>
+          {/* Play/pause/skip controls */}
+          <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", marginTop: "0.5rem" }}>
+            <button onClick={goPrev} style={{ background: "none", border: "none", cursor: "pointer", color: coverThumb ? "rgba(255,255,255,0.85)" : "var(--foreground-light)", display: "flex" }}>
+              <SkipBack size={22} />
+            </button>
             <button
-              onClick={() => setView("addTrack")}
+              onClick={togglePlay} disabled={!track}
               style={{
-                display: "flex", alignItems: "center", gap: "3px",
-                background: "var(--primary-lighter)", border: "none", borderRadius: "999px",
-                cursor: "pointer", color: "var(--primary)", padding: "3px 8px",
-                fontFamily: "inherit", fontSize: "0.625rem", fontWeight: 700,
+                width: "50px", height: "50px", borderRadius: "50%",
+                background: "linear-gradient(135deg, var(--primary), var(--secondary))",
+                border: "none", cursor: "pointer", color: "white",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 4px 18px rgba(139,92,246,0.45)",
+                opacity: track ? 1 : 0.5,
               }}
             >
-              <Plus size={11} /> Añadir
+              {isPlaying ? <Pause size={20} /> : <Play size={20} fill="white" />}
+            </button>
+            <button onClick={goNext} style={{ background: "none", border: "none", cursor: "pointer", color: coverThumb ? "rgba(255,255,255,0.85)" : "var(--foreground-light)", display: "flex" }}>
+              <SkipForward size={22} />
             </button>
           </div>
 
-          <div style={{ maxHeight: "155px", overflowY: "auto" }}>
-            {tracks.length === 0 && (
-              <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", textAlign: "center", padding: "1rem 0" }}>
-                ¡Añade tu primera canción! 🎵
-              </p>
-            )}
-            {tracks.map((t, i) => (
-              <div
-                key={t.id}
-                onClick={() => goTo(i)}
+          {/* Track list */}
+          <div style={{ width: "100%", marginTop: "0.875rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.375rem" }}>
+              <h4 style={{
+                fontSize: "0.625rem", fontWeight: 700, margin: 0,
+                textTransform: "uppercase", letterSpacing: "0.05em",
+                color: coverThumb ? "rgba(255,255,255,0.6)" : "var(--foreground-muted)",
+              }}>
+                Lista · {tracks.length}{likedCount > 0 ? ` · ❤️ ${likedCount}` : ""}
+              </h4>
+              <button
+                onClick={() => setView("addTrack")}
                 style={{
-                  display: "flex", alignItems: "center", gap: "0.625rem",
-                  padding: "0.5rem 0.5rem", cursor: "pointer",
-                  background: trackIdx === i ? "var(--primary-lighter)" : "transparent",
+                  display: "flex", alignItems: "center", gap: "3px",
+                  background: coverThumb ? "rgba(255,255,255,0.18)" : "var(--primary-lighter)",
+                  border: "none", borderRadius: "999px", cursor: "pointer",
+                  color: coverThumb ? "white" : "var(--primary)",
+                  padding: "3px 8px", fontFamily: "inherit", fontSize: "0.625rem", fontWeight: 700,
+                }}
+              >
+                <Plus size={11} /> Añadir
+              </button>
+            </div>
+
+            <div style={{ maxHeight: "155px", overflowY: "auto" }}>
+              {tracks.length === 0 && (
+                <p style={{ fontSize: "0.75rem", textAlign: "center", padding: "1rem 0", color: coverThumb ? "rgba(255,255,255,0.5)" : "var(--foreground-muted)" }}>
+                  ¡Añade tu primera canción! 🎵
+                </p>
+              )}
+              {tracks.map((t, i) => (
+                <div key={t.id} onClick={() => goTo(i)} style={{
+                  display: "flex", alignItems: "center", gap: "0.5rem",
+                  padding: "0.5rem 0.375rem", cursor: "pointer",
+                  background: trackIdx === i ? (coverThumb ? "rgba(255,255,255,0.16)" : "var(--primary-lighter)") : "transparent",
                   borderRadius: "var(--radius-sm)",
                   borderLeft: trackIdx === i ? "3px solid var(--primary)" : "3px solid transparent",
                   transition: "background 0.15s, border-color 0.15s",
-                }}
-              >
-                {/* Track number */}
-                <span style={{
-                  fontFamily: "'Fredoka', sans-serif", fontWeight: 600,
-                  fontSize: "0.75rem", color: trackIdx === i ? "var(--primary)" : "var(--foreground-muted)",
-                  width: "16px", textAlign: "center", flexShrink: 0,
                 }}>
-                  {i + 1}
-                </span>
-                {/* Mini vinyl */}
-                <div style={{
-                  width: "34px", height: "34px", borderRadius: "50%", flexShrink: 0,
-                  background: `radial-gradient(circle, #111 0%, #111 18%, ${t.color} 19%, ${t.color} 44%, #1a1a1a 45%)`,
-                }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: trackIdx === i ? "var(--primary)" : "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {t.title}
+                  <span style={{
+                    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: "0.75rem",
+                    color: trackIdx === i ? "var(--primary)" : (coverThumb ? "rgba(255,255,255,0.4)" : "var(--foreground-muted)"),
+                    width: "16px", textAlign: "center", flexShrink: 0,
+                  }}>{i + 1}</span>
+                  <div style={{
+                    width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
+                    background: `radial-gradient(circle, #111 0%, #111 18%, ${t.color} 19%, ${t.color} 44%, #1a1a1a 45%)`,
+                  }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: "0.8125rem", fontWeight: 600,
+                      color: trackIdx === i ? "var(--primary)" : (coverThumb ? "rgba(255,255,255,0.9)" : "var(--foreground)"),
+                      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                    }}>{t.title}</div>
+                    {trackIdx === i
+                      ? <div style={{ fontSize: "0.625rem", color: "var(--primary)", fontWeight: 700 }}>▶ Reproduciendo</div>
+                      : <div style={{ fontSize: "0.6875rem", color: coverThumb ? "rgba(255,255,255,0.5)" : "var(--foreground-muted)" }}>
+                          {t.artist}{t.url ? (isYouTube(t.url) ? " · YT" : " · Audio") : ""}
+                        </div>
+                    }
                   </div>
-                  {trackIdx === i ? (
-                    <div style={{ fontSize: "0.625rem", color: "var(--primary)", fontWeight: 700 }}>▶ Reproduciendo</div>
-                  ) : (
-                    <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{t.artist}{t.url ? (isYouTube(t.url) ? " · YT" : " · Audio") : ""}</div>
-                  )}
+                  {/* M4: heart per track in list */}
+                  <button onClick={(e) => toggleLike(t.id, e)} style={{ background: "none", border: "none", cursor: "pointer", padding: "3px", flexShrink: 0, display: "flex" }}>
+                    <Heart size={13}
+                      fill={likedTracks.has(t.id) ? "#EC4899" : "none"}
+                      color={likedTracks.has(t.id) ? "#EC4899" : (coverThumb ? "rgba(255,255,255,0.3)" : "var(--foreground-muted)")}
+                    />
+                  </button>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1px", flexShrink: 0 }}>
+                    <button onClick={(e) => { e.stopPropagation(); moveTrack(i, "up") }} disabled={i === 0}
+                      style={{ background: "none", border: "none", cursor: i > 0 ? "pointer" : "default", color: i > 0 ? (coverThumb ? "rgba(255,255,255,0.4)" : "var(--foreground-muted)") : "var(--border)", padding: "1px 4px", fontSize: "0.5rem", lineHeight: 1 }}>▲</button>
+                    <button onClick={(e) => { e.stopPropagation(); moveTrack(i, "down") }} disabled={i === tracks.length - 1}
+                      style={{ background: "none", border: "none", cursor: i < tracks.length - 1 ? "pointer" : "default", color: i < tracks.length - 1 ? (coverThumb ? "rgba(255,255,255,0.4)" : "var(--foreground-muted)") : "var(--border)", padding: "1px 4px", fontSize: "0.5rem", lineHeight: 1 }}>▼</button>
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); deleteTrack(t.id) }}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: coverThumb ? "rgba(255,255,255,0.4)" : "var(--foreground-muted)", padding: "5px", flexShrink: 0, display: "flex", alignItems: "center", borderRadius: "6px" }}>
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "1px", flexShrink: 0 }}>
-                  <button onClick={(e) => { e.stopPropagation(); moveTrack(i, "up") }} disabled={i === 0}
-                    style={{ background: "none", border: "none", cursor: i > 0 ? "pointer" : "default", color: i > 0 ? "var(--foreground-muted)" : "var(--border)", padding: "1px 4px", fontSize: "0.5rem", lineHeight: 1 }}>▲</button>
-                  <button onClick={(e) => { e.stopPropagation(); moveTrack(i, "down") }} disabled={i === tracks.length - 1}
-                    style={{ background: "none", border: "none", cursor: i < tracks.length - 1 ? "pointer" : "default", color: i < tracks.length - 1 ? "var(--foreground-muted)" : "var(--border)", padding: "1px 4px", fontSize: "0.5rem", lineHeight: 1 }}>▼</button>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteTrack(t.id) }}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "6px", flexShrink: 0, display: "flex", alignItems: "center", borderRadius: "6px" }}
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        <audio ref={audioRef} />
+          <audio ref={audioRef} />
+        </div>
       </div>
 
       <style>{`
         @keyframes vinylSpin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
+        }
+        @keyframes vinylEnter {
+          from { transform: scale(0.75) rotate(-30deg); opacity: 0.2; }
+          to   { transform: scale(1) rotate(0deg); opacity: 1; }
         }
       `}</style>
     </>

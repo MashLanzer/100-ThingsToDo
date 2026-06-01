@@ -31,7 +31,7 @@ interface AppStore {
   setActivePhoneApp: (app: string) => void
   setCoupleName: (name: string) => void
   setNowPlayingTrack: (track: NowPlayingTrack | null) => void
-  setMusicIsPlaying: (v: boolean) => void
+  setMusicIsPlaying: (playing: boolean) => void
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -59,5 +59,5 @@ export const useAppStore = create<AppStore>((set) => ({
   setActivePhoneApp: (app) => set({ activePhoneApp: app }),
   setCoupleName: (name) => set({ coupleName: name }),
   setNowPlayingTrack: (track) => set({ nowPlayingTrack: track }),
-  setMusicIsPlaying: (v) => set({ musicIsPlaying: v }),
+  setMusicIsPlaying: (playing) => set({ musicIsPlaying: playing }),
 }))
