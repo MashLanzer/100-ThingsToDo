@@ -5,6 +5,7 @@ import { useAppStore } from "@/stores/app-store"
 import { useCoupleStatus, useLinkPartner, useUnlinkPartner } from "@/hooks/use-couple"
 import { toast } from "sonner"
 import { X, Copy, Check, Heart, Users, Sparkles } from "lucide-react"
+import { showConfirm } from "@/lib/confirm"
 
 export function CoupleModal() {
   const { showCoupleModal, closeCoupleModal } = useAppStore()
@@ -38,7 +39,7 @@ export function CoupleModal() {
   }
 
   async function handleUnlink() {
-    if (!confirm("¿Seguro que quieres desvincular a tu pareja?")) return
+    if (!await showConfirm({ title: "Desvincular pareja", message: "Se romperá el vínculo con tu pareja. Podréis volver a vincularos usando el código.", danger: true, confirmLabel: "Desvincular" })) return
     try {
       await unlinkMutation.mutateAsync()
       toast.success("Pareja desvinculada")
@@ -52,7 +53,7 @@ export function CoupleModal() {
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Heart size={18} /> Gestionar Pareja</h2>
-          <button className="btn-icon" onClick={closeCoupleModal}><X size={18} /></button>
+          <button className="modal-close-btn" onClick={closeCoupleModal}><X size={14} /></button>
         </div>
 
         <div className="modal-body">

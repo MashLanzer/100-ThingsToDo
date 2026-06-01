@@ -2,22 +2,23 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import type { Task } from "@/types"
-import { Trash2, Check, GripVertical, Heart, Flame, Laugh, Star, ThumbsUp, AlertTriangle, Calendar, CheckCircle2, Sparkles, Edit2 } from "lucide-react"
+import { Trash2, Check, GripVertical, Heart, Flame, Laugh, Star, Zap, AlertTriangle, Calendar, CheckCircle2, Sparkles, Edit2 } from "lucide-react"
 import { KawaiiIcon } from "@/components/ui/kawaii-icon"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 
-const REACTION_EMOJIS = ["❤️", "🔥", "😂", "⭐", "👏"]
-const REACTION_ICONS: Record<string, React.ReactNode> = {
-  "❤️": <Heart size={12} />,
-  "🔥": <Flame size={12} />,
-  "😂": <Laugh size={12} />,
-  "⭐": <Star size={12} />,
-  "👏": <ThumbsUp size={12} />,
-}
+const REACTIONS: Array<{ key: string; icon: React.ReactNode; label: string }> = [
+  { key: "heart", icon: <Heart  size={13} />, label: "Me encanta" },
+  { key: "fire",  icon: <Flame  size={13} />, label: "¡Fuego!"    },
+  { key: "star",  icon: <Star   size={13} />, label: "¡Genial!"   },
+  { key: "laugh", icon: <Laugh  size={13} />, label: "¡Jajaja!"   },
+  { key: "zap",   icon: <Zap    size={13} />, label: "¡Vamos!"    },
+]
+const REACTION_KEYS = REACTIONS.map((r) => r.key)
+const REACTION_ICON_MAP: Record<string, React.ReactNode> = Object.fromEntries(REACTIONS.map((r) => [r.key, r.icon]))
 
-interface Reaction { id: string; emoji: string; user_id: string; user_name: string | null }
+interface Reaction { id: string; emoji: string; user_id: string; user_name?: string | null }
 interface Props {
   task: Task
   onToggle: () => void
@@ -70,20 +71,20 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
     return () => clearInterval(interval)
   }, [fetchReactions])
 
-  async function handleReact(emojiChar: string) {
+  async function handleReact(key: string) {
     if (reactLoading) return
     setReactLoading(true)
     // Optimistic toggle
-    const mine = reactions.some((r) => r.emoji === emojiChar && r.user_id === currentUserId)
+    const mine = reactions.some((r) => r.emoji === key && r.user_id === currentUserId)
     setReactions((prev) =>
       mine
-        ? prev.filter((r) => !(r.emoji === emojiChar && r.user_id === currentUserId))
-        : [...prev, { id: "tmp", emoji: emojiChar, user_id: currentUserId ?? "", user_name: null }]
+        ? prev.filter((r) => !(r.emoji === key && r.user_id === currentUserId))
+        : [...prev, { id: "tmp", emoji: key, user_id: currentUserId ?? "", user_name: null }]
     )
     try {
       await authFetch(`/api/tasks/${task.id}/reactions`, {
         method: "POST",
-        body: JSON.stringify({ emoji: emojiChar }),
+        body: JSON.stringify({ emoji: key }),
       })
       await fetchReactions()
     } catch {
@@ -93,6 +94,13 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
       setShowPicker(false)
     }
   }
+
+  // Group reactions by key
+  const reactionGroups = REACTION_KEYS.reduce<Record<string, { count: number; mine: boolean }>>((acc, key) => {
+    const group = reactions.filter((r) => r.emoji === key)
+    if (group.length > 0) acc[key] = { count: group.length, mine: group.some((r) => r.user_id === currentUserId) }
+    return acc
+  }, {})
 
   // ── Toggle with sound/haptic ──────────────────────────────────
   function handleToggle() {
@@ -208,13 +216,6 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
       longPressTimer.current = null
     }
   }
-
-  // Group reactions
-  const reactionGroups = REACTION_EMOJIS.reduce<Record<string, { count: number; mine: boolean }>>((acc, e) => {
-    const group = reactions.filter((r) => r.emoji === e)
-    if (group.length > 0) acc[e] = { count: group.length, mine: group.some((r) => r.user_id === currentUserId) }
-    return acc
-  }, {})
 
   return (
     <div ref={setNodeRef} style={{ ...dndStyle, position: "relative", marginBottom: "0.5rem" }}>
@@ -345,54 +346,67 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
       </div>
 
       {/* Reactions row */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", paddingLeft: "0.5rem", paddingTop: "0.2rem", flexWrap: "wrap" }}>
-        {Object.entries(reactionGroups).map(([emojiChar, { count, mine }]) => (
+      <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", paddingLeft: "0.5rem", paddingBottom: "0.25rem", flexWrap: "wrap", background: "var(--surface)" }}>
+        {Object.entries(reactionGroups).map(([key, { count, mine }]) => (
           <button
-            key={emojiChar}
-            onClick={() => handleReact(emojiChar)}
+            key={key}
+            onClick={() => handleReact(key)}
             disabled={reactLoading}
             style={{
               background: mine ? "var(--primary-lighter)" : "var(--muted)",
               border: mine ? "1px solid var(--primary)" : "1px solid var(--border)",
-              borderRadius: 20, padding: "1px 7px", fontSize: "0.7rem",
+              borderRadius: 20, padding: "2px 8px", fontSize: "0.7rem",
               cursor: "pointer", display: "flex", alignItems: "center", gap: 3,
-              color: "var(--foreground)", transition: "transform 0.1s",
+              color: mine ? "var(--primary)" : "var(--foreground-muted)", transition: "transform 0.1s",
             }}
             title={mine ? "Quitar reacción" : "Reaccionar"}
           >
-            {REACTION_ICONS[emojiChar] ?? emojiChar}
-            <span style={{ fontSize: "0.65rem", fontWeight: 600 }}>{count}</span>
+            {REACTION_ICON_MAP[key]}
+            <span style={{ fontSize: "0.65rem", fontWeight: 700 }}>{count}</span>
           </button>
         ))}
 
-        {/* + picker */}
+        {/* + picker (Sparkles button) */}
         <div style={{ position: "relative" }}>
           <button
             onClick={() => setShowPicker((v) => !v)}
             style={{
               background: "var(--muted)", border: "1px solid var(--border)",
-              borderRadius: 20, padding: "1px 7px", fontSize: "0.7rem",
+              borderRadius: 20, padding: "2px 8px", fontSize: "0.7rem",
               cursor: "pointer", color: "var(--foreground-muted)", lineHeight: 1.4,
+              display: "flex", alignItems: "center",
             }}
             title="Añadir reacción"
-          >+</button>
+          >
+            <Sparkles size={11} />
+          </button>
           {showPicker && (
             <div style={{
-              position: "absolute", bottom: "calc(100% + 4px)", left: 0,
-              background: "white", border: "1px solid var(--border)",
-              borderRadius: "var(--radius-md)", padding: "6px 8px",
-              display: "flex", gap: 6, zIndex: 50,
-              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+              position: "absolute", bottom: "calc(100% + 6px)", left: 0,
+              background: "var(--surface)", border: "1px solid var(--border)",
+              borderRadius: "var(--radius-lg)", padding: "8px 10px",
+              display: "flex", gap: 4, zIndex: 50,
+              boxShadow: "0 6px 24px rgba(0,0,0,0.14)",
             }}>
-              {REACTION_EMOJIS.map((e) => (
+              {REACTIONS.map(({ key, icon, label }) => (
                 <button
-                  key={e}
-                  onClick={() => handleReact(e)}
+                  key={key}
+                  onClick={() => handleReact(key)}
                   disabled={reactLoading}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: 4, borderRadius: 6, display: "flex", alignItems: "center", color: "var(--foreground)", fontSize: "1rem" }}
-                  title={e}
+                  title={label}
+                  style={{
+                    background: reactions.some((r) => r.emoji === key && r.user_id === currentUserId)
+                      ? "var(--primary-lighter)" : "var(--muted)",
+                    border: "none", cursor: "pointer", padding: "6px 8px", borderRadius: "var(--radius-md)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: reactions.some((r) => r.emoji === key && r.user_id === currentUserId)
+                      ? "var(--primary)" : "var(--foreground-muted)",
+                    transition: "transform 0.1s, background 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.2)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
                 >
-                  {e}
+                  {icon}
                 </button>
               ))}
             </div>

@@ -11,6 +11,7 @@ import { ArrowLeft, Plus, Edit2, X, Trash2, Star, Image, Calendar, Tag, Upload, 
 import { useWindowPTR } from "@/hooks/use-window-ptr"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
+import { showConfirm } from "@/lib/confirm"
 import {
   DndContext,
   closestCenter,
@@ -222,7 +223,7 @@ export default function PlanDetailPage() {
   }
 
   async function handleDeletePlan() {
-    if (!confirm("¿Seguro que quieres eliminar este plan?")) return
+    if (!await showConfirm({ title: "Eliminar plan", message: "Se borrarán el plan y todas sus tareas.", danger: true })) return
     try {
       await deletePlan.mutateAsync(params.id)
       router.push("/dashboard")
@@ -602,7 +603,7 @@ export default function PlanDetailPage() {
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Edit2 size={16} /> Editar Plan</h2>
-              <button className="btn-icon" onClick={() => setShowEditModal(false)}><X size={18} /></button>
+              <button className="modal-close-btn" onClick={() => setShowEditModal(false)}><X size={14} /></button>
             </div>
             <div className="modal-body">
               <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>

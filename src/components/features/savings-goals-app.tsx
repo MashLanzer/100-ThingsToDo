@@ -8,6 +8,7 @@ import { PhoneLoader } from "@/components/features/phone-loader"
 import { formatDate } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
 import { Plane, Home, Car, Gem, Baby, GraduationCap, Laptop, Umbrella, Target, Wallet, Moon, Tent, Gift, PiggyBank, Sparkles, Trash2, Pencil, ClipboardList } from "lucide-react"
+import { showConfirm } from "@/lib/confirm"
 import type { LucideProps } from "lucide-react"
 
 type GoalIcon = { key: string; Icon: React.FC<LucideProps>; label: string }
@@ -154,7 +155,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
 
   async function handleDeleteGoal() {
     if (!selected) return
-    if (!confirm("¿Eliminar esta meta y todas sus aportaciones?")) return
+    if (!await showConfirm({ title: "Eliminar meta", message: "Se borrarán la meta y todas las aportaciones.", danger: true })) return
     try {
       await authFetch(`/api/goals/${selected.id}`, { method: "DELETE" })
       toast.success("Meta eliminada")
@@ -164,7 +165,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
   }
 
   async function handleDeleteContribution(goalId: string, contribId: string) {
-    if (!confirm("¿Eliminar esta aportación?")) return
+    if (!await showConfirm({ title: "Eliminar aportación", danger: true })) return
     try {
       await authFetch(`/api/goals/${goalId}/contributions?contributionId=${contribId}`, { method: "DELETE" })
       toast.success("Aportación eliminada")

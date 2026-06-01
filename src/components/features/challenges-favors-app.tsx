@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from "react"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import { CheckCircle, Trophy, Trash2, Heart, Map, Moon, Palette, Star, Sparkles, Gift, Layers, Shuffle, Pencil, CheckCircle2, Users } from "lucide-react"
+import { showConfirm } from "@/lib/confirm"
 import { PullToRefresh } from "@/components/shared/pull-to-refresh"
 import { PhoneLoader } from "@/components/features/phone-loader"
 import type { Favor, FavorDifficulty, FavorCategory } from "@/types"
@@ -264,7 +265,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
   }
 
   async function handleDeleteFavor(id: string) {
-    if (!confirm("¿Eliminar este favor?")) return
+    if (!await showConfirm({ title: "Eliminar favor", danger: true })) return
     try {
       await authFetch(`/api/favors/${id}`, { method: "DELETE" })
       toast.success("Favor eliminado")

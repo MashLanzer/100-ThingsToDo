@@ -272,22 +272,28 @@ export function MapModal() {
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             {view === "list" ? (
               <button
-                className="btn btn-primary"
-                style={{ fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
+                style={{
+                  background: "rgba(255,255,255,0.22)", border: "none", borderRadius: "var(--radius-md)",
+                  fontSize: "0.75rem", padding: "0.375rem 0.875rem", color: "white", cursor: "pointer",
+                  fontFamily: "inherit", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px",
+                }}
                 onClick={() => { setView("add"); setLat(null); setLng(null) }}
               >
-                <Plus size={14} style={{ marginRight: "4px" }} /> Añadir lugar
+                <Plus size={13} /> Añadir lugar
               </button>
             ) : (
               <button
-                className="btn btn-outline"
-                style={{ fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
+                style={{
+                  background: "rgba(255,255,255,0.22)", border: "none", borderRadius: "var(--radius-md)",
+                  fontSize: "0.75rem", padding: "0.375rem 0.875rem", color: "white", cursor: "pointer",
+                  fontFamily: "inherit", fontWeight: 600,
+                }}
                 onClick={() => { cleanupLeaflet(); setView("list") }}
               >
                 ‹ Volver
               </button>
             )}
-            <button className="btn-icon" onClick={closeMapModal}><X size={18} /></button>
+            <button className="modal-close-btn" onClick={closeMapModal}><X size={14} /></button>
           </div>
         </div>
 

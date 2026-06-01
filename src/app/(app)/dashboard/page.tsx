@@ -9,6 +9,7 @@ import { useWindowPTR } from "@/hooks/use-window-ptr"
 import { Plus, X, Trash2, Search, GripVertical, Tag, ImagePlus, Calendar, Heart, Mail, CheckCircle2, ClipboardList, ChevronDown, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { getFirebaseAuth } from "@/lib/firebase/client"
+import { showConfirm } from "@/lib/confirm"
 import type { Plan } from "@/types"
 import { OnboardingModal } from "@/components/shared/onboarding-modal"
 import { PlanCalendar } from "@/components/features/plan-calendar"
@@ -236,7 +237,7 @@ export default function DashboardPage() {
   }
 
   async function handleDeletePlan(id: string) {
-    if (!confirm("¿Eliminar este plan y todas sus tareas?")) return
+    if (!await showConfirm({ title: "Eliminar plan", message: "Se borrarán el plan y todas sus tareas. Esta acción no se puede deshacer.", danger: true })) return
     try {
       const auth = getFirebaseAuth()
       const token = await auth.currentUser?.getIdToken()

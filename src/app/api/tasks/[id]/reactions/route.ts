@@ -20,19 +20,12 @@ export async function GET(req: NextRequest, { params }: Context) {
 
   const { data, error } = await supabase
     .from("task_reactions")
-    .select("id, emoji, user_id, users(name)")
+    .select("id, emoji, user_id")
     .eq("task_id", taskId)
 
   if (error) return NextResponse.json([]) // defensive: table may not exist
 
-  const reactions = (data ?? []).map((r) => ({
-    id: r.id,
-    emoji: r.emoji,
-    user_id: r.user_id,
-    user_name: (Array.isArray(r.users) ? (r.users[0] as { name: string } | undefined)?.name : (r.users as { name: string } | null)?.name) ?? null,
-  }))
-
-  return NextResponse.json(reactions)
+  return NextResponse.json(data ?? [])
 }
 
 // POST /api/tasks/[id]/reactions — toggle reaction (upsert or delete)

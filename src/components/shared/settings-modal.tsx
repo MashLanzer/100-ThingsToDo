@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
 import { toast } from "sonner"
 import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload, LogOut } from "lucide-react"
+import { showConfirm } from "@/lib/confirm"
 
 const THEMES = [
   { id: "purple",   name: "Morado",   primary: "#8B5CF6", lighter: "#EDE9FE", border: "#F3E8FF", muted: "#F5F3FF" },
@@ -158,7 +159,7 @@ export function SettingsModal() {
   const linkMutation = useLinkPartner()
   const unlinkMutation = useUnlinkPartner()
   const [loggingOut, setLoggingOut] = useState(false)
-  const { subscribe: subscribePush, subscribing: pushSubscribing, isSubscribed: pushSubscribed, isSupported: pushSupported, permission: pushPermission } = usePushNotifications()
+  const { subscribe: subscribePush, subscribing: pushSubscribing, subscribed: pushSubscribed } = usePushNotifications()
   const [code, setCode] = useState("")
   const [copied, setCopied] = useState(false)
   const [currentTheme, setCurrentTheme] = useState("purple")
@@ -243,7 +244,7 @@ export function SettingsModal() {
   }
 
   async function handleUnlink() {
-    if (!confirm("¿Seguro que quieres desvincular a tu pareja?")) return
+    if (!await showConfirm({ title: "Desvincular pareja", message: "¿Seguro que quieres desvincular a tu pareja?", danger: true, confirmLabel: "Desvincular" })) return
     try {
       await unlinkMutation.mutateAsync()
       toast.success("Pareja desvinculada")
@@ -293,7 +294,7 @@ export function SettingsModal() {
   }
 
   async function handleLogout() {
-    if (!confirm("¿Seguro que quieres cerrar sesión?")) return
+    if (!await showConfirm({ title: "Cerrar sesión", message: "¿Seguro que quieres salir de la app?", danger: false, confirmLabel: "Cerrar sesión" })) return
     setLoggingOut(true)
     try {
       await signOut(getFirebaseAuth())
@@ -307,7 +308,7 @@ export function SettingsModal() {
 
   async function handleEnablePush() {
     await subscribePush()
-    if (pushPermission === "denied") {
+    if (Notification.permission === "denied") {
       toast.error("Notificaciones bloqueadas en tu navegador")
     } else {
       toast.success("¡Notificaciones activadas! 🔔")
@@ -439,7 +440,7 @@ export function SettingsModal() {
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Settings2 size={18} /> Configuración</h2>
-          <button className="btn-icon" onClick={closeSettingsModal}><X size={18} /></button>
+          <button className="modal-close-btn" onClick={closeSettingsModal}><X size={14} /></button>
         </div>
 
         {/* Pill tabs */}
@@ -704,19 +705,15 @@ export function SettingsModal() {
                       🔔 Notificaciones push
                     </p>
                     <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginTop: "0.125rem" }}>
-                      {!pushSupported
-                        ? "No soportado en este navegador"
-                        : pushSubscribed || pushPermission === "granted"
+                      {pushSubscribed
                         ? "Activadas ✅"
-                        : pushPermission === "denied"
-                        ? "Bloqueadas en el navegador"
                         : "Desactivadas"}
                     </p>
                     <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>
                       Recibirás una notificación cuando tu pareja complete una tarea 💕
                     </p>
                   </div>
-                  {pushSupported && !pushSubscribed && pushPermission !== "granted" && pushPermission !== "denied" && (
+                  {!pushSubscribed && (
                     <button
                       className="btn btn-primary"
                       style={{ fontSize: "0.75rem", padding: "0.375rem 0.75rem", flexShrink: 0 }}

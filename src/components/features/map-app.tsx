@@ -6,6 +6,7 @@ import { useAppStore } from "@/stores/app-store"
 import { toast } from "sonner"
 import type { Place } from "@/types"
 import { Plus, Trash2, Search, Globe, MapPin, Star, Sparkles, Map, Plane, type LucideProps } from "lucide-react"
+import { showConfirm } from "@/lib/confirm"
 import { PhoneLoader } from "@/components/features/phone-loader"
 
 type PlaceStatus = "visited" | "wishlist"
@@ -105,7 +106,7 @@ export function MapApp({ onBack }: Props) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("¿Eliminar este lugar?")) return
+    if (!await showConfirm({ title: "Eliminar lugar", danger: true })) return
     try {
       await authFetch(`/api/places/${id}`, { method: "DELETE" })
       toast.success("Lugar eliminado")

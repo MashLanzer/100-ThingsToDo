@@ -98,9 +98,9 @@ export function FavorsModal() {
     <div className="modal-overlay-bg" onClick={closeFavorsModal}>
       <div className="modal-box" style={{ maxHeight: "80vh" }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 className="modal-title">Favores & Desafíos 💝</h2>
-          <button className="btn-icon" onClick={loadFavors} title="Actualizar"><RefreshCw size={16} /></button>
-          <button className="btn-icon" onClick={closeFavorsModal}><X size={18} /></button>
+          <h2 className="modal-title">💝 Favores & Desafíos</h2>
+          <button className="modal-close-btn" onClick={loadFavors} title="Actualizar" style={{ marginRight: "0.25rem" }}><RefreshCw size={14} /></button>
+          <button className="modal-close-btn" onClick={closeFavorsModal}><X size={14} /></button>
         </div>
 
         {/* Tabs */}

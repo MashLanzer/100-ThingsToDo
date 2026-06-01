@@ -3,11 +3,11 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { usePhotos, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption, usePhotoReactions, useTogglePhotoReaction, type PhotoReaction } from "@/hooks/use-photos"
 import type { Photo } from "@/types"
-import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar, LayoutGrid, Rows3, Download, Share2, CheckCircle2, Circle } from "lucide-react"
+import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar, LayoutGrid, Rows3, Download, Share2, CheckCircle2, Circle, Newspaper, Heart } from "lucide-react"
 import { toast } from "sonner"
 
 type FilterType = "all" | "thingstodo" | "14feb"
-type ViewMode = "polaroid" | "masonry"
+type ViewMode = "polaroid" | "masonry" | "feed"
 
 function polaroidRotation(id: string, index: number): number {
   const sum = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
@@ -221,6 +221,67 @@ function MasonryCard({ photo, onClick }: { photo: Photo; onClick: () => void }) 
   )
 }
 
+function FeedCard({ photo, onClick, reactions, myUid, onReact }: {
+  photo: Photo; onClick: () => void
+  reactions: PhotoReaction[]; myUid: string; onReact: (emoji: string) => void
+}) {
+  const date = new Date(photo.created_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })
+  return (
+    <div
+      style={{
+        background: "var(--surface)",
+        borderRadius: "var(--radius-lg)",
+        overflow: "hidden",
+        marginBottom: "1rem",
+        boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+        border: "1px solid var(--border)",
+      }}
+    >
+      {/* Post header */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.875rem" }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: "50%",
+          background: photo.source === "14feb"
+            ? "linear-gradient(135deg, #EC4899, #F472B6)"
+            : "linear-gradient(135deg, var(--primary), var(--secondary))",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: "0.875rem", flexShrink: 0,
+        }}>
+          {photo.source === "14feb" ? "💕" : "✨"}
+        </div>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.875rem", fontWeight: 700, color: "var(--foreground)", lineHeight: 1.1 }}>
+            {photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"}
+          </p>
+          <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", lineHeight: 1 }}>{date}</p>
+        </div>
+      </div>
+      {/* Image */}
+      <div onClick={onClick} style={{ cursor: "pointer" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={photo.image_url}
+          alt={photo.caption ?? "Foto"}
+          style={{ width: "100%", display: "block", maxHeight: "70vw", objectFit: "cover" }}
+          loading="lazy"
+        />
+      </div>
+      {/* Actions + caption */}
+      <div style={{ padding: "0.625rem 0.875rem 0.75rem" }}>
+        <ReactionStrip photoId={photo.id} reactions={reactions} myUid={myUid} onToggle={onReact} />
+        {photo.caption && (
+          <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "var(--foreground)", marginTop: "0.375rem", lineHeight: 1.3 }}>
+            <span style={{ fontWeight: 700, marginRight: "0.25rem", fontSize: "0.875rem" }}>
+              {photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"}
+            </span>
+            {photo.caption}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function Lightbox({
   photos,
   initialIndex,
@@ -240,16 +301,21 @@ function Lightbox({
   const [editingCaption, setEditingCaption] = useState(false)
   const [captionDraft, setCaptionDraft] = useState("")
   const [savingCaption, setSavingCaption] = useState(false)
+  // displayCaption tracks the saved caption locally so UI updates immediately
+  const [displayCaption, setDisplayCaption] = useState<string | null>(null)
   const captionInputRef = useRef<HTMLInputElement>(null)
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
   const photo = photos[index]
 
+  // Sync displayCaption when navigating to another photo
+  useEffect(() => { setDisplayCaption(photo?.caption ?? null) }, [photo?.id])
+
   function prev() { setIndex((i) => (i > 0 ? i - 1 : photos.length - 1)); setEditingCaption(false) }
   function next() { setIndex((i) => (i < photos.length - 1 ? i + 1 : 0)); setEditingCaption(false) }
 
   function startEdit() {
-    setCaptionDraft(photo.caption ?? "")
+    setCaptionDraft(displayCaption ?? "")
     setEditingCaption(true)
     setTimeout(() => captionInputRef.current?.focus(), 50)
   }
@@ -259,6 +325,9 @@ function Lightbox({
     setSavingCaption(true)
     try {
       await onUpdateCaption(photo.id, captionDraft.trim() || null)
+      setDisplayCaption(captionDraft.trim() || null)
+    } catch {
+      toast.error("No se pudo guardar el pie de foto")
     } finally {
       setSavingCaption(false)
       setEditingCaption(false)
@@ -280,14 +349,19 @@ function Lightbox({
 
   async function handleDownload() {
     try {
-      const res = await fetch(photo.image_url)
+      const { getFirebaseAuth } = await import("@/lib/firebase/client")
+      const token = await getFirebaseAuth().currentUser?.getIdToken()
+      const proxyUrl = `/api/photos/download?url=${encodeURIComponent(photo.image_url)}`
+      const res = await fetch(proxyUrl, { headers: { Authorization: `Bearer ${token ?? ""}` } })
+      if (!res.ok) throw new Error("Download failed")
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = photo.caption ? `${photo.caption}.jpg` : `foto-${photo.id.slice(0, 8)}.jpg`
+      a.download = displayCaption ? `${displayCaption}.jpg` : `foto-${photo.id.slice(0, 8)}.jpg`
       a.click()
       URL.revokeObjectURL(url)
+      toast.success("Foto descargada ✅")
     } catch {
       toast.error("No se pudo descargar la foto")
     }
@@ -463,8 +537,8 @@ function Lightbox({
             </div>
           ) : (
             <button onClick={startEdit} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>
-              <p style={{ fontFamily: "'Caveat', cursive", color: photo.caption ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)", fontSize: "1.125rem", borderBottom: "1px dashed rgba(255,255,255,0.2)" }}>
-                {photo.caption ?? "Toca para añadir pie de foto ✏️"}
+              <p style={{ fontFamily: "'Caveat', cursive", color: displayCaption ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)", fontSize: "1.125rem", borderBottom: "1px dashed rgba(255,255,255,0.2)" }}>
+                {displayCaption ?? "Toca para añadir pie de foto ✏️"}
               </p>
             </button>
           )}
@@ -625,7 +699,8 @@ export default function FotosPage() {
   }, [])
 
   function toggleView() {
-    const next: ViewMode = viewMode === "polaroid" ? "masonry" : "polaroid"
+    const cycle: ViewMode[] = ["polaroid", "masonry", "feed"]
+    const next = cycle[(cycle.indexOf(viewMode) + 1) % cycle.length]
     setViewMode(next)
     localStorage.setItem("fotosView", next)
   }
@@ -760,7 +835,7 @@ export default function FotosPage() {
           </div>
           <button
             onClick={toggleView}
-            title={viewMode === "polaroid" ? "Vista cuadrícula" : "Vista polaroid"}
+            title={viewMode === "polaroid" ? "Vista cuadrícula" : viewMode === "masonry" ? "Vista feed" : "Vista polaroid"}
             style={{
               width: 32, height: 32, borderRadius: "var(--radius-md)", border: "1px solid var(--border)",
               background: "var(--surface)", cursor: "pointer", display: "flex", alignItems: "center",
@@ -768,7 +843,7 @@ export default function FotosPage() {
               transition: "background 0.15s, color 0.15s",
             }}
           >
-            {viewMode === "polaroid" ? <LayoutGrid size={15} /> : <Rows3 size={15} />}
+            {viewMode === "polaroid" ? <LayoutGrid size={15} /> : viewMode === "masonry" ? <Newspaper size={15} /> : <Rows3 size={15} />}
           </button>
         </div>
       )}
@@ -835,12 +910,25 @@ export default function FotosPage() {
                     />
                   ))}
                 </div>
-              ) : (
+              ) : viewMode === "masonry" ? (
                 <div style={{ columns: 2, columnGap: "0.625rem", padding: "0.25rem 0 0.75rem" }}>
                   {group.photos.map((photo) => (
                     <MasonryCard
                       key={photo.id}
                       photo={photo}
+                      onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: "0.25rem 0 0.5rem" }}>
+                  {group.photos.map((photo) => (
+                    <FeedCard
+                      key={photo.id}
+                      photo={photo}
+                      reactions={reactions}
+                      myUid={myUid}
+                      onReact={(emoji) => toggleReaction.mutate({ photoId: photo.id, emoji })}
                       onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))}
                     />
                   ))}
