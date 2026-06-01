@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import type { JournalEntry, Letter } from "@/types"
-import { Lock, Unlock, Flame, Smile, Heart, Laugh, Frown, Meh, Moon, User, Camera, Mail, FileText, CheckCircle2, PenLine, Search as SearchIcon, BarChart2, Mic, MicOff, Trash2, Upload } from "lucide-react"
+import { Lock, Unlock, Flame, Smile, Heart, Laugh, Frown, Meh, Moon, User, Camera, Mail, FileText, CheckCircle2, PenLine, Search as SearchIcon, BarChart2, Mic, Trash2 } from "lucide-react"
 
 const MOODS = [
   { id: "happy",    Icon: Smile,  label: "Feliz",       accent: "#FEF3C7", accentBorder: "#F59E0B", accentText: "#92400E" },
@@ -145,68 +145,6 @@ type View = "calendar" | "read" | "write" | "timeline" | "letters" | "letters-co
 
 // ── Voice recording hook ──────────────────────────────────────────────────────
 
-function useVoiceRecorder() {
-  const [isRecording, setIsRecording] = useState(false)
-  const [recordingSeconds, setRecordingSeconds] = useState(0)
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
-  const [audioDuration, setAudioDuration] = useState(0)
-  const [uploading, setUploading] = useState(false)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const startRecording = useCallback(async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      toast.error("Tu navegador no soporta grabación. Usa Chrome o Safari actualizado.")
-      return
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mr = new MediaRecorder(stream)
-      mediaRecorderRef.current = mr
-      chunksRef.current = []
-      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
-      mr.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" })
-        setAudioBlob(blob)
-        stream.getTracks().forEach(t => t.stop())
-      }
-      mr.start()
-      setIsRecording(true)
-      setRecordingSeconds(0)
-      timerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000)
-    } catch (err) {
-      const name = err instanceof Error ? err.name : ""
-      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-        toast.error("Permiso de micrófono denegado. Ve a Ajustes del dispositivo → Apps → permisos de micrófono.", { duration: 6000 })
-      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-        toast.error("No se encontró micrófono en este dispositivo.")
-      } else {
-        toast.error("No se pudo acceder al micrófono. Asegúrate de usar HTTPS.")
-      }
-    }
-  }, [])
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
-      setAudioDuration(recordingSeconds)
-      mediaRecorderRef.current.stop()
-      setIsRecording(false)
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [isRecording, recordingSeconds])
-
-  const discard = useCallback(() => {
-    setAudioBlob(null)
-    setRecordingSeconds(0)
-    setAudioDuration(0)
-  }, [])
-
-  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current) }, [])
-
-  return { isRecording, recordingSeconds, audioBlob, audioDuration, uploading, setUploading, startRecording, stopRecording, discard }
-}
-
 export function JournalApp({ onBack }: Props) {
   const { user } = useAuth()
   const myUid = user?.uid ?? ""
@@ -226,8 +164,10 @@ export function JournalApp({ onBack }: Props) {
   const [searchQuery, setSearchQuery] = useState("")
   const [photoUrls, setPhotoUrls] = useState<string[]>([])
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [uploadingAudio, setUploadingAudio] = useState(false)
   const [viewingPartner, setViewingPartner] = useState(false)
   const photoFileRef = useRef<HTMLInputElement>(null)
+  const audioFileRef = useRef<HTMLInputElement>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [dismissedOnThisDay, setDismissedOnThisDay] = useState(false)
 
@@ -237,9 +177,6 @@ export function JournalApp({ onBack }: Props) {
   const [letterSubject, setLetterSubject] = useState("")
   const [letterContent, setLetterContent] = useState("")
   const [sendingLetter, setSendingLetter] = useState(false)
-
-  // Voice recorder
-  const voice = useVoiceRecorder()
 
   // ── PIN state ──────────────────────────────────────────────────────────────
   const [pinRequired, setPinRequired] = useState(false)
@@ -318,7 +255,6 @@ export function JournalApp({ onBack }: Props) {
       setWriteMood("happy")
       setPhotoUrls([])
       setAudioUrl(null)
-      voice.discard()
       setView("write")
     }
   }
@@ -328,7 +264,6 @@ export function JournalApp({ onBack }: Props) {
     setWriteMood(entry.mood ?? "happy")
     setPhotoUrls(entry.photos ?? [])
     setAudioUrl(entry.audio_url ?? null)
-    voice.discard()
     setIsEditing(true)
     setView("write")
   }
@@ -339,30 +274,10 @@ export function JournalApp({ onBack }: Props) {
     try {
       const token = await getToken()
       if (!token) throw new Error("Not authenticated")
-
-      let finalAudioUrl = audioUrl
-      // If there's a recorded blob not yet uploaded, upload it now
-      if (voice.audioBlob && !audioUrl) {
-        voice.setUploading(true)
-        const fd = new FormData()
-        fd.append("file", voice.audioBlob, "audio.webm")
-        fd.append("date", selectedDate)
-        const upRes = await fetch("/api/upload/audio", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: fd,
-        })
-        voice.setUploading(false)
-        if (upRes.ok) {
-          const { url } = await upRes.json()
-          finalAudioUrl = url
-        }
-      }
-
       const res = await fetch("/api/journal", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ date: selectedDate, content: writeContent.trim(), mood: writeMood, photos: photoUrls, audio_url: finalAudioUrl }),
+        body: JSON.stringify({ date: selectedDate, content: writeContent.trim(), mood: writeMood, photos: photoUrls, audio_url: audioUrl }),
       })
       if (!res.ok) throw new Error("Error al guardar")
       toast.success(isEditing ? "Entrada actualizada ✏️" : "Entrada guardada 💕")
@@ -374,28 +289,31 @@ export function JournalApp({ onBack }: Props) {
     } finally { setSaving(false) }
   }
 
-  async function uploadVoice() {
-    if (!voice.audioBlob || !selectedDate) return
-    voice.setUploading(true)
+  async function handleAudioUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !selectedDate) return
+    setUploadingAudio(true)
     try {
       const token = await getToken()
       if (!token) throw new Error("No auth")
       const fd = new FormData()
-      fd.append("file", voice.audioBlob, "audio.webm")
+      fd.append("file", file)
       fd.append("date", selectedDate)
       const res = await fetch("/api/upload/audio", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
       })
-      if (!res.ok) throw new Error("Upload failed")
+      if (!res.ok) throw new Error("Error al subir")
       const { url } = await res.json()
       setAudioUrl(url)
-      voice.discard()
-      toast.success("Audio guardado 🎙️")
+      toast.success("Nota de voz añadida 🎙️")
     } catch {
       toast.error("Error al subir el audio")
-    } finally { voice.setUploading(false) }
+    } finally {
+      setUploadingAudio(false)
+      if (audioFileRef.current) audioFileRef.current.value = ""
+    }
   }
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -1025,14 +943,9 @@ export function JournalApp({ onBack }: Props) {
 
   // ── WRITE view ─────────────────────────────────────────────────────────────
   if (view === "write") {
-    const fmtSecs = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
 
     return (
       <>
-        <style>{`
-          @keyframes recordingPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-          @keyframes waveBar { 0%,100%{height:4px} 50%{height:18px} }
-        `}</style>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => { setIsEditing(false); setView(selectedEntry ? "read" : "calendar") }}>‹</button>
           <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>{isEditing ? <><FileText size={14} /> Editando</> : <><PenLine size={14} /> Nueva entrada</>}</span>
@@ -1122,59 +1035,43 @@ export function JournalApp({ onBack }: Props) {
             )}
           </div>
 
-          {/* Feature 5: Voice recording */}
+          {/* Nota de voz — selector de archivo (sin permisos de micrófono) */}
           <div style={{ marginBottom: "0.75rem" }}>
             <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Mic size={14} /> Nota de voz</label>
-
-            {/* Existing uploaded audio */}
-            {audioUrl && (
-              <div style={{ background: "var(--primary-lighter)", border: "1px solid var(--primary-light)", borderRadius: "var(--radius-md)", padding: "0.5rem 0.75rem", display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.375rem" }}>
+            <input
+              ref={audioFileRef}
+              type="file"
+              accept="audio/*,video/mp4"
+              style={{ display: "none" }}
+              onChange={handleAudioUpload}
+            />
+            {audioUrl ? (
+              <div style={{ background: "var(--primary-lighter)", border: "1px solid var(--primary-light)", borderRadius: "var(--radius-md)", padding: "0.5rem 0.75rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <audio controls src={audioUrl} style={{ flex: 1, height: 34, accentColor: "var(--primary)" }} />
                 <button onClick={() => setAudioUrl(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: "0.25rem" }}>
                   <Trash2 size={14} />
                 </button>
               </div>
-            )}
-
-            {!audioUrl && !voice.isRecording && !voice.audioBlob && (
-              <button onClick={voice.startRecording}
-                style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 0.875rem", borderRadius: "999px", border: "1.5px solid var(--primary-light)", background: "var(--primary-lighter)", cursor: "pointer", fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 600, color: "var(--primary)" }}
+            ) : (
+              <button
+                type="button"
+                onClick={() => audioFileRef.current?.click()}
+                disabled={uploadingAudio}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: "0.375rem",
+                  padding: "0.5rem 0.875rem", borderRadius: "999px",
+                  border: "1.5px solid var(--primary-light)", background: "var(--primary-lighter)",
+                  cursor: uploadingAudio ? "wait" : "pointer",
+                  fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 600, color: "var(--primary)",
+                }}
               >
-                <Mic size={14} /> 🎙️ Grabar
+                <Mic size={14} />
+                {uploadingAudio ? "Subiendo..." : "🎙️ Adjuntar audio"}
               </button>
             )}
-
-            {voice.isRecording && (
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0.875rem", borderRadius: "var(--radius-md)", background: "#fff0f0", border: "1.5px solid #fca5a5" }}>
-                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", animation: "recordingPulse 1s infinite", flexShrink: 0 }} />
-                <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#ef4444" }}>Grabando... {fmtSecs(voice.recordingSeconds)}</span>
-                <button onClick={voice.stopRecording}
-                  style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none", background: "#ef4444", color: "white", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600 }}
-                >
-                  <MicOff size={12} /> Detener
-                </button>
-              </div>
-            )}
-
-            {voice.audioBlob && !voice.isRecording && !audioUrl && (
-              <div style={{ padding: "0.625rem 0.875rem", borderRadius: "var(--radius-md)", background: "var(--primary-lighter)", border: "1.5px solid var(--primary-light)", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                {/* Waveform bars */}
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 20, flexShrink: 0 }}>
-                  {[0, 80, 160, 240, 320].map((delay, i) => (
-                    <div key={i} style={{ width: 3, background: "var(--primary)", borderRadius: 2, animation: `waveBar 0.8s ease-in-out ${delay}ms infinite` }} />
-                  ))}
-                </div>
-                <span style={{ fontSize: "0.75rem", color: "var(--primary)", fontWeight: 600 }}>{fmtSecs(voice.audioDuration)}</span>
-                <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
-                  <button onClick={voice.discard} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.25rem 0.5rem", borderRadius: "999px", border: "1px solid #fca5a5", background: "white", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", color: "#ef4444" }}>
-                    <Trash2 size={11} /> Descartar
-                  </button>
-                  <button onClick={uploadVoice} disabled={voice.uploading} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.25rem 0.5rem", borderRadius: "999px", border: "none", background: "var(--primary)", color: "white", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600 }}>
-                    <Upload size={11} /> {voice.uploading ? "Subiendo..." : "Subir"}
-                  </button>
-                </div>
-              </div>
-            )}
+            <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>
+              Graba con la app de voz de tu móvil y luego adjunta el archivo aquí.
+            </p>
           </div>
 
           <button className="btn btn-primary" style={{ marginTop: "0.25rem" }} onClick={saveEntry} disabled={saving || !writeContent.trim()}>
