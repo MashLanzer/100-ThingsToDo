@@ -5,7 +5,7 @@ import { getFirebaseAuth } from "@/lib/firebase/client"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import type { JournalEntry, Letter } from "@/types"
-import { Lock, Unlock, Flame, Smile, Heart, Laugh, Frown, Meh, Moon, User, Camera, Mail, FileText, CheckCircle2, PenLine, Search as SearchIcon, BarChart2, Mic, Trash2 } from "lucide-react"
+import { Lock, Unlock, Flame, Smile, Heart, Laugh, Frown, Meh, Moon, User, Camera, Mail, FileText, CheckCircle2, PenLine, Search as SearchIcon, BarChart2, Mic, MicOff, Square, Trash2 } from "lucide-react"
 
 const MOODS = [
   { id: "happy",    Icon: Smile,  label: "Feliz",       accent: "#FEF3C7", accentBorder: "#F59E0B", accentText: "#92400E" },
@@ -167,8 +167,14 @@ export function JournalApp({ onBack }: Props) {
   const [uploadingAudio, setUploadingAudio] = useState(false)
   const [viewingPartner, setViewingPartner] = useState(false)
   const photoFileRef = useRef<HTMLInputElement>(null)
-  const audioFileRef = useRef<HTMLInputElement>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingSecs, setRecordingSecs] = useState(0)
+  const [showMicHelp, setShowMicHelp] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const [dismissedOnThisDay, setDismissedOnThisDay] = useState(false)
 
   // Letters state
@@ -198,6 +204,13 @@ export function JournalApp({ onBack }: Props) {
   }, [])
 
   useEffect(() => { loadEntries() }, [month, year])
+
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
+      streamRef.current?.getTracks().forEach(t => t.stop())
+    }
+  }, [])
 
   async function getToken() {
     const auth = getFirebaseAuth()
@@ -289,15 +302,67 @@ export function JournalApp({ onBack }: Props) {
     } finally { setSaving(false) }
   }
 
-  async function handleAudioUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || !selectedDate) return
+  function fmtSecs(s: number) {
+    return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
+  }
+
+  async function startRecording() {
+    setShowMicHelp(false)
+    try {
+      if (typeof navigator?.permissions?.query === "function") {
+        try {
+          const perm = await navigator.permissions.query({ name: "microphone" as PermissionName })
+          if (perm.state === "denied") { setShowMicHelp(true); return }
+        } catch { /* permissions API not supported, proceed */ }
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      streamRef.current = stream
+      const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find(t => {
+        try { return MediaRecorder.isTypeSupported(t) } catch { return false }
+      }) ?? ""
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+      mediaRecorderRef.current = mr
+      chunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        streamRef.current = null
+        const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" })
+        await uploadAudioBlob(blob, mimeType)
+      }
+      mr.start(250)
+      setIsRecording(true)
+      setRecordingSecs(0)
+      recordingTimerRef.current = setInterval(() => setRecordingSecs(s => s + 1), 1000)
+    } catch (err: unknown) {
+      const name = err instanceof Error ? err.name : ""
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        setShowMicHelp(true)
+      } else if (name === "NotFoundError") {
+        toast.error("No se encontró micrófono en este dispositivo")
+      } else {
+        toast.error("No se pudo acceder al micrófono")
+      }
+    }
+  }
+
+  function stopRecording() {
+    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop()
+    }
+    setIsRecording(false)
+  }
+
+  async function uploadAudioBlob(blob: Blob, mimeType: string) {
+    if (!selectedDate) return
     setUploadingAudio(true)
     try {
       const token = await getToken()
       if (!token) throw new Error("No auth")
+      const ext = mimeType.includes("mp4") ? "mp4" : mimeType.includes("ogg") ? "ogg" : "webm"
       const fd = new FormData()
-      fd.append("file", file)
+      fd.append("file", blob, `voz-${selectedDate}.${ext}`)
       fd.append("date", selectedDate)
       const res = await fetch("/api/upload/audio", {
         method: "POST",
@@ -312,7 +377,6 @@ export function JournalApp({ onBack }: Props) {
       toast.error("Error al subir el audio")
     } finally {
       setUploadingAudio(false)
-      if (audioFileRef.current) audioFileRef.current.value = ""
     }
   }
 
@@ -1035,16 +1099,28 @@ export function JournalApp({ onBack }: Props) {
             )}
           </div>
 
-          {/* Nota de voz — selector de archivo (sin permisos de micrófono) */}
+          {/* Nota de voz — grabación en la app */}
           <div style={{ marginBottom: "0.75rem" }}>
             <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Mic size={14} /> Nota de voz</label>
-            <input
-              ref={audioFileRef}
-              type="file"
-              accept="audio/*,video/mp4"
-              style={{ display: "none" }}
-              onChange={handleAudioUpload}
-            />
+
+            {showMicHelp && (
+              <div style={{ background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: "var(--radius-md)", padding: "0.875rem", marginBottom: "0.5rem" }}>
+                <p style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#991b1b", marginBottom: "0.375rem", display: "flex", alignItems: "center", gap: "0.375rem" }}><MicOff size={14} /> Permiso de micrófono denegado</p>
+                <p style={{ fontSize: "0.75rem", color: "#7f1d1d", marginBottom: "0.625rem" }}>Activa el micrófono en los ajustes del dispositivo y vuelve a intentarlo:</p>
+                <div style={{ background: "white", borderRadius: "var(--radius-sm)", padding: "0.625rem", marginBottom: "0.375rem" }}>
+                  <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#374151", marginBottom: "0.25rem" }}>📱 Android</p>
+                  <p style={{ fontSize: "0.6875rem", color: "#6b7280", lineHeight: 1.5 }}>Ajustes → Aplicaciones → Chrome (o ThingsToDo) → Permisos → Micrófono → Permitir</p>
+                </div>
+                <div style={{ background: "white", borderRadius: "var(--radius-sm)", padding: "0.625rem" }}>
+                  <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#374151", marginBottom: "0.25rem" }}>🍎 iPhone</p>
+                  <p style={{ fontSize: "0.6875rem", color: "#6b7280", lineHeight: 1.5 }}>Ajustes → Safari → Micrófono → Permitir</p>
+                </div>
+                <button onClick={() => startRecording()} style={{ marginTop: "0.625rem", fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+                  Reintentar →
+                </button>
+              </div>
+            )}
+
             {audioUrl ? (
               <div style={{ background: "var(--primary-lighter)", border: "1px solid var(--primary-light)", borderRadius: "var(--radius-md)", padding: "0.5rem 0.75rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <audio controls src={audioUrl} style={{ flex: 1, height: 34, accentColor: "var(--primary)" }} />
@@ -1052,10 +1128,22 @@ export function JournalApp({ onBack }: Props) {
                   <Trash2 size={14} />
                 </button>
               </div>
+            ) : isRecording ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0.875rem", background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: "999px" }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", flexShrink: 0, animation: "recordingPulse 1s ease infinite" }} />
+                <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.9375rem", fontWeight: 700, color: "#991b1b", flex: 1 }}>{fmtSecs(recordingSecs)}</span>
+                {uploadingAudio ? (
+                  <span style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>Subiendo...</span>
+                ) : (
+                  <button onClick={stopRecording} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.375rem 0.75rem", borderRadius: "999px", border: "none", background: "#ef4444", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 700, color: "white", flexShrink: 0 }}>
+                    <Square size={11} fill="white" /> Detener
+                  </button>
+                )}
+              </div>
             ) : (
               <button
                 type="button"
-                onClick={() => audioFileRef.current?.click()}
+                onClick={startRecording}
                 disabled={uploadingAudio}
                 style={{
                   display: "inline-flex", alignItems: "center", gap: "0.375rem",
@@ -1066,12 +1154,9 @@ export function JournalApp({ onBack }: Props) {
                 }}
               >
                 <Mic size={14} />
-                {uploadingAudio ? "Subiendo..." : "🎙️ Adjuntar audio"}
+                {uploadingAudio ? "Subiendo..." : "🎙️ Grabar nota de voz"}
               </button>
             )}
-            <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>
-              Graba con la app de voz de tu móvil y luego adjunta el archivo aquí.
-            </p>
           </div>
 
           <button className="btn btn-primary" style={{ marginTop: "0.25rem" }} onClick={saveEntry} disabled={saving || !writeContent.trim()}>
