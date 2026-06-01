@@ -1,10 +1,20 @@
 "use client"
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
-import { usePhotos, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption, usePhotoReactions, useTogglePhotoReaction, type PhotoReaction } from "@/hooks/use-photos"
+import {
+  usePhotos, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption,
+  usePhotoReactions, useTogglePhotoReaction, type PhotoReaction,
+  useMarkPhotoViewed, usePhotoViews, type PhotoViewData,
+} from "@/hooks/use-photos"
 import type { Photo } from "@/types"
-import { usePhotoComments, useAddPhotoComment, useDeletePhotoComment, type PhotoComment } from "@/hooks/use-photos"
-import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar, LayoutGrid, Rows3, Download, Share2, CheckCircle2, Circle, Newspaper, Heart, MessageCircle, Send } from "lucide-react"
+import {
+  usePhotoComments, useAddPhotoComment, useDeletePhotoComment, type PhotoComment,
+} from "@/hooks/use-photos"
+import {
+  Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar,
+  LayoutGrid, Rows3, Download, Share2, CheckCircle2, Circle, Newspaper,
+  Heart, MessageCircle, Send, Search, CornerDownRight,
+} from "lucide-react"
 import { toast } from "sonner"
 
 type FilterType = "all" | "thingstodo" | "14feb"
@@ -238,11 +248,13 @@ function MasonryCard({ photo, onClick }: { photo: Photo; onClick: () => void }) 
 
 const FEED_REACTIONS = ["❤️", "🔥", "✨"] as const
 
-function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onOpenComments }: {
+// F5: Double-tap to like FeedCard
+function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onOpenComments, partnerViewed }: {
   photo: Photo; onClick: () => void
   reactions: PhotoReaction[]; commentCount: number; myUid: string
   onReact: (emoji: string) => void
   onOpenComments: () => void
+  partnerViewed?: boolean
 }) {
   const appName = photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"
   const uploaderName = photo.uploaded_by_name?.trim() || null
@@ -257,6 +269,8 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
   const [burst, setBurst] = useState(false)
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressed = useRef(false)
+  // F5: track last tap time for double-tap detection
+  const lastTapTime = useRef<number>(0)
 
   function startPress() {
     longPressed.current = false
@@ -268,6 +282,32 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
   }
   function endPress() {
     if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null }
+  }
+
+  // F5: handle tap — detect double-tap within 300ms
+  function handleTap() {
+    if (longPressed.current) return
+    const now = Date.now()
+    if (now - lastTapTime.current < 300) {
+      // Double-tap: like with heart burst
+      lastTapTime.current = 0
+      if (!liked) {
+        setBurst(true)
+        setTimeout(() => setBurst(false), 700)
+        onReact("❤️")
+      } else {
+        setBurst(true)
+        setTimeout(() => setBurst(false), 700)
+      }
+    } else {
+      lastTapTime.current = now
+      // Single tap: open lightbox after short delay to allow double-tap
+      setTimeout(() => {
+        if (Date.now() - lastTapTime.current >= 290) {
+          onClick()
+        }
+      }, 310)
+    }
   }
 
   function react(emoji: string) {
@@ -287,7 +327,7 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
         border: "1px solid var(--border)",
       }}
     >
-      {/* Post header — uploader avatar + name, app name small below */}
+      {/* Post header */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.875rem" }}>
         <div style={{
           width: 38, height: 38, borderRadius: "50%", padding: 2, flexShrink: 0,
@@ -315,9 +355,9 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
         </div>
       </div>
 
-      {/* Image — long-press to react, single tap opens lightbox */}
+      {/* Image — double-tap to like, single tap opens lightbox */}
       <div
-        onClick={() => { if (!longPressed.current) onClick() }}
+        onClick={handleTap}
         onPointerDown={startPress}
         onPointerUp={endPress}
         onPointerCancel={endPress}
@@ -333,7 +373,7 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
         />
         {burst && (
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-            <Heart size={96} fill="#fff" color="#fff" style={{ animation: "lightboxImgIn 0.6s ease both", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.4))" }} />
+            <Heart size={96} fill="#ef4444" color="#ef4444" style={{ animation: "lightboxImgIn 0.6s ease both", filter: "drop-shadow(0 4px 12px rgba(239,68,68,0.6))" }} />
           </div>
         )}
 
@@ -370,7 +410,7 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
         )}
       </div>
 
-      {/* Action bar — like + comment (reactions live in long-press) */}
+      {/* Action bar */}
       <div style={{ display: "flex", alignItems: "center", gap: "1.125rem", padding: "0.5rem 0.875rem 0.25rem" }}>
         <button onClick={() => react("❤️")} aria-label="Me gusta"
           style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", transition: "transform 0.15s" }}
@@ -385,12 +425,20 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
         </button>
       </div>
 
-      {/* Likes count */}
-      {likeCount > 0 && (
-        <p style={{ padding: "0 0.875rem", fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground)" }}>
-          {likeCount} Me gusta
-        </p>
-      )}
+      {/* Likes count + partner viewed indicator */}
+      <div style={{ padding: "0 0.875rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        {likeCount > 0 && (
+          <p style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground)" }}>
+            {likeCount} Me gusta
+          </p>
+        )}
+        {/* F9: partner viewed indicator */}
+        {partnerViewed && (
+          <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "2px" }}>
+            👁 visto
+          </p>
+        )}
+      </div>
 
       {/* Caption */}
       {photo.caption && (
@@ -409,26 +457,41 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
   )
 }
 
-// ── Comments bottom sheet ───────────────────────────────────────────────────
+// ── Comments bottom sheet (F8 — replies) ────────────────────────────────────
 function CommentsSheet({ photo, comments, myUid, onClose, onAddComment, onDeleteComment }: {
   photo: Photo
   comments: PhotoComment[]
   myUid: string
   onClose: () => void
-  onAddComment: (content: string) => Promise<void>
+  onAddComment: (content: string, parentCommentId?: string | null) => Promise<void>
   onDeleteComment: (id: string) => void
 }) {
   const [draft, setDraft] = useState("")
   const [posting, setPosting] = useState(false)
+  // F8: reply state
+  const [replyingTo, setReplyingTo] = useState<{ id: string; name: string } | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const photoComments = comments.filter((c) => c.photo_id === photo.id)
+
+  function startReply(commentId: string, userName: string) {
+    setReplyingTo({ id: commentId, name: userName })
+    setDraft(`@${userName} `)
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }
+
+  function cancelReply() {
+    setReplyingTo(null)
+    setDraft("")
+  }
 
   async function submit() {
     const text = draft.trim()
     if (!text || posting) return
     setPosting(true)
     try {
-      await onAddComment(text)
+      await onAddComment(text, replyingTo?.id ?? null)
       setDraft("")
+      setReplyingTo(null)
     } catch {
       toast.error("No se pudo publicar el comentario")
     } finally {
@@ -476,34 +539,85 @@ function CommentsSheet({ photo, comments, myUid, onClose, onAddComment, onDelete
             </p>
           )}
           {photoComments.map((c) => (
-            <div key={c.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem" }}>
-              <div style={{ width: 30, height: 30, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, var(--primary), var(--secondary))", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: "0.75rem", fontFamily: "'Fredoka', sans-serif" }}>
-                {(c.user_name || "P")[0].toUpperCase()}
+            <div key={c.id}>
+              {/* Top-level comment */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem" }}>
+                <div style={{ width: 30, height: 30, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, var(--primary), var(--secondary))", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: "0.75rem", fontFamily: "'Fredoka', sans-serif" }}>
+                  {(c.user_name || "P")[0].toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.4 }}>
+                    <span style={{ fontWeight: 700, marginRight: "0.375rem" }}>{c.user_name || "Pareja"}</span>
+                    {c.content}
+                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginTop: "0.125rem" }}>
+                    <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)" }}>{timeAgoEs(c.created_at)}</p>
+                    {/* F8: Reply button */}
+                    <button
+                      onClick={() => startReply(c.id, c.user_name || "Pareja")}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.625rem", color: "var(--foreground-muted)", fontWeight: 600, padding: 0, fontFamily: "inherit", display: "flex", alignItems: "center", gap: "2px" }}
+                    >
+                      <CornerDownRight size={10} />
+                      Responder
+                    </button>
+                  </div>
+                </div>
+                {c.user_id === myUid && (
+                  <button onClick={() => onDeleteComment(c.id)} aria-label="Eliminar"
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "var(--foreground-muted)", flexShrink: 0 }}>
+                    <Trash2 size={13} />
+                  </button>
+                )}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.4 }}>
-                  <span style={{ fontWeight: 700, marginRight: "0.375rem" }}>{c.user_name || "Pareja"}</span>
-                  {c.content}
-                </p>
-                <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", marginTop: "0.125rem" }}>{timeAgoEs(c.created_at)}</p>
-              </div>
-              {c.user_id === myUid && (
-                <button onClick={() => onDeleteComment(c.id)} aria-label="Eliminar"
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "var(--foreground-muted)", flexShrink: 0 }}>
-                  <Trash2 size={13} />
-                </button>
+              {/* F8: Replies indented */}
+              {c.replies && c.replies.length > 0 && (
+                <div style={{ marginLeft: "2.375rem", marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.625rem", paddingLeft: "8px", borderLeft: "2px solid var(--border)" }}>
+                  {c.replies.map((reply) => (
+                    <div key={reply.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
+                      <div style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, var(--secondary), var(--primary))", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: "0.625rem", fontFamily: "'Fredoka', sans-serif" }}>
+                        {(reply.user_name || "P")[0].toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: "0.75rem", color: "var(--foreground)", lineHeight: 1.4 }}>
+                          <span style={{ fontWeight: 700, marginRight: "0.375rem" }}>{reply.user_name || "Pareja"}</span>
+                          {reply.content}
+                        </p>
+                        <p style={{ fontSize: "0.5625rem", color: "var(--foreground-muted)", marginTop: "0.0625rem" }}>{timeAgoEs(reply.created_at)}</p>
+                      </div>
+                      {reply.user_id === myUid && (
+                        <button onClick={() => onDeleteComment(reply.id)} aria-label="Eliminar"
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "var(--foreground-muted)", flexShrink: 0 }}>
+                          <Trash2 size={11} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           ))}
         </div>
 
+        {/* Reply indicator */}
+        {replyingTo && (
+          <div style={{ padding: "0.375rem 1rem", background: "var(--muted)", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+            <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
+              Respondiendo a <span style={{ fontWeight: 700, color: "var(--primary)" }}>{replyingTo.name}</span>
+            </p>
+            <button onClick={cancelReply} style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--foreground-muted)" }}>
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Input */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px))", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
           <input
+            ref={inputRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") submit() }}
-            placeholder="Añade un comentario..."
+            placeholder={replyingTo ? `Responder a @${replyingTo.name}...` : "Añade un comentario..."}
             maxLength={500}
             autoFocus
             style={{
@@ -528,6 +642,7 @@ function CommentsSheet({ photo, comments, myUid, onClose, onAddComment, onDelete
   )
 }
 
+// ── Lightbox (F10 pinch-to-zoom, F11 reactions+comments panel) ─────────────
 function Lightbox({
   photos,
   initialIndex,
@@ -535,6 +650,12 @@ function Lightbox({
   onDelete,
   onUpdateCaption,
   deleting,
+  reactions,
+  myUid,
+  onReact,
+  onOpenComments,
+  comments,
+  onMarkViewed,
 }: {
   photos: Photo[]
   initialIndex: number
@@ -542,23 +663,57 @@ function Lightbox({
   onDelete: (id: string) => void
   onUpdateCaption: (id: string, caption: string | null) => Promise<void>
   deleting: boolean
+  reactions: PhotoReaction[]
+  myUid: string
+  onReact: (photoId: string, emoji: string) => void
+  onOpenComments: (photoId: string) => void
+  comments: PhotoComment[]
+  onMarkViewed: (photoId: string) => void
 }) {
   const [index, setIndex] = useState(initialIndex)
   const [editingCaption, setEditingCaption] = useState(false)
   const [captionDraft, setCaptionDraft] = useState("")
   const [savingCaption, setSavingCaption] = useState(false)
-  // displayCaption tracks the saved caption locally so UI updates immediately
   const [displayCaption, setDisplayCaption] = useState<string | null>(null)
   const captionInputRef = useRef<HTMLInputElement>(null)
+
+  // F10: pinch-to-zoom state
+  const [scale, setScale] = useState(1)
+  const [panX, setPanX] = useState(0)
+  const [panY, setPanY] = useState(0)
+  const initialPinchDistance = useRef<number | null>(null)
+  const initialScale = useRef(1)
+  const lastPanX = useRef(0)
+  const lastPanY = useRef(0)
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
+  const isPinching = useRef(false)
+  // F10: double-tap reset
+  const lastTapTime = useRef(0)
+
   const photo = photos[index]
 
-  // Sync displayCaption when navigating to another photo
-  useEffect(() => { setDisplayCaption(photo?.caption ?? null) }, [photo?.id])
+  useEffect(() => {
+    setDisplayCaption(photo?.caption ?? null)
+    // F9: mark as viewed when opening
+    if (photo?.id) onMarkViewed(photo.id)
+    // Reset zoom when switching photos
+    setScale(1)
+    setPanX(0)
+    setPanY(0)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photo?.id])
 
-  function prev() { setIndex((i) => (i > 0 ? i - 1 : photos.length - 1)); setEditingCaption(false) }
-  function next() { setIndex((i) => (i < photos.length - 1 ? i + 1 : 0)); setEditingCaption(false) }
+  function prev() {
+    if (scale > 1) return // disable nav when zoomed
+    setIndex((i) => (i > 0 ? i - 1 : photos.length - 1))
+    setEditingCaption(false)
+  }
+  function next() {
+    if (scale > 1) return
+    setIndex((i) => (i < photos.length - 1 ? i + 1 : 0))
+    setEditingCaption(false)
+  }
 
   function startEdit() {
     setCaptionDraft(displayCaption ?? "")
@@ -580,17 +735,69 @@ function Lightbox({
     }
   }
 
-  function onTouchStart(e: React.TouchEvent) {
-    touchStartX.current = e.touches[0].clientX
-    touchStartY.current = e.touches[0].clientY
+  // F10: touch handlers
+  function getTouchDistance(touches: React.TouchList): number {
+    const dx = touches[0].clientX - touches[1].clientX
+    const dy = touches[0].clientY - touches[1].clientY
+    return Math.sqrt(dx * dx + dy * dy)
   }
-  function onTouchEnd(e: React.TouchEvent) {
-    const dx = e.changedTouches[0].clientX - touchStartX.current
-    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current)
-    if (Math.abs(dx) > 50 && dy < 80) {
-      if (dx > 0) prev()
-      else next()
+
+  function onTouchStart(e: React.TouchEvent) {
+    if (e.touches.length === 2) {
+      isPinching.current = true
+      initialPinchDistance.current = getTouchDistance(e.touches)
+      initialScale.current = scale
+    } else if (e.touches.length === 1) {
+      isPinching.current = false
+      touchStartX.current = e.touches[0].clientX
+      touchStartY.current = e.touches[0].clientY
+      lastPanX.current = panX
+      lastPanY.current = panY
     }
+  }
+
+  function onTouchMove(e: React.TouchEvent) {
+    if (e.touches.length === 2 && initialPinchDistance.current !== null) {
+      e.preventDefault()
+      const dist = getTouchDistance(e.touches)
+      const ratio = dist / initialPinchDistance.current
+      const newScale = Math.min(4, Math.max(1, initialScale.current * ratio))
+      setScale(newScale)
+    } else if (e.touches.length === 1 && scale > 1) {
+      // Panning when zoomed
+      const dx = e.touches[0].clientX - touchStartX.current
+      const dy = e.touches[0].clientY - touchStartY.current
+      setPanX(lastPanX.current + dx)
+      setPanY(lastPanY.current + dy)
+    }
+  }
+
+  function onTouchEnd(e: React.TouchEvent) {
+    if (isPinching.current) {
+      isPinching.current = false
+      initialPinchDistance.current = null
+      if (scale < 1.05) { setScale(1); setPanX(0); setPanY(0) }
+      return
+    }
+    if (e.changedTouches.length === 1 && scale <= 1) {
+      const dx = e.changedTouches[0].clientX - touchStartX.current
+      const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current)
+      if (Math.abs(dx) > 50 && dy < 80) {
+        if (dx > 0) prev()
+        else next()
+      }
+    }
+  }
+
+  // F10: double-tap on image resets zoom
+  function handleImageTap() {
+    const now = Date.now()
+    if (now - lastTapTime.current < 300) {
+      setScale(1)
+      setPanX(0)
+      setPanY(0)
+    }
+    lastTapTime.current = now
   }
 
   async function handleDownload() {
@@ -632,25 +839,30 @@ function Lightbox({
 
   if (!photo) return null
 
+  // F11: reactions + comments for current photo
+  const photoReactions = reactions.filter((r) => r.photo_id === photo.id)
+  const photoComments = comments.filter((c) => c.photo_id === photo.id)
+  const topComments = photoComments.slice(0, 3)
+
   return (
     <div
-      onClick={onClose}
       onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       style={{
         position: "fixed",
         inset: 0,
         zIndex: 200,
-        background: "rgba(0,0,0,0.88)",
+        background: "rgba(0,0,0,0.92)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "1rem",
         animation: "lightboxIn 0.22s cubic-bezier(0.34,1.56,0.64,1) both",
+        touchAction: "none",
       }}
     >
-      {/* C1: Blurred photo backdrop */}
+      {/* Blurred backdrop */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={photo.thumb_url ?? photo.image_url}
@@ -659,7 +871,7 @@ function Lightbox({
         style={{
           position: "absolute", inset: 0, width: "100%", height: "100%",
           objectFit: "cover", filter: "blur(28px) saturate(1.4)",
-          opacity: 0.3, transform: "scale(1.08)",
+          opacity: 0.2, transform: "scale(1.08)",
           pointerEvents: "none",
         }}
       />
@@ -722,7 +934,7 @@ function Lightbox({
       </div>
 
       {/* Prev / Next */}
-      {photos.length > 1 && (
+      {photos.length > 1 && scale <= 1 && (
         <>
           <button
             onClick={(e) => { e.stopPropagation(); prev() }}
@@ -749,53 +961,283 @@ function Lightbox({
         </>
       )}
 
-      {/* Image */}
-      <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: "min(90vw, 700px)", width: "100%" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          key={photo.id}
-          src={photo.image_url}
-          alt={photo.caption ?? "Foto"}
-          style={{ width: "100%", maxHeight: "68vh", objectFit: "contain", borderRadius: "var(--radius-lg)", display: "block", animation: "lightboxImgIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both" }}
-        />
-        {/* Editable caption */}
-        <div style={{ marginTop: "0.625rem", textAlign: "center" }}>
-          {editingCaption ? (
-            <div style={{ display: "flex", gap: "0.375rem", alignItems: "center", justifyContent: "center" }}>
-              <input
-                ref={captionInputRef}
-                value={captionDraft}
-                onChange={(e) => setCaptionDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") saveCaption(); if (e.key === "Escape") setEditingCaption(false) }}
-                maxLength={120}
-                placeholder="Pie de foto..."
-                style={{
-                  background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)",
-                  borderRadius: "var(--radius-md)", color: "white", padding: "4px 10px",
-                  fontFamily: "'Caveat', cursive", fontSize: "1rem", textAlign: "center",
-                  outline: "none", width: "min(280px, 70vw)",
-                }}
-              />
-              <button onClick={saveCaption} disabled={savingCaption}
-                style={{ background: "var(--primary)", border: "none", borderRadius: "var(--radius-md)", color: "white", padding: "4px 12px", cursor: "pointer", fontSize: "0.8125rem", fontWeight: 600 }}>
-                {savingCaption ? "..." : "OK"}
+      {/* Main content area */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", maxHeight: "100vh", overflow: "hidden" }}>
+        {/* Image with pinch-to-zoom */}
+        <div
+          onClick={(e) => { e.stopPropagation(); handleImageTap() }}
+          style={{
+            maxWidth: "min(90vw, 700px)", width: "100%",
+            display: "flex", flexDirection: "column", alignItems: "center",
+            overflow: "hidden",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            key={photo.id}
+            src={photo.image_url}
+            alt={photo.caption ?? "Foto"}
+            style={{
+              width: "100%", maxHeight: "55vh", objectFit: "contain",
+              borderRadius: "var(--radius-lg)", display: "block",
+              animation: "lightboxImgIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both",
+              transform: `scale(${scale}) translate(${panX / scale}px, ${panY / scale}px)`,
+              transformOrigin: "center center",
+              transition: isPinching.current ? "none" : "transform 0.1s ease",
+              touchAction: "none",
+              userSelect: "none",
+            }}
+            draggable={false}
+          />
+          {/* Editable caption */}
+          <div style={{ marginTop: "0.625rem", textAlign: "center", width: "100%" }}>
+            {editingCaption ? (
+              <div style={{ display: "flex", gap: "0.375rem", alignItems: "center", justifyContent: "center" }}>
+                <input
+                  ref={captionInputRef}
+                  value={captionDraft}
+                  onChange={(e) => setCaptionDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveCaption(); if (e.key === "Escape") setEditingCaption(false) }}
+                  maxLength={120}
+                  placeholder="Pie de foto..."
+                  style={{
+                    background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: "var(--radius-md)", color: "white", padding: "4px 10px",
+                    fontFamily: "'Caveat', cursive", fontSize: "1rem", textAlign: "center",
+                    outline: "none", width: "min(280px, 70vw)",
+                  }}
+                />
+                <button onClick={saveCaption} disabled={savingCaption}
+                  style={{ background: "var(--primary)", border: "none", borderRadius: "var(--radius-md)", color: "white", padding: "4px 12px", cursor: "pointer", fontSize: "0.8125rem", fontWeight: 600 }}>
+                  {savingCaption ? "..." : "OK"}
+                </button>
+              </div>
+            ) : (
+              <button onClick={startEdit} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>
+                <p style={{ fontFamily: "'Caveat', cursive", color: displayCaption ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)", fontSize: "1.125rem", borderBottom: "1px dashed rgba(255,255,255,0.2)" }}>
+                  {displayCaption ?? "Toca para añadir pie de foto ✏️"}
+                </p>
               </button>
-            </div>
-          ) : (
-            <button onClick={startEdit} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>
-              <p style={{ fontFamily: "'Caveat', cursive", color: displayCaption ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)", fontSize: "1.125rem", borderBottom: "1px dashed rgba(255,255,255,0.2)" }}>
-                {displayCaption ?? "Toca para añadir pie de foto ✏️"}
-              </p>
-            </button>
+            )}
+          </div>
+          <p style={{ color: "rgba(255,255,255,0.35)", textAlign: "center", marginTop: "0.25rem", fontSize: "0.6875rem" }}>
+            {photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"}
+          </p>
+          {scale > 1 && (
+            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.625rem", marginTop: "0.25rem" }}>
+              Doble toque para resetear zoom
+            </p>
           )}
         </div>
-        <p style={{ color: "rgba(255,255,255,0.35)", textAlign: "center", marginTop: "0.25rem", fontSize: "0.6875rem" }}>
-          {photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"}
-        </p>
+
+        {/* F11: Bottom panel — reactions + comments */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: "100%", maxWidth: "min(90vw, 700px)",
+            background: "rgba(0,0,0,0.7)",
+            borderRadius: "0 0 var(--radius-lg) var(--radius-lg)",
+            padding: "0.75rem 1rem",
+            marginTop: "0.5rem",
+          }}
+        >
+          {/* Reaction row */}
+          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.625rem", flexWrap: "wrap" }}>
+            {REACTION_EMOJIS.map((emoji) => {
+              const mine = photoReactions.some((r) => r.emoji === emoji && r.user_id === myUid)
+              const count = photoReactions.filter((r) => r.emoji === emoji).length
+              return (
+                <button
+                  key={emoji}
+                  onClick={() => onReact(photo.id, emoji)}
+                  style={{
+                    background: mine ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.12)",
+                    border: mine ? "1px solid rgba(139,92,246,0.6)" : "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: "999px",
+                    padding: "4px 10px",
+                    cursor: "pointer",
+                    fontSize: "0.875rem",
+                    color: "white",
+                    display: "flex", alignItems: "center", gap: "4px",
+                    transition: "transform 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.15)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                >
+                  <span>{emoji}</span>
+                  {count > 0 && <span style={{ fontSize: "0.75rem", fontWeight: 700 }}>{count}</span>}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Top comments */}
+          {topComments.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.5rem" }}>
+              {topComments.map((c) => (
+                <p key={c.id} style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.85)", lineHeight: 1.4 }}>
+                  <span style={{ fontWeight: 700, marginRight: "0.375rem" }}>{c.user_name || "Pareja"}</span>
+                  {c.content}
+                </p>
+              ))}
+              {photoComments.length > 3 && (
+                <button
+                  onClick={() => onOpenComments(photo.id)}
+                  style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", padding: 0, fontFamily: "inherit", textAlign: "left" }}
+                >
+                  Ver todos ({photoComments.length}) comentarios
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Comment + add comment */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <button
+              onClick={() => onOpenComments(photo.id)}
+              style={{
+                flex: 1, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)",
+                borderRadius: "999px", padding: "0.375rem 0.875rem",
+                color: "rgba(255,255,255,0.5)", fontSize: "0.75rem", fontFamily: "inherit",
+                cursor: "pointer", textAlign: "left",
+              }}
+            >
+              {photoComments.length === 0 ? "Añade un comentario..." : `Ver ${photoComments.length} comentario${photoComments.length !== 1 ? "s" : ""}...`}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
 }
+
+// ── F13: Image editor modal (crop/rotate before upload) ─────────────────────
+function ImageEditorModal({ file, onConfirm, onSkip, onCancel }: {
+  file: File
+  onConfirm: (editedFile: File) => void
+  onSkip: () => void
+  onCancel: () => void
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [rotation, setRotation] = useState(0)
+  const [flipH, setFlipH] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string>("")
+  const imgRef = useRef<HTMLImageElement | null>(null)
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+    const img = new Image()
+    img.onload = () => { imgRef.current = img; drawCanvas(img, rotation, flipH) }
+    img.src = url
+    return () => URL.revokeObjectURL(url)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file])
+
+  function drawCanvas(img: HTMLImageElement, rot: number, flip: boolean) {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const isTransposed = rot === 90 || rot === 270
+    canvas.width = isTransposed ? img.naturalHeight : img.naturalWidth
+    canvas.height = isTransposed ? img.naturalWidth : img.naturalHeight
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.save()
+    ctx.translate(canvas.width / 2, canvas.height / 2)
+    ctx.rotate((rot * Math.PI) / 180)
+    if (flip) ctx.scale(-1, 1)
+    ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2)
+    ctx.restore()
+  }
+
+  function rotate() {
+    const newRot = (rotation + 90) % 360
+    setRotation(newRot)
+    if (imgRef.current) drawCanvas(imgRef.current, newRot, flipH)
+  }
+
+  function flip() {
+    const newFlip = !flipH
+    setFlipH(newFlip)
+    if (imgRef.current) drawCanvas(imgRef.current, rotation, newFlip)
+  }
+
+  function confirm() {
+    const canvas = canvasRef.current
+    if (!canvas) { onSkip(); return }
+    canvas.toBlob((blob) => {
+      if (!blob) { onSkip(); return }
+      const editedFile = new File([blob], file.name, { type: "image/jpeg" })
+      onConfirm(editedFile)
+    }, "image/jpeg", 0.92)
+  }
+
+  return (
+    <div
+      onClick={onCancel}
+      style={{
+        position: "fixed", inset: 0, zIndex: 350,
+        background: "rgba(0,0,0,0.8)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--surface)", borderRadius: "var(--radius-lg)", padding: "1.25rem",
+          width: "100%", maxWidth: "420px", boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+        }}
+      >
+        <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.0625rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.875rem" }}>
+          Editar foto ✏️
+        </h3>
+
+        {/* Canvas preview */}
+        <div style={{ position: "relative", borderRadius: "var(--radius-md)", overflow: "hidden", marginBottom: "0.875rem", background: "var(--muted)", minHeight: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <canvas ref={canvasRef} style={{ maxWidth: "100%", maxHeight: "40vh", display: "block", margin: "0 auto" }} />
+          {!previewUrl && <p style={{ color: "var(--foreground-muted)", fontSize: "0.8125rem" }}>Cargando...</p>}
+        </div>
+
+        {/* Edit buttons */}
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+          <button
+            onClick={rotate}
+            className="btn btn-outline"
+            style={{ flex: 1, fontSize: "0.8125rem" }}
+          >
+            ↻ Rotar 90°
+          </button>
+          <button
+            onClick={flip}
+            className="btn btn-outline"
+            style={{ flex: 1, fontSize: "0.8125rem" }}
+          >
+            ⇆ Voltear
+          </button>
+        </div>
+
+        <div style={{ display: "flex", gap: "0.625rem" }}>
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={confirm}>
+            Editar y continuar
+          </button>
+          <button className="btn btn-outline" onClick={onSkip}>
+            Continuar sin editar
+          </button>
+        </div>
+        <button
+          onClick={onCancel}
+          style={{ background: "none", border: "none", color: "var(--foreground-muted)", fontSize: "0.75rem", cursor: "pointer", marginTop: "0.5rem", fontFamily: "inherit", display: "block", textAlign: "center", width: "100%" }}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── F14: Caption dialog with per-file captions ──────────────────────────────
+export interface UploadItem { file: File; caption: string }
 
 function CaptionDialog({
   files,
@@ -804,11 +1246,28 @@ function CaptionDialog({
   uploading,
 }: {
   files: File[]
-  onConfirm: (caption: string) => void
+  onConfirm: (items: UploadItem[]) => void
   onCancel: () => void
   uploading: boolean
 }) {
-  const [caption, setCaption] = useState("")
+  const [captions, setCaptions] = useState<string[]>(() => files.map(() => ""))
+  const [globalCaption, setGlobalCaption] = useState("")
+  const [useGlobal, setUseGlobal] = useState(false)
+  const previewUrls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files])
+
+  useEffect(() => {
+    return () => { previewUrls.forEach((url) => URL.revokeObjectURL(url)) }
+  }, [previewUrls])
+
+  function handleConfirm() {
+    if (useGlobal) {
+      onConfirm(files.map((file) => ({ file, caption: globalCaption.trim() })))
+    } else {
+      onConfirm(files.map((file, i) => ({ file, caption: captions[i].trim() })))
+    }
+  }
+
+  const isMultiple = files.length > 1
 
   return (
     <div
@@ -824,6 +1283,7 @@ function CaptionDialog({
         style={{
           background: "white", borderRadius: "var(--radius-lg)", padding: "1.5rem",
           width: "100%", maxWidth: "440px", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+          maxHeight: "80vh", overflowY: "auto",
         }}
       >
         <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.375rem" }}>
@@ -833,23 +1293,124 @@ function CaptionDialog({
         <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginBottom: "1rem" }}>
           Agrega un pie de foto (opcional)
         </p>
-        <input
-          className="input"
-          type="text"
-          placeholder="Ej: Nuestra cena romántica..."
-          value={caption}
-          onChange={(e) => setCaption(e.target.value)}
-          maxLength={120}
-          autoFocus
-          onKeyDown={(e) => { if (e.key === "Enter") onConfirm(caption.trim()) }}
-          style={{ marginBottom: "1rem" }}
-        />
-        <div style={{ display: "flex", gap: "0.625rem" }}>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onConfirm(caption.trim())} disabled={uploading}>
+
+        {/* F14: Multiple files with individual captions */}
+        {isMultiple && (
+          <div style={{ marginBottom: "0.875rem" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.8125rem", color: "var(--foreground)", cursor: "pointer", marginBottom: "0.75rem" }}>
+              <input
+                type="checkbox"
+                checked={useGlobal}
+                onChange={(e) => setUseGlobal(e.target.checked)}
+                style={{ accentColor: "var(--primary)" }}
+              />
+              Usar un pie de foto para todas
+            </label>
+
+            {useGlobal ? (
+              <input
+                className="input"
+                type="text"
+                placeholder="Pie de foto para todas..."
+                value={globalCaption}
+                onChange={(e) => setGlobalCaption(e.target.value)}
+                maxLength={120}
+                autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter") handleConfirm() }}
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {files.map((file, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewUrls[i]}
+                      alt={`Foto ${i + 1}`}
+                      style={{ width: 48, height: 48, objectFit: "cover", borderRadius: "var(--radius-md)", flexShrink: 0 }}
+                    />
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder={`Pie de foto ${i + 1}...`}
+                      value={captions[i]}
+                      onChange={(e) => {
+                        const next = [...captions]
+                        next[i] = e.target.value
+                        setCaptions(next)
+                      }}
+                      maxLength={120}
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Single file */}
+        {!isMultiple && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewUrls[0]}
+              alt="Preview"
+              style={{ width: "100%", maxHeight: 180, objectFit: "cover", borderRadius: "var(--radius-md)", marginBottom: "0.75rem" }}
+            />
+            <input
+              className="input"
+              type="text"
+              placeholder="Ej: Nuestra cena romántica..."
+              value={captions[0]}
+              onChange={(e) => {
+                const next = [...captions]
+                next[0] = e.target.value
+                setCaptions(next)
+              }}
+              maxLength={120}
+              autoFocus
+              onKeyDown={(e) => { if (e.key === "Enter") handleConfirm() }}
+              style={{ marginBottom: "1rem" }}
+            />
+          </>
+        )}
+
+        <div style={{ display: "flex", gap: "0.625rem", marginTop: isMultiple ? "1rem" : 0 }}>
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleConfirm} disabled={uploading}>
             {uploading ? "Subiendo..." : "Subir"}
           </button>
           <button className="btn btn-outline" onClick={onCancel} disabled={uploading}>Cancelar</button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── F15: Upload progress overlay ────────────────────────────────────────────
+function UploadProgressOverlay({ current, total, fileName }: { current: number; total: number; fileName: string }) {
+  return (
+    <div style={{
+      position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom, 0px))", left: "50%", transform: "translateX(-50%)",
+      background: "var(--foreground)", color: "white", borderRadius: "var(--radius-lg)",
+      padding: "0.75rem 1.25rem", zIndex: 400, boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+      minWidth: "min(320px, 90vw)", animation: "modalIn 0.2s ease",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+        <div style={{ width: 20, height: 20, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid white", borderRadius: "50%", animation: "spin 0.7s linear infinite", flexShrink: 0 }} />
+        <p style={{ fontSize: "0.875rem", fontWeight: 600, fontFamily: "'Fredoka', sans-serif" }}>
+          Subiendo {current} de {total}...
+        </p>
+      </div>
+      <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.65)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {fileName}
+      </p>
+      <div style={{ marginTop: "0.5rem", height: 4, background: "rgba(255,255,255,0.2)", borderRadius: 999 }}>
+        <div style={{
+          height: "100%", borderRadius: 999,
+          background: "linear-gradient(90deg, var(--primary), var(--secondary))",
+          width: `${Math.round((current / total) * 100)}%`,
+          transition: "width 0.3s ease",
+        }} />
       </div>
     </div>
   )
@@ -863,12 +1424,39 @@ function calcMonthsTogether(photos: Photo[]): number {
   return (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth())
 }
 
+// ── F4: Find memory photos ──────────────────────────────────────────────────
+function findMemoryPhotos(photos: Photo[]): { label: string; photos: Photo[] } | null {
+  const now = new Date()
+  const DAY = 86400000
+
+  // Try 1 year ago (± 3 days)
+  const oneYearAgo = new Date(now)
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+  const yearPhotos = photos.filter((p) => {
+    const diff = Math.abs(new Date(p.created_at).getTime() - oneYearAgo.getTime())
+    return diff <= 3 * DAY
+  })
+  if (yearPhotos.length > 0) return { label: "hace un año", photos: yearPhotos.slice(0, 3) }
+
+  // Try 6 months ago (± 3 days)
+  const sixMonthsAgo = new Date(now)
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+  const sixPhotos = photos.filter((p) => {
+    const diff = Math.abs(new Date(p.created_at).getTime() - sixMonthsAgo.getTime())
+    return diff <= 3 * DAY
+  })
+  if (sixPhotos.length > 0) return { label: "hace 6 meses", photos: sixPhotos.slice(0, 3) }
+
+  return null
+}
+
 export default function FotosPage() {
   const { data: photos, isLoading } = usePhotos()
   const uploadPhoto = useUploadPhoto()
   const deletePhoto = useDeletePhoto()
   const updateCaption = useUpdatePhotoCaption()
   const toggleReaction = useTogglePhotoReaction()
+  const markViewed = useMarkPhotoViewed()
 
   const [filter, setFilter] = useState<FilterType>("all")
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -879,10 +1467,18 @@ export default function FotosPage() {
   })
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [commentsPhotoId, setCommentsPhotoId] = useState<string | null>(null)
+  // F13: editing state for the image editor
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
+  const [editingFileIndex, setEditingFileIndex] = useState<number | null>(null)
+  const [editedFiles, setEditedFiles] = useState<File[]>([])
+  // F15: upload progress
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; fileName: string } | null>(null)
   const [newPhotoIds, setNewPhotoIds] = useState<Set<string>>(new Set())
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  // F2: search + month filter
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const selectionMode = selectedIds.size > 0
@@ -916,12 +1512,31 @@ export default function FotosPage() {
   const has14Feb = allPhotos.some((p) => p.source === "14feb")
   const monthsCount = calcMonthsTogether(allPhotos)
 
-  const filteredPhotos =
+  // F2: derive available months for month pills
+  const monthGroups = useMemo(() => groupPhotosByMonth(allPhotos), [allPhotos])
+
+  // Filter by source
+  const sourceFilteredPhotos =
     filter === "all" ? allPhotos
     : filter === "thingstodo" ? allPhotos.filter((p) => p.source === "thingstodo")
     : allPhotos.filter((p) => p.source === "14feb")
 
-  // F9: stats
+  // F2: Filter by month
+  const monthFilteredPhotos = selectedMonth
+    ? sourceFilteredPhotos.filter((p) => {
+        const key = new Date(p.created_at).toLocaleDateString("es-ES", { month: "long", year: "numeric" })
+        return key === selectedMonth
+      })
+    : sourceFilteredPhotos
+
+  // F2: Filter by search query (client-side, caption text)
+  const filteredPhotos = searchQuery.trim()
+    ? monthFilteredPhotos.filter((p) =>
+        (p.caption ?? "").toLowerCase().includes(searchQuery.trim().toLowerCase())
+      )
+    : monthFilteredPhotos
+
+  // Stats
   const now = new Date()
   const thisMonth = allPhotos.filter((p) => {
     const d = new Date(p.created_at)
@@ -929,16 +1544,16 @@ export default function FotosPage() {
   })
   const lastPhoto = allPhotos.length > 0 ? allPhotos.reduce((a, b) => a.created_at > b.created_at ? a : b) : null
   const daysSinceLast = lastPhoto ? Math.floor((now.getTime() - new Date(lastPhoto.created_at).getTime()) / 86400000) : null
-
-  // F10: photo of the month — most recent photo in the current month
   const photoOfMonth = thisMonth.length > 0 ? thisMonth.reduce((a, b) => a.created_at > b.created_at ? a : b) : null
 
   const allPhotoIds = useMemo(() => allPhotos.map((p) => p.id), [allPhotos])
   const { data: reactions = [] } = usePhotoReactions(allPhotoIds)
-  // Only fetch comments in feed view to avoid unnecessary requests
-  const { data: comments = [] } = usePhotoComments(viewMode === "feed" ? allPhotoIds : [])
+  const { data: comments = [] } = usePhotoComments(viewMode === "feed" || lightboxIndex !== null ? allPhotoIds : [])
   const addComment = useAddPhotoComment()
   const deleteComment = useDeletePhotoComment()
+
+  // F9: photo views
+  const { data: photoViews = {} } = usePhotoViews(viewMode === "feed" ? allPhotoIds : [])
 
   // Get current user UID from Firebase auth
   const [myUid, setMyUid] = useState("")
@@ -949,6 +1564,12 @@ export default function FotosPage() {
     })
   }, [])
 
+  // F4: Memories banner
+  const memory = useMemo(() => {
+    if (monthsCount < 6) return null
+    return findMemoryPhotos(allPhotos)
+  }, [allPhotos, monthsCount])
+
   function toggleView() {
     const cycle: ViewMode[] = ["polaroid", "masonry", "feed"]
     const next = cycle[(cycle.indexOf(viewMode) + 1) % cycle.length]
@@ -956,18 +1577,39 @@ export default function FotosPage() {
     localStorage.setItem("fotosView", next)
   }
 
+  // F13: After file selection, show editor for first file
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
     if (files.length === 0) return
     setPendingFiles(files)
+    setEditedFiles([])
+    setEditingFileIndex(0)
     e.target.value = ""
   }, [])
 
-  async function handleUploadConfirm(caption: string) {
+  // F13: Editor confirmed or skipped for a file
+  function handleEditorResult(result: File | null) {
     if (!pendingFiles) return
+    const fileToUse = result ?? pendingFiles[editingFileIndex!]
+    const nextEdited = [...editedFiles, fileToUse]
+    setEditedFiles(nextEdited)
+    const nextIndex = editingFileIndex! + 1
+    if (nextIndex < pendingFiles.length) {
+      setEditingFileIndex(nextIndex)
+    } else {
+      // All files edited — show caption dialog
+      setEditingFileIndex(null)
+    }
+  }
+
+  // F14 + F15: Upload with per-file captions and progress indicator
+  async function handleUploadConfirm(items: UploadItem[]) {
+    setUploadProgress({ current: 0, total: items.length, fileName: "" })
     let successCount = 0
     const freshIds: string[] = []
-    for (const file of pendingFiles) {
+    for (let i = 0; i < items.length; i++) {
+      const { file, caption } = items[i]
+      setUploadProgress({ current: i + 1, total: items.length, fileName: file.name })
       try {
         const result = await uploadPhoto.mutateAsync({ file, caption: caption || undefined })
         successCount++
@@ -976,6 +1618,7 @@ export default function FotosPage() {
         toast.error(err instanceof Error ? err.message : "Error al subir foto")
       }
     }
+    setUploadProgress(null)
     if (successCount > 0) {
       toast.success(successCount === 1 ? "Foto subida!" : `${successCount} fotos subidas!`)
       if (freshIds.length > 0) {
@@ -988,6 +1631,7 @@ export default function FotosPage() {
       }
     }
     setPendingFiles(null)
+    setEditedFiles([])
   }
 
   async function handleDelete(id: string) {
@@ -1005,6 +1649,9 @@ export default function FotosPage() {
     { key: "thingstodo", label: "ThingsToDo" },
     ...(has14Feb ? [{ key: "14feb" as FilterType, label: "14-Febrero" }] : []),
   ]
+
+  // Determine which photos to show in groups
+  const groupedPhotos = useMemo(() => groupPhotosByMonth(filteredPhotos), [filteredPhotos])
 
   return (
     <div className="page-container">
@@ -1045,7 +1692,7 @@ export default function FotosPage() {
         </div>
       </div>
 
-      {/* F9: Stats strip */}
+      {/* Stats strip */}
       {allPhotos.length > 0 && !isLoading && (
         <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", marginBottom: "0.875rem", paddingBottom: "2px" }}>
           {thisMonth.length > 0 && (
@@ -1064,9 +1711,40 @@ export default function FotosPage() {
         </div>
       )}
 
+      {/* F4: Memories banner */}
+      {memory && !isLoading && (
+        <div style={{
+          background: "linear-gradient(135deg, #8B5CF6, #EC4899)",
+          borderRadius: "var(--radius-xl)",
+          padding: "1rem 1.125rem",
+          marginBottom: "1rem",
+          color: "white",
+        }}>
+          <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.9375rem", fontWeight: 700, marginBottom: "0.625rem" }}>
+            📅 Recuerdos de {memory.label}
+          </p>
+          <div style={{ display: "flex", gap: "0.75rem", overflowX: "auto" }}>
+            {memory.photos.map((p, i) => (
+              <button
+                key={p.id}
+                onClick={() => setLightboxIndex(filteredPhotos.findIndex((fp) => fp.id === p.id))}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.thumb_url ?? p.image_url}
+                  alt={p.caption ?? `Recuerdo ${i + 1}`}
+                  style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "3px solid rgba(255,255,255,0.6)", boxShadow: "0 4px 12px rgba(0,0,0,0.25)" }}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filter pills + view toggle */}
       {(allPhotos.length > 0 || isLoading) && (
-        <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.875rem", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.625rem", alignItems: "center" }}>
           <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", flex: 1 }}>
             {filterPills.length > 1 && filterPills.map(({ key, label }) => (
               <button
@@ -1096,6 +1774,69 @@ export default function FotosPage() {
           >
             {viewMode === "polaroid" ? <LayoutGrid size={15} /> : viewMode === "masonry" ? <Newspaper size={15} /> : <Rows3 size={15} />}
           </button>
+        </div>
+      )}
+
+      {/* F2: Search input */}
+      {allPhotos.length > 0 && !isLoading && (
+        <div style={{ position: "relative", marginBottom: "0.625rem" }}>
+          <Search size={14} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--foreground-muted)", pointerEvents: "none" }} />
+          <input
+            type="text"
+            placeholder="Buscar por pie de foto..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: "100%", padding: "0.5rem 0.875rem 0.5rem 2rem",
+              border: "1px solid var(--border)", borderRadius: "999px",
+              background: "var(--muted)", fontFamily: "inherit", fontSize: "0.8125rem",
+              color: "var(--foreground)", outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              style={{ position: "absolute", right: "0.625rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: 2 }}
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* F2: Month filter pills */}
+      {allPhotos.length > 0 && !isLoading && monthGroups.length > 1 && (
+        <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", marginBottom: "0.875rem", paddingBottom: "2px" }}>
+          <button
+            onClick={() => setSelectedMonth(null)}
+            style={{
+              padding: "3px 12px", borderRadius: "999px", border: "none", cursor: "pointer",
+              fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
+              background: !selectedMonth ? "var(--primary)" : "var(--muted)",
+              color: !selectedMonth ? "white" : "var(--foreground-muted)",
+              whiteSpace: "nowrap", flexShrink: 0,
+              transition: "background 0.15s, color 0.15s",
+            }}
+          >
+            Todos
+          </button>
+          {monthGroups.map(({ monthLabel }) => (
+            <button
+              key={monthLabel}
+              onClick={() => setSelectedMonth(monthLabel === selectedMonth ? null : monthLabel)}
+              style={{
+                padding: "3px 12px", borderRadius: "999px", border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
+                background: selectedMonth === monthLabel ? "var(--secondary)" : "var(--muted)",
+                color: selectedMonth === monthLabel ? "white" : "var(--foreground-muted)",
+                whiteSpace: "nowrap", flexShrink: 0,
+                transition: "background 0.15s, color 0.15s",
+              }}
+            >
+              {monthLabel}
+            </button>
+          ))}
         </div>
       )}
 
@@ -1133,12 +1874,15 @@ export default function FotosPage() {
       {/* Photo grid grouped by month */}
       {!isLoading && filteredPhotos.length > 0 && (
         <div style={{ paddingBottom: "6rem" }}>
-          {groupPhotosByMonth(filteredPhotos).map((group) => (
+          {groupedPhotos.map((group) => (
             <div key={group.monthLabel}>
-              <div className="month-separator">
-                <Calendar size={14} />
-                {group.monthLabel}
-              </div>
+              {/* F2: hide month separator when a specific month is selected */}
+              {!selectedMonth && (
+                <div className="month-separator">
+                  <Calendar size={14} />
+                  {group.monthLabel}
+                </div>
+              )}
               {viewMode === "polaroid" ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1.5rem", padding: "0.5rem 0.5rem 1rem" }}>
                   {group.photos.map((photo, i) => (
@@ -1183,6 +1927,7 @@ export default function FotosPage() {
                       onReact={(emoji) => toggleReaction.mutate({ photoId: photo.id, emoji })}
                       onOpenComments={() => setCommentsPhotoId(photo.id)}
                       onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))}
+                      partnerViewed={(photoViews as Record<string, PhotoViewData>)[photo.id]?.partner_viewed}
                     />
                   ))}
                 </div>
@@ -1243,13 +1988,32 @@ export default function FotosPage() {
         </button>
       )}
 
-      {/* Caption dialog */}
-      {pendingFiles && (
+      {/* F13: Image editor modal (shown before caption dialog) */}
+      {pendingFiles && editingFileIndex !== null && (
+        <ImageEditorModal
+          file={pendingFiles[editingFileIndex]}
+          onConfirm={(editedFile) => handleEditorResult(editedFile)}
+          onSkip={() => handleEditorResult(null)}
+          onCancel={() => { setPendingFiles(null); setEditingFileIndex(null); setEditedFiles([]) }}
+        />
+      )}
+
+      {/* F14: Caption dialog with per-file captions */}
+      {pendingFiles && editingFileIndex === null && editedFiles.length > 0 && (
         <CaptionDialog
-          files={pendingFiles}
+          files={editedFiles}
           onConfirm={handleUploadConfirm}
-          onCancel={() => setPendingFiles(null)}
+          onCancel={() => { setPendingFiles(null); setEditedFiles([]) }}
           uploading={uploadPhoto.isPending}
+        />
+      )}
+
+      {/* F15: Upload progress overlay */}
+      {uploadProgress && (
+        <UploadProgressOverlay
+          current={uploadProgress.current}
+          total={uploadProgress.total}
+          fileName={uploadProgress.fileName}
         />
       )}
 
@@ -1263,13 +2027,13 @@ export default function FotosPage() {
             comments={comments}
             myUid={myUid}
             onClose={() => setCommentsPhotoId(null)}
-            onAddComment={(content) => addComment.mutateAsync({ photoId: photo.id, content })}
+            onAddComment={(content, parentCommentId) => addComment.mutateAsync({ photoId: photo.id, content, parentCommentId })}
             onDeleteComment={(id) => deleteComment.mutate(id)}
           />
         )
       })()}
 
-      {/* Lightbox */}
+      {/* Lightbox (F10 + F11) */}
       {lightboxIndex !== null && filteredPhotos.length > 0 && (
         <Lightbox
           photos={filteredPhotos}
@@ -1281,6 +2045,12 @@ export default function FotosPage() {
             toast.success("Caption actualizado")
           }}
           deleting={deletePhoto.isPending}
+          reactions={reactions}
+          myUid={myUid}
+          onReact={(photoId, emoji) => toggleReaction.mutate({ photoId, emoji })}
+          onOpenComments={(photoId) => { setLightboxIndex(null); setCommentsPhotoId(photoId) }}
+          comments={comments}
+          onMarkViewed={(photoId) => markViewed.mutate(photoId)}
         />
       )}
     </div>

@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from("photo_comments")
-    .select("id, photo_id, user_id, content, created_at")
+    .select("id, photo_id, user_id, content, parent_comment_id, created_at")
     .in("photo_id", ids)
     .order("created_at", { ascending: true })
 
@@ -31,7 +31,17 @@ export async function GET(req: NextRequest) {
     for (const u of users ?? []) names.set(u.id, u.name ?? "")
   }
 
-  return NextResponse.json(rows.map((r) => ({ ...r, user_name: names.get(r.user_id) ?? "" })))
+  const enriched = rows.map((r) => ({ ...r, user_name: names.get(r.user_id) ?? "" }))
+
+  // Build nested structure: top-level comments with replies array
+  const topLevel = enriched.filter((r) => !r.parent_comment_id)
+  const replies = enriched.filter((r) => r.parent_comment_id)
+  const nested = topLevel.map((c) => ({
+    ...c,
+    replies: replies.filter((r) => r.parent_comment_id === c.id),
+  }))
+
+  return NextResponse.json(nested)
 }
 
 // POST /api/photos/comments — add a comment
@@ -43,15 +53,26 @@ export async function POST(req: NextRequest) {
   if (!supabase) return NextResponse.json({ error: "DB unavailable" }, { status: 503 })
 
   const body = await req.json().catch(() => ({}))
-  const { photo_id, content } = body as { photo_id?: string; content?: string }
+  const { photo_id, content, parent_comment_id } = body as {
+    photo_id?: string
+    content?: string
+    parent_comment_id?: string | null
+  }
   if (!photo_id || !content?.trim()) {
     return NextResponse.json({ error: "photo_id and content required" }, { status: 400 })
   }
 
+  const insertRow: Record<string, unknown> = {
+    photo_id,
+    user_id: user.uid,
+    content: content.trim().slice(0, 500),
+  }
+  if (parent_comment_id) insertRow.parent_comment_id = parent_comment_id
+
   const { data, error } = await supabase
     .from("photo_comments")
-    .insert({ photo_id, user_id: user.uid, content: content.trim().slice(0, 500) })
-    .select("id, photo_id, user_id, content, created_at")
+    .insert(insertRow)
+    .select("id, photo_id, user_id, content, parent_comment_id, created_at")
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -53,6 +53,11 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabaseAdmin()
   if (!supabase) return NextResponse.json({ error: "DB unavailable" }, { status: 503 })
 
+  const searchParams = req.nextUrl.searchParams
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10))
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "0", 10)))
+  const paginated = limit > 0
+
   // Get couple_id for this user
   const { data: me } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
   const coupleId = me?.couple_id
@@ -80,6 +85,18 @@ export async function GET(req: NextRequest) {
     ...supabasePhotos,
     ...firestorePhotos.filter((p) => !seenUrls.has(p.image_url)),
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+  if (paginated) {
+    const offset = (page - 1) * limit
+    const slice = merged.slice(offset, offset + limit)
+    return NextResponse.json({
+      photos: slice,
+      total: merged.length,
+      page,
+      limit,
+      hasMore: offset + limit < merged.length,
+    })
+  }
 
   return NextResponse.json(merged)
 }
