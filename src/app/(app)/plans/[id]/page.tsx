@@ -132,7 +132,8 @@ export default function PlanDetailPage() {
   // Local optimistic task order for drag-and-drop
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null)
   const [showCompletedTasks, setShowCompletedTasks] = useState(false)
-  const displayTasks = localTasks ?? tasks ?? []
+  const displayTasksRaw = localTasks ?? tasks ?? []
+  const displayTasks = Array.isArray(displayTasksRaw) ? displayTasksRaw : []
 
   const pendingTasks = displayTasks.filter((t) => !t.completed)
   const completedTasksList = displayTasks.filter((t) => t.completed)

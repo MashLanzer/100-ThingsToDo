@@ -181,7 +181,7 @@ export default function DashboardPage() {
     }
   }, [])
 
-  const allPlans = plans ?? []
+  const allPlans = Array.isArray(plans) ? plans : []
 
   // Split into active and archived
   const activePlans = allPlans.filter((p) => !p.archived)

@@ -1460,7 +1460,8 @@ export default function FotosPage() {
   const markViewed = useMarkPhotoViewed()
 
   // F3: albums
-  const { data: albums = [] } = usePhotoAlbums()
+  const { data: albumsRaw = [] } = usePhotoAlbums()
+  const albums = Array.isArray(albumsRaw) ? albumsRaw : []
   const createAlbum = useCreatePhotoAlbum()
   const deleteAlbum = useDeletePhotoAlbum()
   const updateAlbum = useUpdatePhotoAlbum()
@@ -1520,7 +1521,10 @@ export default function FotosPage() {
     setBulkDeleting(false)
   }
 
-  const allPhotos = photos ?? []
+  // Bulletproof: coerce to array even if the API/cache returns an unexpected
+  // shape (e.g. paginated object during a deploy skew) so .some/.filter/.map
+  // can never crash the whole page.
+  const allPhotos = Array.isArray(photos) ? photos : []
   const has14Feb = allPhotos.some((p) => p.source === "14feb")
   const monthsCount = calcMonthsTogether(allPhotos)
 
@@ -1571,8 +1575,10 @@ export default function FotosPage() {
   const photoOfMonth = thisMonth.length > 0 ? thisMonth.reduce((a, b) => a.created_at > b.created_at ? a : b) : null
 
   const allPhotoIds = useMemo(() => allPhotos.map((p) => p.id), [allPhotos])
-  const { data: reactions = [] } = usePhotoReactions(allPhotoIds)
-  const { data: comments = [] } = usePhotoComments(viewMode === "feed" || lightboxIndex !== null ? allPhotoIds : [])
+  const { data: reactionsRaw = [] } = usePhotoReactions(allPhotoIds)
+  const reactions = Array.isArray(reactionsRaw) ? reactionsRaw : []
+  const { data: commentsRaw = [] } = usePhotoComments(viewMode === "feed" || lightboxIndex !== null ? allPhotoIds : [])
+  const comments = Array.isArray(commentsRaw) ? commentsRaw : []
   const addComment = useAddPhotoComment()
   const deleteComment = useDeletePhotoComment()
 
