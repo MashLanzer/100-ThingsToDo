@@ -3,11 +3,26 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { usePhotos, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption, usePhotoReactions, useTogglePhotoReaction, type PhotoReaction } from "@/hooks/use-photos"
 import type { Photo } from "@/types"
-import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar, LayoutGrid, Rows3, Download, Share2, CheckCircle2, Circle, Newspaper, Heart } from "lucide-react"
+import { usePhotoComments, useAddPhotoComment, useDeletePhotoComment, type PhotoComment } from "@/hooks/use-photos"
+import { Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar, LayoutGrid, Rows3, Download, Share2, CheckCircle2, Circle, Newspaper, Heart, MessageCircle, Send } from "lucide-react"
 import { toast } from "sonner"
 
 type FilterType = "all" | "thingstodo" | "14feb"
 type ViewMode = "polaroid" | "masonry" | "feed"
+
+function timeAgoEs(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return "ahora"
+  if (m < 60) return `hace ${m} min`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `hace ${h} h`
+  const d = Math.floor(h / 24)
+  if (d < 7) return `hace ${d} d`
+  const w = Math.floor(d / 7)
+  if (w < 5) return `hace ${w} sem`
+  return new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short" })
+}
 
 function polaroidRotation(id: string, index: number): number {
   const sum = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
@@ -221,18 +236,57 @@ function MasonryCard({ photo, onClick }: { photo: Photo; onClick: () => void }) 
   )
 }
 
-function FeedCard({ photo, onClick, reactions, myUid, onReact }: {
+function FeedCard({ photo, onClick, reactions, comments, myUid, onReact, onAddComment, onDeleteComment }: {
   photo: Photo; onClick: () => void
-  reactions: PhotoReaction[]; myUid: string; onReact: (emoji: string) => void
+  reactions: PhotoReaction[]; comments: PhotoComment[]; myUid: string
+  onReact: (emoji: string) => void
+  onAddComment: (content: string) => Promise<void>
+  onDeleteComment: (id: string) => void
 }) {
-  const date = new Date(photo.created_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })
+  const author = photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"
+  const photoReactions = reactions.filter((r) => r.photo_id === photo.id)
+  const liked = photoReactions.some((r) => r.emoji === "❤️" && r.user_id === myUid)
+  const likeCount = photoReactions.filter((r) => r.emoji === "❤️").length
+  const otherReactions = (["🔥", "✨"] as const).map((e) => ({
+    emoji: e,
+    mine: photoReactions.some((r) => r.emoji === e && r.user_id === myUid),
+    count: photoReactions.filter((r) => r.emoji === e).length,
+  }))
+
+  const photoComments = comments.filter((c) => c.photo_id === photo.id)
+  const [showAllComments, setShowAllComments] = useState(false)
+  const [commentDraft, setCommentDraft] = useState("")
+  const [posting, setPosting] = useState(false)
+  const [burst, setBurst] = useState(false)
+
+  const visibleComments = showAllComments ? photoComments : photoComments.slice(-2)
+
+  function doLike() {
+    if (!liked) { setBurst(true); setTimeout(() => setBurst(false), 600) }
+    onReact("❤️")
+  }
+
+  async function submitComment() {
+    const text = commentDraft.trim()
+    if (!text || posting) return
+    setPosting(true)
+    try {
+      await onAddComment(text)
+      setCommentDraft("")
+    } catch {
+      toast.error("No se pudo publicar el comentario")
+    } finally {
+      setPosting(false)
+    }
+  }
+
   return (
     <div
       style={{
         background: "var(--surface)",
         borderRadius: "var(--radius-lg)",
         overflow: "hidden",
-        marginBottom: "1rem",
+        marginBottom: "1.25rem",
         boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
         border: "1px solid var(--border)",
       }}
@@ -240,43 +294,131 @@ function FeedCard({ photo, onClick, reactions, myUid, onReact }: {
       {/* Post header */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.875rem" }}>
         <div style={{
-          width: 32, height: 32, borderRadius: "50%",
+          width: 36, height: 36, borderRadius: "50%", padding: 2,
           background: photo.source === "14feb"
             ? "linear-gradient(135deg, #EC4899, #F472B6)"
             : "linear-gradient(135deg, var(--primary), var(--secondary))",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "0.875rem", flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
-          {photo.source === "14feb" ? "💕" : "✨"}
+          <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>
+            {photo.source === "14feb" ? "💕" : "✨"}
+          </div>
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.875rem", fontWeight: 700, color: "var(--foreground)", lineHeight: 1.1 }}>
-            {photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"}
+            {author}
           </p>
-          <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", lineHeight: 1 }}>{date}</p>
+          <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", lineHeight: 1.1 }}>{timeAgoEs(photo.created_at)}</p>
         </div>
       </div>
-      {/* Image */}
-      <div onClick={onClick} style={{ cursor: "pointer" }}>
+
+      {/* Image (double-tap-friendly; single tap opens lightbox) */}
+      <div onClick={onClick} style={{ cursor: "pointer", position: "relative" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={photo.image_url}
           alt={photo.caption ?? "Foto"}
-          style={{ width: "100%", display: "block", maxHeight: "70vw", objectFit: "cover" }}
+          style={{ width: "100%", display: "block", maxHeight: "78vw", objectFit: "cover" }}
           loading="lazy"
         />
-      </div>
-      {/* Actions + caption */}
-      <div style={{ padding: "0.625rem 0.875rem 0.75rem" }}>
-        <ReactionStrip photoId={photo.id} reactions={reactions} myUid={myUid} onToggle={onReact} />
-        {photo.caption && (
-          <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "var(--foreground)", marginTop: "0.375rem", lineHeight: 1.3 }}>
-            <span style={{ fontWeight: 700, marginRight: "0.25rem", fontSize: "0.875rem" }}>
-              {photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"}
-            </span>
-            {photo.caption}
-          </p>
+        {burst && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+            <Heart size={96} fill="#fff" color="#fff" style={{ animation: "lightboxImgIn 0.6s ease both", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.4))" }} />
+          </div>
         )}
+      </div>
+
+      {/* Action bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.5rem 0.875rem 0.25rem" }}>
+        <button onClick={doLike} aria-label="Me gusta"
+          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", transition: "transform 0.15s" }}
+          onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.8)")}
+          onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+        >
+          <Heart size={24} fill={liked ? "#ef4444" : "none"} color={liked ? "#ef4444" : "var(--foreground)"} />
+        </button>
+        <button onClick={() => setShowAllComments(true)} aria-label="Comentar"
+          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
+          <MessageCircle size={23} color="var(--foreground)" />
+        </button>
+        <div style={{ display: "flex", gap: "0.375rem", marginLeft: "auto" }}>
+          {otherReactions.map(({ emoji, mine, count }) => (
+            <button key={emoji} onClick={() => onReact(emoji)}
+              style={{
+                background: mine ? "rgba(139,92,246,0.12)" : "var(--muted)",
+                border: mine ? "1px solid rgba(139,92,246,0.3)" : "1px solid transparent",
+                borderRadius: "999px", padding: "2px 8px", cursor: "pointer",
+                fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "2px",
+              }}>
+              <span>{emoji}</span>
+              {count > 0 && <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)" }}>{count}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Likes count */}
+      {likeCount > 0 && (
+        <p style={{ padding: "0 0.875rem", fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground)" }}>
+          {likeCount} Me gusta
+        </p>
+      )}
+
+      {/* Caption */}
+      {photo.caption && (
+        <p style={{ padding: "0.25rem 0.875rem 0", fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.4 }}>
+          <span style={{ fontWeight: 700, marginRight: "0.375rem" }}>{author}</span>
+          {photo.caption}
+        </p>
+      )}
+
+      {/* Comments */}
+      <div style={{ padding: "0.375rem 0.875rem 0" }}>
+        {photoComments.length > 2 && !showAllComments && (
+          <button onClick={() => setShowAllComments(true)}
+            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8125rem", color: "var(--foreground-muted)", fontFamily: "inherit" }}>
+            Ver los {photoComments.length} comentarios
+          </button>
+        )}
+        {visibleComments.map((c) => (
+          <div key={c.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.375rem", marginTop: "0.25rem" }}>
+            <p style={{ flex: 1, fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.4 }}>
+              <span style={{ fontWeight: 700, marginRight: "0.375rem" }}>{c.user_name || "Pareja"}</span>
+              {c.content}
+            </p>
+            {c.user_id === myUid && (
+              <button onClick={() => onDeleteComment(c.id)} aria-label="Eliminar comentario"
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "var(--foreground-muted)", flexShrink: 0 }}>
+                <Trash2 size={12} />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Add comment */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 0.875rem 0.75rem", marginTop: "0.25rem", borderTop: "1px solid var(--border)" }}>
+        <input
+          value={commentDraft}
+          onChange={(e) => setCommentDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") submitComment() }}
+          placeholder="Añade un comentario..."
+          maxLength={500}
+          style={{
+            flex: 1, border: "none", outline: "none", background: "transparent",
+            fontFamily: "inherit", fontSize: "0.8125rem", color: "var(--foreground)",
+          }}
+        />
+        <button onClick={submitComment} disabled={!commentDraft.trim() || posting}
+          style={{
+            background: "none", border: "none",
+            cursor: commentDraft.trim() ? "pointer" : "default",
+            padding: "2px", display: "flex", alignItems: "center",
+            color: commentDraft.trim() ? "var(--primary)" : "var(--foreground-muted)",
+            opacity: commentDraft.trim() ? 1 : 0.5,
+          }}>
+          <Send size={18} />
+        </button>
       </div>
     </div>
   )
@@ -688,6 +830,10 @@ export default function FotosPage() {
 
   const allPhotoIds = useMemo(() => allPhotos.map((p) => p.id), [allPhotos])
   const { data: reactions = [] } = usePhotoReactions(allPhotoIds)
+  // Only fetch comments in feed view to avoid unnecessary requests
+  const { data: comments = [] } = usePhotoComments(viewMode === "feed" ? allPhotoIds : [])
+  const addComment = useAddPhotoComment()
+  const deleteComment = useDeletePhotoComment()
 
   // Get current user UID from Firebase auth
   const [myUid, setMyUid] = useState("")
@@ -927,8 +1073,11 @@ export default function FotosPage() {
                       key={photo.id}
                       photo={photo}
                       reactions={reactions}
+                      comments={comments}
                       myUid={myUid}
                       onReact={(emoji) => toggleReaction.mutate({ photoId: photo.id, emoji })}
+                      onAddComment={(content) => addComment.mutateAsync({ photoId: photo.id, content })}
+                      onDeleteComment={(id) => deleteComment.mutate(id)}
                       onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))}
                     />
                   ))}

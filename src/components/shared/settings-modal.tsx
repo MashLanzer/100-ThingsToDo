@@ -480,7 +480,7 @@ export function SettingsModal() {
         </div>
 
         {/* Pill tabs */}
-        <div className="pill-tab-container" style={{ margin: "0 1.25rem 0.75rem" }}>
+        <div className="pill-tab-container" style={{ margin: "1.125rem 1.25rem 0.5rem" }}>
           <button
             className={`pill-tab-btn${activeTab === "perfil" ? " active" : ""}`}
             onClick={() => setActiveTab("perfil")}

@@ -142,6 +142,11 @@ const PROMPTS = [
 
 interface Props { onBack: () => void }
 type View = "calendar" | "read" | "write" | "timeline" | "letters" | "letters-compose" | "letter-read" | "stats"
+type GetUserMediaLegacy = (
+  constraints: MediaStreamConstraints,
+  success: (stream: MediaStream) => void,
+  error: (err: unknown) => void,
+) => void
 
 // ── Voice recording hook ──────────────────────────────────────────────────────
 
@@ -327,13 +332,30 @@ export function JournalApp({ onBack }: Props) {
     recordingTimerRef.current = setInterval(() => setRecordingSecs(s => s + 1), 1000)
   }
 
+  // Resolve getUserMedia across older WebViews that expose it in legacy locations
+  function getUserMediaCompat(constraints: MediaStreamConstraints): Promise<MediaStream> {
+    const md = navigator.mediaDevices
+    if (md && typeof md.getUserMedia === "function") {
+      return md.getUserMedia(constraints)
+    }
+    // Legacy fallback (very old WebViews)
+    const legacy = (navigator as unknown as {
+      getUserMedia?: GetUserMediaLegacy
+      webkitGetUserMedia?: GetUserMediaLegacy
+      mozGetUserMedia?: GetUserMediaLegacy
+    })
+    const gum = legacy.getUserMedia || legacy.webkitGetUserMedia || legacy.mozGetUserMedia
+    if (!gum) return Promise.reject(new DOMException("getUserMedia not supported", "NotSupportedError"))
+    return new Promise((resolve, reject) => gum.call(navigator, constraints, resolve, reject))
+  }
+
   async function startRecording(isRetry = false) {
     setShowMicHelp(false)
     try {
       // Call getUserMedia directly — the native layer (MainActivity) requests the
       // Android mic permission and grants the WebView request. Don't pre-check the
       // permissions API: inside a WebView it can wrongly report 'denied'.
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      const stream = await getUserMediaCompat({ audio: true, video: false })
       beginRecordingWithStream(stream)
     } catch (err: unknown) {
       const name = err instanceof Error ? err.name : ""
@@ -346,10 +368,19 @@ export function JournalApp({ onBack }: Props) {
           return startRecording(true)
         }
         setShowMicHelp(true)
-      } else if (name === "NotFoundError") {
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
         toast.error("No se encontró micrófono en este dispositivo")
+      } else if (name === "NotReadableError" || name === "TrackStartError") {
+        toast.error("El micrófono está siendo usado por otra app. Ciérrala e intenta de nuevo")
+      } else if (name === "NotSupportedError") {
+        // getUserMedia unavailable — almost always an insecure (non-HTTPS) context
+        if (!isRetry) {
+          await new Promise(r => setTimeout(r, 800))
+          return startRecording(true)
+        }
+        toast.error("Tu dispositivo no permite grabar aquí. Actualiza la app a la última versión")
       } else {
-        toast.error("No se pudo acceder al micrófono")
+        toast.error(`No se pudo acceder al micrófono${name ? ` (${name})` : ""}`)
       }
     }
   }

@@ -107,3 +107,44 @@ export function useTogglePhotoReaction() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["photo-reactions"] }),
   })
 }
+
+// ── Comments ──────────────────────────────────────────────────────────────────
+
+export interface PhotoComment {
+  id: string
+  photo_id: string
+  user_id: string
+  user_name: string
+  content: string
+  created_at: string
+}
+
+export function usePhotoComments(photoIds: string[]) {
+  return useQuery<PhotoComment[]>({
+    queryKey: ["photo-comments", photoIds.join(",")],
+    queryFn: () => authFetch(`/api/photos/comments?photo_ids=${photoIds.join(",")}`),
+    enabled: photoIds.length > 0,
+    staleTime: 10_000,
+  })
+}
+
+export function useAddPhotoComment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ photoId, content }: { photoId: string; content: string }) =>
+      authFetch("/api/photos/comments", {
+        method: "POST",
+        body: JSON.stringify({ photo_id: photoId, content }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["photo-comments"] }),
+  })
+}
+
+export function useDeletePhotoComment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      authFetch(`/api/photos/comments?id=${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["photo-comments"] }),
+  })
+}
