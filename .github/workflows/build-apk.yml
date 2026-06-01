@@ -39,6 +39,10 @@ jobs:
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
             "platforms;android-36" \
             "build-tools;36.0.0" \
+            "platform-tools" 2>/dev/null || \
+          echo "y" | sdkmanager \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
             "platform-tools" 2>/dev/null || true
 
       - name: Cache Gradle
@@ -50,7 +54,7 @@ jobs:
           key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
-      - name: Install npm dependencies and sync Capacitor
+      - name: Install npm and sync Capacitor
         run: |
           npm ci
           mkdir -p android/app/src/main/assets
@@ -59,16 +63,16 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build debug APK
+      - name: Build release APK
         env:
           VERSION_CODE: ${{ github.run_number }}
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Rename APK
         run: |
           mkdir -p out
-          cp android/app/build/outputs/apk/debug/app-debug.apk \
+          cp android/app/build/outputs/apk/release/app-release.apk \
              out/ThingsToDo-v1.${{ github.run_number }}.apk
 
       - name: Upload APK artifact
@@ -85,9 +89,8 @@ jobs:
           tag_name: apk-v${{ github.run_number }}
           name: "ThingsToDo APK v1.${{ github.run_number }}"
           body: |
-            APK lista para instalar en Android.
+            APK lista para instalar en Android y subir a Play Store.
 
             Descarga `ThingsToDo-v1.${{ github.run_number }}.apk` e instálala en tu dispositivo.
-            *(Puede que necesites activar "Instalar apps de fuentes desconocidas" en Ajustes → Seguridad)*
           files: out/ThingsToDo-v1.${{ github.run_number }}.apk
           draft: false
