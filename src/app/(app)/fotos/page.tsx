@@ -451,12 +451,21 @@ function CommentsSheet({ photo, comments, myUid, onClose, onAddComment, onDelete
           animation: "sheetUp 0.28s cubic-bezier(0.34,1.3,0.64,1) both",
           boxShadow: "0 -8px 32px rgba(0,0,0,0.2)",
         }}>
-        {/* Grabber + title */}
-        <div style={{ padding: "0.5rem 1rem 0.625rem", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-          <div style={{ width: 38, height: 4, borderRadius: 999, background: "var(--border)", margin: "0 auto 0.5rem" }} />
+        {/* Grabber + title + close */}
+        <div style={{ padding: "0.5rem 1rem 0.625rem", borderBottom: "1px solid var(--border)", flexShrink: 0, position: "relative" }}>
+          <div onClick={onClose} style={{ width: 38, height: 4, borderRadius: 999, background: "var(--border)", margin: "0 auto 0.5rem", cursor: "pointer" }} />
           <p style={{ textAlign: "center", fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)" }}>
             Comentarios
           </p>
+          <button onClick={onClose} aria-label="Cerrar"
+            style={{
+              position: "absolute", top: "0.5rem", right: "0.75rem",
+              width: 30, height: 30, borderRadius: "50%", border: "none",
+              background: "var(--muted)", color: "var(--foreground-muted)", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+            <X size={16} />
+          </button>
         </div>
 
         {/* List */}
