@@ -17,17 +17,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.4.0
         with:
           node-version: '22'
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4.7.0
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'temurin'
 
       - name: Install npm dependencies and sync Capacitor
@@ -37,7 +37,7 @@ jobs:
           npx cap sync android
 
       - name: Cache Gradle
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.3
         with:
           path: |
             ~/.gradle/caches
@@ -69,7 +69,7 @@ jobs:
              out/ThingsToDo-v1.${{ github.run_number }}.apk
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: ThingsToDo-APK
           path: out/ThingsToDo-v1.${{ github.run_number }}.apk
