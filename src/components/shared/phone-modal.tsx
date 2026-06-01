@@ -85,34 +85,53 @@ export function PhoneModal() {
 
   return (
     <div className="phone-modal-overlay" onClick={closePhoneModal}>
-      <div style={{ position: "relative" }} className="phone-slide-in">
-        {/* Close button outside the phone */}
-        <button
-          onClick={closePhoneModal}
-          style={{
-            position: "absolute",
-            top: "-12px",
-            right: "-12px",
-            width: "28px",
-            height: "28px",
-            borderRadius: "50%",
-            background: "white",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-            zIndex: 10,
-          }}
-        >
-          <X size={14} color="#2D1B3E" />
-        </button>
-
+      <div className="phone-slide-in">
         {/* Phone */}
         <div className="phone-container" onClick={(e) => e.stopPropagation()}>
           <div className="phone-notch" />
           <div className="phone-screen">
+
+            {/* Permanent kawaii wallpaper — always behind everything */}
+            <svg
+              aria-hidden
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.3, zIndex: 0 }}
+              viewBox="0 0 220 480"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M30 60 C30 60 14 48 14 38 C14 30 22 26 30 33 C38 26 46 30 46 38 C46 48 30 60 30 60Z" fill="#EC4899" opacity="0.6" />
+              <path d="M190 140 C190 140 178 131 178 124 C178 118 184 115 190 120 C196 115 202 118 202 124 C202 131 190 140 190 140Z" fill="#8B5CF6" opacity="0.55" />
+              <path d="M50 390 C50 390 38 381 38 374 C38 368 44 365 50 370 C56 365 62 368 62 374 C62 381 50 390 50 390Z" fill="#EC4899" opacity="0.5" />
+              <path d="M170 420 C170 420 162 414 162 409 C162 405 166 403 170 406 C174 403 178 405 178 409 C178 414 170 420 170 420Z" fill="#F59E0B" opacity="0.55" />
+              <path d="M15 240 C15 240 6 233 6 228 C6 224 10 222 15 225 C20 222 24 224 24 228 C24 233 15 240 15 240Z" fill="#8B5CF6" opacity="0.4" />
+              <path d="M205 320 C205 320 197 314 197 309 C197 305 200 303 205 306 C210 303 213 305 213 309 C213 314 205 320 205 320Z" fill="#EC4899" opacity="0.45" />
+              <text x="160" y="75" fontSize="14" fill="#F59E0B" opacity="0.6">✨</text>
+              <text x="8"   y="190" fontSize="10" fill="#8B5CF6" opacity="0.5">⭐</text>
+              <text x="192" y="260" fontSize="11" fill="#EC4899" opacity="0.5">✨</text>
+              <text x="75"  y="450" fontSize="10" fill="#F59E0B" opacity="0.45">⭐</text>
+              <text x="130" y="340" fontSize="9"  fill="#8B5CF6" opacity="0.4">✦</text>
+              <circle cx="105" cy="18"  r="5" fill="#8B5CF6" opacity="0.15" />
+              <circle cx="180" cy="200" r="8" fill="#EC4899" opacity="0.1" />
+              <circle cx="20"  cy="350" r="6" fill="#F59E0B" opacity="0.13" />
+              <circle cx="210" cy="90"  r="4" fill="#EC4899" opacity="0.12" />
+            </svg>
+
+            {/* X close button — inside phone, top-right overlay */}
+            <button
+              onClick={closePhoneModal}
+              style={{
+                position: "absolute", top: 10, right: 10,
+                width: 30, height: 30, borderRadius: "50%",
+                background: "rgba(0,0,0,0.32)",
+                backdropFilter: "blur(4px)",
+                border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                zIndex: 30,
+              }}
+            >
+              <X size={14} color="white" />
+            </button>
+
             {/* E1: Boot flash overlay */}
             {booting && (
               <div style={{
@@ -125,38 +144,14 @@ export function PhoneModal() {
                 <span style={{ fontSize: "1.5rem", opacity: 0.6, animation: "phoneBoot 0.35s ease forwards" }}>💕</span>
               </div>
             )}
-            <div className="phone-app-container">
+            <div className="phone-app-container" style={{ position: "relative", zIndex: 1 }}>
               {/* Homescreen */}
               {activePhoneApp === "home" && (
                 <div className="phone-app-view active">
                   <div className="phone-homescreen" style={{
                     background: "linear-gradient(160deg, #fdf4ff 0%, #fce7f3 55%, #ede9fe 100%)",
                     position: "relative",
-                    overflow: "hidden",
                   }}>
-                    {/* E2: Kawaii wallpaper decorations */}
-                    <svg
-                      aria-hidden
-                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.45 }}
-                      viewBox="0 0 220 380"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      {/* Floating hearts */}
-                      <path d="M30 60 C30 60 14 48 14 38 C14 30 22 26 30 33 C38 26 46 30 46 38 C46 48 30 60 30 60Z" fill="#EC4899" opacity="0.5" />
-                      <path d="M190 140 C190 140 178 131 178 124 C178 118 184 115 190 120 C196 115 202 118 202 124 C202 131 190 140 190 140Z" fill="#8B5CF6" opacity="0.45" />
-                      <path d="M50 310 C50 310 38 301 38 294 C38 288 44 285 50 290 C56 285 62 288 62 294 C62 301 50 310 50 310Z" fill="#EC4899" opacity="0.4" />
-                      <path d="M170 300 C170 300 162 294 162 289 C162 285 166 283 170 286 C174 283 178 285 178 289 C178 294 170 300 170 300Z" fill="#F59E0B" opacity="0.45" />
-                      {/* Stars */}
-                      <text x="160" y="65" fontSize="14" fill="#F59E0B" opacity="0.6">✨</text>
-                      <text x="10" y="200" fontSize="10" fill="#8B5CF6" opacity="0.5">⭐</text>
-                      <text x="190" y="250" fontSize="11" fill="#EC4899" opacity="0.5">✨</text>
-                      <text x="80" y="350" fontSize="10" fill="#F59E0B" opacity="0.4">⭐</text>
-                      {/* Bubbles */}
-                      <circle cx="105" cy="18" r="5" fill="#8B5CF6" opacity="0.15" />
-                      <circle cx="180" cy="180" r="8" fill="#EC4899" opacity="0.1" />
-                      <circle cx="20" cy="280" r="6" fill="#F59E0B" opacity="0.13" />
-                    </svg>
                     <div className="phone-status-bar">
                       <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600 }}>{time}</span>
                       <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -283,3 +278,4 @@ export function PhoneModal() {
     </div>
   )
 }
+

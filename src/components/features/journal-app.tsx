@@ -1127,6 +1127,16 @@ export function JournalApp({ onBack }: Props) {
   }
 
   // ── CALENDAR view ──────────────────────────────────────────────────────────
+
+  const NAV_TABS = [
+    { key: "calendar",  label: "📅 Mes",    action: () => { setViewingPartner(false); setView("calendar") } },
+    { key: "timeline",  label: "📜 Feed",   action: () => setView("timeline") },
+    { key: "stats",     label: "📊 Stats",  action: () => setView("stats") },
+    { key: "letters",   label: unreadCount > 0 ? `💌 Cartas ${unreadCount}` : "💌 Cartas", action: () => { loadLetters(); setView("letters") } },
+    ...(!privateJournal ? [{ key: "partner", label: "👥 Pareja", action: () => setViewingPartner(v => !v) }] : []),
+  ]
+  const activeTab = viewingPartner ? "partner" : (["timeline","stats","letters"].includes(view) ? view : "calendar")
+
   return (
     <>
       <style>{`
@@ -1135,31 +1145,29 @@ export function JournalApp({ onBack }: Props) {
       <div className="app-content-header">
         <button className="back-btn-phone" onClick={onBack}>‹</button>
         <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Heart size={14} /> Nuestro Diario</span>
-        <div style={{ display: "flex", gap: "0.375rem", alignItems: "center" }}>
-          {/* Feature 1: Timeline toggle */}
-          <button onClick={() => setView("timeline")}
-            style={{ fontSize: "0.6rem", padding: "0.25rem 0.5rem", borderRadius: "999px", border: "none", background: "var(--muted)", color: "var(--foreground-muted)", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
-            📜
-          </button>
-          {/* Feature 3: Stats toggle */}
-          <button onClick={() => setView("stats")}
-            style={{ fontSize: "0.6rem", padding: "0.25rem 0.5rem", borderRadius: "999px", border: "none", background: "var(--muted)", color: "var(--foreground-muted)", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
-            📊
-          </button>
-          {/* Feature 2: Letters */}
-          <button
-            onClick={() => { loadLetters(); setView("letters") }}
-            style={{ fontSize: "0.6rem", padding: "0.25rem 0.5rem", borderRadius: "999px", border: "none", background: unreadCount > 0 ? "var(--secondary)" : "var(--muted)", color: unreadCount > 0 ? "white" : "var(--foreground-muted)", cursor: "pointer", fontFamily: "inherit", fontWeight: 600, position: "relative" }}>
-            💌{unreadCount > 0 ? ` ${unreadCount}` : ""}
-          </button>
-          {/* Feature 12: partner view toggle */}
-          {!privateJournal && (
-            <button onClick={() => setViewingPartner(v => !v)}
-              style={{ fontSize: "0.6875rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none", background: viewingPartner ? "var(--secondary)" : "var(--muted)", color: viewingPartner ? "white" : "var(--foreground-muted)", cursor: "pointer", fontFamily: "inherit", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }}>
-              {viewingPartner ? <><Heart size={12} /> Pareja</> : <><User size={12} /> Pareja</>}
-            </button>
-          )}
-        </div>
+      </div>
+
+      {/* Nav tab strip */}
+      <div style={{
+        display: "flex", gap: "0.375rem", overflowX: "auto", padding: "0.5rem 0.75rem",
+        background: "var(--surface)", borderBottom: "1px solid var(--border)",
+        scrollbarWidth: "none", flexShrink: 0,
+      }}>
+        {NAV_TABS.map(tab => (
+          <button key={tab.key} onClick={tab.action}
+            style={{
+              flexShrink: 0, fontSize: "0.75rem", fontWeight: 700, fontFamily: "inherit",
+              padding: "0.375rem 0.875rem", borderRadius: "999px", border: "none", cursor: "pointer",
+              background: activeTab === tab.key
+                ? "linear-gradient(135deg, var(--primary), var(--secondary))"
+                : "var(--muted)",
+              color: activeTab === tab.key ? "white" : "var(--foreground-muted)",
+              boxShadow: activeTab === tab.key ? "0 2px 8px rgba(139,92,246,0.3)" : "none",
+              transition: "all 0.15s ease",
+              whiteSpace: "nowrap",
+            }}
+          >{tab.label}</button>
+        ))}
       </div>
 
       <div className="app-content-body" style={{ gap: "0.5rem" }}>
