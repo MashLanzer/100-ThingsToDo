@@ -146,6 +146,42 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   )
 }
 
+// ── Settings card wrapper ─────────────────────────────────────────────────────
+
+function SettingsCard({ title, children }: { title?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section style={{
+      background: "white",
+      border: "1px solid var(--border)",
+      borderRadius: "var(--radius-lg)",
+      padding: "1rem",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+      display: "flex", flexDirection: "column", gap: "0.875rem",
+    }}>
+      {title && (
+        <h3 style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.375rem", textTransform: "uppercase", letterSpacing: "0.03em", opacity: 0.85 }}>
+          {title}
+        </h3>
+      )}
+      {children}
+    </section>
+  )
+}
+
+function SettingRow({ icon, label, desc, control }: { icon?: React.ReactNode; label: React.ReactNode; desc?: React.ReactNode; control: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+          {icon}{label}
+        </p>
+        {desc && <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginTop: "0.125rem" }}>{desc}</p>}
+      </div>
+      <div style={{ flexShrink: 0 }}>{control}</div>
+    </div>
+  )
+}
+
 // ── PIN constants ─────────────────────────────────────────────────────────────
 const PIN_KEY = "ttd_journal_pin_v1"
 
@@ -459,36 +495,38 @@ export function SettingsModal() {
           </button>
         </div>
 
-        <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
           {activeTab === "perfil" && (
             <>
-              {/* ── User header ── */}
+              {/* ── User header (centered hero card) ── */}
               {user && (
                 <div style={{
-                  display: "flex", alignItems: "center", gap: "0.875rem",
-                  background: "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)",
-                  borderRadius: "var(--radius-lg)", padding: "0.875rem",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem",
+                  background: "linear-gradient(160deg, var(--primary-lighter) 0%, var(--muted) 60%, #fce7f3 100%)",
+                  borderRadius: "var(--radius-lg)", padding: "1.5rem 1rem 1.25rem",
+                  border: "1px solid var(--border)",
                 }}>
                   {user.photoURL ? (
                     <img
                       src={user.photoURL}
                       alt=""
-                      style={{ width: 44, height: 44, borderRadius: "50%", border: "2px solid var(--primary-light)", flexShrink: 0 }}
+                      style={{ width: 72, height: 72, borderRadius: "50%", border: "3px solid white", boxShadow: "0 3px 12px rgba(139,92,246,0.25)" }}
                     />
                   ) : (
                     <div style={{
-                      width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+                      width: 72, height: 72, borderRadius: "50%",
                       background: getAvatarGradient(user.displayName ?? user.email ?? "?"),
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      color: "white", fontWeight: 700, fontSize: "1.125rem",
+                      color: "white", fontWeight: 700, fontSize: "1.75rem",
                       fontFamily: "'Fredoka', sans-serif",
+                      border: "3px solid white", boxShadow: "0 3px 12px rgba(139,92,246,0.25)",
                     }}>
                       {(user.displayName ?? user.email ?? "?")[0].toUpperCase()}
                     </div>
                   )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div style={{ textAlign: "center", width: "100%" }}>
+                    <p style={{ fontWeight: 700, fontSize: "1.0625rem", fontFamily: "'Fredoka', sans-serif", color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {user.displayName ?? "Mi cuenta"}
                     </p>
                     <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -496,12 +534,13 @@ export function SettingsModal() {
                     </p>
                   </div>
                   <div style={{
-                    fontSize: "0.625rem", fontWeight: 700, padding: "3px 8px", borderRadius: "999px", flexShrink: 0,
-                    background: data?.couple ? "#d1fae5" : "var(--muted)",
+                    fontSize: "0.6875rem", fontWeight: 700, padding: "4px 12px", borderRadius: "999px", marginTop: "0.125rem",
+                    display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                    background: data?.couple ? "#d1fae5" : "rgba(255,255,255,0.7)",
                     color: data?.couple ? "#065f46" : "var(--foreground-muted)",
                     border: data?.couple ? "1px solid #6ee7b7" : "1px solid var(--border)",
                   }}>
-                    {data?.couple ? <><Heart size={11} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} />{data.partner?.name ?? "Vinculado"}</> : "Sin pareja"}
+                    {data?.couple ? <><Heart size={12} />{data.partner?.name ?? "Vinculado"}</> : "Sin pareja vinculada"}
                   </div>
                 </div>
               )}
@@ -582,138 +621,115 @@ export function SettingsModal() {
 
           {activeTab === "ajustes" && (
             <>
-              {/* ── Color theme ── */}
-              <section>
-                <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.625rem" }}>
-                  🎨 Color del tema
-                </h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "0.5rem" }}>
-                  {THEMES.map((t) => {
-                    const selected = currentTheme === t.id
-                    return (
+              {/* ══ APARIENCIA ══ */}
+              <SettingsCard title={<>🎨 Apariencia</>}>
+                {/* Color theme */}
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.5rem" }}>Color del tema</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "0.5rem" }}>
+                    {THEMES.map((t) => {
+                      const selected = currentTheme === t.id
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => handleTheme(t)}
+                          onMouseEnter={() => setHoveredTheme(t.id)}
+                          onMouseLeave={() => setHoveredTheme(null)}
+                          onTouchStart={() => setHoveredTheme(t.id)}
+                          onTouchEnd={() => setHoveredTheme(null)}
+                          title={t.name}
+                          style={{
+                            aspectRatio: "1", borderRadius: "12px",
+                            backgroundColor: t.primary,
+                            border: "none",
+                            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                            boxShadow: selected
+                              ? `0 0 0 3px white, 0 0 0 5px ${t.primary}`
+                              : hoveredTheme === t.id
+                              ? `0 0 0 2px white, 0 0 0 4px ${t.primary}88`
+                              : "none",
+                            transform: hoveredTheme === t.id ? "scale(1.12)" : "scale(1)",
+                            fontSize: "0.9rem",
+                            transition: "box-shadow 0.15s, transform 0.15s",
+                          }}
+                        >
+                          {selected && <span style={{ color: "white", fontWeight: 900, fontSize: "1rem", textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>✓</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.375rem" }}>
+                    {THEMES.find((t) => t.id === (hoveredTheme ?? currentTheme))?.name ?? ""}
+                  </p>
+                </div>
+
+                {/* Font size */}
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.5rem" }}>Tamaño de texto</p>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    {(["normal", "large"] as const).map((size) => (
                       <button
-                        key={t.id}
-                        onClick={() => handleTheme(t)}
-                        onMouseEnter={() => setHoveredTheme(t.id)}
-                        onMouseLeave={() => setHoveredTheme(null)}
-                        onTouchStart={() => setHoveredTheme(t.id)}
-                        onTouchEnd={() => setHoveredTheme(null)}
-                        title={t.name}
+                        key={size}
+                        onClick={() => handleFont(size)}
                         style={{
-                          aspectRatio: "1", borderRadius: "12px",
-                          backgroundColor: t.primary,
-                          border: "none",
-                          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                          boxShadow: selected
-                            ? `0 0 0 3px white, 0 0 0 5px ${t.primary}`
-                            : hoveredTheme === t.id
-                            ? `0 0 0 2px white, 0 0 0 4px ${t.primary}88`
-                            : "none",
-                          transform: hoveredTheme === t.id ? "scale(1.12)" : "scale(1)",
-                          fontSize: "0.9rem",
-                          transition: "box-shadow 0.15s, transform 0.15s",
+                          flex: 1, padding: "0.5rem", borderRadius: "var(--radius-md)",
+                          border: currentFont === size ? "2px solid var(--primary)" : "2px solid var(--border)",
+                          background: currentFont === size ? "var(--primary-lighter)" : "white",
+                          cursor: "pointer", fontFamily: "inherit",
+                          fontSize: size === "large" ? "0.9375rem" : "0.8125rem",
+                          fontWeight: 600,
+                          color: currentFont === size ? "var(--primary)" : "var(--foreground-light)",
                         }}
                       >
-                        {selected && <span style={{ color: "white", fontWeight: 900, fontSize: "1rem", textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>✓</span>}
+                        {size === "normal" ? "Normal" : "Grande"}
                       </button>
-                    )
-                  })}
+                    ))}
+                  </div>
                 </div>
-                <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.375rem" }}>
-                  {THEMES.find((t) => t.id === (hoveredTheme ?? currentTheme))?.name ?? ""}
-                </p>
-              </section>
 
-              {/* ── Font size ── */}
-              <section>
-                <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.625rem" }}>
-                  🔤 Tamaño de texto
-                </h3>
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  {(["normal", "large"] as const).map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => handleFont(size)}
-                      style={{
-                        flex: 1, padding: "0.5rem", borderRadius: "var(--radius-md)",
-                        border: currentFont === size ? "2px solid var(--primary)" : "2px solid var(--border)",
-                        background: currentFont === size ? "var(--primary-lighter)" : "white",
-                        cursor: "pointer", fontFamily: "inherit",
-                        fontSize: size === "large" ? "0.9375rem" : "0.8125rem",
-                        fontWeight: 600,
-                        color: currentFont === size ? "var(--primary)" : "var(--foreground-light)",
-                      }}
-                    >
-                      {size === "normal" ? "Normal" : "Grande"}
-                    </button>
-                  ))}
-                </div>
-              </section>
-
-              <div style={{ height: "1px", background: "var(--border)" }} />
-
-              {/* ── Custom app name ── */}
-              <section>
-                <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.625rem" }}>
-                  Nombre de vuestra app 💕
-                </h3>
-                <input
-                  className="input"
-                  placeholder="Ej: Luna y Sol 🌙"
-                  value={coupleName}
-                  onChange={(e) => handleCoupleNameChange(e.target.value)}
-                  maxLength={40}
+                <SettingRow
+                  icon={<Moon size={14} />}
+                  label="Modo oscuro"
+                  desc="Cambia a fondo oscuro"
+                  control={<Toggle checked={darkMode} onChange={handleDarkMode} />}
                 />
-              </section>
+              </SettingsCard>
 
-              {/* ── Modo oscuro ── */}
-              <section>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.5rem 0", borderBottom: "1px solid var(--border)" }}>
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: 4 }}><Moon size={14} /> Modo Oscuro</p>
-                    <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>Cambia a fondo oscuro</p>
-                  </div>
-                  <Toggle checked={darkMode} onChange={handleDarkMode} />
+              {/* ══ PERSONALIZACIÓN ══ */}
+              <SettingsCard title={<>💕 Personalización</>}>
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.5rem" }}>Nombre de vuestra app</p>
+                  <input
+                    className="input"
+                    placeholder="Ej: Luna y Sol 🌙"
+                    value={coupleName}
+                    onChange={(e) => handleCoupleNameChange(e.target.value)}
+                    maxLength={40}
+                  />
                 </div>
-              </section>
 
-              {/* ── Sonidos ── */}
-              <section>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div>
-                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: 4 }}><Bell size={14} /> Sonidos</p>
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.5rem" }}>📱 Apps del teléfono</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+                    {APP_TOGGLES.map((app) => (
+                      <div key={app.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--foreground)" }}>{app.name}</p>
+                        <Toggle
+                          checked={!hiddenApps.includes(app.id)}
+                          onChange={(v) => handleHiddenApp(app.id, !v)}
+                        />
+                      </div>
+                    ))}
                   </div>
-                  <Toggle checked={soundEnabled} onChange={handleSoundToggle} />
                 </div>
-              </section>
+              </SettingsCard>
 
-              {/* ── Vibración ── */}
-              <section>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div>
-                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: 4 }}><Vibrate size={14} /> Vibración al completar tarea</p>
-                  </div>
-                  <Toggle checked={vibrationEnabled} onChange={handleVibrationToggle} />
-                </div>
-              </section>
-
-              {/* ── Notificaciones push ── */}
-              <section>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem" }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>
-                      🔔 Notificaciones push
-                    </p>
-                    <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginTop: "0.125rem" }}>
-                      {pushSubscribed
-                        ? "Activadas ✅"
-                        : "Desactivadas"}
-                    </p>
-                    <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>
-                      Recibirás una notificación cuando tu pareja complete una tarea 💕
-                    </p>
-                  </div>
-                  {!pushSubscribed && (
+              {/* ══ NOTIFICACIONES Y SONIDO ══ */}
+              <SettingsCard title={<>🔔 Notificaciones y sonido</>}>
+                <SettingRow
+                  label="Notificaciones push"
+                  desc={pushSubscribed ? "Activadas ✅ — avisos cuando tu pareja completa una tarea 💕" : "Recibe un aviso cuando tu pareja completa una tarea 💕"}
+                  control={!pushSubscribed ? (
                     <button
                       className="btn btn-primary"
                       style={{ fontSize: "0.75rem", padding: "0.375rem 0.75rem", flexShrink: 0 }}
@@ -722,39 +738,40 @@ export function SettingsModal() {
                     >
                       {pushSubscribing ? "..." : "Activar"}
                     </button>
-                  )}
-                </div>
-              </section>
+                  ) : <span style={{ fontSize: "1.125rem" }}>✅</span>}
+                />
+                <SettingRow
+                  icon={<Bell size={14} />}
+                  label="Sonidos"
+                  control={<Toggle checked={soundEnabled} onChange={handleSoundToggle} />}
+                />
+                <SettingRow
+                  icon={<Vibrate size={14} />}
+                  label="Vibración al completar tarea"
+                  control={<Toggle checked={vibrationEnabled} onChange={handleVibrationToggle} />}
+                />
+              </SettingsCard>
 
-              {/* ── Modo privado del diario ── */}
-              <section>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem" }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>🔒 Modo privado del diario</p>
-                    <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginTop: "0.125rem" }}>
-                      Ocultar entrada del partner hasta que tú escribas la tuya
-                    </p>
-                  </div>
-                  <Toggle checked={privateJournal} onChange={handlePrivateJournalToggle} />
-                </div>
-              </section>
+              {/* ══ DIARIO ══ */}
+              <SettingsCard title={<>📔 Diario</>}>
+                <SettingRow
+                  icon={<Lock size={14} />}
+                  label="Modo privado"
+                  desc="Ocultar entrada del partner hasta que tú escribas la tuya"
+                  control={<Toggle checked={privateJournal} onChange={handlePrivateJournalToggle} />}
+                />
 
-              {/* ── PIN del diario ── */}
-              <section>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem" }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: 4 }}><Lock size={14} /> PIN del diario</p>
-                    <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginTop: "0.125rem" }}>
-                      {pinEnabled ? "Activo — el diario se bloquea al abrirlo" : "Protege el diario con un PIN de 4 dígitos"}
-                    </p>
-                  </div>
-                  <Toggle checked={pinEnabled} onChange={handlePinToggle} />
-                </div>
+                {/* PIN del diario */}
+                <SettingRow
+                  icon={<Lock size={14} />}
+                  label="PIN del diario"
+                  desc={pinEnabled ? "Activo — el diario se bloquea al abrirlo" : "Protege el diario con un PIN de 4 dígitos"}
+                  control={<Toggle checked={pinEnabled} onChange={handlePinToggle} />}
+                />
 
                 {/* Inline expand for setup / disable */}
                 {pinSection !== "idle" && (
                   <div style={{
-                    marginTop: "0.75rem",
                     background: "var(--muted)",
                     borderRadius: "var(--radius-md)",
                     padding: "0.875rem",
@@ -848,55 +865,34 @@ export function SettingsModal() {
                     )}
                   </div>
                 )}
-              </section>
 
-              {/* ── Primer día de semana ── */}
-              <section>
-                <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.625rem" }}>
-                  📅 Primer día de semana
-                </h3>
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  {([{ label: "Dom", monday: false }, { label: "Lun", monday: true }] as const).map(({ label, monday }) => (
-                    <button
-                      key={label}
-                      onClick={() => handleWeekStarts(monday)}
-                      style={{
-                        flex: 1, padding: "0.5rem", borderRadius: "var(--radius-md)",
-                        border: weekStartsMonday === monday ? "2px solid var(--primary)" : "2px solid var(--border)",
-                        background: weekStartsMonday === monday ? "var(--primary-lighter)" : "white",
-                        cursor: "pointer", fontFamily: "inherit",
-                        fontSize: "0.875rem",
-                        fontWeight: 600,
-                        color: weekStartsMonday === monday ? "var(--primary)" : "var(--foreground-light)",
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                {/* Primer día de semana */}
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.5rem" }}>📅 Primer día de semana</p>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    {([{ label: "Domingo", monday: false }, { label: "Lunes", monday: true }] as const).map(({ label, monday }) => (
+                      <button
+                        key={label}
+                        onClick={() => handleWeekStarts(monday)}
+                        style={{
+                          flex: 1, padding: "0.5rem", borderRadius: "var(--radius-md)",
+                          border: weekStartsMonday === monday ? "2px solid var(--primary)" : "2px solid var(--border)",
+                          background: weekStartsMonday === monday ? "var(--primary-lighter)" : "white",
+                          cursor: "pointer", fontFamily: "inherit",
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                          color: weekStartsMonday === monday ? "var(--primary)" : "var(--foreground-light)",
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </section>
+              </SettingsCard>
 
-              {/* ── Apps del teléfono ── */}
-              <section>
-                <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.625rem" }}>
-                  📱 Apps del teléfono
-                </h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-                  {APP_TOGGLES.map((app) => (
-                    <div key={app.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--foreground)" }}>{app.name}</p>
-                      <Toggle
-                        checked={!hiddenApps.includes(app.id)}
-                        onChange={(v) => handleHiddenApp(app.id, !v)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* ── Exportar datos ── */}
-              <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
-                <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.625rem", display: "flex", alignItems: "center", gap: 4 }}><Upload size={14} /> Exportar datos</p>
+              {/* ══ DATOS ══ */}
+              <SettingsCard title={<><Upload size={14} /> Exportar datos</>}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   <button
                     className="btn btn-outline"
@@ -913,20 +909,18 @@ export function SettingsModal() {
                     📓 Exportar diario
                   </button>
                 </div>
-              </div>
+              </SettingsCard>
 
               {/* ── Cerrar sesión ── */}
-              <div style={{ paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
-                <button
-                  className="btn btn-outline btn-danger"
-                  style={{ width: "100%", justifyContent: "center", gap: "0.5rem" }}
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                >
-                  <LogOut size={15} />
-                  {loggingOut ? "Cerrando sesión..." : "Cerrar Sesión"}
-                </button>
-              </div>
+              <button
+                className="btn btn-outline btn-danger"
+                style={{ width: "100%", justifyContent: "center", gap: "0.5rem" }}
+                onClick={handleLogout}
+                disabled={loggingOut}
+              >
+                <LogOut size={15} />
+                {loggingOut ? "Cerrando sesión..." : "Cerrar Sesión"}
+              </button>
             </>
           )}
         </div>

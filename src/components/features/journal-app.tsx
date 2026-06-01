@@ -306,34 +306,45 @@ export function JournalApp({ onBack }: Props) {
     return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
   }
 
-  async function startRecording() {
+  function beginRecordingWithStream(stream: MediaStream) {
+    streamRef.current = stream
+    const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find(t => {
+      try { return MediaRecorder.isTypeSupported(t) } catch { return false }
+    }) ?? ""
+    const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+    mediaRecorderRef.current = mr
+    chunksRef.current = []
+    mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+    mr.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+      const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" })
+      await uploadAudioBlob(blob, mimeType)
+    }
+    mr.start(250)
+    setIsRecording(true)
+    setRecordingSecs(0)
+    recordingTimerRef.current = setInterval(() => setRecordingSecs(s => s + 1), 1000)
+  }
+
+  async function startRecording(isRetry = false) {
     setShowMicHelp(false)
     try {
-      // Don't pre-check permissions API — in Capacitor WebView it can return 'denied'
-      // incorrectly even when the system permission is granted. Just call getUserMedia
-      // directly and let the WebView/browser show its native permission dialog.
+      // Call getUserMedia directly — the native layer (MainActivity) requests the
+      // Android mic permission and grants the WebView request. Don't pre-check the
+      // permissions API: inside a WebView it can wrongly report 'denied'.
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-      streamRef.current = stream
-      const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find(t => {
-        try { return MediaRecorder.isTypeSupported(t) } catch { return false }
-      }) ?? ""
-      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
-      mediaRecorderRef.current = mr
-      chunksRef.current = []
-      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
-      mr.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop())
-        streamRef.current = null
-        const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" })
-        await uploadAudioBlob(blob, mimeType)
-      }
-      mr.start(250)
-      setIsRecording(true)
-      setRecordingSecs(0)
-      recordingTimerRef.current = setInterval(() => setRecordingSecs(s => s + 1), 1000)
+      beginRecordingWithStream(stream)
     } catch (err: unknown) {
       const name = err instanceof Error ? err.name : ""
-      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+      if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError") {
+        // On Android the runtime permission dialog resolves asynchronously, so the
+        // first getUserMedia often rejects right as the user taps "Permitir".
+        // Retry once automatically after a short delay before showing the help panel.
+        if (!isRetry) {
+          await new Promise(r => setTimeout(r, 1300))
+          return startRecording(true)
+        }
         setShowMicHelp(true)
       } else if (name === "NotFoundError") {
         toast.error("No se encontró micrófono en este dispositivo")
@@ -353,11 +364,12 @@ export function JournalApp({ onBack }: Props) {
 
   async function uploadAudioBlob(blob: Blob, mimeType: string) {
     if (!selectedDate) return
+    if (!blob || blob.size === 0) { toast.error("La grabación quedó vacía, intenta de nuevo"); return }
     setUploadingAudio(true)
     try {
       const token = await getToken()
       if (!token) throw new Error("No auth")
-      const ext = mimeType.includes("mp4") ? "mp4" : mimeType.includes("ogg") ? "ogg" : "webm"
+      const ext = mimeType.includes("mp4") ? "m4a" : mimeType.includes("ogg") ? "ogg" : "webm"
       const fd = new FormData()
       fd.append("file", blob, `voz-${selectedDate}.${ext}`)
       fd.append("date", selectedDate)
@@ -366,12 +378,15 @@ export function JournalApp({ onBack }: Props) {
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
       })
-      if (!res.ok) throw new Error("Error al subir")
+      if (!res.ok) {
+        const msg = await res.json().catch(() => null)
+        throw new Error(msg?.error ?? "Error al subir")
+      }
       const { url } = await res.json()
       setAudioUrl(url)
       toast.success("Nota de voz añadida 🎙️")
-    } catch {
-      toast.error("Error al subir el audio")
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al subir el audio")
     } finally {
       setUploadingAudio(false)
     }
@@ -1140,7 +1155,7 @@ export function JournalApp({ onBack }: Props) {
             ) : (
               <button
                 type="button"
-                onClick={startRecording}
+                onClick={() => startRecording()}
                 disabled={uploadingAudio}
                 style={{
                   display: "inline-flex", alignItems: "center", gap: "0.375rem",
