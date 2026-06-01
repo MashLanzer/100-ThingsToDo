@@ -236,48 +236,44 @@ function MasonryCard({ photo, onClick }: { photo: Photo; onClick: () => void }) 
   )
 }
 
-function FeedCard({ photo, onClick, reactions, comments, myUid, onReact, onAddComment, onDeleteComment }: {
+const FEED_REACTIONS = ["❤️", "🔥", "✨"] as const
+
+function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onOpenComments }: {
   photo: Photo; onClick: () => void
-  reactions: PhotoReaction[]; comments: PhotoComment[]; myUid: string
+  reactions: PhotoReaction[]; commentCount: number; myUid: string
   onReact: (emoji: string) => void
-  onAddComment: (content: string) => Promise<void>
-  onDeleteComment: (id: string) => void
+  onOpenComments: () => void
 }) {
-  const author = photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"
+  const appName = photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"
+  const uploaderName = photo.uploaded_by_name?.trim() || null
+  const displayName = uploaderName ?? appName
+  const avatarUrl = photo.uploaded_by_avatar?.trim() || null
+
   const photoReactions = reactions.filter((r) => r.photo_id === photo.id)
   const liked = photoReactions.some((r) => r.emoji === "❤️" && r.user_id === myUid)
   const likeCount = photoReactions.filter((r) => r.emoji === "❤️").length
-  const otherReactions = (["🔥", "✨"] as const).map((e) => ({
-    emoji: e,
-    mine: photoReactions.some((r) => r.emoji === e && r.user_id === myUid),
-    count: photoReactions.filter((r) => r.emoji === e).length,
-  }))
 
-  const photoComments = comments.filter((c) => c.photo_id === photo.id)
-  const [showAllComments, setShowAllComments] = useState(false)
-  const [commentDraft, setCommentDraft] = useState("")
-  const [posting, setPosting] = useState(false)
+  const [picker, setPicker] = useState(false)
   const [burst, setBurst] = useState(false)
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressed = useRef(false)
 
-  const visibleComments = showAllComments ? photoComments : photoComments.slice(-2)
-
-  function doLike() {
-    if (!liked) { setBurst(true); setTimeout(() => setBurst(false), 600) }
-    onReact("❤️")
+  function startPress() {
+    longPressed.current = false
+    pressTimer.current = setTimeout(() => {
+      longPressed.current = true
+      navigator.vibrate?.(40)
+      setPicker(true)
+    }, 480)
+  }
+  function endPress() {
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null }
   }
 
-  async function submitComment() {
-    const text = commentDraft.trim()
-    if (!text || posting) return
-    setPosting(true)
-    try {
-      await onAddComment(text)
-      setCommentDraft("")
-    } catch {
-      toast.error("No se pudo publicar el comentario")
-    } finally {
-      setPosting(false)
-    }
+  function react(emoji: string) {
+    if (emoji === "❤️" && !liked) { setBurst(true); setTimeout(() => setBurst(false), 600) }
+    onReact(emoji)
+    setPicker(false)
   }
 
   return (
@@ -291,34 +287,48 @@ function FeedCard({ photo, onClick, reactions, comments, myUid, onReact, onAddCo
         border: "1px solid var(--border)",
       }}
     >
-      {/* Post header */}
+      {/* Post header — uploader avatar + name, app name small below */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.875rem" }}>
         <div style={{
-          width: 36, height: 36, borderRadius: "50%", padding: 2,
+          width: 38, height: 38, borderRadius: "50%", padding: 2, flexShrink: 0,
           background: photo.source === "14feb"
             ? "linear-gradient(135deg, #EC4899, #F472B6)"
             : "linear-gradient(135deg, var(--primary), var(--secondary))",
-          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>
-            {photo.source === "14feb" ? "💕" : "✨"}
-          </div>
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", border: "2px solid var(--surface)" }} />
+          ) : (
+            <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9375rem", fontWeight: 700, fontFamily: "'Fredoka', sans-serif", color: "var(--primary)" }}>
+              {uploaderName ? uploaderName[0].toUpperCase() : (photo.source === "14feb" ? "💕" : "✨")}
+            </div>
+          )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.875rem", fontWeight: 700, color: "var(--foreground)", lineHeight: 1.1 }}>
-            {author}
+          <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.875rem", fontWeight: 700, color: "var(--foreground)", lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {displayName}
           </p>
-          <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", lineHeight: 1.1 }}>{timeAgoEs(photo.created_at)}</p>
+          <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", lineHeight: 1.15 }}>
+            {uploaderName ? `${appName} · ${timeAgoEs(photo.created_at)}` : timeAgoEs(photo.created_at)}
+          </p>
         </div>
       </div>
 
-      {/* Image (double-tap-friendly; single tap opens lightbox) */}
-      <div onClick={onClick} style={{ cursor: "pointer", position: "relative" }}>
+      {/* Image — long-press to react, single tap opens lightbox */}
+      <div
+        onClick={() => { if (!longPressed.current) onClick() }}
+        onPointerDown={startPress}
+        onPointerUp={endPress}
+        onPointerCancel={endPress}
+        onPointerMove={endPress}
+        style={{ cursor: "pointer", position: "relative", userSelect: "none", WebkitUserSelect: "none", touchAction: "pan-y" }}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={photo.image_url}
           alt={photo.caption ?? "Foto"}
-          style={{ width: "100%", display: "block", maxHeight: "78vw", objectFit: "cover" }}
+          style={{ width: "100%", display: "block", maxHeight: "78vw", objectFit: "cover", pointerEvents: "none" }}
           loading="lazy"
         />
         {burst && (
@@ -326,35 +336,53 @@ function FeedCard({ photo, onClick, reactions, comments, myUid, onReact, onAddCo
             <Heart size={96} fill="#fff" color="#fff" style={{ animation: "lightboxImgIn 0.6s ease both", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.4))" }} />
           </div>
         )}
+
+        {/* Long-press reaction picker */}
+        {picker && (
+          <>
+            <div onClick={(e) => { e.stopPropagation(); setPicker(false) }}
+              style={{ position: "fixed", inset: 0, zIndex: 49 }} />
+            <div onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute", left: "50%", bottom: "12px", transform: "translateX(-50%)",
+                display: "flex", gap: "0.25rem", zIndex: 50,
+                background: "rgba(255,255,255,0.96)", borderRadius: "999px", padding: "6px 10px",
+                boxShadow: "0 8px 28px rgba(0,0,0,0.28)", animation: "modalIn 0.15s ease",
+              }}>
+              {FEED_REACTIONS.map((emoji) => {
+                const mine = photoReactions.some((r) => r.emoji === emoji && r.user_id === myUid)
+                return (
+                  <button key={emoji} onClick={() => react(emoji)}
+                    style={{
+                      background: mine ? "rgba(139,92,246,0.15)" : "transparent",
+                      border: "none", borderRadius: "50%", cursor: "pointer",
+                      padding: "6px 8px", fontSize: "1.375rem", lineHeight: 1, transition: "transform 0.1s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.25)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                  >
+                    {emoji}
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Action bar */}
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.5rem 0.875rem 0.25rem" }}>
-        <button onClick={doLike} aria-label="Me gusta"
+      {/* Action bar — like + comment (reactions live in long-press) */}
+      <div style={{ display: "flex", alignItems: "center", gap: "1.125rem", padding: "0.5rem 0.875rem 0.25rem" }}>
+        <button onClick={() => react("❤️")} aria-label="Me gusta"
           style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", transition: "transform 0.15s" }}
           onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.8)")}
           onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
         >
           <Heart size={24} fill={liked ? "#ef4444" : "none"} color={liked ? "#ef4444" : "var(--foreground)"} />
         </button>
-        <button onClick={() => setShowAllComments(true)} aria-label="Comentar"
+        <button onClick={onOpenComments} aria-label="Comentarios"
           style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
           <MessageCircle size={23} color="var(--foreground)" />
         </button>
-        <div style={{ display: "flex", gap: "0.375rem", marginLeft: "auto" }}>
-          {otherReactions.map(({ emoji, mine, count }) => (
-            <button key={emoji} onClick={() => onReact(emoji)}
-              style={{
-                background: mine ? "rgba(139,92,246,0.12)" : "var(--muted)",
-                border: mine ? "1px solid rgba(139,92,246,0.3)" : "1px solid transparent",
-                borderRadius: "999px", padding: "2px 8px", cursor: "pointer",
-                fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "2px",
-              }}>
-              <span>{emoji}</span>
-              {count > 0 && <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)" }}>{count}</span>}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Likes count */}
@@ -367,58 +395,125 @@ function FeedCard({ photo, onClick, reactions, comments, myUid, onReact, onAddCo
       {/* Caption */}
       {photo.caption && (
         <p style={{ padding: "0.25rem 0.875rem 0", fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.4 }}>
-          <span style={{ fontWeight: 700, marginRight: "0.375rem" }}>{author}</span>
+          <span style={{ fontWeight: 700, marginRight: "0.375rem" }}>{displayName}</span>
           {photo.caption}
         </p>
       )}
 
-      {/* Comments */}
-      <div style={{ padding: "0.375rem 0.875rem 0" }}>
-        {photoComments.length > 2 && !showAllComments && (
-          <button onClick={() => setShowAllComments(true)}
-            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8125rem", color: "var(--foreground-muted)", fontFamily: "inherit" }}>
-            Ver los {photoComments.length} comentarios
-          </button>
-        )}
-        {visibleComments.map((c) => (
-          <div key={c.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.375rem", marginTop: "0.25rem" }}>
-            <p style={{ flex: 1, fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.4 }}>
-              <span style={{ fontWeight: 700, marginRight: "0.375rem" }}>{c.user_name || "Pareja"}</span>
-              {c.content}
-            </p>
-            {c.user_id === myUid && (
-              <button onClick={() => onDeleteComment(c.id)} aria-label="Eliminar comentario"
-                style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "var(--foreground-muted)", flexShrink: 0 }}>
-                <Trash2 size={12} />
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+      {/* View comments link */}
+      <button onClick={onOpenComments}
+        style={{ background: "none", border: "none", padding: "0.375rem 0.875rem 0.75rem", cursor: "pointer", fontSize: "0.8125rem", color: "var(--foreground-muted)", fontFamily: "inherit", textAlign: "left", display: "block" }}>
+        {commentCount > 0 ? `Ver ${commentCount === 1 ? "1 comentario" : `los ${commentCount} comentarios`}` : "Añade un comentario..."}
+      </button>
+    </div>
+  )
+}
 
-      {/* Add comment */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 0.875rem 0.75rem", marginTop: "0.25rem", borderTop: "1px solid var(--border)" }}>
-        <input
-          value={commentDraft}
-          onChange={(e) => setCommentDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") submitComment() }}
-          placeholder="Añade un comentario..."
-          maxLength={500}
-          style={{
-            flex: 1, border: "none", outline: "none", background: "transparent",
-            fontFamily: "inherit", fontSize: "0.8125rem", color: "var(--foreground)",
-          }}
-        />
-        <button onClick={submitComment} disabled={!commentDraft.trim() || posting}
-          style={{
-            background: "none", border: "none",
-            cursor: commentDraft.trim() ? "pointer" : "default",
-            padding: "2px", display: "flex", alignItems: "center",
-            color: commentDraft.trim() ? "var(--primary)" : "var(--foreground-muted)",
-            opacity: commentDraft.trim() ? 1 : 0.5,
-          }}>
-          <Send size={18} />
-        </button>
+// ── Comments bottom sheet ───────────────────────────────────────────────────
+function CommentsSheet({ photo, comments, myUid, onClose, onAddComment, onDeleteComment }: {
+  photo: Photo
+  comments: PhotoComment[]
+  myUid: string
+  onClose: () => void
+  onAddComment: (content: string) => Promise<void>
+  onDeleteComment: (id: string) => void
+}) {
+  const [draft, setDraft] = useState("")
+  const [posting, setPosting] = useState(false)
+  const photoComments = comments.filter((c) => c.photo_id === photo.id)
+
+  async function submit() {
+    const text = draft.trim()
+    if (!text || posting) return
+    setPosting(true)
+    try {
+      await onAddComment(text)
+      setDraft("")
+    } catch {
+      toast.error("No se pudo publicar el comentario")
+    } finally {
+      setPosting(false)
+    }
+  }
+
+  return (
+    <div onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 250,
+        background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)",
+        display: "flex", flexDirection: "column", justifyContent: "flex-end",
+      }}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--surface)",
+          borderRadius: "var(--radius-xl) var(--radius-xl) 0 0",
+          maxHeight: "72vh", display: "flex", flexDirection: "column",
+          animation: "sheetUp 0.28s cubic-bezier(0.34,1.3,0.64,1) both",
+          boxShadow: "0 -8px 32px rgba(0,0,0,0.2)",
+        }}>
+        {/* Grabber + title */}
+        <div style={{ padding: "0.5rem 1rem 0.625rem", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+          <div style={{ width: 38, height: 4, borderRadius: 999, background: "var(--border)", margin: "0 auto 0.5rem" }} />
+          <p style={{ textAlign: "center", fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)" }}>
+            Comentarios
+          </p>
+        </div>
+
+        {/* List */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "0.75rem 1rem", display: "flex", flexDirection: "column", gap: "0.875rem", overscrollBehavior: "contain" }}>
+          {photoComments.length === 0 && (
+            <p style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: "0.8125rem", padding: "1.5rem 0" }}>
+              Aún no hay comentarios. ¡Sé el primero! 💬
+            </p>
+          )}
+          {photoComments.map((c) => (
+            <div key={c.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem" }}>
+              <div style={{ width: 30, height: 30, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, var(--primary), var(--secondary))", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: "0.75rem", fontFamily: "'Fredoka', sans-serif" }}>
+                {(c.user_name || "P")[0].toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.4 }}>
+                  <span style={{ fontWeight: 700, marginRight: "0.375rem" }}>{c.user_name || "Pareja"}</span>
+                  {c.content}
+                </p>
+                <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", marginTop: "0.125rem" }}>{timeAgoEs(c.created_at)}</p>
+              </div>
+              {c.user_id === myUid && (
+                <button onClick={() => onDeleteComment(c.id)} aria-label="Eliminar"
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "var(--foreground-muted)", flexShrink: 0 }}>
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Input */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px))", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") submit() }}
+            placeholder="Añade un comentario..."
+            maxLength={500}
+            autoFocus
+            style={{
+              flex: 1, border: "1px solid var(--border)", borderRadius: "999px",
+              outline: "none", background: "var(--muted)", padding: "0.5rem 0.875rem",
+              fontFamily: "inherit", fontSize: "0.8125rem", color: "var(--foreground)",
+            }}
+          />
+          <button onClick={submit} disabled={!draft.trim() || posting}
+            style={{
+              background: draft.trim() ? "var(--primary)" : "var(--muted)",
+              border: "none", borderRadius: "50%", width: 38, height: 38, flexShrink: 0,
+              cursor: draft.trim() ? "pointer" : "default",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: draft.trim() ? "white" : "var(--foreground-muted)",
+            }}>
+            <Send size={17} />
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -774,6 +869,7 @@ export default function FotosPage() {
     return "polaroid"
   })
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [commentsPhotoId, setCommentsPhotoId] = useState<string | null>(null)
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
   const [newPhotoIds, setNewPhotoIds] = useState<Set<string>>(new Set())
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -1073,11 +1169,10 @@ export default function FotosPage() {
                       key={photo.id}
                       photo={photo}
                       reactions={reactions}
-                      comments={comments}
+                      commentCount={comments.filter((c) => c.photo_id === photo.id).length}
                       myUid={myUid}
                       onReact={(emoji) => toggleReaction.mutate({ photoId: photo.id, emoji })}
-                      onAddComment={(content) => addComment.mutateAsync({ photoId: photo.id, content })}
-                      onDeleteComment={(id) => deleteComment.mutate(id)}
+                      onOpenComments={() => setCommentsPhotoId(photo.id)}
                       onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))}
                     />
                   ))}
@@ -1148,6 +1243,22 @@ export default function FotosPage() {
           uploading={uploadPhoto.isPending}
         />
       )}
+
+      {/* Comments bottom sheet */}
+      {commentsPhotoId && (() => {
+        const photo = allPhotos.find((p) => p.id === commentsPhotoId)
+        if (!photo) return null
+        return (
+          <CommentsSheet
+            photo={photo}
+            comments={comments}
+            myUid={myUid}
+            onClose={() => setCommentsPhotoId(null)}
+            onAddComment={(content) => addComment.mutateAsync({ photoId: photo.id, content })}
+            onDeleteComment={(id) => deleteComment.mutate(id)}
+          />
+        )
+      })()}
 
       {/* Lightbox */}
       {lightboxIndex !== null && filteredPhotos.length > 0 && (

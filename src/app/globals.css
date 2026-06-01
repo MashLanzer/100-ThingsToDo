@@ -861,6 +861,11 @@ main {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
 @keyframes heartBeat {
   0%, 100% { transform: scale(1); }
   25% { transform: scale(1.15); }

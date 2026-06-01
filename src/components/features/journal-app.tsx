@@ -349,8 +349,23 @@ export function JournalApp({ onBack }: Props) {
     return new Promise((resolve, reject) => gum.call(navigator, constraints, resolve, reject))
   }
 
+  // Fully release any microphone stream still held from a previous attempt,
+  // otherwise the next getUserMedia can wrongly throw NotReadableError ("in use").
+  function releaseMicStream() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try { mediaRecorderRef.current.stop() } catch { /* ignore */ }
+    }
+    mediaRecorderRef.current = null
+  }
+
   async function startRecording(isRetry = false) {
     setShowMicHelp(false)
+    // Always free a leftover stream before asking for a new one.
+    releaseMicStream()
     try {
       // Call getUserMedia directly — the native layer (MainActivity) requests the
       // Android mic permission and grants the WebView request. Don't pre-check the
@@ -370,8 +385,15 @@ export function JournalApp({ onBack }: Props) {
         setShowMicHelp(true)
       } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
         toast.error("No se encontró micrófono en este dispositivo")
-      } else if (name === "NotReadableError" || name === "TrackStartError") {
-        toast.error("El micrófono está siendo usado por otra app. Ciérrala e intenta de nuevo")
+      } else if (name === "NotReadableError" || name === "TrackStartError" || name === "AbortError") {
+        // Usually a transient WebView lock, not a real "other app" conflict.
+        // Release everything and retry once before giving up.
+        if (!isRetry) {
+          releaseMicStream()
+          await new Promise(r => setTimeout(r, 900))
+          return startRecording(true)
+        }
+        toast.error("No se pudo iniciar el micrófono. Cierra y vuelve a abrir la app e intenta de nuevo")
       } else if (name === "NotSupportedError") {
         // getUserMedia unavailable — almost always an insecure (non-HTTPS) context
         if (!isRetry) {

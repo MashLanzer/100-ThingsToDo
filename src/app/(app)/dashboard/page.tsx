@@ -77,13 +77,13 @@ function SwipePlanCard({ plan, index, onDelete }: { plan: Plan; index: number; o
       >
         <Trash2 size={22} color="white" />
       </div>
-      {/* Drag handle — left side, vertically centered */}
+      {/* Drag handle — top-left corner */}
       <div
         {...attributes}
         {...listeners}
         style={{
-          position: "absolute", top: "50%", left: "8px", transform: "translateY(-50%)", zIndex: 20,
-          cursor: "grab", touchAction: "none", padding: "5px 3px",
+          position: "absolute", top: "8px", left: "8px", zIndex: 20,
+          cursor: "grab", touchAction: "none", padding: "4px",
           background: "rgba(255,255,255,0.85)", borderRadius: "6px",
           display: "flex", alignItems: "center", color: "#888",
           boxShadow: "0 1px 4px rgba(0,0,0,0.12)",

@@ -199,15 +199,14 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
   // Keep ref in sync with state
   useEffect(() => { swipeXRef.current = swipeX }, [swipeX])
 
-  // ── Long-press to edit (on title area only) ───────────────────
+  // ── Long-press to show reaction picker (on title area) ────────
   function startLongPress() {
-    if (!onEdit) return
     longPressTriggered.current = false
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true
       navigator.vibrate?.(40)
-      onEdit()
-    }, 520)
+      setShowPicker(true)
+    }, 500)
   }
 
   function cancelLongPress() {
@@ -302,6 +301,7 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
             onPointerUp={() => cancelLongPress()}
             onPointerCancel={() => cancelLongPress()}
             onPointerMove={() => cancelLongPress()}
+            onDoubleClick={() => onEdit?.()}
           >
             {task.title}
             {task.completed && task.completed_by_name && (
@@ -337,7 +337,7 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
             <button
               onClick={(e) => { e.stopPropagation(); onEdit() }}
               style={{ background: "none", border: "none", cursor: "pointer", padding: "3px 4px", color: "var(--foreground-muted)", lineHeight: 1, flexShrink: 0, display: "flex", alignItems: "center" }}
-              title="Editar (o mantén presionado el texto)"
+              title="Editar (o doble toque en el texto)"
             >
               <Edit2 size={14} />
             </button>
@@ -346,7 +346,7 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
       </div>
 
       {/* Reactions row */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", paddingLeft: "0.5rem", paddingBottom: "0.25rem", flexWrap: "wrap", background: "var(--surface)" }}>
+      <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "0.25rem", paddingLeft: "0.5rem", paddingBottom: "0.25rem", minHeight: "0.5rem", flexWrap: "wrap", background: "var(--surface)" }}>
         {Object.entries(reactionGroups).map(([key, { count, mine }]) => (
           <button
             key={key}
@@ -366,52 +366,47 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId }: Pr
           </button>
         ))}
 
-        {/* + picker (Sparkles button) */}
-        <div style={{ position: "relative" }}>
-          <button
-            onClick={() => setShowPicker((v) => !v)}
-            style={{
-              background: "var(--muted)", border: "1px solid var(--border)",
-              borderRadius: 20, padding: "2px 8px", fontSize: "0.7rem",
-              cursor: "pointer", color: "var(--foreground-muted)", lineHeight: 1.4,
-              display: "flex", alignItems: "center",
-            }}
-            title="Añadir reacción"
-          >
-            <Sparkles size={11} />
-          </button>
-          {showPicker && (
+        {/* Long-press reaction picker — appears when holding the task */}
+        {showPicker && (
+          <>
+            {/* Backdrop to close */}
+            <div
+              onClick={() => setShowPicker(false)}
+              style={{ position: "fixed", inset: 0, zIndex: 49 }}
+            />
             <div style={{
-              position: "absolute", bottom: "calc(100% + 6px)", left: 0,
+              position: "absolute", bottom: "calc(100% + 6px)", left: "0.5rem",
               background: "var(--surface)", border: "1px solid var(--border)",
-              borderRadius: "var(--radius-lg)", padding: "8px 10px",
+              borderRadius: "999px", padding: "6px 8px",
               display: "flex", gap: 4, zIndex: 50,
-              boxShadow: "0 6px 24px rgba(0,0,0,0.14)",
+              boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+              animation: "modalIn 0.15s ease",
             }}>
-              {REACTIONS.map(({ key, icon, label }) => (
-                <button
-                  key={key}
-                  onClick={() => handleReact(key)}
-                  disabled={reactLoading}
-                  title={label}
-                  style={{
-                    background: reactions.some((r) => r.emoji === key && r.user_id === currentUserId)
-                      ? "var(--primary-lighter)" : "var(--muted)",
-                    border: "none", cursor: "pointer", padding: "6px 8px", borderRadius: "var(--radius-md)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    color: reactions.some((r) => r.emoji === key && r.user_id === currentUserId)
-                      ? "var(--primary)" : "var(--foreground-muted)",
-                    transition: "transform 0.1s, background 0.15s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.2)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                >
-                  {icon}
-                </button>
-              ))}
+              {REACTIONS.map(({ key, icon, label }) => {
+                const mine = reactions.some((r) => r.emoji === key && r.user_id === currentUserId)
+                return (
+                  <button
+                    key={key}
+                    onClick={() => { handleReact(key); setShowPicker(false) }}
+                    disabled={reactLoading}
+                    title={label}
+                    style={{
+                      background: mine ? "var(--primary-lighter)" : "transparent",
+                      border: "none", cursor: "pointer", padding: "6px 8px", borderRadius: "50%",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color: mine ? "var(--primary)" : "var(--foreground-muted)",
+                      transition: "transform 0.1s, background 0.15s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.25)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                  >
+                    {icon}
+                  </button>
+                )
+              })}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   )

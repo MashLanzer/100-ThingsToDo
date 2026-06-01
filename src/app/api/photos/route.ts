@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
   const supabase = getSupabaseAdmin()
   if (!supabase) return NextResponse.json({ error: "DB unavailable" }, { status: 503 })
 
-  const { data: me } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
+  const { data: me } = await supabase.from("users").select("couple_id, name, avatar_url").eq("id", user.uid).single()
   const coupleId = me?.couple_id ?? user.uid
 
   let formData: FormData
@@ -126,18 +126,30 @@ export async function POST(req: NextRequest) {
   const deleteUrl: string | null = imgbbData.data.delete_url ?? null
 
   // Try Supabase photos table first
-  const { data: photoData, error: photoError } = await supabase
-    .from("photos")
-    .insert({
-      collection_key: coupleId,
-      image_url: imageUrl,
-      thumb_url: thumbUrl,
-      delete_url: deleteUrl,
-      caption: captionStr,
-      source: "thingstodo",
-    })
-    .select()
-    .single()
+  const baseRow = {
+    collection_key: coupleId,
+    image_url: imageUrl,
+    thumb_url: thumbUrl,
+    delete_url: deleteUrl,
+    caption: captionStr,
+    source: "thingstodo",
+  }
+  const uploaderRow = {
+    ...baseRow,
+    uploaded_by: user.uid,
+    uploaded_by_name: me?.name ?? null,
+    uploaded_by_avatar: me?.avatar_url ?? null,
+  }
+
+  let { data: photoData, error: photoError } = await supabase
+    .from("photos").insert(uploaderRow).select().single()
+
+  // If the uploader columns don't exist yet (migration 018 not applied),
+  // retry with only the base columns so uploads keep working.
+  if (photoError && /column .* does not exist|uploaded_by/i.test(photoError.message)) {
+    ;({ data: photoData, error: photoError } = await supabase
+      .from("photos").insert(baseRow).select().single())
+  }
 
   // If Supabase fails (e.g. migration not applied yet), fall back to Firestore
   if (photoError) {

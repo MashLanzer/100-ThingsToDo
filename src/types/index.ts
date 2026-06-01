@@ -187,6 +187,9 @@ export interface Photo {
   caption: string | null
   source: string   // 'thingstodo' | '14feb'
   created_at: string
+  uploaded_by?: string | null
+  uploaded_by_name?: string | null
+  uploaded_by_avatar?: string | null
 }
 
 export const KAWAII_ICONS: Record<string, string> = {

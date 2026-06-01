@@ -134,7 +134,7 @@ export function PlanCard({ plan, index = 0 }: Props) {
           {/* "Nuevo" badge */}
           {plan.updated_at && plan.updated_at !== plan.created_at &&
             (Date.now() - new Date(plan.updated_at).getTime()) < 86_400_000 && (
-            <div style={{ position: "absolute", top: 10, left: 10 }}>
+            <div style={{ position: "absolute", top: 10, left: 44 }}>
               <span style={{
                 fontSize: "0.5625rem", fontWeight: 700,
                 background: "linear-gradient(135deg, var(--primary), var(--secondary))",
@@ -231,7 +231,7 @@ export function PlanCard({ plan, index = 0 }: Props) {
             {/* "Nuevo" */}
             {plan.updated_at && plan.updated_at !== plan.created_at &&
               (Date.now() - new Date(plan.updated_at).getTime()) < 86_400_000 && (
-              <div style={{ position: "absolute", top: 10, left: 10 }}>
+              <div style={{ position: "absolute", top: 10, left: 44 }}>
                 <span style={{
                   fontSize: "0.5rem", fontWeight: 700,
                   background: "rgba(255,255,255,0.9)",
