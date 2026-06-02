@@ -57,6 +57,7 @@ jobs:
       - name: Install npm and sync Capacitor
         run: |
           npm ci
+          mkdir -p www && echo '<!DOCTYPE html><html><body></body></html>' > www/index.html
           mkdir -p android/app/src/main/assets
           npx cap sync android
 
