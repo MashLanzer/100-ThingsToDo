@@ -57,9 +57,10 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10))
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "0", 10)))
   const paginated = limit > 0
+  const debug = searchParams.get("debug") === "1"
 
   // Get couple_id for this user
-  const { data: me } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
+  const { data: me, error: meError } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
   const coupleId = me?.couple_id
 
   // Fetch from Supabase photos table (new system)
@@ -69,6 +70,7 @@ export async function GET(req: NextRequest) {
     id: string; image_url: string; thumb_url: string | null; delete_url: string | null;
     caption: string | null; source: string; created_at: string; collection_key: string;
   }> = []
+  let supabaseError: string | null = null
   const collectionKeys = [...new Set([coupleId, user.uid].filter(Boolean) as string[])]
   if (collectionKeys.length > 0) {
     const { data, error } = await supabase
@@ -76,7 +78,7 @@ export async function GET(req: NextRequest) {
       .select("*")
       .in("collection_key", collectionKeys)
       .order("created_at", { ascending: false })
-    if (error) console.error("[photos GET] Supabase error:", error.message)
+    if (error) { console.error("[photos GET] Supabase error:", error.message); supabaseError = error.message }
     supabasePhotos = data ?? []
   }
 
@@ -89,6 +91,20 @@ export async function GET(req: NextRequest) {
     ...supabasePhotos,
     ...firestorePhotos.filter((p) => !seenUrls.has(p.image_url)),
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+  // Debug mode: return diagnostic info instead of photos
+  if (debug) {
+    return NextResponse.json({
+      uid: user.uid,
+      couple_id: coupleId ?? null,
+      users_error: meError?.message ?? null,
+      collection_keys: collectionKeys,
+      supabase_count: supabasePhotos.length,
+      supabase_error: supabaseError,
+      firestore_count: firestorePhotos.length,
+      total: merged.length,
+    })
+  }
 
   if (paginated) {
     const offset = (page - 1) * limit
