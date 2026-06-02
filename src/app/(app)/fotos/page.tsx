@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import {
-  usePhotos, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption,
+  usePhotos, usePhotosDebug, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption,
   usePhotoReactions, useTogglePhotoReaction, type PhotoReaction,
   useMarkPhotoViewed, usePhotoViews, type PhotoViewData,
   usePhotoAlbums, useCreatePhotoAlbum, useDeletePhotoAlbum, useUpdatePhotoAlbum, type PhotoAlbum,
@@ -1453,6 +1453,9 @@ function findMemoryPhotos(photos: Photo[]): { label: string; photos: Photo[] } |
 
 export default function FotosPage() {
   const { data: photos, isLoading, error: photosError } = usePhotos()
+  // Diagnostic: only fetched when the gallery ends up empty, so we can see
+  // exactly what the server found (couple_id, counts, errors).
+  const { data: photosDebug } = usePhotosDebug(!isLoading && (Array.isArray(photos) ? photos.length === 0 : false))
   const uploadPhoto = useUploadPhoto()
   const deletePhoto = useDeletePhoto()
   const updateCaption = useUpdatePhotoCaption()
@@ -1914,6 +1917,20 @@ export default function FotosPage() {
           <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => fileInputRef.current?.click()}>
             <Camera size={16} /> Subir primera foto
           </button>
+          {photosDebug && (
+            <pre style={{
+              marginTop: "1.25rem", textAlign: "left", fontSize: "0.7rem", lineHeight: 1.5,
+              background: "var(--muted)", borderRadius: "var(--radius-md)", padding: "0.75rem",
+              color: "var(--foreground-muted)", overflowX: "auto", maxWidth: "100%",
+            }}>
+{`couple_id: ${photosDebug.couple_id ?? "—"}
+claves buscadas: ${photosDebug.collection_keys.join(", ") || "—"}
+fotos en Supabase: ${photosDebug.supabase_count}
+error Supabase: ${photosDebug.supabase_error ?? "ninguno"}
+fotos en Firestore: ${photosDebug.firestore_count}
+total: ${photosDebug.total}`}
+            </pre>
+          )}
         </div>
       )}
 

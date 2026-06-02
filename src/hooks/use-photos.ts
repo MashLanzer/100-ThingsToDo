@@ -49,6 +49,25 @@ export function usePhotos() {
   })
 }
 
+export interface PhotosDebug {
+  uid: string
+  couple_id: string | null
+  collection_keys: string[]
+  supabase_count: number
+  supabase_error: string | null
+  firestore_count: number
+  total: number
+}
+
+export function usePhotosDebug(enabled: boolean) {
+  return useQuery<PhotosDebug>({
+    queryKey: ["photos-debug"],
+    queryFn: () => authFetch("/api/photos?debug=1"),
+    enabled,
+    staleTime: 0,
+  })
+}
+
 export interface PhotosPage {
   photos: Photo[]
   total: number
