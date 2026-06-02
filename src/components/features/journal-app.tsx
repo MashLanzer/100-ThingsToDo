@@ -155,6 +155,22 @@ const ENTRY_TEMPLATES: EntryTemplate[] = [
   { id: "lazy",      emoji: "🛋️", label: "Día tranqui", mood: "chill",    tags: ["casa"],        body: "Un día tranquilo en casa 🛋️\n\n☕ Qué disfrutamos:\n😌 Cómo me sentí:" },
 ]
 
+// Gradiente del hero de portada cambia por mes (enero=0 … diciembre=11)
+const MONTH_GRADIENTS = [
+  "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",  // enero — índigo
+  "linear-gradient(135deg, #EC4899 0%, #F43F5E 100%)",  // febrero — rosa/rojo
+  "linear-gradient(135deg, #10B981 0%, #059669 100%)",  // marzo — esmeralda
+  "linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)",  // abril — ámbar
+  "linear-gradient(135deg, #22C55E 0%, #84CC16 100%)",  // mayo — verde
+  "linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)",  // junio — cielo
+  "linear-gradient(135deg, #F97316 0%, #F59E0B 100%)",  // julio — naranja
+  "linear-gradient(135deg, #EF4444 0%, #F97316 100%)",  // agosto — rojo
+  "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)",  // septiembre — violeta
+  "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",  // octubre — ámbar oscuro
+  "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",  // noviembre — lila
+  "linear-gradient(135deg, #14B8A6 0%, #0EA5E9 100%)",  // diciembre — teal
+]
+
 interface Props { onBack: () => void }
 type View = "calendar" | "read" | "write" | "timeline" | "letters" | "letters-compose" | "letter-read" | "stats" | "spread" | "export"
 type GetUserMediaLegacy = (
@@ -208,6 +224,11 @@ export function JournalApp({ onBack }: Props) {
   const [saveBurst, setSaveBurst] = useState(false)                  // F5: confetti on save
   const [reminderTime, setReminderTime] = useState<string>("")       // F9: daily reminder (HH:MM, empty = off)
   const [reactingId, setReactingId] = useState<string | null>(null)  // F14: which entry's reaction is being toggled
+
+  // New design improvements
+  const [monthDir, setMonthDir] = useState<"left" | "right" | null>(null)
+  const [calendarKey, setCalendarKey] = useState(0)
+  const [timelineFilter, setTimelineFilter] = useState<"all" | "me" | "partner">("all")
 
   // Letters state
   const [letters, setLetters] = useState<Letter[]>([])
@@ -946,7 +967,9 @@ export function JournalApp({ onBack }: Props) {
 
   // ── TIMELINE view ──────────────────────────────────────────────────────────
   if (view === "timeline") {
-    const sorted = [...mergedEntries()].sort((a, b) => b.date.localeCompare(a.date))
+    const sorted = [...mergedEntries()]
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .filter(e => timelineFilter === "all" || (timelineFilter === "me" ? e.created_by === myUid : e.created_by !== myUid))
     return (
       <>
         <style>{`
@@ -957,6 +980,15 @@ export function JournalApp({ onBack }: Props) {
           <span>📜 Timeline</span>
         </div>
         <div className="app-content-body">
+          {/* Filter toggle */}
+          <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.625rem", justifyContent: "center" }}>
+            {(["all", "me", "partner"] as const).map(f => (
+              <button key={f} onClick={() => setTimelineFilter(f)}
+                style={{ fontSize: "0.6875rem", fontWeight: 700, padding: "0.3125rem 0.875rem", borderRadius: "999px", border: "none", cursor: "pointer", fontFamily: "inherit", background: timelineFilter === f ? "var(--primary)" : "var(--muted)", color: timelineFilter === f ? "white" : "var(--foreground-muted)", transition: "all 0.15s ease" }}>
+                {f === "all" ? "🌍 Todos" : f === "me" ? "🙋 Yo" : "💑 Pareja"}
+              </button>
+            ))}
+          </div>
           {sorted.length === 0 && (
             <div style={{ textAlign: "center", padding: "2rem 0", color: "var(--foreground-muted)" }}>
               <p style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📖</p>
@@ -1222,6 +1254,7 @@ export function JournalApp({ onBack }: Props) {
 
     return (
       <>
+        <style>{`@keyframes fadeSlideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
           <span style={{ fontSize: "0.8125rem" }}>{formatDateShortEs(selectedDate)}</span>
@@ -1231,7 +1264,7 @@ export function JournalApp({ onBack }: Props) {
             </button>
           )}
         </div>
-        <div className="app-content-body">
+        <div className="app-content-body" style={{ animation: "fadeSlideIn 0.2s ease" }}>
           {partnerVisible && (
             <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.75rem" }}>
               {[{ label: "Tu entrada", isPartner: false }, { label: "Pareja", isPartner: true }].map(({ label, isPartner }) => (
@@ -1293,6 +1326,15 @@ export function JournalApp({ onBack }: Props) {
               {displayEntry?.content ?? ""}
             </p>
           </div>
+
+          {/* Firma al pie de la entrada */}
+          {displayEntry && (
+            <div style={{ textAlign: "right", marginTop: "-0.25rem", marginBottom: "0.625rem" }}>
+              <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.9375rem", color: "var(--foreground-muted)" }}>
+                — Con amor, {displayEntry.created_by === myUid ? (user?.displayName?.split(" ")[0] ?? "tú") : "tu pareja"} 💜
+              </span>
+            </div>
+          )}
 
           {/* F14: reactions strip */}
           {displayEntry && (() => {
@@ -1478,6 +1520,13 @@ export function JournalApp({ onBack }: Props) {
             style={{ minHeight: "120px", fontFamily: "'Caveat', cursive", fontSize: "1rem", lineHeight: 1.7, marginBottom: "0.625rem", ...(paperMode === "sepia" ? { background: "#fbf6e9", borderColor: "#d8c9a3", color: "#4a3b1e" } : {}) }}
           />
 
+          {/* Contador de palabras */}
+          {writeContent.trim() && (
+            <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", textAlign: "right", marginTop: "-0.375rem", marginBottom: "0.375rem" }}>
+              {writeContent.trim().split(/\s+/).filter(Boolean).length} palabras
+            </p>
+          )}
+
           {/* F8: Tags */}
           <div style={{ marginBottom: "0.625rem" }}>
             <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}>🏷️ Etiquetas</label>
@@ -1643,6 +1692,8 @@ export function JournalApp({ onBack }: Props) {
     <>
       <style>{`
         @keyframes recordingPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @keyframes slideMonthLeft  { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideMonthRight { from { transform: translateX(20px);  opacity: 0; } to { transform: translateX(0); opacity: 1; } }
       `}</style>
       <div className="app-content-header">
         <button className="back-btn-phone" onClick={onBack}>‹</button>
@@ -1698,7 +1749,7 @@ export function JournalApp({ onBack }: Props) {
           const all = mergedEntries()
           const total = all.length
           return (
-            <div style={{ marginBottom: "0.25rem", position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)", boxShadow: "0 6px 20px rgba(139,92,246,0.3)", padding: "0.875rem 1rem 0.875rem 1.125rem" }}>
+            <div style={{ marginBottom: "0.25rem", position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden", background: MONTH_GRADIENTS[month], boxShadow: "0 6px 20px rgba(139,92,246,0.3)", padding: "0.875rem 1rem 0.875rem 1.125rem" }}>
               {/* book spine */}
               <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 6, background: "rgba(0,0,0,0.18)" }} />
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
@@ -1819,58 +1870,75 @@ export function JournalApp({ onBack }: Props) {
                   })}
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <button className="back-btn-phone" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>‹</button>
-                  <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", textTransform: "capitalize" }}>{monthLabel}</span>
-                  <button className="back-btn-phone" style={{ transform: "rotate(180deg)" }} onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>‹</button>
-                </div>
+                {/* Animated wrapper — remounts on key change to replay slide animation */}
+                <div key={calendarKey} style={{ animation: monthDir === "left" ? "slideMonthLeft 0.22s ease" : monthDir === "right" ? "slideMonthRight 0.22s ease" : undefined }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <button className="back-btn-phone" onClick={() => { setMonthDir("left"); setCalendarKey(k => k + 1); setCurrentDate(new Date(year, month - 1, 1)) }}>‹</button>
+                    <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", textTransform: "capitalize" }}>{monthLabel}</span>
+                    <button className="back-btn-phone" style={{ transform: "rotate(180deg)" }} onClick={() => { setMonthDir("right"); setCalendarKey(k => k + 1); setCurrentDate(new Date(year, month + 1, 1)) }}>‹</button>
+                  </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px", textAlign: "center" }}>
-                  {weekDays.map((d) => (
-                    <div key={d} style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", padding: "0.25rem 0" }}>{d}</div>
-                  ))}
-                </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px", textAlign: "center" }}>
+                    {weekDays.map((d) => (
+                      <div key={d} style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", padding: "0.25rem 0" }}>{d}</div>
+                    ))}
+                  </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px" }}>
-                  {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
-                  {Array.from({ length: daysInMonth }).map((_, i) => {
-                    const day = i + 1
-                    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-                    const myEntry = getMyEntry(dateStr)
-                    const partnerEntry = getPartnerEntry(dateStr)
-                    const hasAny = !!(myEntry || partnerEntry)
-                    const now = new Date()
-                    const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
-                    const isToday = dateStr === todayLocal
-                    // F4: mood heatmap — tint the cell with the day's mood colour (mine first)
-                    const dayMood = getMoodById(myEntry?.mood) ?? getMoodById(partnerEntry?.mood)
-                    // F7: dim days that don't match the active mood filter
-                    const matchesFilter = !moodFilter || [myEntry?.mood, partnerEntry?.mood]
-                      .some(mo => (MOOD_EMOJI_TO_ID[mo ?? ""] ?? mo) === moodFilter)
-                    const dimmed = !!moodFilter && hasAny && !matchesFilter
-                    const cellBg = isToday
-                      ? "var(--primary-lighter)"
-                      : dayMood
-                        ? dayMood.accent
-                        : myEntry ? "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)"
-                        : partnerEntry ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)" : "white"
-                    return (
-                      <button
-                        key={day}
-                        onClick={() => openDay(dateStr)}
-                        style={{ aspectRatio: "1", borderRadius: "10px", border: isToday ? "2px solid var(--primary)" : dayMood ? `1.5px solid ${dayMood.accentBorder}` : hasAny ? "1.5px solid var(--primary-light)" : "1px solid var(--border)", background: cellBg, opacity: dimmed ? 0.32 : 1, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontSize: "0.6875rem", fontWeight: isToday ? 800 : hasAny ? 700 : 400, color: isToday ? "var(--primary)" : dayMood ? dayMood.accentText : hasAny ? "var(--foreground)" : "var(--foreground-muted)", gap: "2px", padding: "3px 2px", boxShadow: isToday ? "0 2px 8px rgba(139,92,246,0.2)" : "none", transition: "transform 0.1s, opacity 0.2s" }}
-                      >
-                        <span style={{ lineHeight: 1 }}>{day}</span>
-                        {/* D1: Two dots — left purple (mine), right pink (partner) */}
-                        {(myEntry || partnerEntry) && (
-                          <div style={{ display: "flex", gap: "2px", alignItems: "center" }}>
-                            {myEntry && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--primary)", flexShrink: 0 }} />}
-                            {partnerEntry && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--secondary)", flexShrink: 0 }} />}
-                          </div>
-                        )}
-                      </button>
-                    )
-                  })}
+                  {entries.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "2rem 0.5rem" }}>
+                      <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}>📓</div>
+                      <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.9375rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem" }}>Este mes está en blanco</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.875rem" }}>¡Empieza a escribir vuestros recuerdos!</p>
+                      <button className="btn btn-primary" style={{ fontSize: "0.8125rem" }} onClick={() => openDay(toLocalDateStr(new Date()))}>✏️ Escribir hoy</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px" }}>
+                      {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
+                      {Array.from({ length: daysInMonth }).map((_, i) => {
+                        const day = i + 1
+                        const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+                        const myEntry = getMyEntry(dateStr)
+                        const partnerEntry = getPartnerEntry(dateStr)
+                        const hasAny = !!(myEntry || partnerEntry)
+                        const bothWrote = !!(myEntry && partnerEntry)
+                        const now = new Date()
+                        const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
+                        const isToday = dateStr === todayLocal
+                        const dayMood = getMoodById(myEntry?.mood) ?? getMoodById(partnerEntry?.mood)
+                        const matchesFilter = !moodFilter || [myEntry?.mood, partnerEntry?.mood]
+                          .some(mo => (MOOD_EMOJI_TO_ID[mo ?? ""] ?? mo) === moodFilter)
+                        const dimmed = !!moodFilter && hasAny && !matchesFilter
+                        const cellBg = isToday
+                          ? "var(--primary-lighter)"
+                          : dayMood
+                            ? dayMood.accent
+                            : myEntry ? "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)"
+                            : partnerEntry ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)" : "white"
+                        return (
+                          <button
+                            key={day}
+                            onClick={() => openDay(dateStr)}
+                            onPointerDown={e => (e.currentTarget.style.transform = "scale(0.88)")}
+                            onPointerUp={e => (e.currentTarget.style.transform = "scale(1)")}
+                            onPointerLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+                            style={{ position: "relative", aspectRatio: "1", borderRadius: "10px", border: isToday ? "2px solid var(--primary)" : dayMood ? `1.5px solid ${dayMood.accentBorder}` : hasAny ? "1.5px solid var(--primary-light)" : "1px solid var(--border)", background: cellBg, opacity: dimmed ? 0.32 : 1, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontSize: "0.6875rem", fontWeight: isToday ? 800 : hasAny ? 700 : 400, color: isToday ? "var(--primary)" : dayMood ? dayMood.accentText : hasAny ? "var(--foreground)" : "var(--foreground-muted)", gap: "2px", padding: "3px 2px", boxShadow: isToday ? "0 2px 8px rgba(139,92,246,0.2)" : "none", transition: "transform 0.1s, opacity 0.2s" }}
+                          >
+                            <span style={{ lineHeight: 1 }}>{day}</span>
+                            {(myEntry || partnerEntry) && (
+                              <div style={{ display: "flex", gap: "2px", alignItems: "center" }}>
+                                {myEntry && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--primary)", flexShrink: 0 }} />}
+                                {partnerEntry && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--secondary)", flexShrink: 0 }} />}
+                              </div>
+                            )}
+                            {/* ❤️ overlay when both partners wrote on this day */}
+                            {bothWrote && (
+                              <div style={{ position: "absolute", top: -5, right: -3, fontSize: "0.5625rem", lineHeight: 1 }}>❤️</div>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* F9: Daily writing reminder */}
