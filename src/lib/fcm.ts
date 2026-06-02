@@ -17,7 +17,14 @@ function getAdmin(): admin.app.App | null {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT
   if (!raw) return null
   try {
-    const creds = JSON.parse(raw)
+    // Accept either raw JSON (starts with "{") or a base64-encoded JSON string.
+    // Base64 is recommended for env vars to avoid newline/escaping issues in the
+    // service account's private_key when pasted into hosting dashboards.
+    const trimmed = raw.trim()
+    const json = trimmed.startsWith("{")
+      ? trimmed
+      : Buffer.from(trimmed, "base64").toString("utf8")
+    const creds = JSON.parse(json)
     app = admin.apps.length
       ? admin.app()
       : admin.initializeApp({ credential: admin.credential.cert(creds) })
