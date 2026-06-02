@@ -55,8 +55,11 @@ export async function GET(req: NextRequest) {
 
   const searchParams = req.nextUrl.searchParams
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10))
-  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "0", 10)))
-  const paginated = limit > 0
+  // Only paginate when a `limit` param is explicitly provided. Without it we
+  // must return a plain array (the gallery expects an array, not an object).
+  const limitParam = searchParams.get("limit")
+  const paginated = limitParam !== null
+  const limit = paginated ? Math.min(100, Math.max(1, parseInt(limitParam, 10) || 30)) : 0
   const debug = searchParams.get("debug") === "1"
 
   // Get couple_id for this user

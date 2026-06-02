@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import {
-  usePhotos, usePhotosDebug, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption,
+  usePhotos, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption,
   usePhotoReactions, useTogglePhotoReaction, type PhotoReaction,
   useMarkPhotoViewed, usePhotoViews, type PhotoViewData,
   usePhotoAlbums, useCreatePhotoAlbum, useDeletePhotoAlbum, useUpdatePhotoAlbum, type PhotoAlbum,
@@ -1453,9 +1453,6 @@ function findMemoryPhotos(photos: Photo[]): { label: string; photos: Photo[] } |
 
 export default function FotosPage() {
   const { data: photos, isLoading, error: photosError } = usePhotos()
-  // Diagnostic: always fetch server-side counts so we can pinpoint why
-  // photos may not render (returned-but-filtered vs. truly empty).
-  const { data: photosDebug } = usePhotosDebug(true)
   const uploadPhoto = useUploadPhoto()
   const deletePhoto = useDeletePhoto()
   const updateCaption = useUpdatePhotoCaption()
@@ -1726,29 +1723,6 @@ export default function FotosPage() {
         </div>
       </div>
 
-      {/* TEMP diagnostic — always visible to debug why photos don't render */}
-      <pre style={{
-        fontSize: "0.7rem", lineHeight: 1.5, background: "#FEF9C3", border: "1px solid #FDE047",
-        borderRadius: "var(--radius-md)", padding: "0.625rem", marginBottom: "0.75rem",
-        color: "#713F12", overflowX: "auto", maxWidth: "100%", whiteSpace: "pre-wrap",
-      }}>
-{`DIAGNÓSTICO (temporal)
-isLoading: ${isLoading}
-error: ${photosError ? (photosError instanceof Error ? photosError.message : String(photosError)) : "ninguno"}
-allPhotos (recibidas): ${allPhotos.length}
-filteredPhotos (tras filtros): ${filteredPhotos.length}
-viewMode: ${viewMode}
-filter: ${filter}
-selectedMonth: ${selectedMonth ?? "—"}
-searchQuery: ${searchQuery || "—"}
-activeAlbumId: ${activeAlbumId ?? "—"}
-${photosDebug ? `--- servidor ---
-couple_id: ${photosDebug.couple_id ?? "—"}
-claves: ${photosDebug.collection_keys.join(", ") || "—"}
-supabase: ${photosDebug.supabase_count} | error: ${photosDebug.supabase_error ?? "ninguno"}
-firestore: ${photosDebug.firestore_count} | total: ${photosDebug.total}` : "(cargando diagnóstico servidor...)"}`}
-      </pre>
-
       {/* Stats strip */}
       {allPhotos.length > 0 && !isLoading && (
         <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", marginBottom: "0.875rem", paddingBottom: "2px" }}>
@@ -1940,20 +1914,6 @@ firestore: ${photosDebug.firestore_count} | total: ${photosDebug.total}` : "(car
           <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => fileInputRef.current?.click()}>
             <Camera size={16} /> Subir primera foto
           </button>
-          {photosDebug && (
-            <pre style={{
-              marginTop: "1.25rem", textAlign: "left", fontSize: "0.7rem", lineHeight: 1.5,
-              background: "var(--muted)", borderRadius: "var(--radius-md)", padding: "0.75rem",
-              color: "var(--foreground-muted)", overflowX: "auto", maxWidth: "100%",
-            }}>
-{`couple_id: ${photosDebug.couple_id ?? "—"}
-claves buscadas: ${photosDebug.collection_keys.join(", ") || "—"}
-fotos en Supabase: ${photosDebug.supabase_count}
-error Supabase: ${photosDebug.supabase_error ?? "ninguno"}
-fotos en Firestore: ${photosDebug.firestore_count}
-total: ${photosDebug.total}`}
-            </pre>
-          )}
         </div>
       )}
 

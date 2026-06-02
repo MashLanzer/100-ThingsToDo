@@ -43,28 +43,15 @@ const PAGE_LIMIT = 30
 export function usePhotos() {
   return useQuery<Photo[]>({
     queryKey: ["photos"],
-    queryFn: () => authFetch("/api/photos"),
+    queryFn: async () => {
+      const res = await authFetch("/api/photos")
+      // Defensive: accept a plain array OR a paginated { photos: [...] } object.
+      if (Array.isArray(res)) return res
+      if (res && Array.isArray(res.photos)) return res.photos
+      return []
+    },
     staleTime: 30_000,
     refetchInterval: 20_000,
-  })
-}
-
-export interface PhotosDebug {
-  uid: string
-  couple_id: string | null
-  collection_keys: string[]
-  supabase_count: number
-  supabase_error: string | null
-  firestore_count: number
-  total: number
-}
-
-export function usePhotosDebug(enabled: boolean) {
-  return useQuery<PhotosDebug>({
-    queryKey: ["photos-debug"],
-    queryFn: () => authFetch("/api/photos?debug=1"),
-    enabled,
-    staleTime: 0,
   })
 }
 
