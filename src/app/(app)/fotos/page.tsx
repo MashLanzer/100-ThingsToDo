@@ -1453,9 +1453,9 @@ function findMemoryPhotos(photos: Photo[]): { label: string; photos: Photo[] } |
 
 export default function FotosPage() {
   const { data: photos, isLoading, error: photosError } = usePhotos()
-  // Diagnostic: only fetched when the gallery ends up empty, so we can see
-  // exactly what the server found (couple_id, counts, errors).
-  const { data: photosDebug } = usePhotosDebug(!isLoading && (Array.isArray(photos) ? photos.length === 0 : false))
+  // Diagnostic: always fetch server-side counts so we can pinpoint why
+  // photos may not render (returned-but-filtered vs. truly empty).
+  const { data: photosDebug } = usePhotosDebug(true)
   const uploadPhoto = useUploadPhoto()
   const deletePhoto = useDeletePhoto()
   const updateCaption = useUpdatePhotoCaption()
@@ -1725,6 +1725,29 @@ export default function FotosPage() {
           </div>
         </div>
       </div>
+
+      {/* TEMP diagnostic — always visible to debug why photos don't render */}
+      <pre style={{
+        fontSize: "0.7rem", lineHeight: 1.5, background: "#FEF9C3", border: "1px solid #FDE047",
+        borderRadius: "var(--radius-md)", padding: "0.625rem", marginBottom: "0.75rem",
+        color: "#713F12", overflowX: "auto", maxWidth: "100%", whiteSpace: "pre-wrap",
+      }}>
+{`DIAGNÓSTICO (temporal)
+isLoading: ${isLoading}
+error: ${photosError ? (photosError instanceof Error ? photosError.message : String(photosError)) : "ninguno"}
+allPhotos (recibidas): ${allPhotos.length}
+filteredPhotos (tras filtros): ${filteredPhotos.length}
+viewMode: ${viewMode}
+filter: ${filter}
+selectedMonth: ${selectedMonth ?? "—"}
+searchQuery: ${searchQuery || "—"}
+activeAlbumId: ${activeAlbumId ?? "—"}
+${photosDebug ? `--- servidor ---
+couple_id: ${photosDebug.couple_id ?? "—"}
+claves: ${photosDebug.collection_keys.join(", ") || "—"}
+supabase: ${photosDebug.supabase_count} | error: ${photosDebug.supabase_error ?? "ninguno"}
+firestore: ${photosDebug.firestore_count} | total: ${photosDebug.total}` : "(cargando diagnóstico servidor...)"}`}
+      </pre>
 
       {/* Stats strip */}
       {allPhotos.length > 0 && !isLoading && (
