@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { verifyFirebaseToken } from "@/lib/api-auth"
 import { getSupabaseAdmin } from "@/lib/supabase/server"
 import { sendPushNotification } from "@/lib/push"
+import { sendFcmToTokens } from "@/lib/fcm"
 
 export async function POST(req: NextRequest) {
   const user = await verifyFirebaseToken(req)
@@ -29,24 +30,49 @@ export async function POST(req: NextRequest) {
 
   const partnerId = couple.user1_id === user.uid ? couple.user2_id : couple.user1_id
 
+  const { title, body, icon, url } = await req.json()
+  const safeTitle = title ?? "ThingsToDo 💕"
+  const safeBody = body ?? ""
+
+  // Web push (existing behaviour) — fire only if the partner has a web subscription.
   const { data: subscription, error: subError } = await supabase
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth_key")
     .eq("user_id", partnerId)
     .single()
 
-  // Table doesn't exist or no subscription — skip silently
-  if (subError || !subscription) return NextResponse.json({ ok: true })
+  if (!subError && subscription) {
+    try {
+      await sendPushNotification(
+        { endpoint: subscription.endpoint, p256dh: subscription.p256dh, auth_key: subscription.auth_key },
+        { title: safeTitle, body: safeBody, icon: icon ?? "/icons/icon-192.png", url }
+      )
+    } catch {
+      // Push delivery failed — don't break the caller
+    }
+  }
 
-  const { title, body, icon } = await req.json()
-
+  // Native push (FCM) — fire to all of the partner's registered devices.
+  // Best-effort: never let a failure break the response.
   try {
-    await sendPushNotification(
-      { endpoint: subscription.endpoint, p256dh: subscription.p256dh, auth_key: subscription.auth_key },
-      { title: title ?? "ThingsToDo 💕", body: body ?? "", icon: icon ?? "/icons/icon-192.png" }
-    )
+    const { data: tokenRows } = await supabase
+      .from("fcm_tokens")
+      .select("token")
+      .eq("user_id", partnerId)
+
+    const tokens = (tokenRows ?? []).map((r) => r.token).filter(Boolean) as string[]
+    if (tokens.length) {
+      const { invalidTokens } = await sendFcmToTokens(tokens, {
+        title: safeTitle,
+        body: safeBody,
+        url: url ?? "/",
+      })
+      if (invalidTokens.length) {
+        await supabase.from("fcm_tokens").delete().in("token", invalidTokens)
+      }
+    }
   } catch {
-    // Push delivery failed — don't break the caller
+    // FCM delivery failed or table missing — don't break the caller
   }
 
   return NextResponse.json({ ok: true })

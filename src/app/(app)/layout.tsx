@@ -12,6 +12,7 @@ import { MapModal } from "@/components/features/map-modal"
 import { SettingsModal } from "@/components/shared/settings-modal"
 import { useAppStore } from "@/stores/app-store"
 import { AppLockGate } from "@/components/shared/app-lock-gate"
+import { useNativePush } from "@/hooks/use-native-push"
 
 function SplashScreen() {
   const coupleName = useAppStore((s) => s.coupleName)
@@ -40,6 +41,7 @@ function SplashScreen() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  useNativePush()
   const [showSplash, setShowSplash] = useState(() => {
     if (typeof window === "undefined") return false
     return !sessionStorage.getItem("ttd_splash_v1")
