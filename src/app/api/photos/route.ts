@@ -63,21 +63,45 @@ export async function GET(req: NextRequest) {
   const { data: me, error: meError } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
   const coupleId = me?.couple_id
 
-  // Fetch from Supabase photos table (new system)
-  // Use couple_id OR user.uid as collection_key — photos uploaded before
-  // linking a partner use user.uid as the key, so we must query both.
+  // Determine all UIDs in this couple (so a re-link that changed couple_id
+  // still surfaces photos either partner uploaded).
+  const memberUids = new Set<string>([user.uid])
+  if (coupleId) {
+    const { data: couple } = await supabase
+      .from("couples").select("user1_id, user2_id").eq("id", coupleId).single()
+    if (couple?.user1_id) memberUids.add(couple.user1_id)
+    if (couple?.user2_id) memberUids.add(couple.user2_id)
+  }
+
+  // Fetch from Supabase photos table (new system).
+  // A photo belongs to this couple if its collection_key matches the couple_id
+  // OR any member's uid (legacy/pre-link uploads), OR it was uploaded_by a member
+  // (covers couple_id drift after unlink/re-link).
   let supabasePhotos: Array<{
     id: string; image_url: string; thumb_url: string | null; delete_url: string | null;
     caption: string | null; source: string; created_at: string; collection_key: string;
   }> = []
   let supabaseError: string | null = null
-  const collectionKeys = [...new Set([coupleId, user.uid].filter(Boolean) as string[])]
+  const collectionKeys = [...new Set([coupleId, ...memberUids].filter(Boolean) as string[])]
+  const memberUidList = [...memberUids]
   if (collectionKeys.length > 0) {
-    const { data, error } = await supabase
+    // Try the broad query (collection_key OR uploaded_by). If uploaded_by column
+    // doesn't exist yet (migration 018 not applied), fall back to collection_key only.
+    const orFilter = `collection_key.in.(${collectionKeys.join(",")}),uploaded_by.in.(${memberUidList.join(",")})`
+    let { data, error } = await supabase
       .from("photos")
       .select("*")
-      .in("collection_key", collectionKeys)
+      .or(orFilter)
       .order("created_at", { ascending: false })
+
+    if (error && /uploaded_by|column .* does not exist/i.test(error.message)) {
+      ;({ data, error } = await supabase
+        .from("photos")
+        .select("*")
+        .in("collection_key", collectionKeys)
+        .order("created_at", { ascending: false }))
+    }
+
     if (error) { console.error("[photos GET] Supabase error:", error.message); supabaseError = error.message }
     supabasePhotos = data ?? []
   }
@@ -97,6 +121,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       uid: user.uid,
       couple_id: coupleId ?? null,
+      member_uids: memberUidList,
       users_error: meError?.message ?? null,
       collection_keys: collectionKeys,
       supabase_count: supabasePhotos.length,
