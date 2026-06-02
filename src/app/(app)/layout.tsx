@@ -11,6 +11,7 @@ import { FavorsModal } from "@/components/features/favors-modal"
 import { MapModal } from "@/components/features/map-modal"
 import { SettingsModal } from "@/components/shared/settings-modal"
 import { useAppStore } from "@/stores/app-store"
+import { AppLockGate } from "@/components/shared/app-lock-gate"
 
 function SplashScreen() {
   const coupleName = useAppStore((s) => s.coupleName)
@@ -69,7 +70,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!user) return null
 
   return (
-    <>
+    <AppLockGate>
       {showSplash && <SplashScreen />}
       <AppHeader />
       <main>{children}</main>
@@ -79,6 +80,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <PhoneModal />
       <FavorsModal />
       <MapModal />
-    </>
+    </AppLockGate>
   )
 }

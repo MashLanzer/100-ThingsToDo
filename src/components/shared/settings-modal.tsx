@@ -13,6 +13,13 @@ import { usePushNotifications } from "@/hooks/use-push-notifications"
 import { toast } from "sonner"
 import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload, LogOut, CalendarHeart, Camera, Trash2, Loader2 } from "lucide-react"
 import { showConfirm } from "@/lib/confirm"
+import {
+  isAppLockEnabled as getIsAppLockEnabled,
+  getAppLockPin,
+  setAppLockEnabled as saveAppLockEnabled,
+  setAppLockPin as saveAppLockPin,
+  clearAppLockPin,
+} from "@/lib/app-lock"
 
 const THEMES = [
   { id: "purple",   name: "Morado",   primary: "#8B5CF6", lighter: "#EDE9FE", border: "#F3E8FF", muted: "#F5F3FF" },
@@ -244,6 +251,15 @@ export function SettingsModal() {
   const [pinDisable, setPinDisable] = useState("")
   const [pinError, setPinError] = useState("")
 
+  // App lock state
+  const [appLockEnabled, setAppLockEnabledState] = useState(false)
+  const [appLockHasPin, setAppLockHasPin] = useState(false)
+  const [appPinSection, setAppPinSection] = useState<"idle" | "setup1" | "setup2" | "disable">("idle")
+  const [appPinNew, setAppPinNew] = useState("")
+  const [appPinConfirm, setAppPinConfirm] = useState("")
+  const [appPinDisable, setAppPinDisable] = useState("")
+  const [appPinError, setAppPinError] = useState("")
+
   useEffect(() => {
     if (showSettingsModal) {
       const s = readThemeSettings()
@@ -280,6 +296,16 @@ export function SettingsModal() {
       setPinConfirm("")
       setPinDisable("")
       setPinError("")
+
+      // Load app lock state
+      setAppLockEnabledState(getIsAppLockEnabled())
+      setAppLockHasPin(!!getAppLockPin())
+      setAppPinSection("idle")
+      setAppPinNew("")
+      setAppPinConfirm("")
+      setAppPinDisable("")
+      setAppPinError("")
+
       setShowDeleteZone(false)
       setDeleteConfirmText("")
     }
@@ -563,6 +589,88 @@ export function SettingsModal() {
     setPinConfirm("")
     setPinDisable("")
     setPinError("")
+  }
+
+  // ── App lock handlers ──────────────────────────────────────────────────────
+
+  function handleAppLockToggle(enable: boolean) {
+    setAppPinError("")
+    if (enable) {
+      if (!appLockHasPin) {
+        setAppPinSection("setup1")
+        setAppPinNew("")
+        setAppPinConfirm("")
+      } else {
+        saveAppLockEnabled(true)
+        setAppLockEnabledState(true)
+        toast.success("Bloqueo de app activado 🔐")
+      }
+    } else {
+      setAppPinSection("disable")
+      setAppPinDisable("")
+    }
+  }
+
+  function handleAppPinSetup1Submit() {
+    if (!/^\d{4}$/.test(appPinNew)) {
+      setAppPinError("El PIN debe tener exactamente 4 dígitos")
+      return
+    }
+    setAppPinError("")
+    setAppPinSection("setup2")
+    setAppPinConfirm("")
+  }
+
+  function handleAppPinSetup2Submit() {
+    if (appPinConfirm !== appPinNew) {
+      setAppPinError("Los PINs no coinciden. Intenta de nuevo")
+      setAppPinSection("setup1")
+      setAppPinNew("")
+      setAppPinConfirm("")
+      return
+    }
+    try {
+      saveAppLockPin(appPinNew)
+      saveAppLockEnabled(true)
+      setAppLockEnabledState(true)
+      setAppLockHasPin(true)
+      setAppPinSection("idle")
+      setAppPinNew("")
+      setAppPinConfirm("")
+      setAppPinError("")
+      toast.success("Bloqueo de app activado 🔐")
+    } catch {
+      setAppPinError("Error al guardar el PIN")
+    }
+  }
+
+  function handleAppPinDisableSubmit() {
+    try {
+      const stored = getAppLockPin()
+      if (appPinDisable !== stored) {
+        setAppPinError("PIN incorrecto")
+        setAppPinDisable("")
+        return
+      }
+      clearAppLockPin()
+      saveAppLockEnabled(false)
+      setAppLockEnabledState(false)
+      setAppLockHasPin(false)
+      setAppPinSection("idle")
+      setAppPinDisable("")
+      setAppPinError("")
+      toast.success("Bloqueo de app desactivado")
+    } catch {
+      setAppPinError("Error al desactivar el bloqueo")
+    }
+  }
+
+  function cancelAppPinSection() {
+    setAppPinSection("idle")
+    setAppPinNew("")
+    setAppPinConfirm("")
+    setAppPinDisable("")
+    setAppPinError("")
   }
 
   async function getAuthToken() {
@@ -1053,6 +1161,113 @@ export function SettingsModal() {
                     ))}
                   </div>
                 </div>
+              </SettingsCard>
+
+              {/* ══ SEGURIDAD ══ */}
+              <SettingsCard title={<>🔒 Seguridad</>}>
+                <SettingRow
+                  icon={<Lock size={14} />}
+                  label="Bloqueo de app"
+                  desc={appLockEnabled ? "Activo — PIN al abrir la app" : "PIN al abrir la app"}
+                  control={<Toggle checked={appLockEnabled} onChange={handleAppLockToggle} />}
+                />
+
+                {/* Inline expand for app lock setup / disable */}
+                {appPinSection !== "idle" && (
+                  <div style={{
+                    background: "var(--muted)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "0.875rem",
+                    display: "flex", flexDirection: "column", gap: "0.5rem",
+                  }}>
+                    {appPinSection === "setup1" && (
+                      <>
+                        <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)" }}>
+                          Nuevo PIN (4 dígitos)
+                        </p>
+                        <input
+                          className="input"
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="••••"
+                          value={appPinNew}
+                          onChange={e => setAppPinNew(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          style={{ letterSpacing: "0.5em", textAlign: "center", fontSize: "1.25rem" }}
+                          autoFocus
+                        />
+                        {appPinError && <p style={{ fontSize: "0.75rem", color: "#ef4444" }}>{appPinError}</p>}
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button className="btn btn-primary" style={{ flex: 1, fontSize: "0.8125rem" }}
+                            onClick={handleAppPinSetup1Submit} disabled={appPinNew.length !== 4}>
+                            Continuar
+                          </button>
+                          <button className="btn btn-outline" style={{ fontSize: "0.8125rem" }} onClick={cancelAppPinSection}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {appPinSection === "setup2" && (
+                      <>
+                        <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)" }}>
+                          Confirma el PIN
+                        </p>
+                        <input
+                          className="input"
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="••••"
+                          value={appPinConfirm}
+                          onChange={e => setAppPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          style={{ letterSpacing: "0.5em", textAlign: "center", fontSize: "1.25rem" }}
+                          autoFocus
+                        />
+                        {appPinError && <p style={{ fontSize: "0.75rem", color: "#ef4444" }}>{appPinError}</p>}
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button className="btn btn-primary" style={{ flex: 1, fontSize: "0.8125rem" }}
+                            onClick={handleAppPinSetup2Submit} disabled={appPinConfirm.length !== 4}>
+                            Activar bloqueo 🔐
+                          </button>
+                          <button className="btn btn-outline" style={{ fontSize: "0.8125rem" }} onClick={cancelAppPinSection}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {appPinSection === "disable" && (
+                      <>
+                        <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)" }}>
+                          Ingresa tu PIN actual para desactivarlo
+                        </p>
+                        <input
+                          className="input"
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="••••"
+                          value={appPinDisable}
+                          onChange={e => setAppPinDisable(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          style={{ letterSpacing: "0.5em", textAlign: "center", fontSize: "1.25rem" }}
+                          autoFocus
+                        />
+                        {appPinError && <p style={{ fontSize: "0.75rem", color: "#ef4444" }}>{appPinError}</p>}
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button className="btn btn-outline btn-danger" style={{ flex: 1, fontSize: "0.8125rem" }}
+                            onClick={handleAppPinDisableSubmit} disabled={appPinDisable.length !== 4}>
+                            Desactivar
+                          </button>
+                          <button className="btn btn-outline" style={{ fontSize: "0.8125rem" }} onClick={cancelAppPinSection}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </SettingsCard>
 
               {/* ══ NOTIFICACIONES Y SONIDO ══ */}
