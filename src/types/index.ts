@@ -14,6 +14,7 @@ export interface Couple {
   user2_id: string
   created_at: string
   anniversary_date?: string | null
+  photo_url?: string | null
   user1?: User
   user2?: User
 }

@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   // Get partner
   const { data: couple } = await supabase
     .from("couples")
-    .select("id, user1_id, user2_id, created_at, anniversary_date")
+    .select("id, user1_id, user2_id, created_at, anniversary_date, photo_url")
     .eq("id", me.couple_id)
     .single()
 
@@ -146,6 +146,9 @@ export async function PATCH(req: NextRequest) {
   if ("anniversary_date" in body) {
     patch.anniversary_date = body.anniversary_date || null
   }
+  if ("photo_url" in body) {
+    patch.photo_url = body.photo_url || null
+  }
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 })
@@ -155,7 +158,7 @@ export async function PATCH(req: NextRequest) {
     .from("couples")
     .update(patch)
     .eq("id", me.couple_id)
-    .select("id, user1_id, user2_id, created_at, anniversary_date")
+    .select("id, user1_id, user2_id, created_at, anniversary_date, photo_url")
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

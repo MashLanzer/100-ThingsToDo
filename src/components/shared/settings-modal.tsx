@@ -6,11 +6,12 @@ import { getFirebaseAuth } from "@/lib/firebase/client"
 import { useRouter } from "next/navigation"
 import { useAppStore } from "@/stores/app-store"
 import { useCoupleStatus, useLinkPartner, useUnlinkPartner, useUpdateCouple } from "@/hooks/use-couple"
+import { useQueryClient } from "@tanstack/react-query"
 import { daysTogether } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
 import { toast } from "sonner"
-import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload, LogOut, CalendarHeart } from "lucide-react"
+import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload, LogOut, CalendarHeart, Camera, Trash2, Loader2 } from "lucide-react"
 import { showConfirm } from "@/lib/confirm"
 
 const THEMES = [
@@ -198,6 +199,8 @@ export function SettingsModal() {
   const linkMutation = useLinkPartner()
   const unlinkMutation = useUnlinkPartner()
   const updateCouple = useUpdateCouple()
+  const qc = useQueryClient()
+  const [couplePhotoUploading, setCouplePhotoUploading] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const { subscribe: subscribePush, subscribing: pushSubscribing, isSubscribed: pushSubscribed } = usePushNotifications()
   const [code, setCode] = useState("")
@@ -283,6 +286,47 @@ export function SettingsModal() {
       toast.success("¡Pareja vinculada exitosamente! 💕")
       setCode("")
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Error al vincular") }
+  }
+
+  async function handleCouplePhotoUpload(file: File) {
+    setCouplePhotoUploading(true)
+    try {
+      const { getFirebaseToken } = await import("@/lib/firebase/client")
+      const token = await getFirebaseToken()
+      if (!token) { toast.error("No autenticado"); return }
+      const form = new FormData()
+      form.append("file", file)
+      const res = await fetch("/api/couple/photo", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error ?? "Error al subir foto")
+        return
+      }
+      await qc.invalidateQueries({ queryKey: ["couple"] })
+      toast.success("Foto de pareja actualizada 📸")
+    } catch {
+      toast.error("Error al subir foto")
+    } finally {
+      setCouplePhotoUploading(false)
+    }
+  }
+
+  async function handleRemoveCouplePhoto() {
+    if (!await showConfirm({ title: "Eliminar foto", message: "¿Eliminar la foto de pareja?", danger: true, confirmLabel: "Eliminar" })) return
+    try {
+      const { getFirebaseToken } = await import("@/lib/firebase/client")
+      const token = await getFirebaseToken()
+      if (!token) return
+      await fetch("/api/couple/photo", { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+      await qc.invalidateQueries({ queryKey: ["couple"] })
+      toast.success("Foto eliminada")
+    } catch {
+      toast.error("Error al eliminar")
+    }
   }
 
   async function handleAnniversaryChange(value: string) {
@@ -531,7 +575,9 @@ export function SettingsModal() {
               {user && (
                 <div style={{
                   display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem",
-                  background: "linear-gradient(160deg, var(--primary-lighter) 0%, var(--muted) 60%, #fce7f3 100%)",
+                  background: data?.couple?.photo_url
+                    ? `linear-gradient(to bottom, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.55) 100%), url(${data.couple.photo_url}) center/cover no-repeat`
+                    : "linear-gradient(160deg, var(--primary-lighter) 0%, var(--muted) 60%, #fce7f3 100%)",
                   borderRadius: "var(--radius-lg)", padding: "1.5rem 1rem 1.25rem",
                   border: "1px solid var(--border)",
                 }}>
@@ -554,10 +600,10 @@ export function SettingsModal() {
                     </div>
                   )}
                   <div style={{ textAlign: "center", width: "100%" }}>
-                    <p style={{ fontWeight: 700, fontSize: "1.0625rem", fontFamily: "'Fredoka', sans-serif", color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <p style={{ fontWeight: 700, fontSize: "1.0625rem", fontFamily: "'Fredoka', sans-serif", color: data?.couple?.photo_url ? "white" : "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textShadow: data?.couple?.photo_url ? "0 1px 4px rgba(0,0,0,0.5)" : "none" }}>
                       {user.displayName ?? "Mi cuenta"}
                     </p>
-                    <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <p style={{ fontSize: "0.75rem", color: data?.couple?.photo_url ? "rgba(255,255,255,0.85)" : "var(--foreground-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textShadow: data?.couple?.photo_url ? "0 1px 3px rgba(0,0,0,0.4)" : "none" }}>
                       {user.email}
                     </p>
                   </div>
@@ -599,6 +645,67 @@ export function SettingsModal() {
                     </p>
                     <div style={{ background: "var(--mint)", borderRadius: "var(--radius-md)", padding: "0.625rem", marginBottom: "1rem", fontSize: "0.8125rem", color: "#065F46" }}>
                       ✨ ¡Compartiendo planes juntos!
+                    </div>
+
+                    {/* Foto de pareja */}
+                    <div style={{ textAlign: "left", marginBottom: "1.25rem" }}>
+                      <label style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.5rem" }}>
+                        <Camera size={14} style={{ color: "var(--primary)" }} /> Foto de pareja
+                      </label>
+                      {data.couple.photo_url ? (
+                        <div style={{ position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden", height: "120px" }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={data.couple.photo_url}
+                            alt="Foto de pareja"
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 60%)" }} />
+                          <button
+                            onClick={handleRemoveCouplePhoto}
+                            style={{
+                              position: "absolute", bottom: 8, right: 8,
+                              background: "rgba(239,68,68,0.9)", border: "none", borderRadius: "50%",
+                              width: 30, height: 30, cursor: "pointer", color: "white",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              backdropFilter: "blur(4px)",
+                            }}
+                            title="Eliminar foto"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <label style={{
+                          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                          gap: "0.5rem", height: "100px", border: "2px dashed var(--border)",
+                          borderRadius: "var(--radius-lg)", cursor: couplePhotoUploading ? "wait" : "pointer",
+                          background: "var(--muted)", color: "var(--foreground-muted)",
+                        }}>
+                          {couplePhotoUploading ? (
+                            <Loader2 size={20} style={{ animation: "spin 1s linear infinite" }} />
+                          ) : (
+                            <>
+                              <Camera size={24} />
+                              <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>Subir foto de pareja</span>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: "none" }}
+                            disabled={couplePhotoUploading}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0]
+                              if (f) handleCouplePhotoUpload(f)
+                              e.target.value = ""
+                            }}
+                          />
+                        </label>
+                      )}
+                      <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.375rem" }}>
+                        Se muestra como fondo en tu perfil
+                      </p>
                     </div>
 
                     {/* Fecha de aniversario */}

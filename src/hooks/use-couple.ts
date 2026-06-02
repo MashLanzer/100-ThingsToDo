@@ -59,7 +59,7 @@ export function useUnlinkPartner() {
 export function useUpdateCouple() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (patch: { anniversary_date?: string | null }) =>
+    mutationFn: (patch: { anniversary_date?: string | null; photo_url?: string | null }) =>
       authFetch("/api/couple", {
         method: "PATCH",
         body: JSON.stringify(patch),
