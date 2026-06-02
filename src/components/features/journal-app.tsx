@@ -485,10 +485,50 @@ export function JournalApp({ onBack }: Props) {
     }
   }
 
-  // F11: open the browser print dialog with a clean printable layout (save as PDF).
+  // F11: build a clean printable document in a new window (save as PDF from there).
   function exportPdf() {
-    setView("export")
-    setTimeout(() => { try { window.print() } catch { /* */ } }, 400)
+    const all = [...mergedEntries()].sort((a, b) => a.date.localeCompare(b.date))
+    if (all.length === 0) { toast.error("Aún no hay entradas para exportar"); return }
+    const esc = (s: string) => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string))
+    const rows = all.map(e => {
+      const isMe = e.created_by === myUid
+      const mood = getMoodById(e.mood)
+      const tags = (e.tags ?? []).map(t => `#${esc(t)}`).join(" ")
+      return `<article>
+        <div class="meta"><span class="date">${esc(formatDateEs(e.date))}</span>
+        <span class="who ${isMe ? "me" : "partner"}">${isMe ? "Tú" : "Pareja"}</span>
+        ${mood ? `<span class="mood">${esc(mood.label)}</span>` : ""}
+        ${e.location ? `<span class="loc">📍 ${esc(e.location)}</span>` : ""}</div>
+        <p class="content">${esc(e.content)}</p>
+        ${tags ? `<p class="tags">${tags}</p>` : ""}
+      </article>`
+    }).join("")
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Nuestro Diario</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Caveat&family=Fredoka:wght@600;700&display=swap');
+        * { box-sizing: border-box; }
+        body { font-family: Georgia, serif; color: #2d1b3e; max-width: 720px; margin: 0 auto; padding: 32px; }
+        h1 { font-family: 'Fredoka', sans-serif; text-align: center; color: #8B5CF6; }
+        .sub { text-align:center; color:#777; margin-bottom: 28px; }
+        article { page-break-inside: avoid; border-bottom: 1px solid #eee; padding: 14px 0; }
+        .meta { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px; font-size: 13px; }
+        .date { font-weight: 700; color:#8B5CF6; }
+        .who { font-size: 11px; font-weight:700; padding:1px 8px; border-radius:999px; }
+        .who.me { background:#EDE9FE; color:#8B5CF6; } .who.partner { background:#FCE7F3; color:#EC4899; }
+        .mood, .loc { font-size: 11px; color:#666; background:#f3f3f3; padding:1px 8px; border-radius:999px; }
+        .content { font-family:'Caveat', cursive; font-size: 19px; line-height: 1.6; white-space: pre-wrap; margin: 4px 0; }
+        .tags { color:#8B5CF6; font-size: 12px; font-weight:600; }
+      </style></head>
+      <body>
+        <h1>📔 Nuestro Diario</h1>
+        <p class="sub">${all.length} recuerdos · ${esc(formatDateEs(all[0].date))} — ${esc(formatDateEs(all[all.length - 1].date))}</p>
+        ${rows}
+        <script>window.onload = () => setTimeout(() => window.print(), 600)<\/script>
+      </body></html>`
+    const w = window.open("", "_blank")
+    if (!w) { toast.error("Permite las ventanas emergentes para exportar"); return }
+    w.document.write(html)
+    w.document.close()
   }
 
   function fmtSecs(s: number) {
@@ -1132,6 +1172,47 @@ export function JournalApp({ onBack }: Props) {
     )
   }
 
+  // ── SPREAD view (F10: both partners' entries on one "open book") ─────────────
+  if (view === "spread" && selectedDate) {
+    const myE = getMyEntry(selectedDate)
+    const partnerE = getPartnerEntry(selectedDate)
+    const page = (entry: JournalEntry | undefined, who: "me" | "partner") => {
+      const mood = getMoodById(entry?.mood)
+      const accent = who === "me" ? "var(--primary)" : "var(--secondary)"
+      return (
+        <div style={{ background: who === "me" ? "linear-gradient(135deg,#fffdf7,#f7f3ff)" : "linear-gradient(135deg,#fffdf7,#fdf0f7)", border: `1.5px solid ${who === "me" ? "var(--primary-light)" : "#fbcfe8"}`, borderRadius: "var(--radius-md)", padding: "0.875rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 800, color: accent }}>{who === "me" ? "Tú" : "Tu pareja"}</span>
+            {mood && <span style={{ fontSize: "0.625rem", fontWeight: 700, color: mood.accentText, background: mood.accent, padding: "0.0625rem 0.5rem", borderRadius: "999px" }}>{mood.label}</span>}
+          </div>
+          {entry ? (
+            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "var(--foreground)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.content}</p>
+          ) : (
+            <div style={{ textAlign: "center", padding: "0.75rem 0" }}>
+              <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.5rem" }}>{who === "me" ? "Aún no has escrito este día" : "Tu pareja aún no ha escrito"}</p>
+              {who === "me" && (
+                <button className="btn btn-primary" style={{ fontSize: "0.75rem", padding: "0.375rem 0.875rem" }} onClick={() => openDay(selectedDate)}>✏️ Escribir mi parte</button>
+              )}
+            </div>
+          )}
+        </div>
+      )
+    }
+    return (
+      <>
+        <div className="app-content-header">
+          <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
+          <span style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem" }}>📖 Juntos · {formatDateShortEs(selectedDate)}</span>
+        </div>
+        <div className="app-content-body" style={{ gap: "0.625rem" }}>
+          <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", textAlign: "center" }}>Vuestras dos versiones del mismo día 💕</p>
+          {page(myE, "me")}
+          {page(partnerE, "partner")}
+        </div>
+      </>
+    )
+  }
+
   // ── READ view ──────────────────────────────────────────────────────────────
   if (view === "read" && selectedEntry && selectedDate) {
     const partnerEntry = getPartnerEntry(selectedDate)
@@ -1265,11 +1346,19 @@ export function JournalApp({ onBack }: Props) {
             </div>
           )}
 
-          {!showPartnerEntry && (
-            <button className="btn btn-outline" style={{ fontSize: "0.8125rem", display: "inline-flex", alignItems: "center", gap: "0.375rem" }} onClick={() => startEdit(selectedEntry)}>
-              <FileText size={14} /> Editar entrada
-            </button>
-          )}
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            {!showPartnerEntry && (
+              <button className="btn btn-outline" style={{ fontSize: "0.8125rem", display: "inline-flex", alignItems: "center", gap: "0.375rem" }} onClick={() => startEdit(selectedEntry)}>
+                <FileText size={14} /> Editar entrada
+              </button>
+            )}
+            {/* F10: jump to the shared "both of us" spread when both wrote */}
+            {partnerEntry && (
+              <button className="btn btn-outline" style={{ fontSize: "0.8125rem", display: "inline-flex", alignItems: "center", gap: "0.375rem" }} onClick={() => setView("spread")}>
+                📖 Ver juntos
+              </button>
+            )}
+          </div>
 
           {/* Partner section */}
           {partnerVisible && !showPartnerEntry && (
@@ -1546,6 +1635,7 @@ export function JournalApp({ onBack }: Props) {
     { key: "stats",     label: "📊 Stats",  action: () => setView("stats") },
     { key: "letters",   label: unreadCount > 0 ? `💌 Cartas ${unreadCount}` : "💌 Cartas", action: () => { loadLetters(); setView("letters") } },
     ...(!privateJournal ? [{ key: "partner", label: "👥 Pareja", action: () => setViewingPartner(v => !v) }] : []),
+    { key: "export",    label: "📕 PDF",    action: () => exportPdf() },
   ]
   const activeTab = viewingPartner ? "partner" : (["timeline","stats","letters"].includes(view) ? view : "calendar")
 
@@ -1603,23 +1693,37 @@ export function JournalApp({ onBack }: Props) {
           </div>
         )}
 
-        {/* Streak banner */}
-        {!viewingPartner && !searchQuery.trim() && (
-          <div style={{ marginBottom: "0.25rem" }}>
-            <div style={{ background: streak > 0 ? "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)" : "var(--muted)", borderRadius: "999px", padding: "0.5rem 1.125rem", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem", boxShadow: streak > 0 ? "0 3px 12px rgba(139,92,246,0.25)" : "none" }}>
-              <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 700, color: streak > 0 ? "white" : "var(--foreground-muted)" }}>
-                {streak > 0 ? <><Flame size={16} style={{ flexShrink: 0 }} /> {streak} día{streak === 1 ? "" : "s"} de racha juntos</> : <><Mail size={16} style={{ flexShrink: 0 }} /> Escribe hoy para empezar la racha</>}
-              </span>
+        {/* F1: Portada — book-cover hero with streak + totals */}
+        {!viewingPartner && !searchQuery.trim() && (() => {
+          const all = mergedEntries()
+          const total = all.length
+          return (
+            <div style={{ marginBottom: "0.25rem", position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)", boxShadow: "0 6px 20px rgba(139,92,246,0.3)", padding: "0.875rem 1rem 0.875rem 1.125rem" }}>
+              {/* book spine */}
+              <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 6, background: "rgba(0,0,0,0.18)" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <div style={{ fontSize: "1.75rem", lineHeight: 1 }}>📔</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.0625rem", fontWeight: 700, color: "white", lineHeight: 1.1 }}>Nuestro Diario</p>
+                  <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.85)", marginTop: "0.125rem" }}>
+                    {total > 0 ? `${total} recuerdo${total === 1 ? "" : "s"} escritos juntos` : "Vuestra historia empieza hoy"}
+                  </p>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "rgba(255,255,255,0.18)", borderRadius: "var(--radius-md)", padding: "0.375rem 0.625rem", flexShrink: 0 }}>
+                  <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 800, color: "white", display: "flex", alignItems: "center", gap: "0.1875rem" }}><Flame size={14} /> {streak}</span>
+                  <span style={{ fontSize: "0.5625rem", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>RACHA</span>
+                </div>
+              </div>
+              <div style={{ textAlign: "center", marginTop: "0.625rem" }}>
+                <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "white", background: "rgba(255,255,255,0.2)", padding: "0.1875rem 0.625rem", borderRadius: "999px", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                  {todayStatus === "both" && <><CheckCircle2 size={12} /> Los dos escribieron hoy</>}
+                  {todayStatus === "onlyme" && <><FileText size={12} /> Solo tú escribiste hoy</>}
+                  {todayStatus === "none" && <><Mail size={12} /> Aún nadie ha escrito hoy</>}
+                </span>
+              </div>
             </div>
-            <div style={{ textAlign: "center", marginTop: "0.375rem" }}>
-              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: todayStatus === "both" ? "#065f46" : todayStatus === "onlyme" ? "#92400e" : "var(--foreground-muted)", background: todayStatus === "both" ? "#d1fae5" : todayStatus === "onlyme" ? "#fef3c7" : "transparent", padding: todayStatus !== "none" ? "0.125rem 0.625rem" : undefined, borderRadius: "999px" }}>
-                {todayStatus === "both" && <><CheckCircle2 size={12} style={{ display: "inline", verticalAlign: "middle" }} /> Los dos escribieron hoy</>}
-                {todayStatus === "onlyme" && <><FileText size={12} style={{ display: "inline", verticalAlign: "middle" }} /> Solo tú escribiste hoy</>}
-                {todayStatus === "none" && <><Mail size={12} style={{ display: "inline", verticalAlign: "middle" }} /> Ninguno ha escrito hoy</>}
-              </span>
-            </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Partner view */}
         {viewingPartner ? (
@@ -1675,6 +1779,46 @@ export function JournalApp({ onBack }: Props) {
               )
             })() : (
               <>
+                {/* F3: Mini photo gallery of this month's entries */}
+                {(() => {
+                  const monthPhotos = entries
+                    .filter(e => e.photos && e.photos.length > 0)
+                    .sort((a, b) => b.date.localeCompare(a.date))
+                    .flatMap(e => e.photos.map(url => ({ url, entry: e })))
+                    .slice(0, 12)
+                  if (monthPhotos.length === 0) return null
+                  return (
+                    <div style={{ marginBottom: "0.75rem" }}>
+                      <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.375rem", display: "flex", alignItems: "center", gap: "0.25rem" }}><Camera size={12} /> Fotos del mes</p>
+                      <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", paddingBottom: "0.25rem", scrollbarWidth: "none" }}>
+                        {monthPhotos.map(({ url, entry }, i) => (
+                          <button key={i} onClick={() => openEntry(entry)}
+                            style={{ flexShrink: 0, padding: 0, border: "2px solid white", borderRadius: "10px", overflow: "hidden", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.12)", lineHeight: 0 }}>
+                            <img src={url} alt="" style={{ width: 64, height: 64, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* F7: Mood filter chips */}
+                <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", paddingBottom: "0.25rem", marginBottom: "0.5rem", scrollbarWidth: "none" }}>
+                  <button onClick={() => setMoodFilter(null)}
+                    style={{ flexShrink: 0, fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "1px solid var(--border)", cursor: "pointer", background: moodFilter === null ? "var(--foreground)" : "white", color: moodFilter === null ? "white" : "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+                    Todos
+                  </button>
+                  {MOODS.map(m => {
+                    const active = moodFilter === m.id
+                    return (
+                      <button key={m.id} onClick={() => setMoodFilter(active ? null : m.id)}
+                        style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit", padding: "0.25rem 0.625rem", borderRadius: "999px", border: `1px solid ${active ? m.accentBorder : "var(--border)"}`, cursor: "pointer", background: active ? m.accent : "white", color: active ? m.accentText : "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+                        <m.Icon size={12} /> {m.label}
+                      </button>
+                    )
+                  })}
+                </div>
+
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <button className="back-btn-phone" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>‹</button>
                   <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", textTransform: "capitalize" }}>{monthLabel}</span>
@@ -1698,11 +1842,23 @@ export function JournalApp({ onBack }: Props) {
                     const now = new Date()
                     const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
                     const isToday = dateStr === todayLocal
+                    // F4: mood heatmap — tint the cell with the day's mood colour (mine first)
+                    const dayMood = getMoodById(myEntry?.mood) ?? getMoodById(partnerEntry?.mood)
+                    // F7: dim days that don't match the active mood filter
+                    const matchesFilter = !moodFilter || [myEntry?.mood, partnerEntry?.mood]
+                      .some(mo => (MOOD_EMOJI_TO_ID[mo ?? ""] ?? mo) === moodFilter)
+                    const dimmed = !!moodFilter && hasAny && !matchesFilter
+                    const cellBg = isToday
+                      ? "var(--primary-lighter)"
+                      : dayMood
+                        ? dayMood.accent
+                        : myEntry ? "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)"
+                        : partnerEntry ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)" : "white"
                     return (
                       <button
                         key={day}
                         onClick={() => openDay(dateStr)}
-                        style={{ aspectRatio: "1", borderRadius: "10px", border: isToday ? "2px solid var(--primary)" : hasAny ? "1.5px solid var(--primary-light)" : "1px solid var(--border)", background: isToday ? "var(--primary-lighter)" : myEntry ? "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)" : partnerEntry ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)" : "white", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontSize: "0.6875rem", fontWeight: isToday ? 800 : hasAny ? 700 : 400, color: isToday ? "var(--primary)" : hasAny ? "var(--foreground)" : "var(--foreground-muted)", gap: "2px", padding: "3px 2px", boxShadow: isToday ? "0 2px 8px rgba(139,92,246,0.2)" : "none", transition: "transform 0.1s" }}
+                        style={{ aspectRatio: "1", borderRadius: "10px", border: isToday ? "2px solid var(--primary)" : dayMood ? `1.5px solid ${dayMood.accentBorder}` : hasAny ? "1.5px solid var(--primary-light)" : "1px solid var(--border)", background: cellBg, opacity: dimmed ? 0.32 : 1, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontSize: "0.6875rem", fontWeight: isToday ? 800 : hasAny ? 700 : 400, color: isToday ? "var(--primary)" : dayMood ? dayMood.accentText : hasAny ? "var(--foreground)" : "var(--foreground-muted)", gap: "2px", padding: "3px 2px", boxShadow: isToday ? "0 2px 8px rgba(139,92,246,0.2)" : "none", transition: "transform 0.1s, opacity 0.2s" }}
                       >
                         <span style={{ lineHeight: 1 }}>{day}</span>
                         {/* D1: Two dots — left purple (mine), right pink (partner) */}
@@ -1716,6 +1872,32 @@ export function JournalApp({ onBack }: Props) {
                     )
                   })}
                 </div>
+
+                {/* F9: Daily writing reminder */}
+                <div style={{ marginTop: "0.875rem", background: "var(--muted)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.625rem 0.75rem", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem" }}>🔔 Recordatorio</span>
+                  <input
+                    type="time"
+                    value={reminderTime}
+                    onChange={async (e) => {
+                      const val = e.target.value
+                      setReminderTime(val)
+                      try { val ? localStorage.setItem("ttd_journal_reminder", val) : localStorage.removeItem("ttd_journal_reminder") } catch { /* */ }
+                      if (val && typeof Notification !== "undefined" && Notification.permission === "default") {
+                        try { await Notification.requestPermission() } catch { /* */ }
+                      }
+                      if (val) toast.success(`Te recordaré escribir a las ${val} 💕`)
+                    }}
+                    style={{ flex: 1, minWidth: 110, padding: "0.375rem 0.5rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", fontFamily: "inherit", fontSize: "0.8125rem", background: "white", color: "var(--foreground)" }}
+                  />
+                  {reminderTime && (
+                    <button onClick={() => { setReminderTime(""); try { localStorage.removeItem("ttd_journal_reminder") } catch { /* */ } }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", fontSize: "0.75rem", fontWeight: 700, fontFamily: "inherit" }}>Quitar</button>
+                  )}
+                </div>
+                <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", textAlign: "center", marginTop: "0.375rem" }}>
+                  El aviso llega mientras la app está abierta.
+                </p>
               </>
             )}
           </>
