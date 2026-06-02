@@ -13,6 +13,7 @@ export interface Couple {
   user1_id: string
   user2_id: string
   created_at: string
+  anniversary_date?: string | null
   user1?: User
   user2?: User
 }

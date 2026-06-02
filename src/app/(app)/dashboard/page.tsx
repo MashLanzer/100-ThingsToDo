@@ -11,6 +11,7 @@ import { Plus, X, Trash2, Search, GripVertical, Tag, ImagePlus, Calendar, Heart,
 import { toast } from "sonner"
 import { getFirebaseToken } from "@/lib/firebase/client"
 import { showConfirm } from "@/lib/confirm"
+import { daysTogether } from "@/lib/utils"
 import type { Plan } from "@/types"
 import { OnboardingModal } from "@/components/shared/onboarding-modal"
 import { PlanCalendar } from "@/components/features/plan-calendar"
@@ -403,6 +404,14 @@ export default function DashboardPage() {
               <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: "999px", padding: "2px 10px", fontSize: "0.75rem", fontWeight: 600, backdropFilter: "blur(4px)" }}>
                 {activePlanCount === 0 ? "Sin planes activos" : `${activePlanCount} plan${activePlanCount !== 1 ? "es" : ""} activo${activePlanCount !== 1 ? "s" : ""}`}
               </span>
+              {(() => {
+                const days = daysTogether(coupleData?.couple?.anniversary_date)
+                return days !== null ? (
+                  <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: "999px", padding: "2px 10px", fontSize: "0.75rem", fontWeight: 600, backdropFilter: "blur(4px)" }}>
+                    {days.toLocaleString("es-ES")} días juntos 💕
+                  </span>
+                ) : null
+              })()}
             </div>
           </div>
         )

@@ -5,11 +5,12 @@ import { signOut } from "firebase/auth"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { useRouter } from "next/navigation"
 import { useAppStore } from "@/stores/app-store"
-import { useCoupleStatus, useLinkPartner, useUnlinkPartner } from "@/hooks/use-couple"
+import { useCoupleStatus, useLinkPartner, useUnlinkPartner, useUpdateCouple } from "@/hooks/use-couple"
+import { daysTogether } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
 import { toast } from "sonner"
-import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload, LogOut } from "lucide-react"
+import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload, LogOut, CalendarHeart } from "lucide-react"
 import { showConfirm } from "@/lib/confirm"
 
 const THEMES = [
@@ -194,6 +195,7 @@ export function SettingsModal() {
   const { user } = useAuth()
   const linkMutation = useLinkPartner()
   const unlinkMutation = useUnlinkPartner()
+  const updateCouple = useUpdateCouple()
   const [loggingOut, setLoggingOut] = useState(false)
   const { subscribe: subscribePush, subscribing: pushSubscribing, isSubscribed: pushSubscribed } = usePushNotifications()
   const [code, setCode] = useState("")
@@ -277,6 +279,15 @@ export function SettingsModal() {
       toast.success("¡Pareja vinculada exitosamente! 💕")
       setCode("")
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Error al vincular") }
+  }
+
+  async function handleAnniversaryChange(value: string) {
+    try {
+      await updateCouple.mutateAsync({ anniversary_date: value || null })
+      toast.success(value ? "Fecha de aniversario guardada 💕" : "Fecha eliminada")
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al guardar")
+    }
   }
 
   async function handleUnlink() {
@@ -576,9 +587,42 @@ export function SettingsModal() {
                     <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginBottom: "1.25rem" }}>
                       {data.partner?.email}
                     </p>
-                    <div style={{ background: "var(--mint)", borderRadius: "var(--radius-md)", padding: "0.625rem", marginBottom: "1.25rem", fontSize: "0.8125rem", color: "#065F46" }}>
+                    <div style={{ background: "var(--mint)", borderRadius: "var(--radius-md)", padding: "0.625rem", marginBottom: "1rem", fontSize: "0.8125rem", color: "#065F46" }}>
                       ✨ ¡Compartiendo planes juntos!
                     </div>
+
+                    {/* Fecha de aniversario */}
+                    <div style={{ textAlign: "left", marginBottom: "1.25rem" }}>
+                      <label style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.5rem" }}>
+                        <CalendarHeart size={14} style={{ color: "var(--primary)" }} /> Fecha de aniversario
+                      </label>
+                      {(() => {
+                        const days = daysTogether(data.couple.anniversary_date)
+                        return days !== null ? (
+                          <div style={{
+                            background: "linear-gradient(135deg, var(--primary-lighter), #fce7f3)",
+                            borderRadius: "var(--radius-md)", padding: "0.625rem 0.875rem", marginBottom: "0.5rem",
+                            display: "flex", alignItems: "center", gap: "0.5rem",
+                          }}>
+                            <span style={{ fontSize: "1.5rem", fontWeight: 700, fontFamily: "'Fredoka', sans-serif", color: "var(--primary)" }}>
+                              {days.toLocaleString("es-ES")}
+                            </span>
+                            <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)" }}>
+                              días juntos 💕
+                            </span>
+                          </div>
+                        ) : null
+                      })()}
+                      <input
+                        type="date"
+                        className="input"
+                        value={data.couple.anniversary_date ?? ""}
+                        max={new Date().toISOString().slice(0, 10)}
+                        disabled={updateCouple.isPending}
+                        onChange={(e) => handleAnniversaryChange(e.target.value)}
+                      />
+                    </div>
+
                     <button className="btn btn-outline btn-danger" onClick={handleUnlink} disabled={unlinkMutation.isPending}>
                       {unlinkMutation.isPending ? "Desvinculando..." : "Desvincular Pareja"}
                     </button>

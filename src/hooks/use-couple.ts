@@ -55,3 +55,15 @@ export function useUnlinkPartner() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["couple"] }),
   })
 }
+
+export function useUpdateCouple() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (patch: { anniversary_date?: string | null }) =>
+      authFetch("/api/couple", {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["couple"] }),
+  })
+}

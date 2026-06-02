@@ -21,3 +21,18 @@ export function formatDate(dateStr: string): string {
     day: "numeric",
   })
 }
+
+/**
+ * Días transcurridos desde la fecha de aniversario (contando el día de inicio).
+ * Devuelve null si la fecha es inválida o futura.
+ */
+export function daysTogether(anniversary?: string | null): number | null {
+  if (!anniversary) return null
+  const start = new Date(anniversary + "T00:00:00")
+  if (isNaN(start.getTime())) return null
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const diff = today.getTime() - start.getTime()
+  if (diff < 0) return null
+  return Math.floor(diff / 86_400_000) + 1
+}
