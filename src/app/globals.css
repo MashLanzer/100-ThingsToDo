@@ -1160,3 +1160,53 @@ main {
   from { transform: scaleY(0.25); }
   to   { transform: scaleY(1); }
 }
+
+/* ─── Dashboard background patterns ─── */
+/* waves */
+body[data-dashboard-bg="waves"] .page-container {
+  background: linear-gradient(160deg, #e0e7ff 0%, #fdf4ff 50%, #fce7f3 100%);
+  background-size: 100% 100%;
+}
+body[data-dashboard-bg="waves"] .page-container::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 120% 40% at 50% 0%, rgba(139,92,246,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 100% 35% at 50% 100%, rgba(236,72,153,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* bubbles */
+body[data-dashboard-bg="bubbles"] .page-container {
+  background: var(--background);
+}
+body[data-dashboard-bg="bubbles"] .page-container::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle 180px at 10% 15%, rgba(167,139,250,0.14) 0%, transparent 80%),
+    radial-gradient(circle 140px at 88% 10%, rgba(236,72,153,0.10) 0%, transparent 80%),
+    radial-gradient(circle 200px at 90% 60%, rgba(139,92,246,0.09) 0%, transparent 80%),
+    radial-gradient(circle 160px at 5% 80%, rgba(236,72,153,0.08) 0%, transparent 80%),
+    radial-gradient(circle 100px at 50% 50%, rgba(245,158,11,0.06) 0%, transparent 80%);
+  pointer-events: none;
+}
+
+/* stars — repeating dot pattern */
+body[data-dashboard-bg="stars"] .page-container {
+  background: linear-gradient(135deg, #f5f3ff 0%, #fdf2f8 100%);
+}
+body[data-dashboard-bg="stars"] .page-container::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    radial-gradient(circle 1.5px at 1.5px 1.5px, rgba(139,92,246,0.2) 100%, transparent 0);
+  background-size: 28px 28px;
+  pointer-events: none;
+}

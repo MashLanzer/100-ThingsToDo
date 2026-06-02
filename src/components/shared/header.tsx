@@ -78,6 +78,7 @@ export function AppHeader() {
         const s = JSON.parse(raw)
         if (s.coupleName && s.coupleName.trim()) setCoupleName(s.coupleName.trim())
         if (s.partnerNickname && s.partnerNickname.trim()) setPartnerNickname(s.partnerNickname.trim())
+        if (s.dashboardBg) document.body.setAttribute("data-dashboard-bg", s.dashboardBg)
       }
     } catch { /* ignore */ }
   }, [setCoupleName, setPartnerNickname])

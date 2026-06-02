@@ -53,6 +53,7 @@ function saveThemeSettings(patch: Partial<{ themeId: string; fontSize: string; d
 interface AppSettings {
   coupleName: string
   partnerNickname: string
+  dashboardBg: "solid" | "waves" | "bubbles" | "stars"
   soundEnabled: boolean
   vibrationEnabled: boolean
   privateJournal: boolean
@@ -63,6 +64,7 @@ interface AppSettings {
 const DEFAULT_APP_SETTINGS: AppSettings = {
   coupleName: "",
   partnerNickname: "",
+  dashboardBg: "solid",
   soundEnabled: true,
   vibrationEnabled: true,
   privateJournal: false,
@@ -215,6 +217,7 @@ export function SettingsModal() {
   // App settings state
   const [coupleName, setCoupleName] = useState("")
   const [partnerNickname, setPartnerNickname] = useState("")
+  const [dashboardBg, setDashboardBg] = useState<AppSettings["dashboardBg"]>("solid")
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [vibrationEnabled, setVibrationEnabled] = useState(true)
   const [privateJournal, setPrivateJournal] = useState(false)
@@ -241,6 +244,8 @@ export function SettingsModal() {
       const as = readAppSettings()
       setCoupleName(as.coupleName ?? "")
       setPartnerNickname(as.partnerNickname ?? "")
+      setDashboardBg(as.dashboardBg ?? "solid")
+      document.body.setAttribute("data-dashboard-bg", as.dashboardBg ?? "solid")
       setSoundEnabled(as.soundEnabled ?? true)
       setVibrationEnabled(as.vibrationEnabled ?? true)
       setPrivateJournal(as.privateJournal ?? false)
@@ -350,6 +355,12 @@ export function SettingsModal() {
     setCoupleName(v)
     saveAppSettings({ coupleName: v })
     setStoreCoupleName(v.trim() || "ThingsToDo")
+  }
+
+  function handleDashboardBg(v: AppSettings["dashboardBg"]) {
+    setDashboardBg(v)
+    saveAppSettings({ dashboardBg: v })
+    document.body.setAttribute("data-dashboard-bg", v)
   }
 
   function handlePartnerNicknameChange(v: string) {
@@ -861,6 +872,44 @@ export function SettingsModal() {
                   desc="Cambia a fondo oscuro"
                   control={<Toggle checked={darkMode} onChange={handleDarkMode} />}
                 />
+
+                {/* Fondo del dashboard */}
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.5rem" }}>Fondo del inicio</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.5rem" }}>
+                    {([
+                      { id: "solid",   label: "Sólido",  preview: "var(--muted)" },
+                      { id: "waves",   label: "Ondas",   preview: "linear-gradient(160deg, #e0e7ff 0%, #fce7f3 100%)" },
+                      { id: "bubbles", label: "Burbujas", preview: "radial-gradient(circle at 25% 25%, #ede9fe 0%, transparent 55%), radial-gradient(circle at 75% 75%, #fce7f3 0%, transparent 55%), var(--muted)" },
+                      { id: "stars",   label: "Estrellas", preview: "linear-gradient(135deg, #f5f3ff 0%, #fdf2f8 100%)" },
+                    ] as const).map((bg) => {
+                      const sel = dashboardBg === bg.id
+                      return (
+                        <button
+                          key={bg.id}
+                          onClick={() => handleDashboardBg(bg.id)}
+                          style={{
+                            height: 52, borderRadius: "var(--radius-md)", cursor: "pointer",
+                            border: sel ? "2.5px solid var(--primary)" : "2px solid var(--border)",
+                            background: bg.preview, position: "relative",
+                            boxShadow: sel ? "0 0 0 3px var(--primary-lighter)" : "none",
+                            transition: "box-shadow 0.15s, border-color 0.15s",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {sel && (
+                            <span style={{ position: "absolute", top: 3, right: 3, background: "var(--primary)", borderRadius: "50%", width: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <Check size={8} color="white" />
+                            </span>
+                          )}
+                          <span style={{ position: "absolute", bottom: 4, left: 0, right: 0, textAlign: "center", fontSize: "0.5625rem", fontWeight: 700, color: sel ? "var(--primary)" : "var(--foreground-muted)" }}>
+                            {bg.label}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               </SettingsCard>
 
               {/* ══ PERSONALIZACIÓN ══ */}
