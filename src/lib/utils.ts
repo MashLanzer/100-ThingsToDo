@@ -22,6 +22,17 @@ export function formatDate(dateStr: string): string {
   })
 }
 
+/** Returns true if celebrations (confetti, emoji bursts) are enabled. */
+export function areCelebrationsEnabled(): boolean {
+  if (typeof window === "undefined") return true
+  try {
+    const raw = localStorage.getItem("ttd_settings_v1")
+    if (!raw) return true
+    const s = JSON.parse(raw)
+    return s.celebrationsEnabled !== false
+  } catch { return true }
+}
+
 /**
  * Días transcurridos desde la fecha de aniversario (contando el día de inicio).
  * Devuelve null si la fecha es inválida o futura.

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { Smartphone, Settings2 } from "lucide-react"
 import { getFirebaseToken } from "@/lib/firebase/client"
+import { areCelebrationsEnabled } from "@/lib/utils"
 
 const CONFETTI_COLORS = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#A78BFA"]
 
@@ -79,6 +80,7 @@ export function AppHeader() {
         if (s.coupleName && s.coupleName.trim()) setCoupleName(s.coupleName.trim())
         if (s.partnerNickname && s.partnerNickname.trim()) setPartnerNickname(s.partnerNickname.trim())
         if (s.dashboardBg) document.body.setAttribute("data-dashboard-bg", s.dashboardBg)
+        if (s.reduceMotion) document.documentElement.setAttribute("data-reduce-motion", "true")
       }
     } catch { /* ignore */ }
   }, [setCoupleName, setPartnerNickname])
@@ -95,7 +97,7 @@ export function AppHeader() {
 
   return (
     <>
-      {isAnniversary && <ConfettiOverlay />}
+      {isAnniversary && areCelebrationsEnabled() && <ConfettiOverlay />}
       <header className="app-header">
         <div className="header-content">
           <div className="header-left">

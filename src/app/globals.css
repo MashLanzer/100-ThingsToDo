@@ -1161,6 +1161,15 @@ main {
   to   { transform: scaleY(1); }
 }
 
+/* ─── Reduce motion ─── */
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
 /* ─── Dashboard background patterns ─── */
 /* waves */
 body[data-dashboard-bg="waves"] .page-container {

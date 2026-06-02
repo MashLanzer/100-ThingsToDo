@@ -5,6 +5,7 @@ import { getFirebaseToken } from "@/lib/firebase/client"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import type { JournalEntry, Letter } from "@/types"
+import { areCelebrationsEnabled } from "@/lib/utils"
 import { Lock, Unlock, Flame, Smile, Heart, Laugh, Frown, Meh, Moon, User, Camera, Mail, FileText, CheckCircle2, PenLine, Search as SearchIcon, BarChart2, Mic, MicOff, Square, Trash2, Tag, MapPin } from "lucide-react"
 
 const MOODS = [
@@ -450,8 +451,10 @@ export function JournalApp({ onBack }: Props) {
       })
       if (!res.ok) throw new Error("Error al guardar")
       // F5: celebratory burst before bouncing back to the calendar
-      setSaveBurst(true)
-      setTimeout(() => setSaveBurst(false), 1400)
+      if (areCelebrationsEnabled()) {
+        setSaveBurst(true)
+        setTimeout(() => setSaveBurst(false), 1400)
+      }
       toast.success(isEditing ? "Entrada actualizada ✏️" : "Entrada guardada 💕")
       try { localStorage.setItem("ttd_last_journal_date", new Date().toISOString()) } catch { /* */ }
       await Promise.all([loadEntries(), loadAllEntries()])

@@ -54,6 +54,8 @@ interface AppSettings {
   coupleName: string
   partnerNickname: string
   dashboardBg: "solid" | "waves" | "bubbles" | "stars"
+  reduceMotion: boolean
+  celebrationsEnabled: boolean
   soundEnabled: boolean
   vibrationEnabled: boolean
   privateJournal: boolean
@@ -65,6 +67,8 @@ const DEFAULT_APP_SETTINGS: AppSettings = {
   coupleName: "",
   partnerNickname: "",
   dashboardBg: "solid",
+  reduceMotion: false,
+  celebrationsEnabled: true,
   soundEnabled: true,
   vibrationEnabled: true,
   privateJournal: false,
@@ -218,6 +222,8 @@ export function SettingsModal() {
   const [coupleName, setCoupleName] = useState("")
   const [partnerNickname, setPartnerNickname] = useState("")
   const [dashboardBg, setDashboardBg] = useState<AppSettings["dashboardBg"]>("solid")
+  const [reduceMotion, setReduceMotion] = useState(false)
+  const [celebrationsEnabled, setCelebrationsEnabled] = useState(true)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [vibrationEnabled, setVibrationEnabled] = useState(true)
   const [privateJournal, setPrivateJournal] = useState(false)
@@ -246,6 +252,11 @@ export function SettingsModal() {
       setPartnerNickname(as.partnerNickname ?? "")
       setDashboardBg(as.dashboardBg ?? "solid")
       document.body.setAttribute("data-dashboard-bg", as.dashboardBg ?? "solid")
+      const rm = as.reduceMotion ?? false
+      setReduceMotion(rm)
+      if (rm) document.documentElement.setAttribute("data-reduce-motion", "true")
+      else document.documentElement.removeAttribute("data-reduce-motion")
+      setCelebrationsEnabled(as.celebrationsEnabled ?? true)
       setSoundEnabled(as.soundEnabled ?? true)
       setVibrationEnabled(as.vibrationEnabled ?? true)
       setPrivateJournal(as.privateJournal ?? false)
@@ -355,6 +366,18 @@ export function SettingsModal() {
     setCoupleName(v)
     saveAppSettings({ coupleName: v })
     setStoreCoupleName(v.trim() || "ThingsToDo")
+  }
+
+  function handleReduceMotion(v: boolean) {
+    setReduceMotion(v)
+    saveAppSettings({ reduceMotion: v })
+    if (v) document.documentElement.setAttribute("data-reduce-motion", "true")
+    else document.documentElement.removeAttribute("data-reduce-motion")
+  }
+
+  function handleCelebrations(v: boolean) {
+    setCelebrationsEnabled(v)
+    saveAppSettings({ celebrationsEnabled: v })
   }
 
   function handleDashboardBg(v: AppSettings["dashboardBg"]) {
@@ -871,6 +894,18 @@ export function SettingsModal() {
                   label="Modo oscuro"
                   desc="Cambia a fondo oscuro"
                   control={<Toggle checked={darkMode} onChange={handleDarkMode} />}
+                />
+
+                <SettingRow
+                  label="✨ Celebraciones"
+                  desc="Confeti y emojis al completar planes"
+                  control={<Toggle checked={celebrationsEnabled} onChange={handleCelebrations} />}
+                />
+
+                <SettingRow
+                  label="🐢 Reducir animaciones"
+                  desc="Desactiva efectos de movimiento"
+                  control={<Toggle checked={reduceMotion} onChange={handleReduceMotion} />}
                 />
 
                 {/* Fondo del dashboard */}
