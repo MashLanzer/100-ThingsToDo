@@ -28,3 +28,27 @@
 -dontwarn com.github.scribejava.**
 -dontwarn com.google.android.gms.auth.api.phone.**
 
+# Capacitor core — plugins are loaded by reflection; keep all plugin classes
+-keep class com.getcapacitor.** { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keep class * extends com.getcapacitor.Plugin { *; }
+
+# Biometric auth plugin
+-keep class com.aparajita.capacitor.biometricauth.** { *; }
+
+# Push notifications plugin + Firebase Messaging
+-keep class com.capacitorjs.plugins.pushnotifications.** { *; }
+-keep class com.google.firebase.messaging.** { *; }
+-keep class com.google.firebase.iid.** { *; }
+-dontwarn com.google.firebase.messaging.**
+
+# Firebase general (auto-init, analytics, installations)
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+
+# AndroidX Biometric
+-keep class androidx.biometric.** { *; }
+
+# Keep all Capacitor Firebase Authentication classes already in use
+-keep class com.capacitorjs.plugins.firebaseauth.** { *; }
+
