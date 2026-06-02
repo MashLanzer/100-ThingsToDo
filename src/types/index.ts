@@ -75,6 +75,9 @@ export interface JournalEntry {
   mood: string | null
   photos: string[]
   audio_url: string | null
+  tags?: string[]
+  location?: string | null
+  reactions?: Record<string, string>
   created_by: string
   created_at: string
 }

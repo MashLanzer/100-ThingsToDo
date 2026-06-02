@@ -48,20 +48,36 @@ export async function POST(req: NextRequest) {
   const { data: me } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
   if (!me?.couple_id) return NextResponse.json({ error: "Not in a couple" }, { status: 403 })
 
-  const { date, content, mood, photos, audio_url } = await req.json()
+  const { date, content, mood, photos, audio_url, tags, location } = await req.json()
   if (!date || !content?.trim()) {
     return NextResponse.json({ error: "date and content required" }, { status: 400 })
   }
 
+  const baseRow = {
+    couple_id: me.couple_id, date, content: content.trim(), mood: mood ?? "happy",
+    created_by: user.uid, photos: photos ?? [], audio_url: audio_url ?? null,
+  }
+  const fullRow = {
+    ...baseRow,
+    tags: Array.isArray(tags) ? tags : [],
+    location: typeof location === "string" && location.trim() ? location.trim() : null,
+  }
+
   // Upsert by couple_id + date + created_by
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("journal_entries")
-    .upsert(
-      { couple_id: me.couple_id, date, content: content.trim(), mood: mood ?? "happy", created_by: user.uid, photos: photos ?? [], audio_url: audio_url ?? null },
-      { onConflict: "couple_id,date,created_by" }
-    )
+    .upsert(fullRow, { onConflict: "couple_id,date,created_by" })
     .select()
     .single()
+
+  // If the extras columns (migration 024) aren't applied yet, retry without them.
+  if (error && /column .* does not exist|tags|location/i.test(error.message)) {
+    ;({ data, error } = await supabase
+      .from("journal_entries")
+      .upsert(baseRow, { onConflict: "couple_id,date,created_by" })
+      .select()
+      .single())
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data, { status: 201 })

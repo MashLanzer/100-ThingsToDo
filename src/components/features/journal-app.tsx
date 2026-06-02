@@ -20,6 +20,9 @@ const MOOD_EMOJI_TO_ID: Record<string, string> = {
   "😊": "happy", "🥰": "love", "😄": "fun", "💕": "romantic", "😌": "chill", "😢": "sad",
 }
 
+// F14: emojis a partner can react to an entry with
+const REACTION_EMOJIS = ["❤️", "🔥", "🥹", "😂", "👏", "🤗"]
+
 function getMoodById(idOrEmoji: string | null | undefined) {
   if (!idOrEmoji) return null
   const mapped = MOOD_EMOJI_TO_ID[idOrEmoji] ?? idOrEmoji
@@ -140,8 +143,20 @@ const PROMPTS = [
   "Describe el día en 3 palabras...",
 ]
 
+// ── Entry templates (F13) ──────────────────────────────────────────────────────
+
+interface EntryTemplate { id: string; emoji: string; label: string; mood: string; tags: string[]; body: string }
+const ENTRY_TEMPLATES: EntryTemplate[] = [
+  { id: "date",      emoji: "💕", label: "Cita",        mood: "love",     tags: ["cita"],        body: "Hoy tuvimos una cita 💕\n\n📍 Dónde:\n🍽️ Qué hicimos:\n✨ El mejor momento:" },
+  { id: "trip",      emoji: "✈️", label: "Viaje",       mood: "fun",      tags: ["viaje"],       body: "¡Día de viaje! ✈️\n\n🗺️ Lugar:\n📸 Lo que más me gustó:\n🥰 Un recuerdo para guardar:" },
+  { id: "milestone", emoji: "🏆", label: "Logro",       mood: "happy",    tags: ["logro"],       body: "Hoy logramos algo juntos 🏆\n\n🎯 Qué conseguimos:\n💪 Cómo lo sentí:" },
+  { id: "makeup",    emoji: "🤝", label: "Reconciliación", mood: "romantic", tags: ["nosotros"], body: "Hoy nos reconciliamos 🤝\n\n💭 Qué pasó:\n❤️ Qué aprendimos:\n🌱 Cómo seguimos:" },
+  { id: "gratitude", emoji: "🙏", label: "Gratitud",    mood: "chill",    tags: ["gratitud"],    body: "Hoy agradezco...\n\n1.\n2.\n3." },
+  { id: "lazy",      emoji: "🛋️", label: "Día tranqui", mood: "chill",    tags: ["casa"],        body: "Un día tranquilo en casa 🛋️\n\n☕ Qué disfrutamos:\n😌 Cómo me sentí:" },
+]
+
 interface Props { onBack: () => void }
-type View = "calendar" | "read" | "write" | "timeline" | "letters" | "letters-compose" | "letter-read" | "stats"
+type View = "calendar" | "read" | "write" | "timeline" | "letters" | "letters-compose" | "letter-read" | "stats" | "spread" | "export"
 type GetUserMediaLegacy = (
   constraints: MediaStreamConstraints,
   success: (stream: MediaStream) => void,
@@ -183,6 +198,17 @@ export function JournalApp({ onBack }: Props) {
   const streamRef = useRef<MediaStream | null>(null)
   const [dismissedOnThisDay, setDismissedOnThisDay] = useState(false)
 
+  // New-feature state
+  const [moodFilter, setMoodFilter] = useState<string | null>(null)   // F7: filter calendar/timeline by mood
+  const [writeTags, setWriteTags] = useState<string[]>([])            // F8: tags on the entry being written
+  const [tagInput, setTagInput] = useState("")
+  const [writeLocation, setWriteLocation] = useState("")             // F12: place of the day
+  const [gettingLocation, setGettingLocation] = useState(false)
+  const [paperMode, setPaperMode] = useState<"normal" | "sepia">("normal") // F6: sepia paper while writing
+  const [saveBurst, setSaveBurst] = useState(false)                  // F5: confetti on save
+  const [reminderTime, setReminderTime] = useState<string>("")       // F9: daily reminder (HH:MM, empty = off)
+  const [reactingId, setReactingId] = useState<string | null>(null)  // F14: which entry's reaction is being toggled
+
   // Letters state
   const [letters, setLetters] = useState<Letter[]>([])
   const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null)
@@ -207,10 +233,31 @@ export function JournalApp({ onBack }: Props) {
     setPrivateJournal(s.privateJournal)
     const stored = getStoredPin()
     if (stored) setPinRequired(true)
+    try {
+      setPaperMode((localStorage.getItem("ttd_journal_paper") as "normal" | "sepia") ?? "normal")
+      setReminderTime(localStorage.getItem("ttd_journal_reminder") ?? "")
+    } catch { /* storage unavailable */ }
   }, [])
 
   useEffect(() => { loadEntries() }, [month, year])
   useEffect(() => { loadAllEntries() }, [])
+
+  // F9: schedule a one-shot browser notification for today's reminder time while
+  // the app stays open. A true push needs a server cron; this covers in-app use.
+  useEffect(() => {
+    if (!reminderTime || typeof window === "undefined" || !("Notification" in window)) return
+    const [h, m] = reminderTime.split(":").map(Number)
+    if (Number.isNaN(h) || Number.isNaN(m)) return
+    const now = new Date()
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0)
+    if (target.getTime() <= now.getTime()) return // time already passed today
+    const id = setTimeout(() => {
+      if (Notification.permission === "granted") {
+        new Notification("📔 Tu diario te espera", { body: "¿Escribiste hoy? Cuenta cómo fue vuestro día 💕" })
+      }
+    }, target.getTime() - now.getTime())
+    return () => clearTimeout(id)
+  }, [reminderTime])
 
   useEffect(() => {
     return () => {
@@ -333,6 +380,9 @@ export function JournalApp({ onBack }: Props) {
       setWriteMood("happy")
       setPhotoUrls([])
       setAudioUrl(null)
+      setWriteTags([])
+      setWriteLocation("")
+      setTagInput("")
       setView("write")
     }
   }
@@ -342,8 +392,47 @@ export function JournalApp({ onBack }: Props) {
     setWriteMood(entry.mood ?? "happy")
     setPhotoUrls(entry.photos ?? [])
     setAudioUrl(entry.audio_url ?? null)
+    setWriteTags(entry.tags ?? [])
+    setWriteLocation(entry.location ?? "")
+    setTagInput("")
     setIsEditing(true)
     setView("write")
+  }
+
+  function commitTag(raw: string) {
+    const t = raw.trim().replace(/^#/, "").toLowerCase()
+    if (!t) return
+    setWriteTags(prev => prev.includes(t) ? prev : [...prev, t].slice(0, 8))
+    setTagInput("")
+  }
+
+  // F12: fill the location field from the device GPS (reverse-geocoded, best effort).
+  async function useMyLocation() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      toast.error("Tu dispositivo no permite ubicación")
+      return
+    }
+    setGettingLocation(true)
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const { latitude, longitude } = pos.coords
+      try {
+        const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=es`)
+        if (res.ok) {
+          const d = await res.json()
+          const place = [d.city || d.locality, d.principalSubdivision, d.countryName].filter(Boolean).join(", ")
+          setWriteLocation(place || `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`)
+        } else {
+          setWriteLocation(`${latitude.toFixed(3)}, ${longitude.toFixed(3)}`)
+        }
+      } catch {
+        setWriteLocation(`${latitude.toFixed(3)}, ${longitude.toFixed(3)}`)
+      } finally {
+        setGettingLocation(false)
+      }
+    }, () => {
+      toast.error("No se pudo obtener la ubicación")
+      setGettingLocation(false)
+    }, { enableHighAccuracy: false, timeout: 8000 })
   }
 
   async function saveEntry() {
@@ -355,9 +444,12 @@ export function JournalApp({ onBack }: Props) {
       const res = await fetch("/api/journal", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ date: selectedDate, content: writeContent.trim(), mood: writeMood, photos: photoUrls, audio_url: audioUrl }),
+        body: JSON.stringify({ date: selectedDate, content: writeContent.trim(), mood: writeMood, photos: photoUrls, audio_url: audioUrl, tags: writeTags, location: writeLocation.trim() || null }),
       })
       if (!res.ok) throw new Error("Error al guardar")
+      // F5: celebratory burst before bouncing back to the calendar
+      setSaveBurst(true)
+      setTimeout(() => setSaveBurst(false), 1400)
       toast.success(isEditing ? "Entrada actualizada ✏️" : "Entrada guardada 💕")
       try { localStorage.setItem("ttd_last_journal_date", new Date().toISOString()) } catch { /* */ }
       await Promise.all([loadEntries(), loadAllEntries()])
@@ -365,6 +457,38 @@ export function JournalApp({ onBack }: Props) {
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error")
     } finally { setSaving(false) }
+  }
+
+  // F14: toggle my reaction on a partner's entry
+  async function toggleReaction(entry: JournalEntry, emoji: string) {
+    setReactingId(entry.id)
+    // optimistic update
+    const apply = (e: JournalEntry): JournalEntry => {
+      if (e.id !== entry.id) return e
+      const r = { ...(e.reactions ?? {}) }
+      if (r[myUid] === emoji) delete r[myUid]; else r[myUid] = emoji
+      return { ...e, reactions: r }
+    }
+    setEntries(prev => prev.map(apply))
+    setAllEntries(prev => prev.map(apply))
+    if (selectedEntry?.id === entry.id) setSelectedEntry(apply(selectedEntry))
+    try {
+      const token = await getToken()
+      if (!token) return
+      await fetch(`/api/journal/${entry.id}/react`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ emoji }),
+      })
+    } catch { /* keep optimistic state */ } finally {
+      setReactingId(null)
+    }
+  }
+
+  // F11: open the browser print dialog with a clean printable layout (save as PDF).
+  function exportPdf() {
+    setView("export")
+    setTimeout(() => { try { window.print() } catch { /* */ } }, 400)
   }
 
   function fmtSecs(s: number) {
@@ -1042,27 +1166,88 @@ export function JournalApp({ onBack }: Props) {
             {formatDateShortEs(selectedDate)}
           </p>
 
-          {/* D2: Mood as large pill */}
-          {displayMood && (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", padding: "0.375rem 0.875rem", borderRadius: "999px", background: displayMood.accent, border: `1.5px solid ${displayMood.accentBorder}`, marginBottom: "0.75rem" }}>
-              <displayMood.Icon size={18} style={{ color: displayMood.accentBorder }} />
-              <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: displayMood.accentText }}>{displayMood.label}</span>
-              {showPartnerEntry && (
-                <span style={{ marginLeft: "0.25rem", fontSize: "0.5625rem", fontWeight: 700, color: "var(--foreground-muted)", background: "rgba(0,0,0,0.07)", padding: "0.0625rem 0.375rem", borderRadius: "999px" }}>PAREJA</span>
-              )}
+          {/* D2: Mood + location pills */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem", marginBottom: "0.75rem", alignItems: "center" }}>
+            {displayMood && (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", padding: "0.375rem 0.875rem", borderRadius: "999px", background: displayMood.accent, border: `1.5px solid ${displayMood.accentBorder}` }}>
+                <displayMood.Icon size={18} style={{ color: displayMood.accentBorder }} />
+                <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: displayMood.accentText }}>{displayMood.label}</span>
+                {showPartnerEntry && (
+                  <span style={{ marginLeft: "0.25rem", fontSize: "0.5625rem", fontWeight: 700, color: "var(--foreground-muted)", background: "rgba(0,0,0,0.07)", padding: "0.0625rem 0.375rem", borderRadius: "999px" }}>PAREJA</span>
+                )}
+              </div>
+            )}
+            {/* F12: location pill */}
+            {displayEntry?.location && (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.375rem 0.75rem", borderRadius: "999px", background: "#ecfdf5", border: "1.5px solid #6ee7b7" }}>
+                <span style={{ fontSize: "0.8125rem" }}>📍</span>
+                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#047857" }}>{displayEntry.location}</span>
+              </div>
+            )}
+          </div>
+
+          {/* F8: tags */}
+          {displayEntry?.tags && displayEntry.tags.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem", marginBottom: "0.75rem" }}>
+              {displayEntry.tags.map(t => (
+                <span key={t} style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--primary)", background: "var(--primary-lighter)", border: "1px solid var(--primary-light)", padding: "0.1875rem 0.5rem", borderRadius: "999px" }}>#{t}</span>
+              ))}
             </div>
           )}
 
-          {/* D2: Ruled lines background on content area */}
+          {/* F2: Notebook page — ruled lines, paper tint and a folded corner */}
           <div style={{
-            background: "repeating-linear-gradient(transparent, transparent 27px, #e5e7eb 27px, #e5e7eb 28px)",
-            borderRadius: "var(--radius-md)", padding: "0.75rem 0.75rem 0.75rem 1rem",
-            border: "1px solid var(--border)", marginBottom: "0.75rem",
+            position: "relative",
+            background: "linear-gradient(#fffdf7, #fffdf7), repeating-linear-gradient(transparent, transparent 27px, #e8e2d0 27px, #e8e2d0 28px)",
+            backgroundBlendMode: "multiply",
+            borderRadius: "var(--radius-md)", padding: "0.75rem 0.75rem 0.75rem 2.25rem",
+            border: "1px solid #e8e2d0", marginBottom: "0.75rem", overflow: "hidden",
+            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.02), 0 2px 8px rgba(0,0,0,0.04)",
           }}>
+            {/* red margin line */}
+            <div style={{ position: "absolute", left: "1.75rem", top: 0, bottom: 0, width: 1.5, background: "#f3b6c2" }} />
+            {/* folded corner */}
+            <div style={{ position: "absolute", top: 0, right: 0, width: 0, height: 0, borderStyle: "solid", borderWidth: "0 22px 22px 0", borderColor: "transparent #efe7d2 transparent transparent" }} />
             <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1.0625rem", color: "var(--foreground)", lineHeight: "28px", whiteSpace: "pre-wrap" }}>
               {displayEntry?.content ?? ""}
             </p>
           </div>
+
+          {/* F14: reactions strip */}
+          {displayEntry && (() => {
+            const reactions = displayEntry.reactions ?? {}
+            const myReaction = reactions[myUid]
+            const partnerReaction = Object.entries(reactions).find(([uid]) => uid !== myUid)?.[1]
+            const isPartnerEntry = displayEntry.created_by !== myUid
+            return (
+              <div style={{ marginBottom: "0.75rem" }}>
+                {/* existing reactions */}
+                {(myReaction || partnerReaction) && (
+                  <div style={{ display: "flex", gap: "0.375rem", marginBottom: isPartnerEntry ? "0.5rem" : 0 }}>
+                    {partnerReaction && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.1875rem 0.5rem", borderRadius: "999px", background: "#fce7f3", border: "1px solid #fbcfe8", fontSize: "0.75rem", fontWeight: 700, color: "var(--secondary)" }}>{partnerReaction} pareja</span>
+                    )}
+                    {myReaction && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.1875rem 0.5rem", borderRadius: "999px", background: "var(--primary-lighter)", border: "1px solid var(--primary-light)", fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)" }}>{myReaction} tú</span>
+                    )}
+                  </div>
+                )}
+                {/* react to partner's entry */}
+                {isPartnerEntry && (
+                  <div style={{ display: "flex", gap: "0.25rem", alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", fontWeight: 600, marginRight: "0.125rem" }}>Reaccionar:</span>
+                    {REACTION_EMOJIS.map(emo => (
+                      <button key={emo} onClick={() => toggleReaction(displayEntry, emo)} disabled={reactingId === displayEntry.id}
+                        style={{ fontSize: "1.125rem", lineHeight: 1, padding: "0.25rem", borderRadius: "999px", border: myReaction === emo ? "2px solid var(--primary)" : "2px solid transparent", background: myReaction === emo ? "var(--primary-lighter)" : "transparent", cursor: "pointer", transition: "transform 0.1s" }}
+                        onMouseDown={e => (e.currentTarget.style.transform = "scale(1.2)")}
+                        onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
+                      >{emo}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Audio player */}
           {displayEntry?.audio_url && (
@@ -1135,9 +1320,31 @@ export function JournalApp({ onBack }: Props) {
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => { setIsEditing(false); setView(selectedEntry ? "read" : "calendar") }}>‹</button>
           <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>{isEditing ? <><FileText size={14} /> Editando</> : <><PenLine size={14} /> Nueva entrada</>}</span>
+          {/* F6: sepia paper toggle */}
+          <button
+            onClick={() => { const next = paperMode === "sepia" ? "normal" : "sepia"; setPaperMode(next); try { localStorage.setItem("ttd_journal_paper", next) } catch { /* */ } }}
+            title="Modo papel sepia"
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1rem", padding: "0.25rem" }}
+          >{paperMode === "sepia" ? "🌙" : "📜"}</button>
         </div>
-        <div className="app-content-body">
-          <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.375rem" }}>{selectedDate}</p>
+        <div className="app-content-body" style={paperMode === "sepia" ? { background: "linear-gradient(180deg, #f4ecd8 0%, #efe4c8 100%)" } : undefined}>
+          <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.375rem", textTransform: "capitalize" }}>{formatDateShortEs(selectedDate ?? "")}</p>
+
+          {/* F13: Entry templates (only for a fresh, empty entry) */}
+          {!isEditing && !writeContent.trim() && (
+            <div style={{ marginBottom: "0.625rem" }}>
+              <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.375rem" }}>✨ Empieza con una plantilla</p>
+              <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", paddingBottom: "0.25rem", scrollbarWidth: "none" }}>
+                {ENTRY_TEMPLATES.map(t => (
+                  <button key={t.id}
+                    onClick={() => { setWriteContent(t.body); setWriteMood(t.mood); setWriteTags(t.tags) }}
+                    style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: "0.25rem", padding: "0.375rem 0.75rem", borderRadius: "999px", border: "1px solid var(--border)", background: "white", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", whiteSpace: "nowrap" }}>
+                    <span>{t.emoji}</span> {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Mood selector */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem", marginBottom: "0.625rem" }}>
@@ -1179,8 +1386,49 @@ export function JournalApp({ onBack }: Props) {
               e.target.style.height = `${e.target.scrollHeight}px`
             }}
             autoFocus
-            style={{ minHeight: "120px", fontFamily: "'Caveat', cursive", fontSize: "1rem", lineHeight: 1.7, marginBottom: "0.625rem" }}
+            style={{ minHeight: "120px", fontFamily: "'Caveat', cursive", fontSize: "1rem", lineHeight: 1.7, marginBottom: "0.625rem", ...(paperMode === "sepia" ? { background: "#fbf6e9", borderColor: "#d8c9a3", color: "#4a3b1e" } : {}) }}
           />
+
+          {/* F8: Tags */}
+          <div style={{ marginBottom: "0.625rem" }}>
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}>🏷️ Etiquetas</label>
+            {writeTags.length > 0 && (
+              <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: "0.375rem" }}>
+                {writeTags.map(t => (
+                  <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.1875rem 0.5rem", borderRadius: "999px", background: "var(--primary-lighter)", border: "1px solid var(--primary-light)", fontSize: "0.6875rem", fontWeight: 700, color: "var(--primary)" }}>
+                    #{t}
+                    <button onClick={() => setWriteTags(prev => prev.filter(x => x !== t))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", fontSize: "0.75rem", lineHeight: 1, padding: 0 }}>×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <input
+              className="input"
+              placeholder="Añadir etiqueta y pulsar Enter…"
+              value={tagInput}
+              onChange={e => setTagInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commitTag(tagInput) } }}
+              onBlur={() => commitTag(tagInput)}
+            />
+          </div>
+
+          {/* F12: Location */}
+          <div style={{ marginBottom: "0.625rem" }}>
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}>📍 Lugar</label>
+            <div style={{ display: "flex", gap: "0.375rem" }}>
+              <input
+                className="input"
+                placeholder="¿Dónde estuvisteis?"
+                value={writeLocation}
+                onChange={e => setWriteLocation(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button type="button" onClick={useMyLocation} disabled={gettingLocation}
+                style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0 0.75rem", borderRadius: "var(--radius-md)", border: "1.5px solid var(--primary-light)", background: "var(--primary-lighter)", cursor: gettingLocation ? "wait" : "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, color: "var(--primary)" }}>
+                {gettingLocation ? "…" : "📍 GPS"}
+              </button>
+            </div>
+          </div>
 
           {/* Photo file upload */}
           <div style={{ marginBottom: "0.625rem" }}>
@@ -1285,6 +1533,7 @@ export function JournalApp({ onBack }: Props) {
             {saving ? "Guardando..." : isEditing ? "Actualizar entrada" : "Guardar Recuerdo"}
           </button>
         </div>
+        {saveBurst && <ConfettiBurst />}
       </>
     )
   }
@@ -1473,5 +1722,30 @@ export function JournalApp({ onBack }: Props) {
         )}
       </div>
     </>
+  )
+}
+
+// F5: lightweight emoji confetti shown briefly after saving an entry
+function ConfettiBurst() {
+  const pieces = ["💕", "✨", "🎉", "💖", "⭐", "🌸", "💫", "💝"]
+  return (
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden", zIndex: 50 }}>
+      <style>{`
+        @keyframes confettiFall {
+          0% { transform: translateY(-10%) rotate(0deg); opacity: 0; }
+          15% { opacity: 1; }
+          100% { transform: translateY(120%) rotate(360deg); opacity: 0; }
+        }
+      `}</style>
+      {Array.from({ length: 16 }).map((_, i) => (
+        <span key={i} style={{
+          position: "absolute",
+          left: `${(i * 6.5 + 4) % 100}%`,
+          top: 0,
+          fontSize: `${0.9 + (i % 4) * 0.25}rem`,
+          animation: `confettiFall ${1 + (i % 5) * 0.12}s ease-in ${(i % 6) * 0.06}s forwards`,
+        }}>{pieces[i % pieces.length]}</span>
+      ))}
+    </div>
   )
 }
