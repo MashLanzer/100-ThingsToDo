@@ -1452,7 +1452,7 @@ function findMemoryPhotos(photos: Photo[]): { label: string; photos: Photo[] } |
 }
 
 export default function FotosPage() {
-  const { data: photos, isLoading } = usePhotos()
+  const { data: photos, isLoading, error: photosError } = usePhotos()
   const uploadPhoto = useUploadPhoto()
   const deletePhoto = useDeletePhoto()
   const updateCaption = useUpdatePhotoCaption()
@@ -1876,6 +1876,28 @@ export default function FotosPage() {
       {isLoading && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1.25rem", padding: "0.5rem 0.25rem" }}>
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      )}
+
+      {/* Error banner — shows the real reason photos failed to load */}
+      {!isLoading && photosError && (
+        <div style={{
+          background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: "var(--radius-lg)",
+          padding: "1rem", margin: "0.5rem 0", color: "#991B1B",
+        }}>
+          <p style={{ fontWeight: 700, margin: "0 0 0.25rem", fontSize: "0.875rem" }}>
+            No se pudieron cargar las fotos
+          </p>
+          <p style={{ margin: 0, fontSize: "0.8125rem", wordBreak: "break-word" }}>
+            {photosError instanceof Error ? photosError.message : String(photosError)}
+          </p>
+          <button
+            className="btn btn-primary"
+            style={{ marginTop: "0.75rem" }}
+            onClick={() => window.location.reload()}
+          >
+            Reintentar
+          </button>
         </div>
       )}
 
