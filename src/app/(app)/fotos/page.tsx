@@ -627,9 +627,9 @@ export default function FotosPage() {
   const [filter, setFilter] = useState<FilterType>("all")
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("fotosView") as ViewMode) ?? "polaroid"
+      return (localStorage.getItem("fotosView") as ViewMode) ?? "feed"
     }
-    return "polaroid"
+    return "feed"
   })
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
@@ -855,18 +855,44 @@ export default function FotosPage() {
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty state — D12 */}
       {!isLoading && allPhotos.length === 0 && (
-        <div className="empty-state" style={{ paddingTop: "3rem" }}>
-          <div className="empty-icon animate-bounce-slow" style={{ color: "var(--foreground-muted)" }}>
-            <Images size={48} />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "3rem 1.5rem 2rem", gap: "1rem" }}>
+          <svg width="140" height="110" viewBox="0 0 140 110" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="70" cy="60" r="46" fill="url(#emptyFotoGrad)" opacity="0.15" />
+            <rect x="38" y="42" width="64" height="44" rx="8" fill="url(#emptyFotoGrad)" opacity="0.85"/>
+            <circle cx="70" cy="64" r="14" fill="white" opacity="0.9"/>
+            <circle cx="70" cy="64" r="9" fill="url(#emptyFotoGrad)" opacity="0.7"/>
+            <circle cx="70" cy="64" r="4" fill="white" opacity="0.6"/>
+            <rect x="56" y="36" width="20" height="10" rx="4" fill="url(#emptyFotoGrad)" opacity="0.7"/>
+            <circle cx="88" cy="50" r="4" fill="#FDE68A" opacity="0.9"/>
+            <circle cx="26" cy="36" r="10" fill="#EC4899" opacity="0.7"/>
+            <rect x="18" y="48" width="16" height="20" rx="5" fill="#EC4899" opacity="0.5"/>
+            <circle cx="114" cy="36" r="10" fill="#8B5CF6" opacity="0.7"/>
+            <rect x="106" y="48" width="16" height="20" rx="5" fill="#8B5CF6" opacity="0.5"/>
+            <text x="64" y="28" fontSize="14" textAnchor="middle" fill="#EC4899" opacity="0.8">♥</text>
+            <defs>
+              <linearGradient id="emptyFotoGrad" x1="38" y1="42" x2="102" y2="86" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#8B5CF6"/>
+                <stop offset="100%" stopColor="#EC4899"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div>
+            <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.375rem" }}>
+              ¡Vuestra galería os espera!
+            </h2>
+            <p style={{ fontSize: "0.875rem", color: "var(--foreground-muted)", lineHeight: 1.6, maxWidth: "240px" }}>
+              Cada foto que subáis quedará guardada para siempre aquí. Empezad capturando vuestro primer momento juntos.
+            </p>
           </div>
-          <h2 className="empty-title" style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", color: "var(--foreground)" }}>
-            Aún no tenéis fotos
-          </h2>
-          <p className="empty-text" style={{ color: "var(--foreground-muted)" }}>Sube vuestra primera foto juntos</p>
-          <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => fileInputRef.current?.click()}>
-            <Camera size={16} /> Subir primera foto
+          <button
+            className="btn btn-primary"
+            style={{ gap: "0.5rem", padding: "0.75rem 1.5rem", borderRadius: "999px", fontSize: "0.9375rem" }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Camera size={18} />
+            Subir primera foto
           </button>
         </div>
       )}

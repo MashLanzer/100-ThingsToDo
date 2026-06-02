@@ -38,6 +38,7 @@ export function PhoneModal() {
   )
   const [time, setTime] = useState("")
   const [hiddenApps, setHiddenApps] = useState<string[]>([])
+  const [lastJournalDate, setLastJournalDate] = useState<string | null>(null)
 
   useEffect(() => {
     const updateTime = () => {
@@ -60,6 +61,7 @@ export function PhoneModal() {
           setHiddenApps([])
         }
       } catch { setHiddenApps([]) }
+      setLastJournalDate(localStorage.getItem("ttd_last_journal_date"))
     }
   }, [showPhoneModal])
 
@@ -127,22 +129,68 @@ export function PhoneModal() {
                         )
                       })()}
                     </div>
-                    <div className="app-grid">
-                      {APPS.filter((app) => !hiddenApps.includes(app.id)).map((app) => (
-                        <div
-                          key={app.id}
-                          className="app-icon-item"
-                          onClick={() => setActivePhoneApp(app.id)}
-                        >
-                          <div
-                            className="app-icon-bg"
-                            style={{ background: app.bg }}
-                          >
-                            {app.emoji}
-                          </div>
-                          <span className="app-icon-name">{app.name}</span>
-                        </div>
+                    {/* D7: Decorative hearts strip */}
+                    <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem", opacity: 0.25, marginTop: "-0.5rem", marginBottom: "-0.25rem" }}>
+                      {["♥","♡","♥","♡","♥"].map((h, i) => (
+                        <span key={i} style={{ fontSize: "0.6rem", color: "var(--primary)" }}>{h}</span>
                       ))}
+                    </div>
+
+                    {/* D7: Date display */}
+                    <div style={{ textAlign: "center", marginTop: "-0.25rem" }}>
+                      <span style={{
+                        fontFamily: "'Quicksand', sans-serif",
+                        fontSize: "0.5625rem",
+                        fontWeight: 600,
+                        color: "var(--foreground-muted)",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                      }}>
+                        {new Date().toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" })}
+                      </span>
+                    </div>
+
+                    <div className="app-grid">
+                      {APPS.filter((app) => !hiddenApps.includes(app.id)).map((app, idx) => {
+                        const journalDays = app.id === "journal" && lastJournalDate
+                          ? Math.floor((Date.now() - new Date(lastJournalDate).getTime()) / 86_400_000)
+                          : null
+                        const showBadge = app.id === "journal" && journalDays !== null && journalDays > 0
+                        return (
+                          <div
+                            key={app.id}
+                            className="app-icon-item"
+                            onClick={() => setActivePhoneApp(app.id)}
+                            style={{ animation: `appIconIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both`, animationDelay: `${idx * 0.05}s` }}
+                          >
+                            <div style={{ position: "relative" }}>
+                              <div
+                                className="app-icon-bg"
+                                style={{ background: app.bg }}
+                              >
+                                {app.emoji}
+                              </div>
+                              {showBadge && (
+                                <span style={{
+                                  position: "absolute", top: -4, right: -4,
+                                  background: "var(--secondary)",
+                                  color: "white",
+                                  fontSize: "0.45rem",
+                                  fontWeight: 700,
+                                  borderRadius: "999px",
+                                  padding: "1px 4px",
+                                  lineHeight: 1.4,
+                                  border: "1.5px solid white",
+                                  fontFamily: "'Quicksand', sans-serif",
+                                }}>
+                                  {journalDays === 1 ? "ayer" : `${journalDays}d`}
+                                </span>
+                              )}
+                            </div>
+                            <span className="app-icon-name">{app.name}</span>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 </div>
