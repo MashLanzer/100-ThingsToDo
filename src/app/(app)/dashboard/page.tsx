@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react"
 import { usePlans, useCreatePlan } from "@/hooks/use-plans"
 import { useCoupleStatus } from "@/hooks/use-couple"
+import { useAuth } from "@/hooks/use-auth"
 import { PlanCard } from "@/components/features/plan-card"
 import { useAppStore } from "@/stores/app-store"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
@@ -120,9 +121,27 @@ function sortPlans(plans: Plan[], sortBy: SortBy): Plan[] {
   })
 }
 
+const ES_DAYS_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+const ES_MONTHS_FULL = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+const MONTH_GRADIENTS = [
+  "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+  "linear-gradient(135deg, #EC4899 0%, #F43F5E 100%)",
+  "linear-gradient(135deg, #7C3AED 0%, #2563EB 100%)",
+  "linear-gradient(135deg, #059669 0%, #0EA5E9 100%)",
+  "linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)",
+  "linear-gradient(135deg, #EC4899 0%, #A855F7 100%)",
+  "linear-gradient(135deg, #EF4444 0%, #F59E0B 100%)",
+  "linear-gradient(135deg, #10B981 0%, #3B82F6 100%)",
+  "linear-gradient(135deg, #8B5CF6 0%, #F43F5E 100%)",
+  "linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)",
+  "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+  "linear-gradient(135deg, #EC4899 0%, #F59E0B 100%)",
+]
+
 export default function DashboardPage() {
   const { data: plans, isLoading, refetch } = usePlans()
   const { data: coupleData } = useCoupleStatus()
+  const { user } = useAuth()
   const createPlan = useCreatePlan()
   const { openCoupleModal } = useAppStore()
   const ptr = useWindowPTR(() => { refetch() })
@@ -351,6 +370,44 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* D1: Hero section */}
+      {hasCouple && (() => {
+        const now = new Date()
+        const dayName = ES_DAYS_SHORT[now.getDay()]
+        const dayNum = now.getDate()
+        const monthName = ES_MONTHS_FULL[now.getMonth()]
+        const grad = MONTH_GRADIENTS[now.getMonth()]
+        const partner = coupleData?.partner
+        const firstName = user?.displayName?.split(" ")[0] ?? "tú"
+        const partnerFirst = partner?.name?.split(" ")[0] ?? "pareja"
+        const activePlanCount = filteredActive.length
+        return (
+          <div style={{
+            background: grad,
+            borderRadius: "var(--radius-xl)",
+            padding: "1.25rem 1.25rem 1rem",
+            marginBottom: "1rem",
+            position: "relative",
+            overflow: "hidden",
+            color: "white",
+          }}>
+            <div aria-hidden style={{ position: "absolute", top: "-20%", right: "-10%", width: "180px", height: "180px", borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
+            <div aria-hidden style={{ position: "absolute", bottom: "-30%", left: "-5%", width: "140px", height: "140px", borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
+            <p style={{ fontFamily: "'Quicksand', sans-serif", fontSize: "0.75rem", fontWeight: 600, opacity: 0.8, marginBottom: "0.25rem", textTransform: "capitalize" }}>
+              {dayName} {dayNum} de {monthName}
+            </p>
+            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.5rem", fontWeight: 700, lineHeight: 1.2, marginBottom: "0.625rem" }}>
+              Hola, {firstName} & {partnerFirst} 💕
+            </h1>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: "999px", padding: "2px 10px", fontSize: "0.75rem", fontWeight: 600, backdropFilter: "blur(4px)" }}>
+                {activePlanCount === 0 ? "Sin planes activos" : `${activePlanCount} plan${activePlanCount !== 1 ? "es" : ""} activo${activePlanCount !== 1 ? "s" : ""}`}
+              </span>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Completion counter */}
       {hasCouple && allPlans.length > 0 && (() => {
         const totalDone = allPlans.reduce((s, p) => s + (p.completed_count ?? 0), 0)
@@ -375,39 +432,12 @@ export default function DashboardPage() {
         )
       })()}
 
-      {/* Hero heading */}
-      <div style={{
-        background: "linear-gradient(135deg, var(--primary-lighter) 0%, var(--pink-light) 100%)",
-        borderRadius: "var(--radius-lg)",
-        padding: "1rem 1.125rem",
-        marginBottom: "0.875rem",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        border: "1px solid var(--primary-light)",
-      }}>
-        <div>
-          <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.5rem", fontWeight: 700, color: "var(--primary)", display: "flex", alignItems: "center", gap: "0.5rem", lineHeight: 1.2 }}>
-            <ClipboardList size={22} /> Nuestros Planes
-          </h1>
-          {hasAnyPlans && (
-            <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "3px" }}>
-              {totalInProgress > 0 ? `${totalInProgress} en progreso` : "¿Qué aventura sigue?"}
-              {totalCompleted > 0 ? ` · ${totalCompleted} completado${totalCompleted !== 1 ? "s" : ""}` : ""}
-            </p>
-          )}
-        </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowForm(true)}
-          disabled={!hasCouple}
-          title={!hasCouple ? "Vincula una pareja para crear planes" : undefined}
-          style={{ flexShrink: 0 }}
-        >
-          <Plus size={18} />
-          Nuevo
-        </button>
-      </div>
+      {/* Fallback title when no couple */}
+      {!hasCouple && (
+        <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.75rem" }}>
+          Nuestros Planes 📋
+        </h1>
+      )}
 
       {/* Search bar */}
       {hasAnyPlans && allPlans.length > 2 && (
@@ -831,6 +861,37 @@ export default function DashboardPage() {
         )
       )}
       {showOnboarding && <OnboardingModal onComplete={() => setShowOnboarding(false)} />}
+
+      {/* D2: FAB Nuevo Plan */}
+      {hasCouple && !showForm && (
+        <button
+          onClick={() => setShowForm(true)}
+          style={{
+            position: "fixed",
+            bottom: "calc(72px + env(safe-area-inset-bottom, 0px))",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 50,
+            background: "linear-gradient(135deg, var(--primary), var(--secondary))",
+            border: "none",
+            borderRadius: "999px",
+            padding: "0.75rem 1.5rem",
+            color: "white",
+            fontFamily: "inherit",
+            fontSize: "0.9375rem",
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            boxShadow: "0 4px 20px rgba(139,92,246,0.4)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <Plus size={20} />
+          Nuevo plan
+        </button>
+      )}
     </div>
   )
 }
