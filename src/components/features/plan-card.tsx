@@ -70,9 +70,10 @@ function tagBasedGradient(tags: string[], fallback: string): string {
 interface Props {
   plan: Plan
   index?: number
+  cardSize?: "compact" | "normal" | "large"
 }
 
-export function PlanCard({ plan, index = 0 }: Props) {
+export function PlanCard({ plan, index = 0, cardSize = "normal" }: Props) {
   const router = useRouter()
   const total = plan.task_count ?? 0
   const done = plan.completed_count ?? 0
@@ -86,6 +87,10 @@ export function PlanCard({ plan, index = 0 }: Props) {
   const visibleTags = tags.slice(0, 3)
   const extraTags = tags.length - visibleTags.length
   const dueInfo = plan.due_date ? dueDateBadge(plan.due_date) : null
+
+  const coverHeight = cardSize === "compact" ? 120 : cardSize === "large" ? 260 : 200
+  const gradientHeaderHeight = cardSize === "compact" ? 52 : cardSize === "large" ? 120 : 88
+  const showDescription = cardSize !== "compact"
 
   // A3: staggered entrance delay
   const animDelay = `${index * 70}ms`
@@ -103,12 +108,12 @@ export function PlanCard({ plan, index = 0 }: Props) {
     >
       {hasCover ? (
         // ── A1: FULL-COVER CARD ──────────────────────────────────────────────
-        <div style={{ position: "relative", minHeight: "200px" }}>
+        <div style={{ position: "relative", minHeight: coverHeight }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={plan.cover_image!}
             alt=""
-            style={{ width: "100%", height: "200px", objectFit: "cover", display: "block" }}
+            style={{ width: "100%", height: coverHeight, objectFit: "cover", display: "block" }}
           />
           {/* Gradient overlay — stronger at bottom */}
           <div style={{
@@ -201,7 +206,7 @@ export function PlanCard({ plan, index = 0 }: Props) {
         // ── A2: GRADIENT HEADER CARD ─────────────────────────────────────────
         <>
           {/* Gradient header — taller, title overlaid */}
-          <div style={{ position: "relative", height: "88px", background: gradient, overflow: "hidden" }}>
+          <div style={{ position: "relative", height: gradientHeaderHeight, background: gradient, overflow: "hidden" }}>
             {/* Decorative circles */}
             <div style={{
               position: "absolute", top: -18, right: -18,
@@ -259,11 +264,11 @@ export function PlanCard({ plan, index = 0 }: Props) {
 
           {/* Card body */}
           <div style={{ padding: "0.75rem 0.875rem 0.875rem" }}>
-            {plan.description && (
+            {showDescription && plan.description && (
               <p style={{
                 fontSize: "0.8125rem", color: "var(--foreground-muted)",
                 marginBottom: "0.625rem", lineHeight: 1.5,
-                display: "-webkit-box", WebkitLineClamp: 2,
+                display: "-webkit-box", WebkitLineClamp: cardSize === "large" ? 4 : 2,
                 WebkitBoxOrient: "vertical" as const, overflow: "hidden",
               }}>
                 {plan.description}

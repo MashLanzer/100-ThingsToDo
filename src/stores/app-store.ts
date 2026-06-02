@@ -16,6 +16,7 @@ interface AppStore {
   activePhoneApp: string
   coupleName: string
   partnerNickname: string
+  cardSize: "compact" | "normal" | "large"
   nowPlayingTrack: NowPlayingTrack | null
   musicIsPlaying: boolean
 
@@ -32,6 +33,7 @@ interface AppStore {
   setActivePhoneApp: (app: string) => void
   setCoupleName: (name: string) => void
   setPartnerNickname: (name: string) => void
+  setCardSize: (size: "compact" | "normal" | "large") => void
   setNowPlayingTrack: (track: NowPlayingTrack | null) => void
   setMusicIsPlaying: (playing: boolean) => void
 }
@@ -45,6 +47,7 @@ export const useAppStore = create<AppStore>((set) => ({
   activePhoneApp: "home",
   coupleName: "ThingsToDo",
   partnerNickname: "",
+  cardSize: "normal",
   nowPlayingTrack: null,
   musicIsPlaying: false,
 
@@ -62,6 +65,7 @@ export const useAppStore = create<AppStore>((set) => ({
   setActivePhoneApp: (app) => set({ activePhoneApp: app }),
   setCoupleName: (name) => set({ coupleName: name }),
   setPartnerNickname: (name) => set({ partnerNickname: name }),
+  setCardSize: (size) => set({ cardSize: size }),
   setNowPlayingTrack: (track) => set({ nowPlayingTrack: track }),
   setMusicIsPlaying: (playing) => set({ musicIsPlaying: playing }),
 }))

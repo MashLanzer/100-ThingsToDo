@@ -50,7 +50,7 @@ function getPageTitle(path: string, coupleName: string): string {
 }
 
 export function AppHeader() {
-  const { coupleName, setCoupleName, setPartnerNickname, openPhoneModal, openSettingsModal } = useAppStore()
+  const { coupleName, setCoupleName, setPartnerNickname, setCardSize, openPhoneModal, openSettingsModal } = useAppStore()
   const pathname = usePathname()
   const { data } = useCoupleStatus()
   const [isAnniversary, setIsAnniversary] = useState(false)
@@ -81,6 +81,7 @@ export function AppHeader() {
         if (s.partnerNickname && s.partnerNickname.trim()) setPartnerNickname(s.partnerNickname.trim())
         if (s.dashboardBg) document.body.setAttribute("data-dashboard-bg", s.dashboardBg)
         if (s.reduceMotion) document.documentElement.setAttribute("data-reduce-motion", "true")
+        if (s.cardSize) setCardSize(s.cardSize)
       }
     } catch { /* ignore */ }
   }, [setCoupleName, setPartnerNickname])

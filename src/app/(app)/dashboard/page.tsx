@@ -33,7 +33,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
-function SwipePlanCard({ plan, index, onDelete }: { plan: Plan; index: number; onDelete: () => void }) {
+function SwipePlanCard({ plan, index, onDelete, cardSize }: { plan: Plan; index: number; onDelete: () => void; cardSize?: "compact" | "normal" | "large" }) {
   const [swipeX, setSwipeX] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const touchStartX = useRef<number>(0)
@@ -102,7 +102,7 @@ function SwipePlanCard({ plan, index, onDelete }: { plan: Plan; index: number; o
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <PlanCard plan={plan} index={index} />
+        <PlanCard plan={plan} index={index} cardSize={cardSize} />
       </div>
     </div>
   )
@@ -146,6 +146,7 @@ export default function DashboardPage() {
   const createPlan = useCreatePlan()
   const { openCoupleModal } = useAppStore()
   const partnerNickname = useAppStore((s) => s.partnerNickname)
+  const cardSize = useAppStore((s) => s.cardSize)
   const ptr = useWindowPTR(() => { refetch() })
 
   const sensors = useSensors(
@@ -825,7 +826,7 @@ export default function DashboardPage() {
                 <SortableContext items={inProgressPlans.map((p) => p.id)} strategy={verticalListSortingStrategy}>
                   <div>
                     {inProgressPlans.map((plan, i) => (
-                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
+                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} cardSize={cardSize} />
                     ))}
                   </div>
                 </SortableContext>
@@ -853,7 +854,7 @@ export default function DashboardPage() {
                 {showArchived && (
                   <div className="animate-fade-in">
                     {allCompletedPlans.map((plan, i) => (
-                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} />
+                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} cardSize={cardSize} />
                     ))}
                   </div>
                 )}

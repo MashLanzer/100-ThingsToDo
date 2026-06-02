@@ -56,6 +56,7 @@ interface AppSettings {
   dashboardBg: "solid" | "waves" | "bubbles" | "stars"
   reduceMotion: boolean
   celebrationsEnabled: boolean
+  cardSize: "compact" | "normal" | "large"
   soundEnabled: boolean
   vibrationEnabled: boolean
   privateJournal: boolean
@@ -69,6 +70,7 @@ const DEFAULT_APP_SETTINGS: AppSettings = {
   dashboardBg: "solid",
   reduceMotion: false,
   celebrationsEnabled: true,
+  cardSize: "normal",
   soundEnabled: true,
   vibrationEnabled: true,
   privateJournal: false,
@@ -199,7 +201,7 @@ const PIN_KEY = "ttd_journal_pin_v1"
 
 export function SettingsModal() {
   const router = useRouter()
-  const { showSettingsModal, closeSettingsModal, setCoupleName: setStoreCoupleName, setPartnerNickname: setStorePartnerNickname } = useAppStore()
+  const { showSettingsModal, closeSettingsModal, setCoupleName: setStoreCoupleName, setPartnerNickname: setStorePartnerNickname, setCardSize: setStoreCardSize } = useAppStore()
   const { data, isLoading } = useCoupleStatus()
   const { user } = useAuth()
   const linkMutation = useLinkPartner()
@@ -208,6 +210,9 @@ export function SettingsModal() {
   const qc = useQueryClient()
   const [couplePhotoUploading, setCouplePhotoUploading] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [deletingData, setDeletingData] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState("")
+  const [showDeleteZone, setShowDeleteZone] = useState(false)
   const { subscribe: subscribePush, subscribing: pushSubscribing, isSubscribed: pushSubscribed } = usePushNotifications()
   const [code, setCode] = useState("")
   const [copied, setCopied] = useState(false)
@@ -224,6 +229,7 @@ export function SettingsModal() {
   const [dashboardBg, setDashboardBg] = useState<AppSettings["dashboardBg"]>("solid")
   const [reduceMotion, setReduceMotion] = useState(false)
   const [celebrationsEnabled, setCelebrationsEnabled] = useState(true)
+  const [cardSize, setCardSize] = useState<AppSettings["cardSize"]>("normal")
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [vibrationEnabled, setVibrationEnabled] = useState(true)
   const [privateJournal, setPrivateJournal] = useState(false)
@@ -257,6 +263,7 @@ export function SettingsModal() {
       if (rm) document.documentElement.setAttribute("data-reduce-motion", "true")
       else document.documentElement.removeAttribute("data-reduce-motion")
       setCelebrationsEnabled(as.celebrationsEnabled ?? true)
+      setCardSize(as.cardSize ?? "normal")
       setSoundEnabled(as.soundEnabled ?? true)
       setVibrationEnabled(as.vibrationEnabled ?? true)
       setPrivateJournal(as.privateJournal ?? false)
@@ -273,6 +280,8 @@ export function SettingsModal() {
       setPinConfirm("")
       setPinDisable("")
       setPinError("")
+      setShowDeleteZone(false)
+      setDeleteConfirmText("")
     }
   }, [showSettingsModal])
 
@@ -386,6 +395,12 @@ export function SettingsModal() {
     document.body.setAttribute("data-dashboard-bg", v)
   }
 
+  function handleCardSize(v: AppSettings["cardSize"]) {
+    setCardSize(v)
+    saveAppSettings({ cardSize: v })
+    setStoreCardSize(v)
+  }
+
   function handlePartnerNicknameChange(v: string) {
     setPartnerNickname(v)
     saveAppSettings({ partnerNickname: v })
@@ -426,6 +441,25 @@ export function SettingsModal() {
     saveThemeSettings({ ...ts, darkMode: v })
     if (v) document.documentElement.setAttribute("data-dark", "true")
     else document.documentElement.removeAttribute("data-dark")
+  }
+
+  async function handleDeleteData() {
+    if (deleteConfirmText !== "BORRAR") return
+    setDeletingData(true)
+    try {
+      const token = await getAuthToken()
+      if (!token) { toast.error("No autenticado"); return }
+      const res = await fetch("/api/account/delete", { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Error al borrar"); return }
+      await signOut(getFirebaseAuth())
+      closeSettingsModal()
+      router.replace("/login")
+      toast.success("Cuenta y datos eliminados")
+    } catch {
+      toast.error("Error al eliminar los datos")
+    } finally {
+      setDeletingData(false)
+    }
   }
 
   async function handleLogout() {
@@ -945,6 +979,37 @@ export function SettingsModal() {
                     })}
                   </div>
                 </div>
+                {/* Card size */}
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.5rem" }}>Tamaño de tarjetas</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
+                    {([
+                      { id: "compact", label: "Compacto", icon: "▤", desc: "3 por pantalla" },
+                      { id: "normal",  label: "Normal",   icon: "▣", desc: "2-3 visibles" },
+                      { id: "large",   label: "Grande",   icon: "▢", desc: "Portada amplia" },
+                    ] as const).map((sz) => {
+                      const sel = cardSize === sz.id
+                      return (
+                        <button
+                          key={sz.id}
+                          onClick={() => handleCardSize(sz.id)}
+                          style={{
+                            padding: "0.625rem 0.25rem",
+                            borderRadius: "var(--radius-md)",
+                            border: sel ? "2px solid var(--primary)" : "2px solid var(--border)",
+                            background: sel ? "var(--primary-lighter)" : "white",
+                            cursor: "pointer",
+                            display: "flex", flexDirection: "column", alignItems: "center", gap: "0.125rem",
+                          }}
+                        >
+                          <span style={{ fontSize: "1.25rem", lineHeight: 1 }}>{sz.icon}</span>
+                          <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: sel ? "var(--primary)" : "var(--foreground)" }}>{sz.label}</span>
+                          <span style={{ fontSize: "0.5625rem", color: "var(--foreground-muted)" }}>{sz.desc}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               </SettingsCard>
 
               {/* ══ PERSONALIZACIÓN ══ */}
@@ -1174,6 +1239,62 @@ export function SettingsModal() {
                   >
                     📓 Exportar diario
                   </button>
+                </div>
+              </SettingsCard>
+
+              {/* ══ ZONA DE PELIGRO ══ */}
+              <SettingsCard title={<span style={{ color: "#ef4444" }}>⚠️ Zona de peligro</span>}>
+                <div>
+                  <button
+                    onClick={() => { setShowDeleteZone((v) => !v); setDeleteConfirmText("") }}
+                    style={{
+                      width: "100%", padding: "0.625rem 0.875rem",
+                      borderRadius: "var(--radius-md)", border: "1.5px solid #ef4444",
+                      background: showDeleteZone ? "#fef2f2" : "white", cursor: "pointer",
+                      color: "#ef4444", fontWeight: 700, fontSize: "0.875rem",
+                      fontFamily: "inherit", textAlign: "left",
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                    }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <Trash2 size={15} /> Borrar todos mis datos
+                    </span>
+                    <span style={{ fontSize: "0.75rem" }}>{showDeleteZone ? "▲" : "▼"}</span>
+                  </button>
+
+                  {showDeleteZone && (
+                    <div style={{
+                      marginTop: "0.75rem", background: "#fef2f2", borderRadius: "var(--radius-md)",
+                      padding: "0.875rem", border: "1px solid #fecaca",
+                      display: "flex", flexDirection: "column", gap: "0.625rem",
+                    }}>
+                      <p style={{ fontSize: "0.8125rem", color: "#991b1b", fontWeight: 600 }}>
+                        Esta acción es irreversible
+                      </p>
+                      <p style={{ fontSize: "0.75rem", color: "#b91c1c", lineHeight: 1.5 }}>
+                        Se eliminarán todos tus planes, tareas, entradas del diario, metas, cápsulas del tiempo, favores y lugares. Tu pareja también quedará desvinculada.
+                      </p>
+                      <p style={{ fontSize: "0.75rem", color: "#991b1b", fontWeight: 700 }}>
+                        Escribe <code style={{ background: "#fee2e2", padding: "1px 5px", borderRadius: 4 }}>BORRAR</code> para confirmar:
+                      </p>
+                      <input
+                        className="input"
+                        placeholder="BORRAR"
+                        value={deleteConfirmText}
+                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                        style={{ borderColor: deleteConfirmText === "BORRAR" ? "#ef4444" : undefined }}
+                        disabled={deletingData}
+                      />
+                      <button
+                        className="btn btn-outline btn-danger"
+                        style={{ width: "100%", justifyContent: "center" }}
+                        onClick={handleDeleteData}
+                        disabled={deleteConfirmText !== "BORRAR" || deletingData}
+                      >
+                        {deletingData ? <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Borrando...</> : "Confirmar — borrar todo"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </SettingsCard>
 
