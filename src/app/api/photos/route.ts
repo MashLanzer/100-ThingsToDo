@@ -63,16 +63,20 @@ export async function GET(req: NextRequest) {
   const coupleId = me?.couple_id
 
   // Fetch from Supabase photos table (new system)
+  // Use couple_id OR user.uid as collection_key — photos uploaded before
+  // linking a partner use user.uid as the key, so we must query both.
   let supabasePhotos: Array<{
     id: string; image_url: string; thumb_url: string | null; delete_url: string | null;
     caption: string | null; source: string; created_at: string; collection_key: string;
   }> = []
-  if (coupleId) {
-    const { data } = await supabase
+  const collectionKeys = [...new Set([coupleId, user.uid].filter(Boolean) as string[])]
+  if (collectionKeys.length > 0) {
+    const { data, error } = await supabase
       .from("photos")
       .select("*")
-      .eq("collection_key", coupleId)
+      .in("collection_key", collectionKeys)
       .order("created_at", { ascending: false })
+    if (error) console.error("[photos GET] Supabase error:", error.message)
     supabasePhotos = data ?? []
   }
 
