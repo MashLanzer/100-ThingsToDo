@@ -156,6 +156,7 @@ export function JournalApp({ onBack }: Props) {
   const [view, setView] = useState<View>("calendar")
   const [currentDate, setCurrentDate] = useState(new Date())
   const [entries, setEntries] = useState<JournalEntry[]>([])
+  const [allEntries, setAllEntries] = useState<JournalEntry[]>([])
   const [lastYearEntries, setLastYearEntries] = useState<JournalEntry[]>([])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null)
@@ -209,6 +210,7 @@ export function JournalApp({ onBack }: Props) {
   }, [])
 
   useEffect(() => { loadEntries() }, [month, year])
+  useEffect(() => { loadAllEntries() }, [])
 
   useEffect(() => {
     return () => {
@@ -243,6 +245,27 @@ export function JournalApp({ onBack }: Props) {
     } catch { /* silently fail */ }
   }
 
+  // Load the full journal (all months) for search, timeline and stats.
+  async function loadAllEntries() {
+    try {
+      const token = await getToken()
+      if (!token) return
+      const res = await fetch(`/api/journal`, { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) return
+      const data: unknown = await res.json()
+      setAllEntries(Array.isArray(data) ? (data as JournalEntry[]) : [])
+    } catch { /* silently fail */ }
+  }
+
+  // Union of the current-month entries and the full set (deduped by id), so
+  // lookups work for any date even before/while the full set is loading.
+  function mergedEntries(): JournalEntry[] {
+    const map = new Map<string, JournalEntry>()
+    for (const e of allEntries) map.set(e.id, e)
+    for (const e of entries) map.set(e.id, e)
+    return [...map.values()]
+  }
+
   async function loadLetters() {
     try {
       const token = await getToken()
@@ -254,11 +277,46 @@ export function JournalApp({ onBack }: Props) {
   }
 
   function getMyEntry(dateStr: string) {
-    return entries.find((e) => e.date === dateStr && e.created_by === myUid)
+    return mergedEntries().find((e) => e.date === dateStr && e.created_by === myUid)
   }
 
   function getPartnerEntry(dateStr: string) {
-    return entries.find((e) => e.date === dateStr && e.created_by !== myUid)
+    return mergedEntries().find((e) => e.date === dateStr && e.created_by !== myUid)
+  }
+
+  // Open a specific entry (from search, timeline or partner list) in the read view.
+  function openEntry(entry: JournalEntry) {
+    const isMe = entry.created_by === myUid
+    setSelectedDate(entry.date)
+    setIsEditing(false)
+    if (isMe) {
+      setSelectedEntry(entry)
+      setShowPartnerEntry(false)
+    } else {
+      const myE = getMyEntry(entry.date)
+      setSelectedEntry(myE ?? entry)
+      setShowPartnerEntry(true)
+    }
+    setView("read")
+  }
+
+  async function deleteEntry(entry: JournalEntry) {
+    if (!confirm("¿Eliminar esta entrada? No se puede deshacer.")) return
+    try {
+      const token = await getToken()
+      if (!token) throw new Error("No auth")
+      const res = await fetch(`/api/journal/${entry.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error("Error al eliminar")
+      setEntries(prev => prev.filter(e => e.id !== entry.id))
+      setAllEntries(prev => prev.filter(e => e.id !== entry.id))
+      toast.success("Entrada eliminada")
+      setView("calendar")
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al eliminar")
+    }
   }
 
   function openDay(dateStr: string) {
@@ -302,7 +360,7 @@ export function JournalApp({ onBack }: Props) {
       if (!res.ok) throw new Error("Error al guardar")
       toast.success(isEditing ? "Entrada actualizada ✏️" : "Entrada guardada 💕")
       try { localStorage.setItem("ttd_last_journal_date", new Date().toISOString()) } catch { /* */ }
-      await loadEntries()
+      await Promise.all([loadEntries(), loadAllEntries()])
       setView("calendar")
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error")
@@ -638,8 +696,9 @@ export function JournalApp({ onBack }: Props) {
 
   // ── STATS view ─────────────────────────────────────────────────────────────
   if (view === "stats") {
-    const myEntries = entries.filter(e => e.created_by === myUid)
-    const partnerEntries = entries.filter(e => e.created_by !== myUid)
+    const statsEntries = mergedEntries()
+    const myEntries = statsEntries.filter(e => e.created_by === myUid)
+    const partnerEntries = statsEntries.filter(e => e.created_by !== myUid)
 
     // Mood counts for my entries
     const moodCounts: Record<string, number> = {}
@@ -651,11 +710,11 @@ export function JournalApp({ onBack }: Props) {
     const maxMoodCount = Math.max(...Object.values(moodCounts), 1)
 
     // Max streak
-    const maxStreak = calculateMaxStreak(entries, myUid)
+    const maxStreak = calculateMaxStreak(statsEntries, myUid)
 
     // Most active month — from all loaded entries
     const monthCounts: Record<string, number> = {}
-    for (const e of entries) {
+    for (const e of statsEntries) {
       const m = e.date.slice(0, 7)
       monthCounts[m] = (monthCounts[m] ?? 0) + 1
     }
@@ -694,7 +753,7 @@ export function JournalApp({ onBack }: Props) {
             {statCard("💑", "Entradas pareja", `${partnerEntries.length}`)}
             {statCard("📅", "Mes más activo", mostActiveMonthLabel)}
             {statCard("⭐", "Día favorito", favDowLabel)}
-            {statCard("📖", "Total juntos", `${entries.length}`)}
+            {statCard("📖", "Total juntos", `${statsEntries.length}`)}
           </div>
 
           <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem" }}>
@@ -723,7 +782,7 @@ export function JournalApp({ onBack }: Props) {
 
   // ── TIMELINE view ──────────────────────────────────────────────────────────
   if (view === "timeline") {
-    const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date))
+    const sorted = [...mergedEntries()].sort((a, b) => b.date.localeCompare(a.date))
     return (
       <>
         <style>{`
@@ -737,7 +796,7 @@ export function JournalApp({ onBack }: Props) {
           {sorted.length === 0 && (
             <div style={{ textAlign: "center", padding: "2rem 0", color: "var(--foreground-muted)" }}>
               <p style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📖</p>
-              <p style={{ fontSize: "0.875rem" }}>Aún no hay entradas este mes</p>
+              <p style={{ fontSize: "0.875rem" }}>Aún no hay entradas</p>
             </div>
           )}
           <div style={{ position: "relative", paddingLeft: "1.5rem" }}>
@@ -755,16 +814,7 @@ export function JournalApp({ onBack }: Props) {
                     {/* Dot on the line */}
                     <div style={{ position: "absolute", left: -20, top: "1rem", width: 10, height: 10, borderRadius: "50%", background: isMe ? "var(--primary)" : "var(--secondary)", border: "2px solid white", boxShadow: "0 0 0 2px " + (isMe ? "var(--primary)" : "var(--secondary)"), zIndex: 1 }} />
                     <button
-                      onClick={() => {
-                        setSelectedDate(entry.date)
-                        setSelectedEntry(entry)
-                        setShowPartnerEntry(!isMe)
-                        if (!isMe) {
-                          const myE = getMyEntry(entry.date)
-                          if (myE) { setSelectedEntry(myE); setShowPartnerEntry(true) }
-                        }
-                        setView("read")
-                      }}
+                      onClick={() => openEntry(entry)}
                       style={{ width: "100%", textAlign: "left", background: "white", border: `1.5px solid ${isMe ? "var(--primary-light)" : "var(--secondary-light)"}`, borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", boxShadow: "var(--shadow-sm)", display: "flex", gap: "0.75rem", alignItems: "flex-start" }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -969,7 +1019,12 @@ export function JournalApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
-          <span>{selectedDate}</span>
+          <span style={{ fontSize: "0.8125rem" }}>{formatDateShortEs(selectedDate)}</span>
+          {!showPartnerEntry && getMyEntry(selectedDate) && (
+            <button onClick={() => deleteEntry(getMyEntry(selectedDate)!)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: "0.25rem" }} aria-label="Eliminar entrada">
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
         <div className="app-content-body">
           {partnerVisible && (
@@ -1321,14 +1376,14 @@ export function JournalApp({ onBack }: Props) {
         {viewingPartner ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}><Heart size={12} /> Entradas de tu pareja</p>
-            {entries.filter(e => e.created_by !== user?.uid).sort((a, b) => b.date.localeCompare(a.date)).map(e => (
-              <button key={e.id} onClick={() => { setSelectedDate(e.date); setViewingPartner(false) }}
+            {mergedEntries().filter(e => e.created_by !== user?.uid).sort((a, b) => b.date.localeCompare(a.date)).map(e => (
+              <button key={e.id} onClick={() => { setViewingPartner(false); openEntry(e) }}
                 style={{ textAlign: "left", background: "linear-gradient(135deg, var(--primary-lighter), white)", border: "1px solid var(--primary-light)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
-                <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>{e.date} <Heart size={10} /></div>
+                <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--secondary)", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>{formatDateShortEs(e.date)} <Heart size={10} /></div>
                 <div style={{ fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{e.content}</div>
               </button>
             ))}
-            {entries.filter(e => e.created_by !== user?.uid).length === 0 && (
+            {mergedEntries().filter(e => e.created_by !== user?.uid).length === 0 && (
               <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
                 <div style={{ color: "var(--primary)", display: "flex", justifyContent: "center" }}><Heart size={32} /></div>
                 <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginTop: "0.375rem" }}>Tu pareja aún no ha escrito</p>
@@ -1343,21 +1398,33 @@ export function JournalApp({ onBack }: Props) {
               <input className="input" type="search" placeholder="Buscar en el diario..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ paddingLeft: "2rem" }} />
             </div>
 
-            {/* Search results vs calendar */}
-            {searchQuery.trim() ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {entries.filter(e => e.content.toLowerCase().includes(searchQuery.toLowerCase())).map(e => (
-                  <button key={e.id} onClick={() => { setSelectedDate(e.date); setSearchQuery("") }}
-                    style={{ textAlign: "left", background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
-                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem" }}>{e.date}</div>
-                    <div style={{ fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{e.content}</div>
-                  </button>
-                ))}
-                {entries.filter(e => e.content.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-                  <p style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: "0.8125rem" }}>Sin resultados</p>
-                )}
-              </div>
-            ) : (
+            {/* Search results vs calendar — searches the whole journal, not just this month */}
+            {searchQuery.trim() ? (() => {
+              const q = searchQuery.toLowerCase()
+              const results = mergedEntries()
+                .filter(e => e.content.toLowerCase().includes(q))
+                .sort((a, b) => b.date.localeCompare(a.date))
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {results.map(e => {
+                    const isMe = e.created_by === myUid
+                    return (
+                      <button key={e.id} onClick={() => { openEntry(e); setSearchQuery("") }}
+                        style={{ textAlign: "left", background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.25rem" }}>
+                          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: isMe ? "var(--primary)" : "var(--secondary)" }}>{formatDateShortEs(e.date)}</span>
+                          <span style={{ fontSize: "0.5625rem", fontWeight: 700, padding: "0.0625rem 0.375rem", borderRadius: "999px", background: isMe ? "var(--primary-lighter)" : "#fce7f3", color: isMe ? "var(--primary)" : "var(--secondary)" }}>{isMe ? "Tú" : "Pareja"}</span>
+                        </div>
+                        <div style={{ fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{e.content}</div>
+                      </button>
+                    )
+                  })}
+                  {results.length === 0 && (
+                    <p style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: "0.8125rem" }}>Sin resultados</p>
+                  )}
+                </div>
+              )
+            })() : (
               <>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <button className="back-btn-phone" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>‹</button>
