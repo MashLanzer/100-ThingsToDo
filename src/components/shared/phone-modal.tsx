@@ -29,7 +29,7 @@ const GREETING_DEFS: Record<string, GreetingDef> = {
 }
 
 export function PhoneModal() {
-  const { showPhoneModal, closePhoneModal, activePhoneApp, setActivePhoneApp, nowPlayingTrack, musicIsPlaying } = useAppStore(
+  const { showPhoneModal, closePhoneModal, activePhoneApp, setActivePhoneApp, nowPlayingTrack, musicIsPlaying, partnerNickname } = useAppStore(
     useShallow((s) => ({
       showPhoneModal: s.showPhoneModal,
       closePhoneModal: s.closePhoneModal,
@@ -37,6 +37,7 @@ export function PhoneModal() {
       setActivePhoneApp: s.setActivePhoneApp,
       nowPlayingTrack: s.nowPlayingTrack,
       musicIsPlaying: s.musicIsPlaying,
+      partnerNickname: s.partnerNickname,
     }))
   )
   const [time, setTime] = useState("")
@@ -145,7 +146,7 @@ export function PhoneModal() {
                               {g.main}
                             </p>
                             <p style={{ fontFamily: "'Quicksand', sans-serif", fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.125rem" }}>
-                              {g.sub}
+                              {partnerNickname.trim() ? `${g.sub}, ${partnerNickname.trim()} 💗` : g.sub}
                             </p>
                           </>
                         )

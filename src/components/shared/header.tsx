@@ -49,7 +49,7 @@ function getPageTitle(path: string, coupleName: string): string {
 }
 
 export function AppHeader() {
-  const { coupleName, setCoupleName, openPhoneModal, openSettingsModal } = useAppStore()
+  const { coupleName, setCoupleName, setPartnerNickname, openPhoneModal, openSettingsModal } = useAppStore()
   const pathname = usePathname()
   const { data } = useCoupleStatus()
   const [isAnniversary, setIsAnniversary] = useState(false)
@@ -77,9 +77,10 @@ export function AppHeader() {
       if (raw) {
         const s = JSON.parse(raw)
         if (s.coupleName && s.coupleName.trim()) setCoupleName(s.coupleName.trim())
+        if (s.partnerNickname && s.partnerNickname.trim()) setPartnerNickname(s.partnerNickname.trim())
       }
     } catch { /* ignore */ }
-  }, [setCoupleName])
+  }, [setCoupleName, setPartnerNickname])
 
   useEffect(() => {
     if (data?.couple?.created_at) {

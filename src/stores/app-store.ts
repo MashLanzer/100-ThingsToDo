@@ -15,6 +15,7 @@ interface AppStore {
   showSettingsModal: boolean
   activePhoneApp: string
   coupleName: string
+  partnerNickname: string
   nowPlayingTrack: NowPlayingTrack | null
   musicIsPlaying: boolean
 
@@ -30,6 +31,7 @@ interface AppStore {
   closeSettingsModal: () => void
   setActivePhoneApp: (app: string) => void
   setCoupleName: (name: string) => void
+  setPartnerNickname: (name: string) => void
   setNowPlayingTrack: (track: NowPlayingTrack | null) => void
   setMusicIsPlaying: (playing: boolean) => void
 }
@@ -42,6 +44,7 @@ export const useAppStore = create<AppStore>((set) => ({
   showSettingsModal: false,
   activePhoneApp: "home",
   coupleName: "ThingsToDo",
+  partnerNickname: "",
   nowPlayingTrack: null,
   musicIsPlaying: false,
 
@@ -58,6 +61,7 @@ export const useAppStore = create<AppStore>((set) => ({
   closeSettingsModal: () => set({ showSettingsModal: false }),
   setActivePhoneApp: (app) => set({ activePhoneApp: app }),
   setCoupleName: (name) => set({ coupleName: name }),
+  setPartnerNickname: (name) => set({ partnerNickname: name }),
   setNowPlayingTrack: (track) => set({ nowPlayingTrack: track }),
   setMusicIsPlaying: (playing) => set({ musicIsPlaying: playing }),
 }))

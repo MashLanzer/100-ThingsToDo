@@ -51,6 +51,7 @@ function saveThemeSettings(patch: Partial<{ themeId: string; fontSize: string; d
 
 interface AppSettings {
   coupleName: string
+  partnerNickname: string
   soundEnabled: boolean
   vibrationEnabled: boolean
   privateJournal: boolean
@@ -60,6 +61,7 @@ interface AppSettings {
 
 const DEFAULT_APP_SETTINGS: AppSettings = {
   coupleName: "",
+  partnerNickname: "",
   soundEnabled: true,
   vibrationEnabled: true,
   privateJournal: false,
@@ -190,7 +192,7 @@ const PIN_KEY = "ttd_journal_pin_v1"
 
 export function SettingsModal() {
   const router = useRouter()
-  const { showSettingsModal, closeSettingsModal, setCoupleName: setStoreCoupleName } = useAppStore()
+  const { showSettingsModal, closeSettingsModal, setCoupleName: setStoreCoupleName, setPartnerNickname: setStorePartnerNickname } = useAppStore()
   const { data, isLoading } = useCoupleStatus()
   const { user } = useAuth()
   const linkMutation = useLinkPartner()
@@ -209,6 +211,7 @@ export function SettingsModal() {
 
   // App settings state
   const [coupleName, setCoupleName] = useState("")
+  const [partnerNickname, setPartnerNickname] = useState("")
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [vibrationEnabled, setVibrationEnabled] = useState(true)
   const [privateJournal, setPrivateJournal] = useState(false)
@@ -234,6 +237,7 @@ export function SettingsModal() {
 
       const as = readAppSettings()
       setCoupleName(as.coupleName ?? "")
+      setPartnerNickname(as.partnerNickname ?? "")
       setSoundEnabled(as.soundEnabled ?? true)
       setVibrationEnabled(as.vibrationEnabled ?? true)
       setPrivateJournal(as.privateJournal ?? false)
@@ -302,6 +306,12 @@ export function SettingsModal() {
     setCoupleName(v)
     saveAppSettings({ coupleName: v })
     setStoreCoupleName(v.trim() || "ThingsToDo")
+  }
+
+  function handlePartnerNicknameChange(v: string) {
+    setPartnerNickname(v)
+    saveAppSettings({ partnerNickname: v })
+    setStorePartnerNickname(v.trim())
   }
 
   function handleSoundToggle(v: boolean) {
@@ -757,6 +767,20 @@ export function SettingsModal() {
                     onChange={(e) => handleCoupleNameChange(e.target.value)}
                     maxLength={40}
                   />
+                </div>
+
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.5rem" }}>Apodo de tu pareja 💗</p>
+                  <input
+                    className="input"
+                    placeholder={data?.partner?.name ? `Ej: Bebé 🌙 (en vez de ${data.partner.name.split(" ")[0]})` : "Ej: Bebé 🌙"}
+                    value={partnerNickname}
+                    onChange={(e) => handlePartnerNicknameChange(e.target.value)}
+                    maxLength={24}
+                  />
+                  <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.375rem" }}>
+                    Se mostrará en el saludo del inicio y en el teléfono
+                  </p>
                 </div>
 
                 <div>

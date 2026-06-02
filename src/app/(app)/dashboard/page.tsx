@@ -145,6 +145,7 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const createPlan = useCreatePlan()
   const { openCoupleModal } = useAppStore()
+  const partnerNickname = useAppStore((s) => s.partnerNickname)
   const ptr = useWindowPTR(() => { refetch() })
 
   const sensors = useSensors(
@@ -380,7 +381,7 @@ export default function DashboardPage() {
         const grad = MONTH_GRADIENTS[now.getMonth()]
         const partner = coupleData?.partner
         const firstName = user?.displayName?.split(" ")[0] ?? "tú"
-        const partnerFirst = partner?.name?.split(" ")[0] ?? "pareja"
+        const partnerFirst = partnerNickname.trim() || partner?.name?.split(" ")[0] || "pareja"
         const activePlanCount = filteredActive.length
         return (
           <div style={{
