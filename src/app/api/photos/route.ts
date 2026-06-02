@@ -60,49 +60,40 @@ export async function GET(req: NextRequest) {
   const debug = searchParams.get("debug") === "1"
 
   // Get couple_id for this user
-  const { data: me, error: meError } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
+  const { data: me } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
   const coupleId = me?.couple_id
 
-  // Determine all UIDs in this couple (so a re-link that changed couple_id
-  // still surfaces photos either partner uploaded).
-  const memberUids = new Set<string>([user.uid])
+  // Build the list of collection_key values to search.
+  // Photos are stored under couple_id (when linked) or user.uid (when solo).
+  // We also fetch photos from each couple member's uid to recover from any
+  // re-link event where the couple_id changed.
+  const collectionKeys: string[] = [...new Set([coupleId, user.uid].filter(Boolean) as string[])]
+
+  // If linked, also add both member UIDs so we catch photos uploaded
+  // before the couple_id was assigned (e.g. during solo testing).
   if (coupleId) {
     const { data: couple } = await supabase
       .from("couples").select("user1_id, user2_id").eq("id", coupleId).single()
-    if (couple?.user1_id) memberUids.add(couple.user1_id)
-    if (couple?.user2_id) memberUids.add(couple.user2_id)
+    if (couple?.user1_id) collectionKeys.push(couple.user1_id)
+    if (couple?.user2_id) collectionKeys.push(couple.user2_id)
   }
 
-  // Fetch from Supabase photos table (new system).
-  // A photo belongs to this couple if its collection_key matches the couple_id
-  // OR any member's uid (legacy/pre-link uploads), OR it was uploaded_by a member
-  // (covers couple_id drift after unlink/re-link).
+  // De-duplicate
+  const uniqueKeys = [...new Set(collectionKeys)]
+
+  // Fetch from Supabase photos table (simple .in() — no OR, no complex filter)
   let supabasePhotos: Array<{
     id: string; image_url: string; thumb_url: string | null; delete_url: string | null;
     caption: string | null; source: string; created_at: string; collection_key: string;
   }> = []
   let supabaseError: string | null = null
-  const collectionKeys = [...new Set([coupleId, ...memberUids].filter(Boolean) as string[])]
-  const memberUidList = [...memberUids]
-  if (collectionKeys.length > 0) {
-    // Try the broad query (collection_key OR uploaded_by). If uploaded_by column
-    // doesn't exist yet (migration 018 not applied), fall back to collection_key only.
-    const orFilter = `collection_key.in.(${collectionKeys.join(",")}),uploaded_by.in.(${memberUidList.join(",")})`
-    let { data, error } = await supabase
+  if (uniqueKeys.length > 0) {
+    const { data, error } = await supabase
       .from("photos")
       .select("*")
-      .or(orFilter)
+      .in("collection_key", uniqueKeys)
       .order("created_at", { ascending: false })
-
-    if (error && /uploaded_by|column .* does not exist/i.test(error.message)) {
-      ;({ data, error } = await supabase
-        .from("photos")
-        .select("*")
-        .in("collection_key", collectionKeys)
-        .order("created_at", { ascending: false }))
-    }
-
-    if (error) { console.error("[photos GET] Supabase error:", error.message); supabaseError = error.message }
+    if (error) { console.error("[photos GET]", error.message); supabaseError = error.message }
     supabasePhotos = data ?? []
   }
 
@@ -121,9 +112,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       uid: user.uid,
       couple_id: coupleId ?? null,
-      member_uids: memberUidList,
-      users_error: meError?.message ?? null,
-      collection_keys: collectionKeys,
+      collection_keys: uniqueKeys,
       supabase_count: supabasePhotos.length,
       supabase_error: supabaseError,
       firestore_count: firestorePhotos.length,
