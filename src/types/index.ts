@@ -198,6 +198,7 @@ export interface Photo {
   uploaded_by?: string | null
   uploaded_by_name?: string | null
   uploaded_by_avatar?: string | null
+  group_id?: string | null
 }
 
 export const KAWAII_ICONS: Record<string, string> = {

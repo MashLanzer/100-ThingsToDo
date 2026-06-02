@@ -163,6 +163,9 @@ export async function POST(req: NextRequest) {
   const caption = formData.get("caption")
   const captionStr = typeof caption === "string" ? caption.trim() || null : null
 
+  const groupIdRaw = formData.get("group_id")
+  const groupId = typeof groupIdRaw === "string" ? groupIdRaw.trim() || null : null
+
   // Upload to ImgBB
   const imgbbForm = new FormData()
   imgbbForm.append("image", file)
@@ -187,6 +190,7 @@ export async function POST(req: NextRequest) {
     delete_url: deleteUrl,
     caption: captionStr,
     source: "thingstodo",
+    ...(groupId ? { group_id: groupId } : {}),
   }
   const uploaderRow = {
     ...baseRow,

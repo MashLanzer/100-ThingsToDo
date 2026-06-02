@@ -249,13 +249,101 @@ function MasonryCard({ photo, onClick }: { photo: Photo; onClick: () => void }) 
 
 const FEED_REACTIONS = ["❤️", "🔥", "✨"] as const
 
+// ── Multi-photo feed grouping ──────────────────────────────────────────────
+type FeedPost = {
+  id: string        // group_id if group, else photo.id
+  photos: Photo[]   // sorted by created_at asc within group
+  isGroup: boolean
+}
+
+function groupPhotosIntoPosts(photos: Photo[]): FeedPost[] {
+  const grouped = new Map<string, Photo[]>()
+  const solos: Photo[] = []
+
+  for (const p of photos) {
+    if (p.group_id) {
+      const arr = grouped.get(p.group_id) ?? []
+      arr.push(p)
+      grouped.set(p.group_id, arr)
+    } else {
+      solos.push(p)
+    }
+  }
+
+  const posts: FeedPost[] = []
+  for (const [gid, gPhotos] of grouped.entries()) {
+    const sorted = [...gPhotos].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    if (sorted.length >= 2) {
+      posts.push({ id: gid, photos: sorted, isGroup: true })
+    } else {
+      solos.push(sorted[0])
+    }
+  }
+  for (const p of solos) posts.push({ id: p.id, photos: [p], isGroup: false })
+
+  return posts.sort((a, b) => new Date(b.photos[0].created_at).getTime() - new Date(a.photos[0].created_at).getTime())
+}
+
+function PhotoCarousel({ photos }: { photos: Photo[] }) {
+  const [idx, setIdx] = useState(0)
+  const touchStartX = useRef<number>(0)
+
+  function prev() { setIdx((i) => (i - 1 + photos.length) % photos.length) }
+  function next() { setIdx((i) => (i + 1) % photos.length) }
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div
+        style={{ overflow: "hidden" }}
+        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX }}
+        onTouchEnd={(e) => {
+          const delta = e.changedTouches[0].clientX - touchStartX.current
+          if (delta < -40) next()
+          else if (delta > 40) prev()
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={photos[idx].image_url}
+          alt={photos[idx].caption ?? ""}
+          style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }}
+        />
+        <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.5)", borderRadius: "999px", padding: "2px 8px", color: "white", fontSize: "0.6875rem", fontWeight: 700 }}>
+          {idx + 1}/{photos.length}
+        </div>
+      </div>
+      {photos.length > 1 && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 5, padding: "6px 0 2px" }}>
+          {photos.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setIdx(i)}
+              style={{
+                width: i === idx ? 16 : 6, height: 6, borderRadius: 999, border: "none", cursor: "pointer", padding: 0,
+                background: i === idx ? "var(--primary)" : "var(--border)",
+                transition: "width 0.2s, background 0.2s",
+              }}
+            />
+          ))}
+        </div>
+      )}
+      {photos[idx].caption && (
+        <p style={{ padding: "4px 12px 0", fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.5 }}>
+          <span style={{ fontWeight: 700 }}>{photos[idx].uploaded_by_name ?? "Nosotros"}</span>{" "}{photos[idx].caption}
+        </p>
+      )}
+    </div>
+  )
+}
+
 // F5: Double-tap to like FeedCard
-function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onOpenComments, partnerViewed }: {
+function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onOpenComments, partnerViewed, groupPhotos }: {
   photo: Photo; onClick: () => void
   reactions: PhotoReaction[]; commentCount: number; myUid: string
   onReact: (emoji: string) => void
   onOpenComments: () => void
   partnerViewed?: boolean
+  groupPhotos?: Photo[]
 }) {
   const appName = photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"
   const uploaderName = photo.uploaded_by_name?.trim() || null
@@ -356,60 +444,97 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
         </div>
       </div>
 
-      {/* Image — double-tap to like, single tap opens lightbox */}
-      <div
-        onClick={handleTap}
-        onPointerDown={startPress}
-        onPointerUp={endPress}
-        onPointerCancel={endPress}
-        onPointerMove={endPress}
-        style={{ cursor: "pointer", position: "relative", userSelect: "none", WebkitUserSelect: "none", touchAction: "pan-y" }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={photo.image_url}
-          alt={photo.caption ?? "Foto"}
-          style={{ width: "100%", display: "block", maxHeight: "78vw", objectFit: "cover", pointerEvents: "none" }}
-          loading="lazy"
-        />
-        {burst && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-            <Heart size={96} fill="#ef4444" color="#ef4444" style={{ animation: "lightboxImgIn 0.6s ease both", filter: "drop-shadow(0 4px 12px rgba(239,68,68,0.6))" }} />
-          </div>
-        )}
-
-        {/* Long-press reaction picker */}
-        {picker && (
-          <>
-            <div onClick={(e) => { e.stopPropagation(); setPicker(false) }}
-              style={{ position: "fixed", inset: 0, zIndex: 49 }} />
-            <div onClick={(e) => e.stopPropagation()}
-              style={{
-                position: "absolute", left: "50%", bottom: "12px", transform: "translateX(-50%)",
-                display: "flex", gap: "0.25rem", zIndex: 50,
-                background: "rgba(255,255,255,0.96)", borderRadius: "999px", padding: "6px 10px",
-                boxShadow: "0 8px 28px rgba(0,0,0,0.28)", animation: "modalIn 0.15s ease",
-              }}>
-              {FEED_REACTIONS.map((emoji) => {
-                const mine = photoReactions.some((r) => r.emoji === emoji && r.user_id === myUid)
-                return (
-                  <button key={emoji} onClick={() => react(emoji)}
-                    style={{
-                      background: mine ? "rgba(139,92,246,0.15)" : "transparent",
-                      border: "none", borderRadius: "50%", cursor: "pointer",
-                      padding: "6px 8px", fontSize: "1.375rem", lineHeight: 1, transition: "transform 0.1s",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.25)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                  >
-                    {emoji}
-                  </button>
-                )
-              })}
+      {/* Image — for group posts show carousel; for solo use double-tap to like / single tap lightbox */}
+      {groupPhotos ? (
+        <div style={{ position: "relative" }}>
+          <PhotoCarousel photos={groupPhotos} />
+          {/* Long-press reaction picker overlay for group posts */}
+          {picker && (
+            <>
+              <div onClick={(e) => { e.stopPropagation(); setPicker(false) }}
+                style={{ position: "fixed", inset: 0, zIndex: 49 }} />
+              <div onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: "absolute", left: "50%", bottom: "12px", transform: "translateX(-50%)",
+                  display: "flex", gap: "0.25rem", zIndex: 50,
+                  background: "rgba(255,255,255,0.96)", borderRadius: "999px", padding: "6px 10px",
+                  boxShadow: "0 8px 28px rgba(0,0,0,0.28)", animation: "modalIn 0.15s ease",
+                }}>
+                {FEED_REACTIONS.map((emoji) => {
+                  const mine = photoReactions.some((r) => r.emoji === emoji && r.user_id === myUid)
+                  return (
+                    <button key={emoji} onClick={() => react(emoji)}
+                      style={{
+                        background: mine ? "rgba(139,92,246,0.15)" : "transparent",
+                        border: "none", borderRadius: "50%", cursor: "pointer",
+                        padding: "6px 8px", fontSize: "1.375rem", lineHeight: 1, transition: "transform 0.1s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.25)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                    >
+                      {emoji}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <div
+          onClick={handleTap}
+          onPointerDown={startPress}
+          onPointerUp={endPress}
+          onPointerCancel={endPress}
+          onPointerMove={endPress}
+          style={{ cursor: "pointer", position: "relative", userSelect: "none", WebkitUserSelect: "none", touchAction: "pan-y" }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photo.image_url}
+            alt={photo.caption ?? "Foto"}
+            style={{ width: "100%", display: "block", maxHeight: "78vw", objectFit: "cover", pointerEvents: "none" }}
+            loading="lazy"
+          />
+          {burst && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+              <Heart size={96} fill="#ef4444" color="#ef4444" style={{ animation: "lightboxImgIn 0.6s ease both", filter: "drop-shadow(0 4px 12px rgba(239,68,68,0.6))" }} />
             </div>
-          </>
-        )}
-      </div>
+          )}
+
+          {/* Long-press reaction picker */}
+          {picker && (
+            <>
+              <div onClick={(e) => { e.stopPropagation(); setPicker(false) }}
+                style={{ position: "fixed", inset: 0, zIndex: 49 }} />
+              <div onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: "absolute", left: "50%", bottom: "12px", transform: "translateX(-50%)",
+                  display: "flex", gap: "0.25rem", zIndex: 50,
+                  background: "rgba(255,255,255,0.96)", borderRadius: "999px", padding: "6px 10px",
+                  boxShadow: "0 8px 28px rgba(0,0,0,0.28)", animation: "modalIn 0.15s ease",
+                }}>
+                {FEED_REACTIONS.map((emoji) => {
+                  const mine = photoReactions.some((r) => r.emoji === emoji && r.user_id === myUid)
+                  return (
+                    <button key={emoji} onClick={() => react(emoji)}
+                      style={{
+                        background: mine ? "rgba(139,92,246,0.15)" : "transparent",
+                        border: "none", borderRadius: "50%", cursor: "pointer",
+                        padding: "6px 8px", fontSize: "1.375rem", lineHeight: 1, transition: "transform 0.1s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.25)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                    >
+                      {emoji}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Action bar */}
       <div style={{ display: "flex", alignItems: "center", gap: "1.125rem", padding: "0.5rem 0.875rem 0.25rem" }}>
@@ -441,8 +566,8 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
         )}
       </div>
 
-      {/* Caption */}
-      {photo.caption && (
+      {/* Caption — for group posts the caption is rendered inside PhotoCarousel */}
+      {!groupPhotos && photo.caption && (
         <p style={{ padding: "0.25rem 0.875rem 0", fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.4 }}>
           <span style={{ fontWeight: 700, marginRight: "0.375rem" }}>{displayName}</span>
           {photo.caption}
@@ -1638,11 +1763,12 @@ export default function FotosPage() {
     setUploadProgress({ current: 0, total: items.length, fileName: "" })
     let successCount = 0
     const freshIds: string[] = []
+    const groupId = items.length > 1 ? crypto.randomUUID() : undefined
     for (let i = 0; i < items.length; i++) {
       const { file, caption } = items[i]
       setUploadProgress({ current: i + 1, total: items.length, fileName: file.name })
       try {
-        const result = await uploadPhoto.mutateAsync({ file, caption: caption || undefined })
+        const result = await uploadPhoto.mutateAsync({ file, caption: caption || undefined, group_id: groupId })
         successCount++
         if (result?.id) freshIds.push(result.id)
       } catch (err: unknown) {
@@ -2198,19 +2324,23 @@ export default function FotosPage() {
                 </div>
               ) : (
                 <div style={{ padding: "0.25rem 0 0.5rem" }}>
-                  {group.photos.map((photo) => (
-                    <FeedCard
-                      key={photo.id}
-                      photo={photo}
-                      reactions={reactions}
-                      commentCount={comments.filter((c) => c.photo_id === photo.id).length}
-                      myUid={myUid}
-                      onReact={(emoji) => toggleReaction.mutate({ photoId: photo.id, emoji })}
-                      onOpenComments={() => setCommentsPhotoId(photo.id)}
-                      onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === photo.id))}
-                      partnerViewed={(photoViews as Record<string, PhotoViewData>)[photo.id]?.partner_viewed}
-                    />
-                  ))}
+                  {groupPhotosIntoPosts(group.photos).map((post) => {
+                    const primaryPhoto = post.photos[0]
+                    return (
+                      <FeedCard
+                        key={post.id}
+                        photo={primaryPhoto}
+                        reactions={reactions}
+                        commentCount={comments.filter((c) => c.photo_id === primaryPhoto.id).length}
+                        myUid={myUid}
+                        onReact={(emoji) => toggleReaction.mutate({ photoId: primaryPhoto.id, emoji })}
+                        onOpenComments={() => setCommentsPhotoId(primaryPhoto.id)}
+                        onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === primaryPhoto.id))}
+                        partnerViewed={(photoViews as Record<string, PhotoViewData>)[primaryPhoto.id]?.partner_viewed}
+                        groupPhotos={post.isGroup ? post.photos : undefined}
+                      />
+                    )
+                  })}
                 </div>
               )}
             </div>

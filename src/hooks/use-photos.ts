@@ -78,10 +78,11 @@ export function usePhotosPaginated() {
 export function useUploadPhoto() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ file, caption }: { file: File; caption?: string }) => {
+    mutationFn: ({ file, caption, group_id }: { file: File; caption?: string; group_id?: string }) => {
       const formData = new FormData()
       formData.append("file", file)
       if (caption) formData.append("caption", caption)
+      if (group_id) formData.append("group_id", group_id)
       return authFetchFormData("/api/photos", formData)
     },
     onSuccess: () => {
