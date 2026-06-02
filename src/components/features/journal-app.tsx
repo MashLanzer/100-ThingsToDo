@@ -5,7 +5,7 @@ import { getFirebaseToken } from "@/lib/firebase/client"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import type { JournalEntry, Letter } from "@/types"
-import { Lock, Unlock, Flame, Smile, Heart, Laugh, Frown, Meh, Moon, User, Camera, Mail, FileText, CheckCircle2, PenLine, Search as SearchIcon, BarChart2, Mic, MicOff, Square, Trash2 } from "lucide-react"
+import { Lock, Unlock, Flame, Smile, Heart, Laugh, Frown, Meh, Moon, User, Camera, Mail, FileText, CheckCircle2, PenLine, Search as SearchIcon, BarChart2, Mic, MicOff, Square, Trash2, Tag, MapPin } from "lucide-react"
 
 const MOODS = [
   { id: "happy",    Icon: Smile,  label: "Feliz",       accent: "#FEF3C7", accentBorder: "#F59E0B", accentText: "#92400E" },
@@ -222,7 +222,6 @@ export function JournalApp({ onBack }: Props) {
   const [gettingLocation, setGettingLocation] = useState(false)
   const [paperMode, setPaperMode] = useState<"normal" | "sepia">("normal") // F6: sepia paper while writing
   const [saveBurst, setSaveBurst] = useState(false)                  // F5: confetti on save
-  const [reminderTime, setReminderTime] = useState<string>("")       // F9: daily reminder (HH:MM, empty = off)
   const [reactingId, setReactingId] = useState<string | null>(null)  // F14: which entry's reaction is being toggled
 
   // New design improvements
@@ -256,29 +255,11 @@ export function JournalApp({ onBack }: Props) {
     if (stored) setPinRequired(true)
     try {
       setPaperMode((localStorage.getItem("ttd_journal_paper") as "normal" | "sepia") ?? "normal")
-      setReminderTime(localStorage.getItem("ttd_journal_reminder") ?? "")
     } catch { /* storage unavailable */ }
   }, [])
 
   useEffect(() => { loadEntries() }, [month, year])
   useEffect(() => { loadAllEntries() }, [])
-
-  // F9: schedule a one-shot browser notification for today's reminder time while
-  // the app stays open. A true push needs a server cron; this covers in-app use.
-  useEffect(() => {
-    if (!reminderTime || typeof window === "undefined" || !("Notification" in window)) return
-    const [h, m] = reminderTime.split(":").map(Number)
-    if (Number.isNaN(h) || Number.isNaN(m)) return
-    const now = new Date()
-    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0)
-    if (target.getTime() <= now.getTime()) return // time already passed today
-    const id = setTimeout(() => {
-      if (Notification.permission === "granted") {
-        new Notification("📔 Tu diario te espera", { body: "¿Escribiste hoy? Cuenta cómo fue vuestro día 💕" })
-      }
-    }, target.getTime() - now.getTime())
-    return () => clearTimeout(id)
-  }, [reminderTime])
 
   useEffect(() => {
     return () => {
@@ -977,7 +958,7 @@ export function JournalApp({ onBack }: Props) {
         `}</style>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
-          <span>📜 Timeline</span>
+          <span>Timeline</span>
         </div>
         <div className="app-content-body">
           {/* Filter toggle */}
@@ -985,7 +966,7 @@ export function JournalApp({ onBack }: Props) {
             {(["all", "me", "partner"] as const).map(f => (
               <button key={f} onClick={() => setTimelineFilter(f)}
                 style={{ fontSize: "0.6875rem", fontWeight: 700, padding: "0.3125rem 0.875rem", borderRadius: "999px", border: "none", cursor: "pointer", fontFamily: "inherit", background: timelineFilter === f ? "var(--primary)" : "var(--muted)", color: timelineFilter === f ? "white" : "var(--foreground-muted)", transition: "all 0.15s ease" }}>
-                {f === "all" ? "🌍 Todos" : f === "me" ? "🙋 Yo" : "💑 Pareja"}
+                {f === "all" ? "Todos" : f === "me" ? "Yo" : "Pareja"}
               </button>
             ))}
           </div>
@@ -1056,7 +1037,7 @@ export function JournalApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("letters")}>‹</button>
-          <span>💌 Carta</span>
+          <span>Carta</span>
           {isFromMe && (
             <button onClick={() => deleteLetter(selectedLetter.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: "0.25rem" }}>
               <Trash2 size={16} />
@@ -1097,7 +1078,7 @@ export function JournalApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("letters")}>‹</button>
-          <span>✏️ Escribir carta</span>
+          <span>Escribir carta</span>
         </div>
         <div className="app-content-body">
           <div style={{ background: "linear-gradient(135deg, #fffbf0 0%, #fff8e8 100%)", border: "1.5px solid #f5e6c8", borderRadius: "var(--radius-lg)", padding: "1rem", marginBottom: "1rem" }}>
@@ -1119,7 +1100,7 @@ export function JournalApp({ onBack }: Props) {
             />
           </div>
           <button className="btn btn-primary" onClick={sendLetter} disabled={sendingLetter || !letterContent.trim()}>
-            {sendingLetter ? "Enviando..." : "💌 Enviar carta"}
+            {sendingLetter ? "Enviando..." : "Enviar carta"}
           </button>
         </div>
       </>
@@ -1134,12 +1115,12 @@ export function JournalApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
-          <span>💌 Cartas</span>
+          <span>Cartas</span>
           <button
             onClick={() => setView("letters-compose")}
             style={{ fontSize: "0.6875rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none", background: "var(--secondary)", color: "white", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}
           >
-            ✏️ Escribir
+            Escribir
           </button>
         </div>
         <div className="app-content-body">
@@ -1148,7 +1129,7 @@ export function JournalApp({ onBack }: Props) {
               <p style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>💌</p>
               <p style={{ color: "var(--foreground-muted)", fontSize: "0.875rem" }}>Aún no hay cartas</p>
               <button className="btn btn-primary" style={{ marginTop: "1rem" }} onClick={() => setView("letters-compose")}>
-                ✏️ Escribir primera carta
+                Escribir primera carta
               </button>
             </div>
           )}
@@ -1234,7 +1215,7 @@ export function JournalApp({ onBack }: Props) {
       <>
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
-          <span style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem" }}>📖 Juntos · {formatDateShortEs(selectedDate)}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem" }}>Juntos · {formatDateShortEs(selectedDate)}</span>
         </div>
         <div className="app-content-body" style={{ gap: "0.625rem" }}>
           <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", textAlign: "center" }}>Vuestras dos versiones del mismo día 💕</p>
@@ -1456,7 +1437,7 @@ export function JournalApp({ onBack }: Props) {
             onClick={() => { const next = paperMode === "sepia" ? "normal" : "sepia"; setPaperMode(next); try { localStorage.setItem("ttd_journal_paper", next) } catch { /* */ } }}
             title="Modo papel sepia"
             style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1rem", padding: "0.25rem" }}
-          >{paperMode === "sepia" ? "🌙" : "📜"}</button>
+          ><Moon size={15} style={{ color: paperMode === "sepia" ? "#92400e" : "var(--foreground-muted)" }} /></button>
         </div>
         <div className="app-content-body" style={paperMode === "sepia" ? { background: "linear-gradient(180deg, #f4ecd8 0%, #efe4c8 100%)" } : undefined}>
           <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.375rem", textTransform: "capitalize" }}>{formatDateShortEs(selectedDate ?? "")}</p>
@@ -1464,7 +1445,7 @@ export function JournalApp({ onBack }: Props) {
           {/* F13: Entry templates (only for a fresh, empty entry) */}
           {!isEditing && !writeContent.trim() && (
             <div style={{ marginBottom: "0.625rem" }}>
-              <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.375rem" }}>✨ Empieza con una plantilla</p>
+              <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.375rem" }}>Empieza con una plantilla</p>
               <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", paddingBottom: "0.25rem", scrollbarWidth: "none" }}>
                 {ENTRY_TEMPLATES.map(t => (
                   <button key={t.id}
@@ -1501,7 +1482,7 @@ export function JournalApp({ onBack }: Props) {
               }}
               style={{ fontSize: "0.6875rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "1px solid var(--border)", background: "var(--muted)", cursor: "pointer", fontFamily: "inherit", color: "var(--foreground-muted)", fontWeight: 600 }}
             >
-              💡 Inspiración
+              Inspiración
             </button>
           </div>
 
@@ -1529,7 +1510,7 @@ export function JournalApp({ onBack }: Props) {
 
           {/* F8: Tags */}
           <div style={{ marginBottom: "0.625rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}>🏷️ Etiquetas</label>
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Tag size={12} /> Etiquetas</label>
             {writeTags.length > 0 && (
               <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: "0.375rem" }}>
                 {writeTags.map(t => (
@@ -1552,7 +1533,7 @@ export function JournalApp({ onBack }: Props) {
 
           {/* F12: Location */}
           <div style={{ marginBottom: "0.625rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}>📍 Lugar</label>
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><MapPin size={12} /> Lugar</label>
             <div style={{ display: "flex", gap: "0.375rem" }}>
               <input
                 className="input"
@@ -1563,7 +1544,7 @@ export function JournalApp({ onBack }: Props) {
               />
               <button type="button" onClick={useMyLocation} disabled={gettingLocation}
                 style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0 0.75rem", borderRadius: "var(--radius-md)", border: "1.5px solid var(--primary-light)", background: "var(--primary-lighter)", cursor: gettingLocation ? "wait" : "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, color: "var(--primary)" }}>
-                {gettingLocation ? "…" : "📍 GPS"}
+                {gettingLocation ? "…" : "GPS"}
               </button>
             </div>
           </div>
@@ -1592,7 +1573,7 @@ export function JournalApp({ onBack }: Props) {
               }}
             >
               <Camera size={14} />
-              {uploadingPhoto ? "Subiendo..." : "📷 Añadir fotos"}
+              {uploadingPhoto ? "Subiendo..." : "Añadir fotos"}
             </button>
             {photoUrls.length > 0 && (
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
@@ -1679,12 +1660,12 @@ export function JournalApp({ onBack }: Props) {
   // ── CALENDAR view ──────────────────────────────────────────────────────────
 
   const NAV_TABS = [
-    { key: "calendar",  label: "📅 Mes",    action: () => { setViewingPartner(false); setView("calendar") } },
-    { key: "timeline",  label: "📜 Feed",   action: () => setView("timeline") },
-    { key: "stats",     label: "📊 Stats",  action: () => setView("stats") },
-    { key: "letters",   label: unreadCount > 0 ? `💌 Cartas ${unreadCount}` : "💌 Cartas", action: () => { loadLetters(); setView("letters") } },
-    ...(!privateJournal ? [{ key: "partner", label: "👥 Pareja", action: () => setViewingPartner(v => !v) }] : []),
-    { key: "export",    label: "📕 PDF",    action: () => exportPdf() },
+    { key: "calendar",  label: "Mes",      action: () => { setViewingPartner(false); setView("calendar") } },
+    { key: "timeline",  label: "Feed",     action: () => setView("timeline") },
+    { key: "stats",     label: "Stats",    action: () => setView("stats") },
+    { key: "letters",   label: unreadCount > 0 ? `Cartas (${unreadCount})` : "Cartas", action: () => { loadLetters(); setView("letters") } },
+    ...(!privateJournal ? [{ key: "partner", label: "Pareja", action: () => setViewingPartner(v => !v) }] : []),
+    { key: "export",    label: "Exportar", action: () => exportPdf() },
   ]
   const activeTab = viewingPartner ? "partner" : (["timeline","stats","letters"].includes(view) ? view : "calendar")
 
@@ -1941,31 +1922,6 @@ export function JournalApp({ onBack }: Props) {
                   )}
                 </div>
 
-                {/* F9: Daily writing reminder */}
-                <div style={{ marginTop: "0.875rem", background: "var(--muted)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.625rem 0.75rem", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground-light)", display: "flex", alignItems: "center", gap: "0.25rem" }}>🔔 Recordatorio</span>
-                  <input
-                    type="time"
-                    value={reminderTime}
-                    onChange={async (e) => {
-                      const val = e.target.value
-                      setReminderTime(val)
-                      try { val ? localStorage.setItem("ttd_journal_reminder", val) : localStorage.removeItem("ttd_journal_reminder") } catch { /* */ }
-                      if (val && typeof Notification !== "undefined" && Notification.permission === "default") {
-                        try { await Notification.requestPermission() } catch { /* */ }
-                      }
-                      if (val) toast.success(`Te recordaré escribir a las ${val} 💕`)
-                    }}
-                    style={{ flex: 1, minWidth: 110, padding: "0.375rem 0.5rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", fontFamily: "inherit", fontSize: "0.8125rem", background: "white", color: "var(--foreground)" }}
-                  />
-                  {reminderTime && (
-                    <button onClick={() => { setReminderTime(""); try { localStorage.removeItem("ttd_journal_reminder") } catch { /* */ } }}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", fontSize: "0.75rem", fontWeight: 700, fontFamily: "inherit" }}>Quitar</button>
-                  )}
-                </div>
-                <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", textAlign: "center", marginTop: "0.375rem" }}>
-                  El aviso llega mientras la app está abierta.
-                </p>
               </>
             )}
           </>
