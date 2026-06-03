@@ -1692,7 +1692,7 @@ function CaptionDialogContent({
         </>
       )}
 
-      <div style={{ display: "flex", gap: "0.625rem", marginTop: isMultiple ? "1rem" : 0 }}>
+      <div style={{ display: "flex", gap: "0.625rem", marginTop: isMultiple ? "1rem" : 0, position: "sticky", bottom: 0, background: "var(--surface)", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
         <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleConfirm} disabled={uploading}>
           {uploading ? "Subiendo..." : "Subir"}
         </button>
@@ -2698,42 +2698,46 @@ export default function FotosPage() {
 
             {/* Step 1: Review selection */}
             {wizardStep === "review" && (
-              <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
-                  <p style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)" }}>
-                    {reviewFiles.length} foto{reviewFiles.length !== 1 ? "s" : ""} seleccionada{reviewFiles.length !== 1 ? "s" : ""}
-                  </p>
-                  <button onClick={cancelWizard} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "0.25rem", fontSize: "1rem" }}>✕</button>
+              <>
+                <div style={{ flex: 1, overflowY: "auto", padding: "1rem 1rem 0.5rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
+                    <p style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)" }}>
+                      {reviewFiles.length} foto{reviewFiles.length !== 1 ? "s" : ""} seleccionada{reviewFiles.length !== 1 ? "s" : ""}
+                    </p>
+                    <button onClick={cancelWizard} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "0.25rem", fontSize: "1rem" }}>✕</button>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
+                    {reviewFiles.map((file, i) => (
+                      <ReviewThumb
+                        key={`${file.name}-${file.size}-${i}`}
+                        file={file}
+                        onRemove={() => {
+                          const next = reviewFiles.filter((_, j) => j !== i)
+                          setReviewFiles(next)
+                          if (next.length === 0) cancelWizard()
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", marginBottom: "1rem" }}>
-                  {reviewFiles.map((file, i) => (
-                    <ReviewThumb
-                      key={`${file.name}-${file.size}-${i}`}
-                      file={file}
-                      onRemove={() => {
-                        const next = reviewFiles.filter((_, j) => j !== i)
-                        setReviewFiles(next)
-                        if (next.length === 0) cancelWizard()
+                <div style={{ flexShrink: 0, padding: "0.75rem 1rem", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))", borderTop: "1px solid var(--border)" }}>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button className="btn btn-outline" style={{ flex: 1 }} onClick={cancelWizard}>Cancelar</button>
+                    <button
+                      className="btn btn-primary"
+                      style={{ flex: 2 }}
+                      onClick={() => {
+                        setPendingFiles(reviewFiles)
+                        setEditedFiles([])
+                        setEditingFileIndex(0)
+                        setWizardStep("edit")
                       }}
-                    />
-                  ))}
+                    >
+                      Continuar →
+                    </button>
+                  </div>
                 </div>
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <button className="btn btn-outline" style={{ flex: 1 }} onClick={cancelWizard}>Cancelar</button>
-                  <button
-                    className="btn btn-primary"
-                    style={{ flex: 2 }}
-                    onClick={() => {
-                      setPendingFiles(reviewFiles)
-                      setEditedFiles([])
-                      setEditingFileIndex(0)
-                      setWizardStep("edit")
-                    }}
-                  >
-                    Continuar →
-                  </button>
-                </div>
-              </div>
+              </>
             )}
 
             {/* Step 2: Edit — per-file image editor */}

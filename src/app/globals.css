@@ -359,10 +359,9 @@ body {
   width: 100%;
   max-width: 480px;
   max-height: 88vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-  touch-action: pan-y;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   animation: modalIn 0.25s ease;
 }
 
@@ -377,6 +376,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 2;
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -404,6 +404,11 @@ body {
 
 .modal-body {
   padding: 1.25rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-footer {
@@ -446,6 +451,7 @@ body {
   border-radius: 999px;
   padding: 3px;
   gap: 2px;
+  flex-shrink: 0;
 }
 .pill-tab-btn {
   flex: 1;

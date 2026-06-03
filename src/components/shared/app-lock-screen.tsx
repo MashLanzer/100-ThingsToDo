@@ -19,6 +19,7 @@ export function AppLockScreen({ onUnlock, allowBiometric = false, onBiometricAtt
   const [bioLoading, setBioLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState("")
   const [couplePhoto, setCouplePhoto] = useState<string | null>(null)
+  const [view, setView] = useState<"bio" | "pin">(allowBiometric ? "bio" : "pin")
 
   // Load the cached couple photo to use as the lock-screen backdrop
   useEffect(() => {
@@ -46,9 +47,13 @@ export function AppLockScreen({ onUnlock, allowBiometric = false, onBiometricAtt
     try {
       const ok = await onBiometricAttempt()
       if (ok) onUnlock()
-      else setErrorMsg("Biometría cancelada — introduce tu PIN")
+      else {
+        setErrorMsg("Biometría cancelada — introduce tu PIN")
+        setTimeout(() => setView("pin"), 500)
+      }
     } catch {
       setErrorMsg("Biometría no disponible — introduce tu PIN")
+      setTimeout(() => setView("pin"), 500)
     } finally {
       setBioLoading(false)
     }
@@ -90,75 +95,120 @@ export function AppLockScreen({ onUnlock, allowBiometric = false, onBiometricAtt
       padding: "2rem 1.5rem", gap: "1.5rem",
       fontFamily: "'Quicksand', sans-serif",
     }}>
-      {/* Lock icon */}
-      <div style={{ fontSize: "3rem", lineHeight: 1, filter: hasPhoto ? "drop-shadow(0 2px 8px rgba(0,0,0,0.5))" : undefined }}>🔒</div>
-      <div style={{ textAlign: "center" }}>
-        <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.5rem", fontWeight: 700, color: titleColor, margin: 0, textShadow: hasPhoto ? "0 2px 12px rgba(0,0,0,0.6)" : undefined }}>
-          ThingsToDo
-        </h1>
-        <p style={{ color: subColor, fontSize: "0.875rem", marginTop: "0.25rem", textShadow: hasPhoto ? "0 1px 8px rgba(0,0,0,0.6)" : undefined }}>
-          {allowBiometric ? "Usa tu huella o introduce el PIN" : "Introduce tu PIN para continuar"}
-        </p>
-      </div>
+      {view === "bio" ? (
+        <>
+          {/* Lock icon */}
+          <div style={{ fontSize: "3rem", lineHeight: 1, filter: hasPhoto ? "drop-shadow(0 2px 8px rgba(0,0,0,0.5))" : undefined }}>🔒</div>
+          <div style={{ textAlign: "center" }}>
+            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.5rem", fontWeight: 700, color: titleColor, margin: 0, textShadow: hasPhoto ? "0 2px 12px rgba(0,0,0,0.6)" : undefined }}>
+              ThingsToDo
+            </h1>
+            <p style={{ color: subColor, fontSize: "0.875rem", marginTop: "0.25rem", textShadow: hasPhoto ? "0 1px 8px rgba(0,0,0,0.6)" : undefined }}>
+              Usa tu huella para entrar
+            </p>
+          </div>
 
-      {/* PIN dots */}
-      <div style={{
-        display: "flex", gap: "1rem",
-        animation: shake ? "pinShake 0.5s ease" : undefined,
-      }}>
-        {[0,1,2,3].map(i => (
-          <div key={i} style={{
-            width: 16, height: 16, borderRadius: "50%",
-            background: i < input.length
-              ? (hasPhoto ? "#ffffff" : "var(--primary, #8B5CF6)")
-              : (hasPhoto ? "rgba(255,255,255,0.25)" : "var(--border, #E8E0F0)"),
-            border: hasPhoto ? "2px solid rgba(255,255,255,0.8)" : "2px solid var(--primary, #8B5CF6)",
-            transition: "background 0.15s",
-          }} />
-        ))}
-      </div>
-
-      {errorMsg && (
-        <p style={{ color: hasPhoto ? "#fecaca" : "#ef4444", fontSize: "0.8125rem", fontWeight: 600, margin: 0, textShadow: hasPhoto ? "0 1px 8px rgba(0,0,0,0.6)" : undefined }}>{errorMsg}</p>
-      )}
-
-      {/* Keypad */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", width: "100%", maxWidth: 260 }}>
-        {DIGITS.map((d, i) => (
-          d === undefined ? <div key={i} /> : (
-            <button
-              key={i}
-              onClick={() => handleDigit(d)}
-              disabled={bioLoading}
-              style={{
-                height: 60, borderRadius: "var(--radius-lg, 16px)",
-                background: keyBg, border: keyBorder,
-                fontSize: d === "⌫" ? "1.25rem" : "1.5rem",
-                fontFamily: "'Fredoka', sans-serif", fontWeight: 600,
-                color: keyColor, cursor: "pointer",
-                transition: "transform 0.1s, background 0.1s",
-                backdropFilter: "blur(8px)",
-              }}
-              onTouchStart={(e) => { e.currentTarget.style.transform = "scale(0.93)"; e.currentTarget.style.background = keyBgActive }}
-              onTouchEnd={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.background = keyBg }}
-            >
-              {d}
+          {/* Big fingerprint button */}
+          {bioLoading ? (
+            <Loader2 size={48} style={{ animation: "spin 1s linear infinite", color: hasPhoto ? "#ffffff" : "var(--primary, #8B5CF6)" }} />
+          ) : (
+            <button onClick={handleBiometric} style={{
+              background: "none", border: "2px solid rgba(255,255,255,0.3)", borderRadius: "50%",
+              width: 88, height: 88, fontSize: "3rem", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              backdropFilter: "blur(8px)", transition: "transform 0.1s",
+            }}>
+              👆
             </button>
-          )
-        ))}
-      </div>
+          )}
 
-      {/* Biometric retry button */}
-      {allowBiometric && !bioLoading && (
-        <button
-          onClick={handleBiometric}
-          style={{ background: "none", border: "none", cursor: "pointer", fontSize: "2rem", padding: "0.5rem" }}
-          title="Usar huella"
-        >
-          👆
-        </button>
+          {errorMsg && <p style={{ color: "#fecaca", fontSize: "0.875rem", fontWeight: 600 }}>{errorMsg}</p>}
+
+          {/* Switch to PIN */}
+          <button onClick={() => { setErrorMsg(""); setView("pin") }} style={{
+            background: "none", border: "none", cursor: "pointer",
+            color: hasPhoto ? "rgba(255,255,255,0.75)" : "var(--primary)",
+            fontSize: "0.875rem", fontWeight: 600, fontFamily: "inherit", textDecoration: "underline",
+          }}>
+            Usar PIN
+          </button>
+        </>
+      ) : (
+        <>
+          {/* Lock icon */}
+          <div style={{ fontSize: "3rem", lineHeight: 1, filter: hasPhoto ? "drop-shadow(0 2px 8px rgba(0,0,0,0.5))" : undefined }}>🔒</div>
+          <div style={{ textAlign: "center" }}>
+            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.5rem", fontWeight: 700, color: titleColor, margin: 0, textShadow: hasPhoto ? "0 2px 12px rgba(0,0,0,0.6)" : undefined }}>
+              ThingsToDo
+            </h1>
+            <p style={{ color: subColor, fontSize: "0.875rem", marginTop: "0.25rem", textShadow: hasPhoto ? "0 1px 8px rgba(0,0,0,0.6)" : undefined }}>
+              Introduce tu PIN para continuar
+            </p>
+          </div>
+
+          {/* PIN dots */}
+          <div style={{
+            display: "flex", gap: "1rem",
+            animation: shake ? "pinShake 0.5s ease" : undefined,
+          }}>
+            {[0,1,2,3].map(i => (
+              <div key={i} style={{
+                width: 16, height: 16, borderRadius: "50%",
+                background: i < input.length
+                  ? (hasPhoto ? "#ffffff" : "var(--primary, #8B5CF6)")
+                  : (hasPhoto ? "rgba(255,255,255,0.25)" : "var(--border, #E8E0F0)"),
+                border: hasPhoto ? "2px solid rgba(255,255,255,0.8)" : "2px solid var(--primary, #8B5CF6)",
+                transition: "background 0.15s",
+              }} />
+            ))}
+          </div>
+
+          {errorMsg && (
+            <p style={{ color: hasPhoto ? "#fecaca" : "#ef4444", fontSize: "0.8125rem", fontWeight: 600, margin: 0, textShadow: hasPhoto ? "0 1px 8px rgba(0,0,0,0.6)" : undefined }}>{errorMsg}</p>
+          )}
+
+          {/* Keypad */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", width: "100%", maxWidth: 260 }}>
+            {DIGITS.map((d, i) => (
+              d === undefined ? <div key={i} /> : (
+                <button
+                  key={i}
+                  onClick={() => handleDigit(d)}
+                  disabled={bioLoading}
+                  style={{
+                    height: 60, borderRadius: "var(--radius-lg, 16px)",
+                    background: keyBg, border: keyBorder,
+                    fontSize: d === "⌫" ? "1.25rem" : "1.5rem",
+                    fontFamily: "'Fredoka', sans-serif", fontWeight: 600,
+                    color: keyColor, cursor: "pointer",
+                    transition: "transform 0.1s, background 0.1s",
+                    backdropFilter: "blur(8px)",
+                  }}
+                  onTouchStart={(e) => { e.currentTarget.style.transform = "scale(0.93)"; e.currentTarget.style.background = keyBgActive }}
+                  onTouchEnd={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.background = keyBg }}
+                >
+                  {d}
+                </button>
+              )
+            ))}
+          </div>
+
+          {/* Biometric fallback button */}
+          {allowBiometric && !bioLoading && (
+            <button
+              onClick={handleBiometric}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "0.5rem",
+                color: hasPhoto ? "rgba(255,255,255,0.75)" : "var(--primary)",
+                fontFamily: "inherit", fontWeight: 600, fontSize: "0.875rem", textDecoration: "underline",
+              }}
+              title="Usar huella"
+            >
+              👆 Usar huella
+            </button>
+          )}
+          {bioLoading && <Loader2 size={28} style={{ animation: "spin 1s linear infinite", color: "var(--primary, #8B5CF6)" }} />}
+        </>
       )}
-      {bioLoading && <Loader2 size={28} style={{ animation: "spin 1s linear infinite", color: "var(--primary, #8B5CF6)" }} />}
     </div>
   )
 }
