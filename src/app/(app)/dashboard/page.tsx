@@ -33,7 +33,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
-function SwipePlanCard({ plan, index, onDelete, cardSize }: { plan: Plan; index: number; onDelete: () => void; cardSize?: "compact" | "normal" | "large" }) {
+function SwipePlanCard({ plan, index, onDelete, cardSize, isNew }: { plan: Plan; index: number; onDelete: () => void; cardSize?: "compact" | "normal" | "large"; isNew?: boolean }) {
   const [swipeX, setSwipeX] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const touchStartX = useRef<number>(0)
@@ -102,7 +102,7 @@ function SwipePlanCard({ plan, index, onDelete, cardSize }: { plan: Plan; index:
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <PlanCard plan={plan} index={index} cardSize={cardSize} />
+        <PlanCard plan={plan} index={index} cardSize={cardSize} isNew={isNew} />
       </div>
     </div>
   )
@@ -170,6 +170,7 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<"grid" | "calendar">("grid")
   const [localPlanOrder, setLocalPlanOrder] = useState<string[] | null>(null)
   const [showSortMenu, setShowSortMenu] = useState(false)
+  const [newlyCreatedId, setNewlyCreatedId] = useState<string | null>(null)
   const sortMenuRef = useRef<HTMLDivElement>(null)
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (typeof window === "undefined") return false
@@ -293,7 +294,7 @@ export default function DashboardPage() {
       return
     }
     try {
-      await createPlan.mutateAsync({
+      const created = await createPlan.mutateAsync({
         title: title.trim(),
         description: desc.trim() || undefined,
         cover_image: newCoverImage.trim() || undefined,
@@ -309,6 +310,10 @@ export default function DashboardPage() {
       setNewTagInput("")
       setShowForm(false)
       toast.success("Plan creado 🎉")
+      if (created?.id) {
+        setNewlyCreatedId(created.id)
+        setTimeout(() => setNewlyCreatedId(null), 1500)
+      }
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error al crear plan")
     }
@@ -835,7 +840,7 @@ export default function DashboardPage() {
                 <SortableContext items={inProgressPlans.map((p) => p.id)} strategy={verticalListSortingStrategy}>
                   <div>
                     {inProgressPlans.map((plan, i) => (
-                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} cardSize={cardSize} />
+                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} cardSize={cardSize} isNew={plan.id === newlyCreatedId} />
                     ))}
                   </div>
                 </SortableContext>

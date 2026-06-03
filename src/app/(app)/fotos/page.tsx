@@ -287,10 +287,11 @@ function groupPhotosIntoPosts(photos: Photo[]): FeedPost[] {
 
 function PhotoCarousel({ photos }: { photos: Photo[] }) {
   const [idx, setIdx] = useState(0)
+  const [imgLoading, setImgLoading] = useState(false)
   const touchStartX = useRef<number>(0)
 
-  function prev() { setIdx((i) => (i - 1 + photos.length) % photos.length) }
-  function next() { setIdx((i) => (i + 1) % photos.length) }
+  function prev() { setIdx((i) => (i - 1 + photos.length) % photos.length); setImgLoading(true) }
+  function next() { setIdx((i) => (i + 1) % photos.length); setImgLoading(true) }
 
   // Preload next image so switching feels instant
   const nextSrc = photos[(idx + 1) % photos.length]?.medium_url ?? photos[(idx + 1) % photos.length]?.image_url
@@ -303,7 +304,7 @@ function PhotoCarousel({ photos }: { photos: Photo[] }) {
   return (
     <div style={{ position: "relative" }}>
       <div
-        style={{ overflow: "hidden" }}
+        style={{ overflow: "hidden", position: "relative" }}
         onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX }}
         onTouchEnd={(e) => {
           const delta = e.changedTouches[0].clientX - touchStartX.current
@@ -313,11 +314,24 @@ function PhotoCarousel({ photos }: { photos: Photo[] }) {
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          key={photos[idx].id}
           src={photos[idx].medium_url ?? photos[idx].image_url}
           alt={photos[idx].caption ?? ""}
           decoding="async"
-          style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }}
+          onLoad={() => setImgLoading(false)}
+          style={{
+            width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block",
+            animation: "imgFadeIn 0.25s ease forwards",
+          }}
         />
+        {imgLoading && (
+          <div style={{
+            position: "absolute", inset: 0, background: "var(--muted)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <div className="skeleton" style={{ position: "absolute", inset: 0 }} />
+          </div>
+        )}
         <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.5)", borderRadius: "999px", padding: "2px 8px", color: "white", fontSize: "0.6875rem", fontWeight: 700 }}>
           {idx + 1}/{photos.length}
         </div>
@@ -504,8 +518,8 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
             src={photo.medium_url ?? photo.image_url}
             alt={photo.caption ?? "Foto"}
             decoding="async"
-            style={{ width: "100%", display: "block", maxHeight: "78vw", objectFit: "cover", pointerEvents: "none" }}
             loading="lazy"
+            style={{ width: "100%", display: "block", maxHeight: "78vw", objectFit: "cover", pointerEvents: "none", animation: "imgFadeIn 0.3s ease" }}
           />
           {burst && (
             <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
@@ -2218,9 +2232,12 @@ export default function FotosPage() {
 
       {/* Filtered empty state */}
       {!isLoading && allPhotos.length > 0 && filteredPhotos.length === 0 && viewMode !== "albums" && (
-        <div className="empty-state">
-          <div className="empty-icon" style={{ color: "var(--foreground-muted)" }}><Images size={36} /></div>
-          <p className="empty-text">No hay fotos con este filtro</p>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", padding: "3rem 1.5rem", textAlign: "center" }}>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Images size={32} color="var(--foreground-muted)" />
+          </div>
+          <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Sin resultados</p>
+          <p style={{ color: "var(--foreground-muted)", fontSize: "0.875rem", margin: 0 }}>No hay fotos con ese filtro activo</p>
         </div>
       )}
 
@@ -2317,11 +2334,19 @@ export default function FotosPage() {
 
           {/* Albums grid */}
           {albums.length === 0 && (
-            <div className="empty-state" style={{ paddingTop: "2rem" }}>
-              <div className="empty-icon" style={{ color: "var(--foreground-muted)" }}><Folder size={40} /></div>
-              <p className="empty-text">Aún no tienes álbumes</p>
-              <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", textAlign: "center", margin: "0.25rem 0 0" }}>
-                Organiza tus fotos en colecciones
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.875rem", padding: "3rem 1.5rem", textAlign: "center" }}>
+              <div style={{
+                width: 88, height: 88, borderRadius: "50%",
+                background: "linear-gradient(135deg, var(--primary-lighter), #fce7f3)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Folder size={40} color="var(--primary)" />
+              </div>
+              <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", fontWeight: 700, color: "var(--foreground)", margin: 0 }}>
+                ¡Crea tu primer álbum!
+              </h3>
+              <p style={{ color: "var(--foreground-muted)", fontSize: "0.875rem", margin: 0, maxWidth: 220, lineHeight: 1.5 }}>
+                Organiza vuestros recuerdos en colecciones temáticas
               </p>
             </div>
           )}

@@ -252,7 +252,9 @@ body {
   color: var(--primary);
 }
 .btn-icon:active {
-  transform: scale(0.9);
+  transform: scale(0.88);
+  background: var(--primary-lighter);
+  color: var(--primary);
 }
 
 .btn-icon-small {
@@ -274,7 +276,9 @@ body {
   color: var(--primary);
 }
 .btn-icon-small:active {
-  transform: scale(0.88);
+  transform: scale(0.85);
+  background: var(--primary-lighter);
+  color: var(--primary);
 }
 
 /* ─── Form primitives ─── */
@@ -476,6 +480,41 @@ main {
   padding-bottom: 0;
 }
 
+.page-transition {
+  animation: pageIn 0.22s ease forwards;
+}
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── T1/T2: Typography scale & section titles ─── */
+.section-title {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--foreground);
+  letter-spacing: -0.01em;
+  margin: 0 0 0.75rem 0;
+}
+
+.section-subtitle {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground-muted);
+  margin: 0 0 0.5rem 0;
+}
+
+.page-title {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
 .header-left {
   display: flex;
   align-items: center;
@@ -553,7 +592,11 @@ main {
 }
 
 .bottom-nav-item .nav-label {
-  transition: color 0.2s, font-weight 0.15s;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--foreground-muted);
+  transition: color 0.2s, font-weight 0.15s, opacity 0.2s;
+  opacity: 0.75;
 }
 
 .bottom-nav-item.active {
@@ -563,6 +606,20 @@ main {
 .bottom-nav-item.active .nav-label {
   font-weight: 700;
   color: var(--primary);
+  opacity: 1;
+}
+
+/* N2: active indicator bar at top */
+.bottom-nav-item.active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, var(--primary), #EC4899);
 }
 
 .bottom-nav-item.active .nav-pill {
@@ -591,13 +648,14 @@ main {
   -webkit-tap-highlight-color: transparent;
 }
 .plan-card:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.15), var(--shadow-md);
-  border-color: var(--primary-light);
+  transform: translateY(-4px) scale(1.015);
+  box-shadow: 0 12px 32px rgba(139, 92, 246, 0.22), 0 2px 8px rgba(236, 72, 153, 0.1);
+  border-color: rgba(139, 92, 246, 0.35);
 }
 .plan-card:active {
-  transform: scale(0.98);
-  box-shadow: var(--shadow-sm);
+  transform: scale(0.97) translateY(0);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.1);
+  transition-duration: 0.1s;
 }
 
 .progress-bar-track {
@@ -951,6 +1009,18 @@ main {
 @keyframes cardSlideIn {
   from { opacity: 0; transform: translateY(22px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes cardNewBounce {
+  0%   { opacity: 0; transform: translateY(-30px) scale(0.92); }
+  60%  { opacity: 1; transform: translateY(6px) scale(1.02); }
+  80%  { transform: translateY(-3px) scale(0.99); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes imgFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @keyframes lightboxIn {

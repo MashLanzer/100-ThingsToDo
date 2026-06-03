@@ -500,10 +500,21 @@ export default function PlanDetailPage() {
 
   if (planLoading) {
     return (
-      <div className="loading-screen">
-        <svg className="animate-heartbeat" width="40" height="40" viewBox="0 0 24 24" fill="#8B5CF6">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-        </svg>
+      <div style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {/* Header skeleton */}
+        <div className="skeleton" style={{ height: 160, borderRadius: "var(--radius-xl, 20px)" }} />
+        {/* Progress bar skeleton */}
+        <div className="skeleton" style={{ height: 10, borderRadius: 8, width: "100%" }} />
+        {/* Stats row */}
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          {[80, 100, 90].map((w, i) => (
+            <div key={i} className="skeleton" style={{ height: 28, borderRadius: 20, width: w }} />
+          ))}
+        </div>
+        {/* Task skeletons */}
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="skeleton" style={{ height: 56, borderRadius: "var(--radius-md)" }} />
+        ))}
       </div>
     )
   }
@@ -860,12 +871,27 @@ export default function PlanDetailPage() {
             <span style={{ color: "var(--foreground-muted)" }}>Cargando tareas...</span>
           </div>
         ) : !tasks || tasks.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon animate-bounce-slow"><Star size={40} color="var(--primary)" /></div>
-            <h2 className="empty-title" style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem" }}>¡Sin tareas aún!</h2>
-            <p className="empty-text">Añade vuestra primera tarea y empezad juntos</p>
-            <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => setShowTaskForm(true)}>
-              <Plus size={16} /> Agregar tarea
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            padding: "3rem 1.5rem", gap: "1rem", textAlign: "center",
+          }}>
+            <div style={{
+              width: 88, height: 88, borderRadius: "50%",
+              background: "var(--primary-lighter)", display: "flex", alignItems: "center", justifyContent: "center",
+              animation: "bounce-slow 2.5s ease-in-out infinite",
+            }}>
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+              </svg>
+            </div>
+            <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)", margin: 0 }}>
+              ¡Lista lista para empezar!
+            </h2>
+            <p style={{ color: "var(--foreground-muted)", fontSize: "0.9rem", margin: 0, maxWidth: 240, lineHeight: 1.5 }}>
+              Añadid vuestra primera tarea y comenzad la aventura juntos
+            </p>
+            <button className="btn btn-primary" style={{ marginTop: "0.25rem", gap: "0.375rem" }} onClick={() => setShowTaskForm(true)}>
+              <Plus size={16} /> Agregar primera tarea
             </button>
           </div>
         ) : (

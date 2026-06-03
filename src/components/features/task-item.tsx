@@ -142,9 +142,17 @@ function SubtasksModal({ task, open, onClose }: { task: Task; open: boolean; onC
                   width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: "pointer",
                   border: "2px solid var(--primary)", background: sub.completed ? "var(--primary)" : "transparent",
                   display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "background 0.18s ease, transform 0.15s ease",
                 }}
+                onMouseDown={(e) => { e.currentTarget.style.transform = "scale(1.2)" }}
+                onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)" }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)" }}
+                onTouchStart={(e) => { e.currentTarget.style.transform = "scale(1.2)" }}
+                onTouchEnd={(e) => { e.currentTarget.style.transform = "scale(1)" }}
               >
-                {sub.completed && <Check size={12} color="white" strokeWidth={3} />}
+                <span style={{ transition: "opacity 0.15s ease", opacity: sub.completed ? 1 : 0, display: "flex" }}>
+                  <Check size={12} color="white" strokeWidth={3} />
+                </span>
               </button>
 
               {editingId === sub.id ? (
@@ -167,6 +175,7 @@ function SubtasksModal({ task, open, onClose }: { task: Task; open: boolean; onC
                     flex: 1, fontSize: "0.875rem", color: "var(--foreground)", cursor: "text",
                     textDecoration: sub.completed ? "line-through" : "none",
                     opacity: sub.completed ? 0.5 : 1,
+                    transition: "opacity 0.2s ease, text-decoration 0.2s ease",
                   }}
                 >
                   {sub.title}

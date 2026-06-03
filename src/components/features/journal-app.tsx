@@ -223,6 +223,7 @@ export function JournalApp({ onBack }: Props) {
   const [gettingLocation, setGettingLocation] = useState(false)
   const [paperMode, setPaperMode] = useState<"normal" | "sepia">("normal") // F6: sepia paper while writing
   const [saveBurst, setSaveBurst] = useState(false)                  // F5: confetti on save
+  const [streakToast, setStreakToast] = useState<number | null>(null) // M4: streak milestone toast
   const [reactingId, setReactingId] = useState<string | null>(null)  // F14: which entry's reaction is being toggled
 
   const [entriesLoading, setEntriesLoading] = useState(true)
@@ -463,6 +464,15 @@ export function JournalApp({ onBack }: Props) {
       toast.success(isEditing ? "Entrada actualizada ✏️" : "Entrada guardada 💕")
       try { localStorage.setItem("ttd_last_journal_date", new Date().toISOString()) } catch { /* */ }
       await Promise.all([loadEntries(), loadAllEntries()])
+      // M4: show streak milestone badge after entries reload
+      if (!isEditing) {
+        const newStreak = calculateStreak([...entries], myUid)
+        const MILESTONES = [3, 5, 7, 10, 14, 21, 30]
+        if (MILESTONES.includes(newStreak)) {
+          setStreakToast(newStreak)
+          setTimeout(() => setStreakToast(null), 3000)
+        }
+      }
       setView("calendar")
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error")
@@ -1661,6 +1671,20 @@ export function JournalApp({ onBack }: Props) {
           </button>
         </div>
         {saveBurst && <ConfettiBurst />}
+        {streakToast !== null && (
+          <div style={{
+            position: "fixed", bottom: "5.5rem", left: "50%", transform: "translateX(-50%)",
+            background: "linear-gradient(135deg, #8B5CF6, #EC4899)",
+            color: "white", borderRadius: 40, padding: "0.625rem 1.25rem",
+            fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 700,
+            boxShadow: "0 4px 20px rgba(139,92,246,0.5)", zIndex: 9999,
+            display: "flex", alignItems: "center", gap: "0.5rem",
+            animation: "slideInUp 0.3s ease",
+            whiteSpace: "nowrap",
+          }}>
+            🔥 ¡{streakToast} días de racha!
+          </div>
+        )}
       </>
     )
   }

@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState, useRef } from "react"
+import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { AppHeader } from "@/components/shared/header"
 import { BottomNav } from "@/components/shared/bottom-nav"
@@ -41,6 +41,9 @@ function SplashScreen() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+  const [pageKey, setPageKey] = useState(0)
+  const prevPath = useRef(pathname)
   useNativePush()
   const [showSplash, setShowSplash] = useState(() => {
     if (typeof window === "undefined") return false
@@ -59,6 +62,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [showSplash])
 
+  useEffect(() => {
+    if (pathname !== prevPath.current) {
+      prevPath.current = pathname
+      setPageKey(k => k + 1)
+    }
+  }, [pathname])
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -75,7 +85,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <AppLockGate>
       {showSplash && <SplashScreen />}
       <AppHeader />
-      <main>{children}</main>
+      <main key={pageKey} className="page-transition">{children}</main>
       <BottomNav />
       <CoupleModal />
       <SettingsModal />

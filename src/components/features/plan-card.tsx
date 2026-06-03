@@ -71,9 +71,10 @@ interface Props {
   plan: Plan
   index?: number
   cardSize?: "compact" | "normal" | "large"
+  isNew?: boolean
 }
 
-export function PlanCard({ plan, index = 0, cardSize = "normal" }: Props) {
+export function PlanCard({ plan, index = 0, cardSize = "normal", isNew = false }: Props) {
   const router = useRouter()
   const total = plan.task_count ?? 0
   const done = plan.completed_count ?? 0
@@ -102,8 +103,10 @@ export function PlanCard({ plan, index = 0, cardSize = "normal" }: Props) {
       style={{
         overflow: "hidden",
         padding: 0,
-        animation: "cardSlideIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both",
-        animationDelay: animDelay,
+        animation: isNew
+          ? "cardNewBounce 0.5s cubic-bezier(0.34,1.56,0.64,1) both"
+          : "cardSlideIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both",
+        animationDelay: isNew ? "0ms" : animDelay,
       }}
     >
       {hasCover ? (
@@ -290,13 +293,18 @@ export function PlanCard({ plan, index = 0, cardSize = "normal" }: Props) {
             )}
 
             {/* Progress bar */}
-            <div className="progress-bar-track">
-              <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
+            <div className="progress-bar-track" style={total === 0 ? { opacity: 0.4 } : undefined}>
+              <div className="progress-bar-fill" style={{ width: `${pct}%`, background: total === 0 ? "var(--border)" : undefined }} />
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.375rem" }}>
-              <p style={{ fontSize: "0.75rem", color: isComplete ? "var(--primary)" : "var(--foreground-muted)", fontWeight: isComplete ? 700 : 400 }}>
-                {total === 0 ? "Sin tareas" : isComplete ? <><Sparkles size={12} /> ¡Plan completado!</> : `${done}/${total} completadas`}
+              <p style={{ fontSize: "0.75rem", color: total === 0 ? "var(--foreground-muted)" : isComplete ? "var(--primary)" : "var(--foreground-muted)", fontWeight: isComplete ? 700 : 400 }}>
+                {total === 0
+                  ? <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", color: "var(--foreground-muted)", fontStyle: "italic" }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                      Sin tareas aún
+                    </span>
+                  : isComplete ? <><Sparkles size={12} /> ¡Plan completado!</> : `${done}/${total} completadas`}
               </p>
               <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", opacity: 0.7 }}>
                 {relativeDate(plan.created_at)}
