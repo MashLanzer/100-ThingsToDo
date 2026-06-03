@@ -415,6 +415,7 @@ body {
   padding: 0 1.25rem 1.25rem;
   display: flex;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 /* ─── Header ─── */

@@ -1465,20 +1465,26 @@ function ImageEditorContent({ file, onConfirm, onSkip, onCancel }: {
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: "0.625rem" }}>
-        <button className="btn btn-primary" style={{ flex: 1 }} onClick={confirm}>
-          Aplicar
-        </button>
-        <button className="btn btn-outline" onClick={onSkip}>
-          Saltar esta
+      <div style={{
+        position: "sticky", bottom: 0,
+        background: "var(--surface)", paddingTop: "0.5rem",
+        paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))",
+      }}>
+        <div style={{ display: "flex", gap: "0.625rem" }}>
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={confirm}>
+            Aplicar
+          </button>
+          <button className="btn btn-outline" onClick={onSkip}>
+            Saltar esta
+          </button>
+        </div>
+        <button
+          onClick={onCancel}
+          style={{ background: "none", border: "none", color: "var(--foreground-muted)", fontSize: "0.75rem", cursor: "pointer", marginTop: "0.5rem", fontFamily: "inherit", display: "block", textAlign: "center", width: "100%" }}
+        >
+          Cancelar
         </button>
       </div>
-      <button
-        onClick={onCancel}
-        style={{ background: "none", border: "none", color: "var(--foreground-muted)", fontSize: "0.75rem", cursor: "pointer", marginTop: "0.5rem", fontFamily: "inherit", display: "block", textAlign: "center", width: "100%" }}
-      >
-        Cancelar
-      </button>
     </div>
   )
 }
