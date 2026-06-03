@@ -225,6 +225,8 @@ export function JournalApp({ onBack }: Props) {
   const [saveBurst, setSaveBurst] = useState(false)                  // F5: confetti on save
   const [reactingId, setReactingId] = useState<string | null>(null)  // F14: which entry's reaction is being toggled
 
+  const [entriesLoading, setEntriesLoading] = useState(true)
+
   // New design improvements
   const [monthDir, setMonthDir] = useState<"left" | "right" | null>(null)
   const [calendarKey, setCalendarKey] = useState(0)
@@ -274,6 +276,7 @@ export function JournalApp({ onBack }: Props) {
   }
 
   async function loadEntries() {
+    setEntriesLoading(true)
     try {
       const token = await getToken()
       if (!token) return
@@ -292,7 +295,9 @@ export function JournalApp({ onBack }: Props) {
         const ly: unknown = await lyRes.json()
         setLastYearEntries(Array.isArray(ly) ? (ly as JournalEntry[]) : [])
       }
-    } catch { /* silently fail */ }
+    } catch { /* silently fail */ } finally {
+      setEntriesLoading(false)
+    }
   }
 
   // Load the full journal (all months) for search, timeline and stats.
@@ -1868,7 +1873,11 @@ export function JournalApp({ onBack }: Props) {
                     ))}
                   </div>
 
-                  {entries.length === 0 ? (
+                  {entriesLoading ? (
+                    <div style={{ textAlign: "center", padding: "2rem 0.5rem", color: "var(--foreground-muted)", fontSize: "0.875rem" }}>
+                      Cargando...
+                    </div>
+                  ) : entries.length === 0 ? (
                     <div style={{ textAlign: "center", padding: "2rem 0.5rem" }}>
                       <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}>📓</div>
                       <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.9375rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem" }}>Este mes está en blanco</p>

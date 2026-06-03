@@ -1238,7 +1238,8 @@ function Lightbox({
 }
 
 // ── F13: Image editor modal (crop/rotate before upload) ─────────────────────
-function ImageEditorModal({ file, onConfirm, onSkip, onCancel }: {
+// Inner editor content — reusable without the full-screen backdrop
+function ImageEditorContent({ file, onConfirm, onSkip, onCancel }: {
   file: File
   onConfirm: (editedFile: File) => void
   onSkip: () => void
@@ -1301,6 +1302,65 @@ function ImageEditorModal({ file, onConfirm, onSkip, onCancel }: {
 
   return (
     <div
+      style={{
+        background: "var(--surface)", borderRadius: "var(--radius-lg)", padding: "1.25rem",
+        width: "100%",
+      }}
+    >
+      <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.0625rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.875rem" }}>
+        Editar foto ✏️
+      </h3>
+
+      {/* Canvas preview */}
+      <div style={{ position: "relative", borderRadius: "var(--radius-md)", overflow: "hidden", marginBottom: "0.875rem", background: "var(--muted)", minHeight: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <canvas ref={canvasRef} style={{ maxWidth: "100%", maxHeight: "40vh", display: "block", margin: "0 auto" }} />
+        {!previewUrl && <p style={{ color: "var(--foreground-muted)", fontSize: "0.8125rem" }}>Cargando...</p>}
+      </div>
+
+      {/* Edit buttons */}
+      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+        <button
+          onClick={rotate}
+          className="btn btn-outline"
+          style={{ flex: 1, fontSize: "0.8125rem" }}
+        >
+          ↻ Rotar 90°
+        </button>
+        <button
+          onClick={flip}
+          className="btn btn-outline"
+          style={{ flex: 1, fontSize: "0.8125rem" }}
+        >
+          ⇆ Voltear
+        </button>
+      </div>
+
+      <div style={{ display: "flex", gap: "0.625rem" }}>
+        <button className="btn btn-primary" style={{ flex: 1 }} onClick={confirm}>
+          Aplicar
+        </button>
+        <button className="btn btn-outline" onClick={onSkip}>
+          Saltar esta
+        </button>
+      </div>
+      <button
+        onClick={onCancel}
+        style={{ background: "none", border: "none", color: "var(--foreground-muted)", fontSize: "0.75rem", cursor: "pointer", marginTop: "0.5rem", fontFamily: "inherit", display: "block", textAlign: "center", width: "100%" }}
+      >
+        Cancelar
+      </button>
+    </div>
+  )
+}
+
+function ImageEditorModal({ file, onConfirm, onSkip, onCancel }: {
+  file: File
+  onConfirm: (editedFile: File) => void
+  onSkip: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div
       onClick={onCancel}
       style={{
         position: "fixed", inset: 0, zIndex: 350,
@@ -1308,56 +1368,43 @@ function ImageEditorModal({ file, onConfirm, onSkip, onCancel }: {
         display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
       }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "var(--surface)", borderRadius: "var(--radius-lg)", padding: "1.25rem",
-          width: "100%", maxWidth: "420px", boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
-        }}
-      >
-        <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.0625rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.875rem" }}>
-          Editar foto ✏️
-        </h3>
-
-        {/* Canvas preview */}
-        <div style={{ position: "relative", borderRadius: "var(--radius-md)", overflow: "hidden", marginBottom: "0.875rem", background: "var(--muted)", minHeight: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <canvas ref={canvasRef} style={{ maxWidth: "100%", maxHeight: "40vh", display: "block", margin: "0 auto" }} />
-          {!previewUrl && <p style={{ color: "var(--foreground-muted)", fontSize: "0.8125rem" }}>Cargando...</p>}
-        </div>
-
-        {/* Edit buttons */}
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-          <button
-            onClick={rotate}
-            className="btn btn-outline"
-            style={{ flex: 1, fontSize: "0.8125rem" }}
-          >
-            ↻ Rotar 90°
-          </button>
-          <button
-            onClick={flip}
-            className="btn btn-outline"
-            style={{ flex: 1, fontSize: "0.8125rem" }}
-          >
-            ⇆ Voltear
-          </button>
-        </div>
-
-        <div style={{ display: "flex", gap: "0.625rem" }}>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={confirm}>
-            Editar y continuar
-          </button>
-          <button className="btn btn-outline" onClick={onSkip}>
-            Continuar sin editar
-          </button>
-        </div>
-        <button
-          onClick={onCancel}
-          style={{ background: "none", border: "none", color: "var(--foreground-muted)", fontSize: "0.75rem", cursor: "pointer", marginTop: "0.5rem", fontFamily: "inherit", display: "block", textAlign: "center", width: "100%" }}
-        >
-          Cancelar
-        </button>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "420px", boxShadow: "0 20px 60px rgba(0,0,0,0.4)", borderRadius: "var(--radius-lg)" }}>
+        <ImageEditorContent file={file} onConfirm={onConfirm} onSkip={onSkip} onCancel={onCancel} />
       </div>
+    </div>
+  )
+}
+
+// ── Wizard step indicator ────────────────────────────────────────────────────
+function WizardHeader({ step, total }: { step: number; total: number }) {
+  const labels = ["Revisar", "Editar", "Detalles", "Subiendo"]
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, padding: "0.875rem 1rem 0" }}>
+      {labels.slice(0, total).map((label, i) => {
+        const num = i + 1
+        const active = num === step
+        const done = num < step
+        return (
+          <div key={i} style={{ display: "flex", alignItems: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem" }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                background: done || active ? "var(--primary)" : "var(--muted)",
+                color: done || active ? "white" : "var(--foreground-muted)",
+                fontWeight: 700, fontSize: "0.75rem",
+                border: done || active ? "2px solid var(--primary)" : "2px solid var(--border)",
+                transition: "all 0.2s",
+              }}>
+                {done ? "✓" : num}
+              </div>
+              <span style={{ fontSize: "0.5625rem", fontWeight: active ? 700 : 500, color: active ? "var(--primary)" : "var(--foreground-muted)", whiteSpace: "nowrap" }}>{label}</span>
+            </div>
+            {i < (total - 1) && (
+              <div style={{ width: 32, height: 2, background: done ? "var(--primary)" : "var(--border)", margin: "0 4px", marginBottom: 16, transition: "background 0.2s" }} />
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -1365,7 +1412,8 @@ function ImageEditorModal({ file, onConfirm, onSkip, onCancel }: {
 // ── F14: Caption dialog with per-file captions ──────────────────────────────
 export interface UploadItem { file: File; caption: string }
 
-function CaptionDialog({
+// Inner caption form — reusable without the fixed backdrop
+function CaptionDialogContent({
   files,
   onConfirm,
   onCancel,
@@ -1396,6 +1444,118 @@ function CaptionDialog({
   const isMultiple = files.length > 1
 
   return (
+    <div style={{ padding: "1.5rem" }}>
+      <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.375rem" }}>
+        <Camera size={16} style={{ display: "inline", verticalAlign: "middle", marginRight: 6 }} />
+        {files.length === 1 ? "Subir foto" : `Subir ${files.length} fotos`}
+      </h3>
+      <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginBottom: "1rem" }}>
+        Agrega un pie de foto (opcional)
+      </p>
+
+      {/* F14: Multiple files with individual captions */}
+      {isMultiple && (
+        <div style={{ marginBottom: "0.875rem" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.8125rem", color: "var(--foreground)", cursor: "pointer", marginBottom: "0.75rem" }}>
+            <input
+              type="checkbox"
+              checked={useGlobal}
+              onChange={(e) => setUseGlobal(e.target.checked)}
+              style={{ accentColor: "var(--primary)" }}
+            />
+            Usar un pie de foto para todas
+          </label>
+
+          {useGlobal ? (
+            <input
+              className="input"
+              type="text"
+              placeholder="Pie de foto para todas..."
+              value={globalCaption}
+              onChange={(e) => setGlobalCaption(e.target.value)}
+              maxLength={120}
+              autoFocus
+              onKeyDown={(e) => { if (e.key === "Enter") handleConfirm() }}
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              {files.map((file, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={previewUrls[i]}
+                    alt={`Foto ${i + 1}`}
+                    style={{ width: 48, height: 48, objectFit: "cover", borderRadius: "var(--radius-md)", flexShrink: 0 }}
+                  />
+                  <input
+                    className="input"
+                    type="text"
+                    placeholder={`Pie de foto ${i + 1}...`}
+                    value={captions[i]}
+                    onChange={(e) => {
+                      const next = [...captions]
+                      next[i] = e.target.value
+                      setCaptions(next)
+                    }}
+                    maxLength={120}
+                    style={{ flex: 1 }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Single file */}
+      {!isMultiple && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={previewUrls[0]}
+            alt="Preview"
+            style={{ width: "100%", maxHeight: 180, objectFit: "cover", borderRadius: "var(--radius-md)", marginBottom: "0.75rem" }}
+          />
+          <input
+            className="input"
+            type="text"
+            placeholder="Ej: Nuestra cena romántica..."
+            value={captions[0]}
+            onChange={(e) => {
+              const next = [...captions]
+              next[0] = e.target.value
+              setCaptions(next)
+            }}
+            maxLength={120}
+            autoFocus
+            onKeyDown={(e) => { if (e.key === "Enter") handleConfirm() }}
+            style={{ marginBottom: "1rem" }}
+          />
+        </>
+      )}
+
+      <div style={{ display: "flex", gap: "0.625rem", marginTop: isMultiple ? "1rem" : 0 }}>
+        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleConfirm} disabled={uploading}>
+          {uploading ? "Subiendo..." : "Subir"}
+        </button>
+        <button className="btn btn-outline" onClick={onCancel} disabled={uploading}>Cancelar</button>
+      </div>
+    </div>
+  )
+}
+
+function CaptionDialog({
+  files,
+  onConfirm,
+  onCancel,
+  uploading,
+}: {
+  files: File[]
+  onConfirm: (items: UploadItem[]) => void
+  onCancel: () => void
+  uploading: boolean
+}) {
+  return (
     <div
       onClick={onCancel}
       style={{
@@ -1407,106 +1567,12 @@ function CaptionDialog({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "white", borderRadius: "var(--radius-lg)", padding: "1.5rem",
+          background: "white", borderRadius: "var(--radius-lg)",
           width: "100%", maxWidth: "440px", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
           maxHeight: "80vh", overflowY: "auto",
         }}
       >
-        <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.375rem" }}>
-          <Camera size={16} style={{ display: "inline", verticalAlign: "middle", marginRight: 6 }} />
-          {files.length === 1 ? "Subir foto" : `Subir ${files.length} fotos`}
-        </h3>
-        <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginBottom: "1rem" }}>
-          Agrega un pie de foto (opcional)
-        </p>
-
-        {/* F14: Multiple files with individual captions */}
-        {isMultiple && (
-          <div style={{ marginBottom: "0.875rem" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.8125rem", color: "var(--foreground)", cursor: "pointer", marginBottom: "0.75rem" }}>
-              <input
-                type="checkbox"
-                checked={useGlobal}
-                onChange={(e) => setUseGlobal(e.target.checked)}
-                style={{ accentColor: "var(--primary)" }}
-              />
-              Usar un pie de foto para todas
-            </label>
-
-            {useGlobal ? (
-              <input
-                className="input"
-                type="text"
-                placeholder="Pie de foto para todas..."
-                value={globalCaption}
-                onChange={(e) => setGlobalCaption(e.target.value)}
-                maxLength={120}
-                autoFocus
-                onKeyDown={(e) => { if (e.key === "Enter") handleConfirm() }}
-              />
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {files.map((file, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={previewUrls[i]}
-                      alt={`Foto ${i + 1}`}
-                      style={{ width: 48, height: 48, objectFit: "cover", borderRadius: "var(--radius-md)", flexShrink: 0 }}
-                    />
-                    <input
-                      className="input"
-                      type="text"
-                      placeholder={`Pie de foto ${i + 1}...`}
-                      value={captions[i]}
-                      onChange={(e) => {
-                        const next = [...captions]
-                        next[i] = e.target.value
-                        setCaptions(next)
-                      }}
-                      maxLength={120}
-                      style={{ flex: 1 }}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Single file */}
-        {!isMultiple && (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={previewUrls[0]}
-              alt="Preview"
-              style={{ width: "100%", maxHeight: 180, objectFit: "cover", borderRadius: "var(--radius-md)", marginBottom: "0.75rem" }}
-            />
-            <input
-              className="input"
-              type="text"
-              placeholder="Ej: Nuestra cena romántica..."
-              value={captions[0]}
-              onChange={(e) => {
-                const next = [...captions]
-                next[0] = e.target.value
-                setCaptions(next)
-              }}
-              maxLength={120}
-              autoFocus
-              onKeyDown={(e) => { if (e.key === "Enter") handleConfirm() }}
-              style={{ marginBottom: "1rem" }}
-            />
-          </>
-        )}
-
-        <div style={{ display: "flex", gap: "0.625rem", marginTop: isMultiple ? "1rem" : 0 }}>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleConfirm} disabled={uploading}>
-            {uploading ? "Subiendo..." : "Subir"}
-          </button>
-          <button className="btn btn-outline" onClick={onCancel} disabled={uploading}>Cancelar</button>
-        </div>
+        <CaptionDialogContent files={files} onConfirm={onConfirm} onCancel={onCancel} uploading={uploading} />
       </div>
     </div>
   )
@@ -1609,6 +1675,9 @@ export default function FotosPage() {
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
   const [editingFileIndex, setEditingFileIndex] = useState<number | null>(null)
   const [editedFiles, setEditedFiles] = useState<File[]>([])
+  // Wizard state
+  const [wizardStep, setWizardStep] = useState<"review" | "edit" | "details" | "uploading" | null>(null)
+  const [reviewFiles, setReviewFiles] = useState<File[]>([])
   // F15: upload progress
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; fileName: string } | null>(null)
   const [newPhotoIds, setNewPhotoIds] = useState<Set<string>>(new Set())
@@ -1733,13 +1802,16 @@ export default function FotosPage() {
     localStorage.setItem("fotosView", next)
   }
 
-  // F13: After file selection, show editor for first file
+  // F13: After file selection, enter wizard
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
     if (files.length === 0) return
     setPendingFiles(files)
+    setReviewFiles(files)
     setEditedFiles([])
     setEditingFileIndex(0)
+    // For multiple files show review step; single file goes straight to edit
+    setWizardStep(files.length > 1 ? "review" : "edit")
     e.target.value = ""
   }, [])
 
@@ -1753,13 +1825,23 @@ export default function FotosPage() {
     if (nextIndex < pendingFiles.length) {
       setEditingFileIndex(nextIndex)
     } else {
-      // All files edited — show caption dialog
+      // All files edited — move to details step
       setEditingFileIndex(null)
+      setWizardStep("details")
     }
+  }
+
+  function cancelWizard() {
+    setPendingFiles(null)
+    setReviewFiles([])
+    setEditedFiles([])
+    setEditingFileIndex(null)
+    setWizardStep(null)
   }
 
   // F14 + F15: Upload with per-file captions and progress indicator
   async function handleUploadConfirm(items: UploadItem[]) {
+    setWizardStep("uploading")
     setUploadProgress({ current: 0, total: items.length, fileName: "" })
     let successCount = 0
     const freshIds: string[] = []
@@ -1776,6 +1858,7 @@ export default function FotosPage() {
       }
     }
     setUploadProgress(null)
+    setWizardStep(null)
     if (successCount > 0) {
       toast.success(successCount === 1 ? "Foto subida!" : `${successCount} fotos subidas!`)
       if (freshIds.length > 0) {
@@ -1788,6 +1871,7 @@ export default function FotosPage() {
       }
     }
     setPendingFiles(null)
+    setReviewFiles([])
     setEditedFiles([])
   }
 
@@ -2419,33 +2503,141 @@ export default function FotosPage() {
         </button>
       )}
 
-      {/* F13: Image editor modal (shown before caption dialog) */}
-      {pendingFiles && editingFileIndex !== null && (
-        <ImageEditorModal
-          file={pendingFiles[editingFileIndex]}
-          onConfirm={(editedFile) => handleEditorResult(editedFile)}
-          onSkip={() => handleEditorResult(null)}
-          onCancel={() => { setPendingFiles(null); setEditingFileIndex(null); setEditedFiles([]) }}
-        />
-      )}
+      {/* Photo Upload Wizard */}
+      {wizardStep && (pendingFiles || wizardStep === "uploading") && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 100,
+          display: "flex", flexDirection: "column",
+          backdropFilter: "blur(4px)",
+        }}>
+          <div style={{
+            position: "absolute", inset: "auto 0 0 0",
+            background: "var(--background)", borderRadius: "1.25rem 1.25rem 0 0",
+            maxHeight: "92vh", display: "flex", flexDirection: "column",
+            overflow: "hidden",
+          }}>
+            {/* Step indicator */}
+            <WizardHeader
+              step={wizardStep === "review" ? 1 : wizardStep === "edit" ? 2 : wizardStep === "details" ? 3 : 4}
+              total={4}
+            />
 
-      {/* F14: Caption dialog with per-file captions */}
-      {pendingFiles && editingFileIndex === null && editedFiles.length > 0 && (
-        <CaptionDialog
-          files={editedFiles}
-          onConfirm={handleUploadConfirm}
-          onCancel={() => { setPendingFiles(null); setEditedFiles([]) }}
-          uploading={uploadPhoto.isPending}
-        />
-      )}
+            {/* Step 1: Review selection */}
+            {wizardStep === "review" && (
+              <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
+                  <p style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)" }}>
+                    {reviewFiles.length} foto{reviewFiles.length !== 1 ? "s" : ""} seleccionada{reviewFiles.length !== 1 ? "s" : ""}
+                  </p>
+                  <button onClick={cancelWizard} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "0.25rem", fontSize: "1rem" }}>✕</button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", marginBottom: "1rem" }}>
+                  {reviewFiles.map((file, i) => {
+                    const url = URL.createObjectURL(file)
+                    return (
+                      <div key={i} style={{ position: "relative", aspectRatio: "1", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onLoad={() => URL.revokeObjectURL(url)} />
+                        <button
+                          onClick={() => {
+                            const next = reviewFiles.filter((_, j) => j !== i)
+                            setReviewFiles(next)
+                            if (next.length === 0) cancelWizard()
+                          }}
+                          style={{
+                            position: "absolute", top: 4, right: 4,
+                            width: 22, height: 22, borderRadius: "50%",
+                            background: "rgba(239,68,68,0.9)", border: "none",
+                            color: "white", fontSize: "0.75rem", fontWeight: 700,
+                            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                          }}
+                        >✕</button>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button className="btn btn-outline" style={{ flex: 1 }} onClick={cancelWizard}>Cancelar</button>
+                  <button
+                    className="btn btn-primary"
+                    style={{ flex: 2 }}
+                    onClick={() => {
+                      setPendingFiles(reviewFiles)
+                      setEditedFiles([])
+                      setEditingFileIndex(0)
+                      setWizardStep("edit")
+                    }}
+                  >
+                    Continuar →
+                  </button>
+                </div>
+              </div>
+            )}
 
-      {/* F15: Upload progress overlay */}
-      {uploadProgress && (
-        <UploadProgressOverlay
-          current={uploadProgress.current}
-          total={uploadProgress.total}
-          fileName={uploadProgress.fileName}
-        />
+            {/* Step 2: Edit — per-file image editor */}
+            {wizardStep === "edit" && pendingFiles && editingFileIndex !== null && pendingFiles[editingFileIndex] && (
+              <div style={{ flex: 1, overflowY: "auto" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem 0" }}>
+                  <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)" }}>
+                    Foto {editingFileIndex + 1} de {pendingFiles.length}
+                  </p>
+                  <button
+                    onClick={() => {
+                      // Skip all: collect remaining files unedited
+                      const allUnedited = [...editedFiles, ...pendingFiles.slice(editingFileIndex)]
+                      setEditedFiles(allUnedited)
+                      setEditingFileIndex(null)
+                      setWizardStep("details")
+                    }}
+                    style={{ background: "none", border: "none", fontSize: "0.8125rem", color: "var(--primary)", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}
+                  >
+                    Saltar todo
+                  </button>
+                </div>
+                <ImageEditorContent
+                  file={pendingFiles[editingFileIndex]}
+                  onConfirm={(editedFile) => handleEditorResult(editedFile)}
+                  onSkip={() => handleEditorResult(null)}
+                  onCancel={cancelWizard}
+                />
+              </div>
+            )}
+
+            {/* Step 3: Details — caption dialog (inline, no separate backdrop) */}
+            {wizardStep === "details" && editedFiles.length > 0 && (
+              <div style={{ flex: 1, overflowY: "auto" }}>
+                <CaptionDialogContent
+                  files={editedFiles}
+                  onConfirm={(items) => {
+                    handleUploadConfirm(items)
+                  }}
+                  onCancel={cancelWizard}
+                  uploading={uploadPhoto.isPending}
+                />
+              </div>
+            )}
+
+            {/* Step 4: Uploading — progress UI */}
+            {wizardStep === "uploading" && uploadProgress && (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem", gap: "1rem" }}>
+                <div style={{ fontSize: "2.5rem" }}>📤</div>
+                <p style={{ fontWeight: 700, fontSize: "1rem", color: "var(--foreground)" }}>
+                  Subiendo {uploadProgress.current} de {uploadProgress.total}
+                </p>
+                <div style={{ width: "100%", background: "var(--muted)", borderRadius: "999px", height: 8, overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%", background: "var(--primary)", borderRadius: "999px",
+                    width: `${Math.round((uploadProgress.current / uploadProgress.total) * 100)}%`,
+                    transition: "width 0.3s ease",
+                  }} />
+                </div>
+                <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>
+                  {uploadProgress.fileName}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Comments bottom sheet */}

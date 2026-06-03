@@ -63,20 +63,63 @@ export async function POST(req: NextRequest) {
     location: typeof location === "string" && location.trim() ? location.trim() : null,
   }
 
-  // Upsert by couple_id + date + created_by
+  // Try upsert with 3-column conflict (migration 016 constraint)
   let { data, error } = await supabase
     .from("journal_entries")
     .upsert(fullRow, { onConflict: "couple_id,date,created_by" })
     .select()
     .single()
 
-  // If the extras columns (migration 024) aren't applied yet, retry without them.
+  // If tags/location columns missing, retry without them
   if (error && /column .* does not exist|tags|location/i.test(error.message)) {
     ;({ data, error } = await supabase
       .from("journal_entries")
       .upsert(baseRow, { onConflict: "couple_id,date,created_by" })
       .select()
       .single())
+  }
+
+  // If conflict target doesn't match any constraint, fall back to manual upsert
+  if (error && /there is no unique or exclusion constraint|42P10|onConflict/i.test(error.message)) {
+    // Check if entry exists for this user on this date
+    const { data: existing } = await supabase
+      .from("journal_entries")
+      .select("id")
+      .eq("couple_id", me.couple_id)
+      .eq("date", date)
+      .eq("created_by", user.uid)
+      .single()
+
+    if (existing?.id) {
+      ;({ data, error } = await supabase
+        .from("journal_entries")
+        .update(fullRow)
+        .eq("id", existing.id)
+        .select()
+        .single())
+      // retry without tags/location if needed
+      if (error && /column .* does not exist|tags|location/i.test(error.message)) {
+        ;({ data, error } = await supabase
+          .from("journal_entries")
+          .update(baseRow)
+          .eq("id", existing.id)
+          .select()
+          .single())
+      }
+    } else {
+      ;({ data, error } = await supabase
+        .from("journal_entries")
+        .insert(fullRow)
+        .select()
+        .single())
+      if (error && /column .* does not exist|tags|location/i.test(error.message)) {
+        ;({ data, error } = await supabase
+          .from("journal_entries")
+          .insert(baseRow)
+          .select()
+          .single())
+      }
+    }
   }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -1,5 +1,15 @@
 export const APP_LOCK_ENABLED_KEY = "ttd_app_lock_v1"
 export const APP_LOCK_PIN_KEY = "ttd_app_lock_pin_v1"  // separate from journal PIN
+export const APP_LOCK_BIO_KEY = "ttd_app_lock_bio_v1"
+
+export function isAppLockBioEnabled(): boolean {
+  if (typeof window === "undefined") return false
+  try { return localStorage.getItem(APP_LOCK_BIO_KEY) === "true" } catch { return false }
+}
+
+export function setAppLockBioEnabled(v: boolean) {
+  try { localStorage.setItem(APP_LOCK_BIO_KEY, v ? "true" : "false") } catch {}
+}
 const LOCK_TIMEOUT_MS = 30_000 // 30 seconds in background before requiring re-lock
 
 export function isAppLockEnabled(): boolean {

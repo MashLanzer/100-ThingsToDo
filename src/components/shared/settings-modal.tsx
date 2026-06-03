@@ -11,7 +11,7 @@ import { daysTogether } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
 import { toast } from "sonner"
-import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload, LogOut, CalendarHeart, Camera, Trash2, Loader2 } from "lucide-react"
+import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload, LogOut, CalendarHeart, Camera, Trash2, Loader2, Fingerprint } from "lucide-react"
 import { showConfirm } from "@/lib/confirm"
 import {
   isAppLockEnabled as getIsAppLockEnabled,
@@ -19,6 +19,8 @@ import {
   setAppLockEnabled as saveAppLockEnabled,
   setAppLockPin as saveAppLockPin,
   clearAppLockPin,
+  isAppLockBioEnabled,
+  setAppLockBioEnabled,
 } from "@/lib/app-lock"
 
 const THEMES = [
@@ -259,6 +261,8 @@ export function SettingsModal() {
   const [appPinConfirm, setAppPinConfirm] = useState("")
   const [appPinDisable, setAppPinDisable] = useState("")
   const [appPinError, setAppPinError] = useState("")
+  const [appLockBioEnabled, setAppLockBioEnabledState] = useState(false)
+  const [bioAvailableInSettings, setBioAvailableInSettings] = useState(false)
 
   useEffect(() => {
     if (showSettingsModal) {
@@ -305,6 +309,17 @@ export function SettingsModal() {
       setAppPinConfirm("")
       setAppPinDisable("")
       setAppPinError("")
+      setAppLockBioEnabledState(isAppLockBioEnabled())
+      // Check biometric availability on native
+      ;(async () => {
+        try {
+          const { Capacitor } = await import("@capacitor/core")
+          if (!Capacitor.isNativePlatform()) return
+          const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth")
+          const info = await BiometricAuth.checkBiometry()
+          setBioAvailableInSettings(info.isAvailable && info.strongBiometryIsAvailable)
+        } catch {}
+      })()
 
       setShowDeleteZone(false)
       setDeleteConfirmText("")
@@ -673,6 +688,13 @@ export function SettingsModal() {
     setAppPinError("")
   }
 
+  function handleBioToggle(enable: boolean) {
+    setAppLockBioEnabled(enable)
+    setAppLockBioEnabledState(enable)
+    if (enable) toast.success("Desbloqueo con huella activado 👆")
+    else toast.success("Desbloqueo con huella desactivado")
+  }
+
   async function getAuthToken() {
     const { getFirebaseToken } = await import("@/lib/firebase/client")
     return getFirebaseToken()
@@ -747,219 +769,176 @@ export function SettingsModal() {
 
           {activeTab === "perfil" && (
             <>
-              {/* ── User header (centered hero card) ── */}
+              {/* Card 1 — Tú */}
               {user && (
-                <div style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem",
-                  background: data?.couple?.photo_url
-                    ? `linear-gradient(to bottom, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.55) 100%), url(${data.couple.photo_url}) center/cover no-repeat`
-                    : "linear-gradient(160deg, var(--primary-lighter) 0%, var(--muted) 60%, #fce7f3 100%)",
-                  borderRadius: "var(--radius-lg)", padding: "1.5rem 1rem 1.25rem",
-                  border: "1px solid var(--border)",
-                }}>
-                  {user.photoURL ? (
-                    <img
-                      src={user.photoURL}
-                      alt=""
-                      style={{ width: 72, height: 72, borderRadius: "50%", border: "3px solid white", boxShadow: "0 3px 12px rgba(139,92,246,0.25)" }}
-                    />
-                  ) : (
-                    <div style={{
-                      width: 72, height: 72, borderRadius: "50%",
-                      background: getAvatarGradient(user.displayName ?? user.email ?? "?"),
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      color: "white", fontWeight: 700, fontSize: "1.75rem",
-                      fontFamily: "'Fredoka', sans-serif",
-                      border: "3px solid white", boxShadow: "0 3px 12px rgba(139,92,246,0.25)",
-                    }}>
-                      {(user.displayName ?? user.email ?? "?")[0].toUpperCase()}
+                <SettingsCard title={<>👤 Tú</>}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.875rem" }}>
+                    {/* Avatar */}
+                    {user.photoURL ? (
+                      <img src={user.photoURL} alt="" style={{ width: 52, height: 52, borderRadius: "50%", border: "2px solid var(--border)", flexShrink: 0, objectFit: "cover" }} />
+                    ) : (
+                      <div style={{
+                        width: 52, height: 52, borderRadius: "50%",
+                        background: getAvatarGradient(user.displayName ?? user.email ?? "?"),
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "white", fontWeight: 700, fontSize: "1.375rem",
+                        fontFamily: "'Fredoka', sans-serif", flexShrink: 0,
+                        border: "2px solid var(--border)",
+                      }}>
+                        {(user.displayName ?? user.email ?? "?")[0].toUpperCase()}
+                      </div>
+                    )}
+                    {/* Info */}
+                    <div style={{ overflow: "hidden", flex: 1 }}>
+                      <p style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {user.displayName ?? "Mi cuenta"}
+                      </p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "0.375rem" }}>
+                        {user.email}
+                      </p>
+                      <div style={{
+                        display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                        fontSize: "0.6875rem", fontWeight: 700, padding: "2px 10px", borderRadius: "999px",
+                        background: data?.couple ? "#d1fae5" : "var(--muted)",
+                        color: data?.couple ? "#065f46" : "var(--foreground-muted)",
+                        border: data?.couple ? "1px solid #6ee7b7" : "1px solid var(--border)",
+                      }}>
+                        {data?.couple ? <><Heart size={11} /> {data.partner?.name ?? "Vinculado"}</> : "Sin pareja vinculada"}
+                      </div>
                     </div>
-                  )}
-                  <div style={{ textAlign: "center", width: "100%" }}>
-                    <p style={{ fontWeight: 700, fontSize: "1.0625rem", fontFamily: "'Fredoka', sans-serif", color: data?.couple?.photo_url ? "white" : "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textShadow: data?.couple?.photo_url ? "0 1px 4px rgba(0,0,0,0.5)" : "none" }}>
-                      {user.displayName ?? "Mi cuenta"}
-                    </p>
-                    <p style={{ fontSize: "0.75rem", color: data?.couple?.photo_url ? "rgba(255,255,255,0.85)" : "var(--foreground-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textShadow: data?.couple?.photo_url ? "0 1px 3px rgba(0,0,0,0.4)" : "none" }}>
-                      {user.email}
-                    </p>
                   </div>
-                  <div style={{
-                    fontSize: "0.6875rem", fontWeight: 700, padding: "4px 12px", borderRadius: "999px", marginTop: "0.125rem",
-                    display: "inline-flex", alignItems: "center", gap: "0.25rem",
-                    background: data?.couple ? "#d1fae5" : "rgba(255,255,255,0.7)",
-                    color: data?.couple ? "#065f46" : "var(--foreground-muted)",
-                    border: data?.couple ? "1px solid #6ee7b7" : "1px solid var(--border)",
-                  }}>
-                    {data?.couple ? <><Heart size={12} />{data.partner?.name ?? "Vinculado"}</> : "Sin pareja vinculada"}
-                  </div>
-                </div>
+                </SettingsCard>
               )}
 
-              {/* ── Couple management ── */}
-              <section>
-                <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", marginBottom: "0.75rem" }}>
-                  <Heart size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: 5 }} /> Gestionar Pareja
-                </h3>
-
-                {isLoading ? (
-                  <div style={{ textAlign: "center", padding: "1.5rem" }}>
-                    <svg className="animate-heartbeat" width="36" height="36" viewBox="0 0 24 24" fill="#8B5CF6">
+              {/* Card 2 — Vuestra pareja (linked) */}
+              {isLoading ? (
+                <SettingsCard title={<>💏 Vuestra pareja</>}>
+                  <div style={{ textAlign: "center", padding: "1rem" }}>
+                    <svg className="animate-heartbeat" width="28" height="28" viewBox="0 0 24 24" fill="#8B5CF6">
                       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                     </svg>
                   </div>
-                ) : data?.couple ? (
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>💏</div>
-                    <p style={{ fontWeight: 700, color: "var(--foreground)", marginBottom: "0.25rem" }}>
-                      Vinculado con
-                    </p>
-                    <p style={{ fontSize: "1.125rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem" }}>
-                      {data.partner?.name ?? "Tu pareja"}
-                    </p>
-                    <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginBottom: "1.25rem" }}>
-                      {data.partner?.email}
-                    </p>
-                    <div style={{ background: "var(--mint)", borderRadius: "var(--radius-md)", padding: "0.625rem", marginBottom: "1rem", fontSize: "0.8125rem", color: "#065F46" }}>
-                      ✨ ¡Compartiendo planes juntos!
+                </SettingsCard>
+              ) : data?.couple ? (
+                <SettingsCard title={<>💏 Vuestra pareja</>}>
+                  {/* Partner info row */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", paddingBottom: "0.75rem", borderBottom: "1px solid var(--border)", marginBottom: "0.875rem" }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: "50%",
+                      background: getAvatarGradient(data.partner?.name ?? "P"),
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color: "white", fontWeight: 700, fontSize: "1.125rem",
+                      fontFamily: "'Fredoka', sans-serif", flexShrink: 0,
+                    }}>
+                      {(data.partner?.name ?? "P")[0].toUpperCase()}
                     </div>
+                    <div style={{ overflow: "hidden" }}>
+                      <p style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)" }}>{data.partner?.name ?? "Tu pareja"}</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data.partner?.email}</p>
+                    </div>
+                    <div style={{ marginLeft: "auto", fontSize: "0.6875rem", fontWeight: 700, padding: "3px 10px", borderRadius: "999px", background: "#d1fae5", color: "#065f46", border: "1px solid #6ee7b7", whiteSpace: "nowrap" }}>
+                      ✨ Vinculados
+                    </div>
+                  </div>
 
-                    {/* Foto de pareja */}
-                    <div style={{ textAlign: "left", marginBottom: "1.25rem" }}>
-                      <label style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.5rem" }}>
-                        <Camera size={14} style={{ color: "var(--primary)" }} /> Foto de pareja
+                  {/* Couple photo */}
+                  <div style={{ marginBottom: "1rem" }}>
+                    <label style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.5rem" }}>
+                      <Camera size={13} style={{ color: "var(--primary)" }} /> Foto de pareja
+                    </label>
+                    {data.couple.photo_url ? (
+                      <div style={{ position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden", height: "110px" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={data.couple.photo_url} alt="Foto de pareja" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 60%)" }} />
+                        <button onClick={handleRemoveCouplePhoto} style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(239,68,68,0.9)", border: "none", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }} title="Eliminar foto">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.375rem", height: "80px", border: "2px dashed var(--border)", borderRadius: "var(--radius-lg)", cursor: couplePhotoUploading ? "wait" : "pointer", background: "var(--muted)", color: "var(--foreground-muted)" }}>
+                        {couplePhotoUploading ? <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} /> : <><Camera size={20} /><span style={{ fontSize: "0.75rem", fontWeight: 600 }}>Subir foto de pareja</span></>}
+                        <input type="file" accept="image/*" style={{ display: "none" }} disabled={couplePhotoUploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCouplePhotoUpload(f); e.target.value = "" }} />
                       </label>
-                      {data.couple.photo_url ? (
-                        <div style={{ position: "relative", borderRadius: "var(--radius-lg)", overflow: "hidden", height: "120px" }}>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={data.couple.photo_url}
-                            alt="Foto de pareja"
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                          />
-                          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 60%)" }} />
-                          <button
-                            onClick={handleRemoveCouplePhoto}
-                            style={{
-                              position: "absolute", bottom: 8, right: 8,
-                              background: "rgba(239,68,68,0.9)", border: "none", borderRadius: "50%",
-                              width: 30, height: 30, cursor: "pointer", color: "white",
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              backdropFilter: "blur(4px)",
-                            }}
-                            title="Eliminar foto"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                    )}
+                    <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>Se muestra como fondo en tu perfil</p>
+                  </div>
+
+                  {/* Anniversary */}
+                  <div style={{ marginBottom: "1rem" }}>
+                    <label style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.5rem" }}>
+                      <CalendarHeart size={13} style={{ color: "var(--primary)" }} /> Fecha de aniversario
+                    </label>
+                    {(() => {
+                      const days = daysTogether(data.couple.anniversary_date)
+                      return days !== null ? (
+                        <div style={{ background: "linear-gradient(135deg, var(--primary-lighter), #fce7f3)", borderRadius: "var(--radius-md)", padding: "0.5rem 0.875rem", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <span style={{ fontSize: "1.375rem", fontWeight: 700, fontFamily: "'Fredoka', sans-serif", color: "var(--primary)" }}>{days.toLocaleString("es-ES")}</span>
+                          <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)" }}>días juntos 💕</span>
                         </div>
-                      ) : (
-                        <label style={{
-                          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                          gap: "0.5rem", height: "100px", border: "2px dashed var(--border)",
-                          borderRadius: "var(--radius-lg)", cursor: couplePhotoUploading ? "wait" : "pointer",
-                          background: "var(--muted)", color: "var(--foreground-muted)",
-                        }}>
-                          {couplePhotoUploading ? (
-                            <Loader2 size={20} style={{ animation: "spin 1s linear infinite" }} />
-                          ) : (
-                            <>
-                              <Camera size={24} />
-                              <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>Subir foto de pareja</span>
-                            </>
-                          )}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            style={{ display: "none" }}
-                            disabled={couplePhotoUploading}
-                            onChange={(e) => {
-                              const f = e.target.files?.[0]
-                              if (f) handleCouplePhotoUpload(f)
-                              e.target.value = ""
-                            }}
-                          />
-                        </label>
-                      )}
-                      <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.375rem" }}>
-                        Se muestra como fondo en tu perfil
-                      </p>
-                    </div>
+                      ) : null
+                    })()}
+                    <input type="date" className="input" value={data.couple.anniversary_date ?? ""} max={new Date().toISOString().slice(0, 10)} disabled={updateCouple.isPending} onChange={(e) => handleAnniversaryChange(e.target.value)} />
+                  </div>
 
-                    {/* Fecha de aniversario */}
-                    <div style={{ textAlign: "left", marginBottom: "1.25rem" }}>
-                      <label style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.5rem" }}>
-                        <CalendarHeart size={14} style={{ color: "var(--primary)" }} /> Fecha de aniversario
-                      </label>
-                      {(() => {
-                        const days = daysTogether(data.couple.anniversary_date)
-                        return days !== null ? (
-                          <div style={{
-                            background: "linear-gradient(135deg, var(--primary-lighter), #fce7f3)",
-                            borderRadius: "var(--radius-md)", padding: "0.625rem 0.875rem", marginBottom: "0.5rem",
-                            display: "flex", alignItems: "center", gap: "0.5rem",
-                          }}>
-                            <span style={{ fontSize: "1.5rem", fontWeight: 700, fontFamily: "'Fredoka', sans-serif", color: "var(--primary)" }}>
-                              {days.toLocaleString("es-ES")}
-                            </span>
-                            <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)" }}>
-                              días juntos 💕
-                            </span>
-                          </div>
-                        ) : null
-                      })()}
+                  {/* Unlink */}
+                  <button className="btn btn-outline btn-danger" style={{ width: "100%", fontSize: "0.8125rem" }} onClick={handleUnlink} disabled={unlinkMutation.isPending}>
+                    {unlinkMutation.isPending ? "Desvinculando..." : "Desvincular pareja"}
+                  </button>
+                </SettingsCard>
+              ) : null}
+
+              {/* Card 3 — Conectar pareja (unlinked) */}
+              {!isLoading && !data?.couple && (
+                <SettingsCard title={<>🔗 Conectar pareja</>}>
+                  {/* Share code */}
+                  <div style={{ marginBottom: "1.25rem" }}>
+                    <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.25rem" }}>Tu código único</p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.625rem" }}>Comparte este código con tu pareja para vincularos</p>
+                    {data?.user?.couple_code && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div style={{ flex: 1, background: "var(--muted)", borderRadius: "var(--radius-md)", padding: "0.625rem 0.875rem", fontFamily: "monospace", fontWeight: 700, fontSize: "1.25rem", textAlign: "center", letterSpacing: "0.15em", color: "var(--primary)", border: "1px solid var(--border)" }}>
+                          {data.user.couple_code}
+                        </div>
+                        <button className="btn btn-outline" onClick={handleCopy} style={{ flexShrink: 0, padding: "0.625rem" }} title="Copiar código">
+                          {copied ? <Check size={16} style={{ color: "#10b981" }} /> : <Copy size={16} />}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
+                    <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+                    <span style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", fontWeight: 600 }}>o</span>
+                    <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+                  </div>
+
+                  {/* Link partner */}
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", marginBottom: "0.25rem" }}>Vincular con pareja</p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.625rem" }}>Pide a tu pareja su código e introdúcelo aquí</p>
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
                       <input
-                        type="date"
                         className="input"
-                        value={data.couple.anniversary_date ?? ""}
-                        max={new Date().toISOString().slice(0, 10)}
-                        disabled={updateCouple.isPending}
-                        onChange={(e) => handleAnniversaryChange(e.target.value)}
+                        placeholder="Código de 6 caracteres"
+                        value={code}
+                        onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 6))}
+                        maxLength={6}
+                        style={{ flex: 1, textAlign: "center", fontFamily: "monospace", fontWeight: 700, fontSize: "1rem", letterSpacing: "0.1em" }}
                       />
-                    </div>
-
-                    <button className="btn btn-outline btn-danger" onClick={handleUnlink} disabled={unlinkMutation.isPending}>
-                      {unlinkMutation.isPending ? "Desvinculando..." : "Desvincular Pareja"}
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                    <div>
-                      <p style={{ fontWeight: 700, color: "var(--foreground)", marginBottom: "0.25rem", fontSize: "0.9375rem" }}>Tu Código Único</p>
-                      <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginBottom: "0.75rem" }}>
-                        Comparte este código con tu pareja
-                      </p>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                        <span className="couple-code">{data?.user.couple_code ?? "------"}</span>
-                        <button className="btn-icon-small" onClick={handleCopy} title="Copiar">
-                          {copied ? <Check size={16} color="var(--success-dark)" /> : <Copy size={16} />}
-                        </button>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", color: "var(--foreground-muted)" }}>
-                      <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
-                      <span style={{ fontSize: "0.8125rem" }}>o</span>
-                      <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
-                    </div>
-                    <div>
-                      <p style={{ fontWeight: 700, color: "var(--foreground)", marginBottom: "0.25rem", fontSize: "0.9375rem" }}>Vincular con Pareja</p>
-                      <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginBottom: "0.75rem" }}>
-                        Ingresa el código de tu pareja
-                      </p>
-                      <div style={{ display: "flex", gap: "0.5rem" }}>
-                        <input
-                          type="text" className="input" placeholder="Ej: AB12CD" maxLength={6}
-                          value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
-                          style={{ textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 700 }}
-                        />
-                        <button className="btn btn-primary" onClick={handleLink}
-                          disabled={linkMutation.isPending || code.length !== 6} style={{ flexShrink: 0 }}>
-                          {linkMutation.isPending ? "..." : "Vincular"}
-                        </button>
-                      </div>
+                      <button
+                        className="btn btn-primary"
+                        onClick={handleLink}
+                        disabled={code.length !== 6 || linkMutation.isPending}
+                        style={{ flexShrink: 0 }}
+                      >
+                        {linkMutation.isPending ? "..." : "Vincular"}
+                      </button>
                     </div>
                   </div>
-                )}
-              </section>
-
+                </SettingsCard>
+              )}
             </>
           )}
 
@@ -1265,6 +1244,29 @@ export function SettingsModal() {
                           </button>
                         </div>
                       </>
+                    )}
+                  </div>
+                )}
+
+                {/* Biometric toggle — only show on native when lock is enabled */}
+                {appLockEnabled && (
+                  <div>
+                    <SettingRow
+                      icon={<Fingerprint size={14} />}
+                      label="Desbloquear con huella"
+                      desc={bioAvailableInSettings
+                        ? (appLockBioEnabled ? "Activo — la app se abre con tu huella 👆" : "Usa tu huella al abrir la app")
+                        : "No disponible en este dispositivo"}
+                      control={
+                        bioAvailableInSettings
+                          ? <Toggle checked={appLockBioEnabled} onChange={handleBioToggle} />
+                          : <span style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>—</span>
+                      }
+                    />
+                    {!bioAvailableInSettings && (
+                      <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.25rem", paddingLeft: "1.5rem" }}>
+                        Regístra tu huella en Ajustes de Android → Seguridad → Huella digital
+                      </p>
                     )}
                   </div>
                 )}

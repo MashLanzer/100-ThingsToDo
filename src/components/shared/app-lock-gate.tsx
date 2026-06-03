@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { AppLockScreen } from "@/components/shared/app-lock-screen"
 import {
   isAppLockEnabled, getAppLockPin,
-  recordBackgroundTime, shouldRelockAfterBackground, clearBackgroundTime
+  recordBackgroundTime, shouldRelockAfterBackground, clearBackgroundTime,
+  isAppLockBioEnabled
 } from "@/lib/app-lock"
 
 interface Props { children: React.ReactNode }
@@ -14,6 +15,7 @@ export function AppLockGate({ children }: Props) {
   const [isMounted, setIsMounted] = useState(false)
   const [isNative, setIsNative] = useState(false)
   const [biometricAvailable, setBiometricAvailable] = useState(false)
+  const [bioEnabled, setBioEnabled] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
@@ -35,6 +37,7 @@ export function AppLockGate({ children }: Props) {
       } catch { /* not native or plugin not available */ }
     }
     checkBiometric()
+    setBioEnabled(isAppLockBioEnabled())
 
     // Background/foreground detection
     function handleVisibilityChange() {
@@ -74,6 +77,12 @@ export function AppLockGate({ children }: Props) {
     }
   }, [])
 
+  useEffect(() => {
+    if (locked) {
+      setBioEnabled(isAppLockBioEnabled())
+    }
+  }, [locked])
+
   async function handleBiometricAttempt(): Promise<boolean> {
     const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth")
     try {
@@ -100,8 +109,8 @@ export function AppLockGate({ children }: Props) {
     return (
       <AppLockScreen
         onUnlock={handleUnlock}
-        allowBiometric={isNative && biometricAvailable}
-        onBiometricAttempt={isNative && biometricAvailable ? handleBiometricAttempt : undefined}
+        allowBiometric={isNative && biometricAvailable && bioEnabled}
+        onBiometricAttempt={isNative && biometricAvailable && bioEnabled ? handleBiometricAttempt : undefined}
       />
     )
   }
