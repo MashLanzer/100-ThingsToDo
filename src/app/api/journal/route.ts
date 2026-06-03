@@ -24,8 +24,19 @@ export async function GET(req: NextRequest) {
     .order("date", { ascending: false })
 
   if (year && month) {
-    const pad = month.padStart(2, "0")
-    query = query.gte("date", `${year}-${pad}-01`).lte("date", `${year}-${pad}-31`)
+    const y = parseInt(year, 10)
+    const m = parseInt(month, 10)
+    if (!Number.isNaN(y) && !Number.isNaN(m) && m >= 1 && m <= 12) {
+      const pad = month.padStart(2, "0")
+      // Use the first day of the next month with `lt` so we never build an
+      // invalid date like 2026-06-31 (which makes Postgres reject the whole
+      // query and the journal appears empty for 30-day months and February).
+      const nextM = m === 12 ? 1 : m + 1
+      const nextY = m === 12 ? y + 1 : y
+      const start = `${year}-${pad}-01`
+      const end = `${nextY}-${String(nextM).padStart(2, "0")}-01`
+      query = query.gte("date", start).lt("date", end)
+    }
   }
 
   const { data, error } = await query
