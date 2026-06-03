@@ -189,6 +189,7 @@ export interface ChallengeData {
 export interface Photo {
   id: string
   image_url: string
+  medium_url?: string | null
   thumb_url: string | null
   delete_url: string | null
   file_name: string | null

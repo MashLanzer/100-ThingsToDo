@@ -7,6 +7,7 @@ import {
   useMarkPhotoViewed, usePhotoViews, type PhotoViewData,
   usePhotoAlbums, useCreatePhotoAlbum, useDeletePhotoAlbum, useUpdatePhotoAlbum, type PhotoAlbum,
 } from "@/hooks/use-photos"
+import { useQueryClient } from "@tanstack/react-query"
 import type { Photo } from "@/types"
 import {
   usePhotoComments, useAddPhotoComment, useDeletePhotoComment, type PhotoComment,
@@ -291,6 +292,14 @@ function PhotoCarousel({ photos }: { photos: Photo[] }) {
   function prev() { setIdx((i) => (i - 1 + photos.length) % photos.length) }
   function next() { setIdx((i) => (i + 1) % photos.length) }
 
+  // Preload next image so switching feels instant
+  const nextSrc = photos[(idx + 1) % photos.length]?.medium_url ?? photos[(idx + 1) % photos.length]?.image_url
+  useEffect(() => {
+    if (!nextSrc || photos.length < 2) return
+    const img = new Image()
+    img.src = nextSrc
+  }, [nextSrc, photos.length])
+
   return (
     <div style={{ position: "relative" }}>
       <div
@@ -304,8 +313,9 @@ function PhotoCarousel({ photos }: { photos: Photo[] }) {
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={photos[idx].image_url}
+          src={photos[idx].medium_url ?? photos[idx].image_url}
           alt={photos[idx].caption ?? ""}
+          decoding="async"
           style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }}
         />
         <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.5)", borderRadius: "999px", padding: "2px 8px", color: "white", fontSize: "0.6875rem", fontWeight: 700 }}>
@@ -491,8 +501,9 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={photo.image_url}
+            src={photo.medium_url ?? photo.image_url}
             alt={photo.caption ?? "Foto"}
+            decoding="async"
             style={{ width: "100%", display: "block", maxHeight: "78vw", objectFit: "cover", pointerEvents: "none" }}
             loading="lazy"
           />
@@ -1671,6 +1682,7 @@ function findMemoryPhotos(photos: Photo[]): { label: string; photos: Photo[] } |
 }
 
 export default function FotosPage() {
+  const qc = useQueryClient()
   const { data: photos, isLoading, error: photosError } = usePhotos()
   const uploadPhoto = useUploadPhoto()
   const deletePhoto = useDeletePhoto()
@@ -1888,6 +1900,9 @@ export default function FotosPage() {
     setUploadProgress(null)
     setWizardStep(null)
     if (successCount > 0) {
+      // Invalidate once after all uploads so the carousel is never half-populated
+      qc.invalidateQueries({ queryKey: ["photos"] })
+      qc.invalidateQueries({ queryKey: ["photos-paginated"] })
       toast.success(successCount === 1 ? "Foto subida!" : `${successCount} fotos subidas!`)
       if (freshIds.length > 0) {
         setNewPhotoIds((prev) => new Set([...prev, ...freshIds]))

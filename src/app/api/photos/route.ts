@@ -26,8 +26,16 @@ function parseFirestoreDoc(doc: FirestoreDoc) {
   }
 }
 
+// Server-side cache: avoid re-crawling Firestore on every request
+let firestoreCache: { photos: ReturnType<typeof parseFirestoreDoc>[]; fetchedAt: number } | null = null
+const FIRESTORE_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
 async function fetchFirestorePhotos(): Promise<ReturnType<typeof parseFirestoreDoc>[]> {
   if (!FIREBASE_API_KEY) return []
+  const now = Date.now()
+  if (firestoreCache && now - firestoreCache.fetchedAt < FIRESTORE_CACHE_TTL_MS) {
+    return firestoreCache.photos
+  }
   try {
     const docs: FirestoreDoc[] = []
     let pageToken: string | undefined
@@ -40,9 +48,11 @@ async function fetchFirestorePhotos(): Promise<ReturnType<typeof parseFirestoreD
       if (data.documents) docs.push(...(data.documents as FirestoreDoc[]))
       pageToken = data.nextPageToken
     } while (pageToken)
-    return docs.map(parseFirestoreDoc).filter((p) => p.image_url)
+    const photos = docs.map(parseFirestoreDoc).filter((p) => p.image_url)
+    firestoreCache = { photos, fetchedAt: now }
+    return photos
   } catch {
-    return []
+    return firestoreCache?.photos ?? []
   }
 }
 
@@ -180,12 +190,14 @@ export async function POST(req: NextRequest) {
 
   const imageUrl: string = imgbbData.data.url
   const thumbUrl: string = imgbbData.data.thumb?.url ?? imageUrl
+  const mediumUrl: string = imgbbData.data.medium?.url ?? imgbbData.data.display_url ?? imageUrl
   const deleteUrl: string | null = imgbbData.data.delete_url ?? null
 
   // Try Supabase photos table first
   const baseRow = {
     collection_key: coupleId,
     image_url: imageUrl,
+    medium_url: mediumUrl,
     thumb_url: thumbUrl,
     delete_url: deleteUrl,
     caption: captionStr,
@@ -233,6 +245,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       id: "firestore-" + firestoreData.name?.split("/").pop(),
       image_url: imageUrl,
+      medium_url: mediumUrl,
       thumb_url: thumbUrl,
       delete_url: deleteUrl,
       caption: captionStr,

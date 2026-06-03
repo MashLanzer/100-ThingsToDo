@@ -50,8 +50,8 @@ export function usePhotos() {
       if (res && Array.isArray(res.photos)) return res.photos
       return []
     },
-    staleTime: 30_000,
-    refetchInterval: 20_000,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   })
 }
 
@@ -76,7 +76,6 @@ export function usePhotosPaginated() {
 }
 
 export function useUploadPhoto() {
-  const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ file, caption, group_id }: { file: File; caption?: string; group_id?: string }) => {
       const formData = new FormData()
@@ -85,10 +84,7 @@ export function useUploadPhoto() {
       if (group_id) formData.append("group_id", group_id)
       return authFetchFormData("/api/photos", formData)
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["photos"] })
-      qc.invalidateQueries({ queryKey: ["photos-paginated"] })
-    },
+    // Invalidation is handled in handleUploadConfirm after all uploads finish
   })
 }
 
