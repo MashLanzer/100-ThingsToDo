@@ -16,6 +16,7 @@ import {
   Camera, Images, Trash2, X, ChevronLeft, ChevronRight, Calendar,
   LayoutGrid, Rows3, Download, Share2, CheckCircle2, Circle, Newspaper,
   Heart, MessageCircle, Send, Search, CornerDownRight, FolderOpen, Plus, Folder,
+  MoreVertical,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -361,13 +362,14 @@ function PhotoCarousel({ photos }: { photos: Photo[] }) {
 }
 
 // F5: Double-tap to like FeedCard
-function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onOpenComments, partnerViewed, groupPhotos }: {
+function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onOpenComments, partnerViewed, groupPhotos, onDelete }: {
   photo: Photo; onClick: () => void
   reactions: PhotoReaction[]; commentCount: number; myUid: string
   onReact: (emoji: string) => void
   onOpenComments: () => void
   partnerViewed?: boolean
   groupPhotos?: Photo[]
+  onDelete?: () => void
 }) {
   const appName = photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"
   const uploaderName = photo.uploaded_by_name?.trim() || null
@@ -380,6 +382,8 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
 
   const [picker, setPicker] = useState(false)
   const [burst, setBurst] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressed = useRef(false)
   // F5: track last tap time for double-tap detection
@@ -441,7 +445,7 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
       }}
     >
       {/* Post header */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.875rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.875rem", position: "relative" }}>
         <div style={{
           width: 38, height: 38, borderRadius: "50%", padding: 2, flexShrink: 0,
           background: photo.source === "14feb"
@@ -466,7 +470,108 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
             {uploaderName ? `${appName} · ${timeAgoEs(photo.created_at)}` : timeAgoEs(photo.created_at)}
           </p>
         </div>
+
+        {/* 3-dot menu button */}
+        {onDelete && (
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v) }}
+              style={{
+                background: "none", border: "none", cursor: "pointer", padding: "6px",
+                color: "var(--foreground-muted)", borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--muted)" }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "none" }}
+            >
+              <MoreVertical size={18} />
+            </button>
+
+            {/* Dropdown */}
+            {menuOpen && (
+              <>
+                <div onClick={(e) => { e.stopPropagation(); setMenuOpen(false) }}
+                  style={{ position: "fixed", inset: 0, zIndex: 98 }} />
+                <div style={{
+                  position: "absolute", top: "calc(100% + 4px)", right: 0,
+                  background: "var(--surface)", border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-md)", boxShadow: "var(--shadow-lg)",
+                  zIndex: 99, minWidth: 160, overflow: "hidden",
+                  animation: "modalIn 0.12s ease",
+                }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setConfirmDelete(true) }}
+                    style={{
+                      width: "100%", padding: "0.625rem 0.875rem",
+                      background: "none", border: "none", cursor: "pointer",
+                      display: "flex", alignItems: "center", gap: "0.5rem",
+                      fontSize: "0.875rem", fontFamily: "inherit", fontWeight: 500,
+                      color: "#ef4444", textAlign: "left",
+                      transition: "background 0.1s",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.08)" }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "none" }}
+                  >
+                    <Trash2 size={15} />
+                    Borrar publicación
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Delete confirmation modal */}
+      {confirmDelete && (
+        <>
+          <div onClick={(e) => { e.stopPropagation(); setConfirmDelete(false) }}
+            style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(45,27,62,0.5)", backdropFilter: "blur(4px)" }} />
+          <div style={{
+            position: "fixed", left: "50%", top: "50%", transform: "translate(-50%, -50%)",
+            zIndex: 201, background: "var(--surface)", borderRadius: "var(--radius-xl)",
+            boxShadow: "var(--shadow-xl)", padding: "1.5rem", width: "min(320px, 90vw)",
+            animation: "modalIn 0.15s ease",
+          }}>
+            <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
+              <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🗑️</div>
+              <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "var(--foreground)", margin: "0 0 0.5rem" }}>
+                ¿Borrar publicación?
+              </h3>
+              <p style={{ fontSize: "0.875rem", color: "var(--foreground-muted)", margin: 0, lineHeight: 1.5 }}>
+                Esta foto se eliminará de vuestra galería y no se podrá recuperar.
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "0.625rem" }}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDelete(false) }}
+                style={{
+                  flex: 1, padding: "0.625rem", borderRadius: "var(--radius-md)",
+                  background: "var(--muted)", border: "none", cursor: "pointer",
+                  fontSize: "0.875rem", fontFamily: "inherit", fontWeight: 600,
+                  color: "var(--foreground-muted)", transition: "background 0.15s",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); onDelete?.() }}
+                style={{
+                  flex: 1, padding: "0.625rem", borderRadius: "var(--radius-md)",
+                  background: "#ef4444", border: "none", cursor: "pointer",
+                  fontSize: "0.875rem", fontFamily: "inherit", fontWeight: 700,
+                  color: "white", transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#dc2626" }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#ef4444" }}
+              >
+                Sí, borrar
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Image — for group posts show carousel; for solo use double-tap to like / single tap lightbox */}
       {groupPhotos ? (
@@ -2490,6 +2595,7 @@ export default function FotosPage() {
                         onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === primaryPhoto.id))}
                         partnerViewed={(photoViews as Record<string, PhotoViewData>)[primaryPhoto.id]?.partner_viewed}
                         groupPhotos={post.isGroup ? post.photos : undefined}
+                        onDelete={() => handleDelete(primaryPhoto.id)}
                       />
                     )
                   })}

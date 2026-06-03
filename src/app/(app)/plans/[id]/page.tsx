@@ -699,13 +699,6 @@ export default function PlanDetailPage() {
           ) : null}
         </div>
 
-        {/* Add task button */}
-        <div style={{ marginBottom: "1rem" }}>
-          <button className="btn btn-primary" onClick={() => setShowTaskForm(true)}>
-            <Plus size={18} />
-            Agregar Tarea
-          </button>
-        </div>
 
         {/* Task form modal */}
         <Modal
