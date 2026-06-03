@@ -4,7 +4,7 @@ alter table journal_entries drop constraint if exists journal_entries_couple_id_
 alter table journal_entries drop constraint if exists journal_entries_couple_id_date_user_key;
 alter table journal_entries drop constraint if exists journal_entries_couple_id_date_created_by_key;
 
-alter table journal_entries add constraint if not exists journal_entries_couple_id_date_created_by_key
+alter table journal_entries add constraint journal_entries_couple_id_date_created_by_key
   unique (couple_id, date, created_by);
 
 -- Ensure optional columns exist
