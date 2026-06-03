@@ -60,16 +60,22 @@
 
 [data-dark="true"] {
   --background: #1a1225;
+  --surface: #221833;
+  --surface-hover: #2a1e3a;
   --foreground: #f0e8ff;
   --foreground-light: #c4b8d8;
   --foreground-muted: #9080a8;
   --muted: #2a1e3a;
-  --border: #3d2d55;
+  --border: #4a3465;
+  --border-hover: #5e4480;
   --card-bg: #221833;
   --primary-lighter: #2d1f45;
   --pink-light: #3d1e35;
-  --shadow-sm: 0 1px 4px rgba(0,0,0,0.4);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+  /* Sombras visibles en dark — usan color púrpura oscuro en vez de negro plano */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.55), 0 1px 3px rgba(139,92,246,0.12);
+  --shadow-md: 0 4px 18px rgba(0,0,0,0.65), 0 2px 8px rgba(139,92,246,0.15);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.7), 0 4px 12px rgba(139,92,246,0.18);
+  --shadow-xl: 0 16px 48px rgba(0,0,0,0.75), 0 8px 20px rgba(139,92,246,0.2);
   color-scheme: dark;
 }
 
@@ -82,33 +88,63 @@
 [data-dark="true"] .task-item,
 [data-dark="true"] .modal-box {
   background: #221833;
-  border-color: #3d2d55;
+  border-color: #4a3465;
+  box-shadow: var(--shadow-sm);
 }
 
 [data-dark="true"] .input,
 [data-dark="true"] .textarea {
-  background: #2a1e3a;
+  background: #2e2244;
   color: #f0e8ff;
-  border-color: #3d2d55;
+  border-color: #5e4480;
+}
+
+[data-dark="true"] .input:focus,
+[data-dark="true"] .textarea:focus {
+  border-color: var(--primary);
+  background: #33274d;
+}
+
+[data-dark="true"] .input::placeholder,
+[data-dark="true"] .textarea::placeholder {
+  color: #7060a0;
 }
 
 [data-dark="true"] .app-header {
-  background: rgba(26,18,37,0.95);
-  border-color: #3d2d55;
+  background: rgba(26,18,37,0.96);
+  border-color: #4a3465;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
 }
 
 [data-dark="true"] .btn-outline {
-  border-color: #3d2d55;
+  border-color: #5e4480;
   color: var(--foreground-light);
+  background: rgba(255,255,255,0.03);
+}
+
+[data-dark="true"] .btn-outline:hover {
+  background: rgba(139,92,246,0.12);
+  border-color: var(--primary);
 }
 
 [data-dark="true"] .modal-overlay-bg {
-  background: rgba(0,0,0,0.7);
+  background: rgba(0,0,0,0.75);
 }
 
 [data-dark="true"] .bottom-nav {
   background: rgba(26, 18, 37, 0.97);
-  border-color: #3d2d55;
+  border-color: #4a3465;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.5);
+}
+
+[data-dark="true"] .skeleton,
+[data-dark="true"] .skeleton-card {
+  background: #2a1e3a;
+}
+
+[data-dark="true"] .skeleton::after,
+[data-dark="true"] .skeleton-card::after {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
 }
 
 * {
