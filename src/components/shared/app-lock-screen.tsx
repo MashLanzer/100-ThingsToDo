@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { getAppLockPin } from "@/lib/app-lock"
+import { getCachedCouplePhoto } from "@/lib/couple-photo"
 import { Loader2 } from "lucide-react"
 
 interface Props {
@@ -17,6 +18,12 @@ export function AppLockScreen({ onUnlock, allowBiometric = false, onBiometricAtt
   const [shake, setShake] = useState(false)
   const [bioLoading, setBioLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState("")
+  const [couplePhoto, setCouplePhoto] = useState<string | null>(null)
+
+  // Load the cached couple photo to use as the lock-screen backdrop
+  useEffect(() => {
+    setCouplePhoto(getCachedCouplePhoto())
+  }, [])
 
   // Auto-try biometric on mount
   useEffect(() => {
@@ -25,6 +32,12 @@ export function AppLockScreen({ onUnlock, allowBiometric = false, onBiometricAtt
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const hasPhoto = !!couplePhoto
+  // On a photo backdrop we switch to light text and translucent dark keys so
+  // everything stays legible over any image.
+  const titleColor = hasPhoto ? "#ffffff" : "var(--foreground, #2D1B3E)"
+  const subColor = hasPhoto ? "rgba(255,255,255,0.85)" : "var(--foreground-muted, #7c6b8a)"
 
   async function handleBiometric() {
     if (!onBiometricAttempt) return
@@ -62,21 +75,28 @@ export function AppLockScreen({ onUnlock, allowBiometric = false, onBiometricAtt
     }
   }
 
+  const keyBg = hasPhoto ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.7)"
+  const keyBgActive = hasPhoto ? "rgba(255,255,255,0.32)" : "rgba(139,92,246,0.12)"
+  const keyColor = hasPhoto ? "#ffffff" : "var(--foreground, #2D1B3E)"
+  const keyBorder = hasPhoto ? "1.5px solid rgba(255,255,255,0.25)" : "1.5px solid rgba(139,92,246,0.15)"
+
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 9999,
-      background: "linear-gradient(160deg, var(--primary-lighter, #EDE9FE) 0%, #fce7f3 100%)",
+      background: hasPhoto
+        ? `linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.35) 40%, rgba(0,0,0,0.65) 100%), center / cover no-repeat url("${couplePhoto}")`
+        : "linear-gradient(160deg, var(--primary-lighter, #EDE9FE) 0%, #fce7f3 100%)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       padding: "2rem 1.5rem", gap: "1.5rem",
       fontFamily: "'Quicksand', sans-serif",
     }}>
       {/* Lock icon */}
-      <div style={{ fontSize: "3rem", lineHeight: 1 }}>🔒</div>
+      <div style={{ fontSize: "3rem", lineHeight: 1, filter: hasPhoto ? "drop-shadow(0 2px 8px rgba(0,0,0,0.5))" : undefined }}>🔒</div>
       <div style={{ textAlign: "center" }}>
-        <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.5rem", fontWeight: 700, color: "var(--foreground, #2D1B3E)", margin: 0 }}>
+        <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.5rem", fontWeight: 700, color: titleColor, margin: 0, textShadow: hasPhoto ? "0 2px 12px rgba(0,0,0,0.6)" : undefined }}>
           ThingsToDo
         </h1>
-        <p style={{ color: "var(--foreground-muted, #7c6b8a)", fontSize: "0.875rem", marginTop: "0.25rem" }}>
+        <p style={{ color: subColor, fontSize: "0.875rem", marginTop: "0.25rem", textShadow: hasPhoto ? "0 1px 8px rgba(0,0,0,0.6)" : undefined }}>
           {allowBiometric ? "Usa tu huella o introduce el PIN" : "Introduce tu PIN para continuar"}
         </p>
       </div>
@@ -89,15 +109,17 @@ export function AppLockScreen({ onUnlock, allowBiometric = false, onBiometricAtt
         {[0,1,2,3].map(i => (
           <div key={i} style={{
             width: 16, height: 16, borderRadius: "50%",
-            background: i < input.length ? "var(--primary, #8B5CF6)" : "var(--border, #E8E0F0)",
-            border: "2px solid var(--primary, #8B5CF6)",
+            background: i < input.length
+              ? (hasPhoto ? "#ffffff" : "var(--primary, #8B5CF6)")
+              : (hasPhoto ? "rgba(255,255,255,0.25)" : "var(--border, #E8E0F0)"),
+            border: hasPhoto ? "2px solid rgba(255,255,255,0.8)" : "2px solid var(--primary, #8B5CF6)",
             transition: "background 0.15s",
           }} />
         ))}
       </div>
 
       {errorMsg && (
-        <p style={{ color: "#ef4444", fontSize: "0.8125rem", fontWeight: 600, margin: 0 }}>{errorMsg}</p>
+        <p style={{ color: hasPhoto ? "#fecaca" : "#ef4444", fontSize: "0.8125rem", fontWeight: 600, margin: 0, textShadow: hasPhoto ? "0 1px 8px rgba(0,0,0,0.6)" : undefined }}>{errorMsg}</p>
       )}
 
       {/* Keypad */}
@@ -110,15 +132,15 @@ export function AppLockScreen({ onUnlock, allowBiometric = false, onBiometricAtt
               disabled={bioLoading}
               style={{
                 height: 60, borderRadius: "var(--radius-lg, 16px)",
-                background: "rgba(255,255,255,0.7)", border: "1.5px solid rgba(139,92,246,0.15)",
+                background: keyBg, border: keyBorder,
                 fontSize: d === "⌫" ? "1.25rem" : "1.5rem",
                 fontFamily: "'Fredoka', sans-serif", fontWeight: 600,
-                color: "var(--foreground, #2D1B3E)", cursor: "pointer",
+                color: keyColor, cursor: "pointer",
                 transition: "transform 0.1s, background 0.1s",
                 backdropFilter: "blur(8px)",
               }}
-              onTouchStart={(e) => { e.currentTarget.style.transform = "scale(0.93)"; e.currentTarget.style.background = "rgba(139,92,246,0.12)" }}
-              onTouchEnd={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.background = "rgba(255,255,255,0.7)" }}
+              onTouchStart={(e) => { e.currentTarget.style.transform = "scale(0.93)"; e.currentTarget.style.background = keyBgActive }}
+              onTouchEnd={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.background = keyBg }}
             >
               {d}
             </button>

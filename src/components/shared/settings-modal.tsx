@@ -861,7 +861,7 @@ export function SettingsModal() {
                         <input type="file" accept="image/*" style={{ display: "none" }} disabled={couplePhotoUploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCouplePhotoUpload(f); e.target.value = "" }} />
                       </label>
                     )}
-                    <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>Se muestra como fondo en tu perfil</p>
+                    <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>Aparece en el inicio, el header y la pantalla de bloqueo</p>
                   </div>
 
                   {/* Anniversary */}

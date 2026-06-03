@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react"
 import { Smartphone, Settings2 } from "lucide-react"
 import { getFirebaseToken } from "@/lib/firebase/client"
 import { areCelebrationsEnabled } from "@/lib/utils"
+import { setCachedCouplePhoto } from "@/lib/couple-photo"
 
 const CONFETTI_COLORS = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#A78BFA"]
 
@@ -94,6 +95,12 @@ export function AppHeader() {
     }
   }, [data?.couple?.created_at])
 
+  // Cache the couple photo so the lock screen can use it as a backdrop
+  useEffect(() => {
+    setCachedCouplePhoto(data?.couple?.photo_url ?? null)
+  }, [data?.couple?.photo_url])
+
+  const couplePhoto = data?.couple?.photo_url ?? null
   const title = getPageTitle(pathname, coupleName)
 
   return (
@@ -113,6 +120,23 @@ export function AppHeader() {
             </span>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            {couplePhoto && (
+              <button
+                onClick={() => openSettingsModal()}
+                title="Vuestro perfil"
+                aria-label="Vuestro perfil"
+                style={{
+                  width: 32, height: 32, borderRadius: "50%", padding: 0, flexShrink: 0,
+                  border: "2px solid var(--primary-light, #d8c9f0)", cursor: "pointer",
+                  overflow: "hidden", background: "var(--muted)", marginRight: "0.125rem",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={couplePhoto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </button>
+            )}
             <button
               className="btn-icon"
               onClick={() => openPhoneModal("home")}

@@ -384,22 +384,31 @@ export default function DashboardPage() {
         const firstName = user?.displayName?.split(" ")[0] ?? "tú"
         const partnerFirst = partnerNickname.trim() || partner?.name?.split(" ")[0] || "pareja"
         const activePlanCount = filteredActive.length
+        const couplePhoto = coupleData?.couple?.photo_url ?? null
         return (
           <div style={{
-            background: grad,
             borderRadius: "var(--radius-xl)",
             padding: "1.25rem 1.25rem 1rem",
             marginBottom: "1rem",
             position: "relative",
             overflow: "hidden",
             color: "white",
+            // If a couple photo exists, use it as bg with a dark overlay; else use the gradient
+            background: couplePhoto
+              ? `linear-gradient(160deg, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.38) 60%, rgba(0,0,0,0.62) 100%), center / cover no-repeat url("${couplePhoto}")`
+              : grad,
           }}>
-            <div aria-hidden style={{ position: "absolute", top: "-20%", right: "-10%", width: "180px", height: "180px", borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
-            <div aria-hidden style={{ position: "absolute", bottom: "-30%", left: "-5%", width: "140px", height: "140px", borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
-            <p style={{ fontFamily: "'Quicksand', sans-serif", fontSize: "0.75rem", fontWeight: 600, opacity: 0.8, marginBottom: "0.25rem", textTransform: "capitalize" }}>
+            {/* Decorative circles only when no photo (they'd show through the overlay) */}
+            {!couplePhoto && (
+              <>
+                <div aria-hidden style={{ position: "absolute", top: "-20%", right: "-10%", width: "180px", height: "180px", borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
+                <div aria-hidden style={{ position: "absolute", bottom: "-30%", left: "-5%", width: "140px", height: "140px", borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
+              </>
+            )}
+            <p style={{ fontFamily: "'Quicksand', sans-serif", fontSize: "0.75rem", fontWeight: 600, opacity: 0.85, marginBottom: "0.25rem", textTransform: "capitalize", textShadow: couplePhoto ? "0 1px 6px rgba(0,0,0,0.5)" : undefined }}>
               {dayName} {dayNum} de {monthName}
             </p>
-            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.5rem", fontWeight: 700, lineHeight: 1.2, marginBottom: "0.625rem" }}>
+            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.5rem", fontWeight: 700, lineHeight: 1.2, marginBottom: "0.625rem", textShadow: couplePhoto ? "0 2px 10px rgba(0,0,0,0.55)" : undefined }}>
               Hola, {firstName} & {partnerFirst} 💕
             </h1>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
