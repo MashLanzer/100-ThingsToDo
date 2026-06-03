@@ -120,23 +120,6 @@ export function AppHeader() {
             </span>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-            {couplePhoto && (
-              <button
-                onClick={() => openSettingsModal()}
-                title="Vuestro perfil"
-                aria-label="Vuestro perfil"
-                style={{
-                  width: 32, height: 32, borderRadius: "50%", padding: 0, flexShrink: 0,
-                  border: "2px solid var(--primary-light, #d8c9f0)", cursor: "pointer",
-                  overflow: "hidden", background: "var(--muted)", marginRight: "0.125rem",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={couplePhoto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              </button>
-            )}
             <button
               className="btn-icon"
               onClick={() => openPhoneModal("home")}
@@ -152,12 +135,26 @@ export function AppHeader() {
                 }} />
               )}
             </button>
+            {/* Un solo botón: foto de pareja si existe, engranaje si no */}
             <button
               className="btn-icon"
               onClick={() => openSettingsModal()}
               title="Ajustes"
+              style={{
+                position: "relative", padding: 0,
+                width: 36, height: 36, borderRadius: "50%",
+                overflow: couplePhoto ? "hidden" : undefined,
+                border: couplePhoto ? "2px solid var(--primary-light, #d8c9f0)" : undefined,
+                background: couplePhoto ? undefined : "transparent",
+                boxShadow: couplePhoto ? "0 1px 4px rgba(0,0,0,0.12)" : undefined,
+              }}
             >
-              <Settings2 size={20} />
+              {couplePhoto ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={couplePhoto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <Settings2 size={20} />
+              )}
             </button>
           </div>
         </div>
