@@ -613,7 +613,7 @@ export default function PlanDetailPage() {
         </div>
       </header>
 
-      <div className="page-container animate-page-in">
+      <div className="page-container animate-page-in" style={{ paddingBottom: "calc(136px + env(safe-area-inset-bottom, 0px))" }}>
         {/* Progress */}
         <div style={{ marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.375rem" }}>
@@ -968,10 +968,10 @@ export default function PlanDetailPage() {
       <div
         style={{
           position: "fixed",
-          bottom: "calc(64px + env(safe-area-inset-bottom, 0px))",
+          bottom: "calc(56px + env(safe-area-inset-bottom, 0px))",
           left: 0, right: 0,
           padding: "0.5rem 1rem",
-          background: "rgba(253,252,254,0.95)",
+          background: "var(--surface-glass)",
           backdropFilter: "blur(10px)",
           borderTop: "1px solid var(--border)",
           zIndex: 40,

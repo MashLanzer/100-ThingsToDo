@@ -302,15 +302,17 @@ export function JournalApp({ onBack }: Props) {
   }
 
   // Load the full journal (all months) for search, timeline and stats.
-  async function loadAllEntries() {
+  async function loadAllEntries(): Promise<JournalEntry[]> {
     try {
       const token = await getToken()
-      if (!token) return
+      if (!token) return []
       const res = await fetch(`/api/journal`, { headers: { Authorization: `Bearer ${token}` } })
-      if (!res.ok) return
+      if (!res.ok) return []
       const data: unknown = await res.json()
-      setAllEntries(Array.isArray(data) ? (data as JournalEntry[]) : [])
-    } catch { /* silently fail */ }
+      const parsed = Array.isArray(data) ? (data as JournalEntry[]) : []
+      setAllEntries(parsed)
+      return parsed
+    } catch { return [] }
   }
 
   // Union of the current-month entries and the full set (deduped by id), so
@@ -463,10 +465,10 @@ export function JournalApp({ onBack }: Props) {
       }
       toast.success(isEditing ? "Entrada actualizada ✏️" : "Entrada guardada 💕")
       try { localStorage.setItem("ttd_last_journal_date", new Date().toISOString()) } catch { /* */ }
-      await Promise.all([loadEntries(), loadAllEntries()])
-      // M4: show streak milestone badge after entries reload
-      if (!isEditing) {
-        const newStreak = calculateStreak([...entries], myUid)
+      const [, freshAll] = await Promise.all([loadEntries(), loadAllEntries()])
+      // M4: use fresh data directly — state hasn't re-rendered yet at this point
+      if (!isEditing && freshAll.length > 0) {
+        const newStreak = calculateStreak(freshAll, myUid)
         const MILESTONES = [3, 5, 7, 10, 14, 21, 30]
         if (MILESTONES.includes(newStreak)) {
           setStreakToast(newStreak)
