@@ -19,25 +19,28 @@ export function AppLockGate({ children }: Props) {
 
   useEffect(() => {
     setIsMounted(true)
+    setBioEnabled(isAppLockBioEnabled())
 
-    // Check if lock is enabled + PIN is set
-    if (isAppLockEnabled() && getAppLockPin()) {
-      setLocked(true)
-    }
-
-    // Detect native platform and biometric availability
-    async function checkBiometric() {
+    // Check biometric BEFORE locking so the lock screen mounts with the
+    // correct allowBiometric value and auto-triggers the fingerprint prompt.
+    async function initLock() {
       try {
         const { Capacitor } = await import("@capacitor/core")
-        if (!Capacitor.isNativePlatform()) return
-        setIsNative(true)
-        const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth")
-        const info = await BiometricAuth.checkBiometry()
-        setBiometricAvailable(info.isAvailable && info.strongBiometryIsAvailable)
-      } catch { /* not native or plugin not available */ }
+        if (Capacitor.isNativePlatform()) {
+          setIsNative(true)
+          const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth")
+          const info = await BiometricAuth.checkBiometry()
+          // isAvailable is enough — fingerprint is always considered strong on Android
+          setBiometricAvailable(info.isAvailable)
+        }
+      } catch { /* not native or plugin unavailable */ }
+
+      // Lock AFTER biometric check so AppLockScreen mounts knowing allowBiometric
+      if (isAppLockEnabled() && getAppLockPin()) {
+        setLocked(true)
+      }
     }
-    checkBiometric()
-    setBioEnabled(isAppLockBioEnabled())
+    initLock()
 
     // Background/foreground detection
     function handleVisibilityChange() {

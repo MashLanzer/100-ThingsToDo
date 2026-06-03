@@ -1375,6 +1375,34 @@ function ImageEditorModal({ file, onConfirm, onSkip, onCancel }: {
   )
 }
 
+// ── Stable blob-URL thumbnail for review grid (avoids re-creating URLs on every render) ──
+function ReviewThumb({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const [url, setUrl] = useState("")
+  useEffect(() => {
+    const u = URL.createObjectURL(file)
+    setUrl(u)
+    return () => URL.revokeObjectURL(u)
+  }, [file])
+  return (
+    <div style={{ position: "relative", aspectRatio: "1", borderRadius: "var(--radius-md)", overflow: "hidden", background: "var(--muted)" }}>
+      {url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      )}
+      <button
+        onClick={onRemove}
+        style={{
+          position: "absolute", top: 4, right: 4,
+          width: 22, height: 22, borderRadius: "50%",
+          background: "rgba(239,68,68,0.9)", border: "none",
+          color: "white", fontSize: "0.75rem", fontWeight: 700,
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+        }}
+      >✕</button>
+    </div>
+  )
+}
+
 // ── Wizard step indicator ────────────────────────────────────────────────────
 function WizardHeader({ step, total }: { step: number; total: number }) {
   const labels = ["Revisar", "Editar", "Detalles", "Subiendo"]
@@ -2532,29 +2560,17 @@ export default function FotosPage() {
                   <button onClick={cancelWizard} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "0.25rem", fontSize: "1rem" }}>✕</button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", marginBottom: "1rem" }}>
-                  {reviewFiles.map((file, i) => {
-                    const url = URL.createObjectURL(file)
-                    return (
-                      <div key={i} style={{ position: "relative", aspectRatio: "1", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onLoad={() => URL.revokeObjectURL(url)} />
-                        <button
-                          onClick={() => {
-                            const next = reviewFiles.filter((_, j) => j !== i)
-                            setReviewFiles(next)
-                            if (next.length === 0) cancelWizard()
-                          }}
-                          style={{
-                            position: "absolute", top: 4, right: 4,
-                            width: 22, height: 22, borderRadius: "50%",
-                            background: "rgba(239,68,68,0.9)", border: "none",
-                            color: "white", fontSize: "0.75rem", fontWeight: 700,
-                            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                          }}
-                        >✕</button>
-                      </div>
-                    )
-                  })}
+                  {reviewFiles.map((file, i) => (
+                    <ReviewThumb
+                      key={`${file.name}-${file.size}-${i}`}
+                      file={file}
+                      onRemove={() => {
+                        const next = reviewFiles.filter((_, j) => j !== i)
+                        setReviewFiles(next)
+                        if (next.length === 0) cancelWizard()
+                      }}
+                    />
+                  ))}
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <button className="btn btn-outline" style={{ flex: 1 }} onClick={cancelWizard}>Cancelar</button>

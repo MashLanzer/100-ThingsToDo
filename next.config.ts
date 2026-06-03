@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://unpkg.com https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com https://vercel.live",
-              "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://tile.openstreetmap.org https://*.supabase.co https://vercel.live https://vercel.com https://unpkg.com https://*.tile.openstreetmap.org https://i.ibb.co https://ibb.co",
+              "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://tile.openstreetmap.org https://*.supabase.co https://vercel.live https://vercel.com https://unpkg.com https://*.tile.openstreetmap.org https://i.ibb.co https://ibb.co https://img.youtube.com",
               "media-src * blob:",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://nominatim.openstreetmap.org https://vercel.live https://*.vercel.live wss://*.vercel.live https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseapp.com https://unpkg.com https://api.imgbb.com https://firestore.googleapis.com",
               "worker-src 'self' blob:",
