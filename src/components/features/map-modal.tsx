@@ -5,7 +5,7 @@ import { useAppStore } from "@/stores/app-store"
 import { getFirebaseToken } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import type { Place } from "@/types"
-import { X, Plus, Trash2, Search, MapPin } from "lucide-react"
+import { X, Plus, Trash2, Search, MapPin, Share2 } from "lucide-react"
 
 type PlaceStatus = "visited" | "wishlist"
 
@@ -14,8 +14,18 @@ const STATUS_OPTIONS: { id: PlaceStatus; label: string; emoji: string }[] = [
   { id: "wishlist", label: "Lista deseos", emoji: "⭐" },
 ]
 
+function relDays(dateStr: string | null): string {
+  if (!dateStr) return "—"
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000)
+  if (diff === 0) return "hoy"
+  if (diff === 1) return "ayer"
+  if (diff < 30) return `hace ${diff}d`
+  return new Date(dateStr).toLocaleDateString("es-ES", { month: "short", year: "numeric" })
+}
+
 export function MapModal() {
   const { showMapModal, closeMapModal } = useAppStore()
+  const coupleName = useAppStore((s) => s.coupleName)
   const [places, setPlaces] = useState<Place[]>([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<"list" | "add">("list")
@@ -48,6 +58,16 @@ export function MapModal() {
   const [editDate, setEditDate] = useState("")
   const [editPhotoUrls, setEditPhotoUrls] = useState<string[]>([])
   const [editPhotoInput, setEditPhotoInput] = useState("")
+
+  // List filter state
+  const [listFilter, setListFilter] = useState("")
+
+  // Gallery picker state
+  const [showGalleryPicker, setShowGalleryPicker] = useState(false)
+  const [galleryPhotos, setGalleryPhotos] = useState<{ id: string; image_url: string; thumb_url: string | null }[]>([])
+  const [galleryLoading, setGalleryLoading] = useState(false)
+  // "add" = picker for add form, "edit" = picker for edit form
+  const [galleryTarget, setGalleryTarget] = useState<"add" | "edit">("add")
 
   useEffect(() => {
     if (showMapModal) {
@@ -250,9 +270,50 @@ export function MapModal() {
     } catch { toast.error("Error al actualizar") } finally { setSaving(false) }
   }
 
+  async function openGalleryPicker(target: "add" | "edit") {
+    setGalleryTarget(target)
+    setShowGalleryPicker(true)
+    setGalleryLoading(true)
+    try {
+      const token = await getFirebaseToken()
+      const res = await fetch("/api/photos", { headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      const photos = Array.isArray(data) ? data : (data?.photos ?? [])
+      setGalleryPhotos(photos)
+    } catch { toast.error("Error al cargar fotos") } finally { setGalleryLoading(false) }
+  }
+
+  function pickGalleryPhoto(photo: { id: string; image_url: string; thumb_url: string | null }) {
+    const url = photo.thumb_url ?? photo.image_url
+    if (galleryTarget === "add") {
+      setPhotoUrls((p) => [...p, url])
+    } else {
+      setEditPhotoUrls((p) => [...p, url])
+    }
+    setShowGalleryPicker(false)
+  }
+
+  async function handleShare(place: Place) {
+    const text = `🗺️ Visitamos ${place.name}${place.country ? ", " + place.country : ""} · ${coupleName || "nosotros"} 💕`
+    try {
+      if (navigator.share) {
+        await navigator.share({ text })
+      } else {
+        await navigator.clipboard.writeText(text)
+        toast.success("¡Copiado!")
+      }
+    } catch { /* user cancelled or clipboard failed */ }
+  }
+
   if (!showMapModal) return null
 
-  const filtered = tab === "all" ? places : places.filter((p) => p.status === tab)
+  const tabFiltered = tab === "all" ? places : places.filter((p) => p.status === tab)
+  const filtered = listFilter.trim()
+    ? tabFiltered.filter((p) => {
+        const q = listFilter.toLowerCase()
+        return p.name.toLowerCase().includes(q) || (p.country ?? "").toLowerCase().includes(q)
+      })
+    : tabFiltered
 
   return (
     <div className="modal-overlay-bg" onClick={closeMapModal}>
@@ -419,6 +480,12 @@ export function MapModal() {
                     onClick={() => { if (photoInput.trim()) { setPhotoUrls((p) => [...p, photoInput.trim()]); setPhotoInput("") } }}
                     style={{ padding: "0.5rem 0.75rem", flexShrink: 0 }}
                   >+</button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => openGalleryPicker("add")}
+                    style={{ padding: "0.5rem 0.75rem", flexShrink: 0, fontSize: "0.75rem" }}
+                  >📷 De la galería</button>
                 </div>
                 {photoUrls.length > 0 && (
                   <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.375rem", overflowX: "auto" }}>
@@ -457,19 +524,33 @@ export function MapModal() {
               )}
 
               {/* Stats */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", marginBottom: "0.75rem" }}>
-                {[
+              {(() => {
+                const visited = places.filter((p) => p.status === "visited")
+                const uniqueCountries = new Set(visited.map((p) => p.country).filter(Boolean)).size
+                const lastVisitDate = visited.reduce<string | null>((best, p) => {
+                  if (!p.date) return best
+                  if (!best) return p.date
+                  return p.date > best ? p.date : best
+                }, null)
+                const stats = [
                   { label: "Total", value: places.length, emoji: "🌍" },
-                  { label: "Visitados", value: places.filter((p) => p.status === "visited").length, emoji: "📍" },
+                  { label: "Visitados", value: visited.length, emoji: "📍" },
                   { label: "Deseos", value: places.filter((p) => p.status === "wishlist").length, emoji: "⭐" },
-                ].map((s) => (
-                  <div key={s.label} style={{ background: "var(--muted)", borderRadius: "var(--radius-md)", padding: "0.5rem", textAlign: "center" }}>
-                    <div style={{ fontSize: "1rem" }}>{s.emoji}</div>
-                    <div style={{ fontWeight: 700, color: "var(--primary)", fontSize: "1rem" }}>{s.value}</div>
-                    <div style={{ fontSize: "0.625rem", color: "var(--foreground-muted)" }}>{s.label}</div>
+                  { label: "Países únicos", value: uniqueCountries, emoji: "🏳️" },
+                  { label: "Última visita", value: relDays(lastVisitDate), emoji: "🗓️" },
+                ]
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.375rem", marginBottom: "0.75rem" }}>
+                    {stats.map((s) => (
+                      <div key={s.label} style={{ background: "var(--muted)", borderRadius: "var(--radius-md)", padding: "0.375rem 0.25rem", textAlign: "center" }}>
+                        <div style={{ fontSize: "0.875rem" }}>{s.emoji}</div>
+                        <div style={{ fontWeight: 700, color: "var(--primary)", fontSize: "0.875rem" }}>{s.value}</div>
+                        <div style={{ fontSize: "0.5625rem", color: "var(--foreground-muted)", lineHeight: 1.2 }}>{s.label}</div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )
+              })()}
 
               {/* Tab filter */}
               <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.5rem" }}>
@@ -483,6 +564,18 @@ export function MapModal() {
                     {t === "all" ? "Todos" : t === "visited" ? "📍 Visitados" : "⭐ Deseos"}
                   </button>
                 ))}
+              </div>
+
+              {/* List search */}
+              <div style={{ position: "relative", marginBottom: "0.5rem" }}>
+                <Search size={14} style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", color: "var(--foreground-muted)", pointerEvents: "none" }} />
+                <input
+                  className="input"
+                  placeholder="Buscar por nombre o país..."
+                  value={listFilter}
+                  onChange={(e) => setListFilter(e.target.value)}
+                  style={{ paddingLeft: "2rem", fontSize: "0.8125rem" }}
+                />
               </div>
 
               {/* Places list */}
@@ -511,6 +604,15 @@ export function MapModal() {
                           </div>
                         )}
                       </div>
+                      {p.status === "visited" && (
+                        <button
+                          onClick={() => handleShare(p)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "0.25rem", flexShrink: 0 }}
+                          title="Compartir"
+                        >
+                          <Share2 size={14} />
+                        </button>
+                      )}
                       <button
                         onClick={() => { setEditingPlace(p); setEditName(p.name); setEditStatus(p.status as PlaceStatus); setEditNote(p.note ?? ""); setEditDate(p.date ?? ""); setEditPhotoUrls(p.photos ?? []); setEditPhotoInput("") }}
                         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "0.25rem", flexShrink: 0, fontSize: "0.875rem" }}
@@ -546,6 +648,7 @@ export function MapModal() {
                               style={{ flex: 1 }}
                             />
                             <button type="button" className="btn btn-primary" onClick={() => { if (editPhotoInput.trim()) { setEditPhotoUrls((p) => [...p, editPhotoInput.trim()]); setEditPhotoInput("") } }} style={{ padding: "0.375rem 0.625rem", flexShrink: 0 }}>+</button>
+                            <button type="button" className="btn btn-outline" onClick={() => openGalleryPicker("edit")} style={{ padding: "0.375rem 0.5rem", flexShrink: 0, fontSize: "0.7rem" }}>📷 De la galería</button>
                           </div>
                           {editPhotoUrls.length > 0 && (
                             <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.375rem", overflowX: "auto" }}>
@@ -573,6 +676,59 @@ export function MapModal() {
           )}
         </div>
       </div>
+
+      {/* Gallery picker modal */}
+      {showGalleryPicker && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 1100,
+            background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onClick={() => setShowGalleryPicker(false)}
+        >
+          <div
+            style={{
+              background: "white", borderRadius: "var(--radius-lg)", padding: "1rem",
+              width: "min(340px, 90vw)", maxHeight: "70vh", display: "flex", flexDirection: "column",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+              <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>📷 Seleccionar foto</span>
+              <button
+                onClick={() => setShowGalleryPicker(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "0.25rem" }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {galleryLoading ? (
+                <p style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: "0.875rem", padding: "1.5rem 0" }}>Cargando...</p>
+              ) : galleryPhotos.length === 0 ? (
+                <p style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: "0.875rem", padding: "1.5rem 0" }}>No hay fotos en la galería</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.375rem" }}>
+                  {galleryPhotos.map((photo) => (
+                    <button
+                      key={photo.id}
+                      onClick={() => pickGalleryPhoto(photo)}
+                      style={{ background: "none", border: "1px solid var(--border)", borderRadius: "8px", padding: 0, cursor: "pointer", overflow: "hidden" }}
+                    >
+                      <img
+                        src={photo.thumb_url ?? photo.image_url}
+                        alt=""
+                        style={{ width: "60px", height: "60px", objectFit: "cover", display: "block" }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.3" }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

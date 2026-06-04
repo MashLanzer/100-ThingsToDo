@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { daysTogether } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
+import { usePlans } from "@/hooks/use-plans"
 import { toast } from "sonner"
 import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload, LogOut, CalendarHeart, Camera, Trash2, Loader2, Fingerprint } from "lucide-react"
 import { showConfirm } from "@/lib/confirm"
@@ -217,7 +218,12 @@ export function SettingsModal() {
   const unlinkMutation = useUnlinkPartner()
   const updateCouple = useUpdateCouple()
   const qc = useQueryClient()
+  const { data: plans } = usePlans()
+  const completedPlans = (plans ?? []).filter((p) => (p.task_count ?? 0) > 0 && p.completed_count === p.task_count).length
+  const totalTasks = (plans ?? []).reduce((sum, p) => sum + (p.completed_count ?? 0), 0)
   const [couplePhotoUploading, setCouplePhotoUploading] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
   const [deletingData, setDeletingData] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
@@ -263,6 +269,12 @@ export function SettingsModal() {
   const [appPinError, setAppPinError] = useState("")
   const [appLockBioEnabled, setAppLockBioEnabledState] = useState(false)
   const [bioAvailableInSettings, setBioAvailableInSettings] = useState(false)
+
+  useEffect(() => {
+    if (showSettingsModal && data?.user) {
+      setAvatarUrl(data.user.avatar_url ?? null)
+    }
+  }, [showSettingsModal, data?.user])
 
   useEffect(() => {
     if (showSettingsModal) {
@@ -388,6 +400,64 @@ export function SettingsModal() {
       const token = await getFirebaseToken()
       if (!token) return
       await fetch("/api/couple/photo", { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+      await qc.invalidateQueries({ queryKey: ["couple"] })
+      toast.success("Foto eliminada")
+    } catch {
+      toast.error("Error al eliminar")
+    }
+  }
+
+  async function handleAvatarUpload(file: File) {
+    setAvatarUploading(true)
+    try {
+      const { getFirebaseToken } = await import("@/lib/firebase/client")
+      const token = await getFirebaseToken()
+      if (!token) { toast.error("No autenticado"); return }
+      const form = new FormData()
+      form.append("file", file)
+      const uploadRes = await fetch("/api/upload/cover", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      })
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({}))
+        toast.error(err.error ?? "Error al subir foto")
+        return
+      }
+      const { url } = await uploadRes.json()
+      const patchRes = await fetch("/api/user", {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar_url: url }),
+      })
+      if (!patchRes.ok) {
+        const err = await patchRes.json().catch(() => ({}))
+        toast.error(err.error ?? "Error al guardar foto")
+        return
+      }
+      setAvatarUrl(url)
+      await qc.invalidateQueries({ queryKey: ["couple"] })
+      toast.success("Foto de perfil actualizada 📸")
+    } catch {
+      toast.error("Error al subir foto")
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
+  async function handleAvatarRemove() {
+    if (!await showConfirm({ title: "Eliminar foto", message: "¿Eliminar tu foto de perfil?", danger: true, confirmLabel: "Eliminar" })) return
+    try {
+      const { getFirebaseToken } = await import("@/lib/firebase/client")
+      const token = await getFirebaseToken()
+      if (!token) return
+      await fetch("/api/user", {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar_url: null }),
+      })
+      setAvatarUrl(null)
       await qc.invalidateQueries({ queryKey: ["couple"] })
       toast.success("Foto eliminada")
     } catch {
@@ -774,7 +844,11 @@ export function SettingsModal() {
                 <SettingsCard title={<>👤 Tú</>}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.875rem" }}>
                     {/* Avatar */}
-                    {user.photoURL ? (
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarUrl} alt="" style={{ width: 52, height: 52, borderRadius: "50%", border: "2px solid var(--border)", flexShrink: 0, objectFit: "cover" }} />
+                    ) : user.photoURL ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={user.photoURL} alt="" style={{ width: 52, height: 52, borderRadius: "50%", border: "2px solid var(--border)", flexShrink: 0, objectFit: "cover" }} />
                     ) : (
                       <div style={{
@@ -804,6 +878,61 @@ export function SettingsModal() {
                         border: data?.couple ? "1px solid #6ee7b7" : "1px solid var(--border)",
                       }}>
                         {data?.couple ? <><Heart size={11} /> {data.partner?.name ?? "Vinculado"}</> : "Sin pareja vinculada"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Avatar upload section */}
+                  <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.875rem" }}>
+                    <label style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.5rem" }}>
+                      <Camera size={13} style={{ color: "var(--primary)" }} /> Tu foto de perfil
+                    </label>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      {/* 64px circle preview */}
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        {avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={avatarUrl} alt="" style={{ width: 64, height: 64, borderRadius: "50%", border: "2px solid var(--border)", objectFit: "cover" }} />
+                        ) : (
+                          <div style={{
+                            width: 64, height: 64, borderRadius: "50%",
+                            background: getAvatarGradient(user.displayName ?? user.email ?? "?"),
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            color: "white", fontWeight: 700, fontSize: "1.5rem",
+                            fontFamily: "'Fredoka', sans-serif",
+                            border: "2px solid var(--border)",
+                          }}>
+                            {(user.displayName ?? user.email ?? "?")[0].toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", flex: 1 }}>
+                        <label style={{
+                          display: "inline-flex", alignItems: "center", gap: "0.375rem",
+                          padding: "0.4rem 0.875rem", borderRadius: "var(--radius-md)",
+                          border: "1.5px solid var(--border)", background: "white",
+                          cursor: avatarUploading ? "wait" : "pointer",
+                          fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)",
+                          width: "fit-content",
+                        }}>
+                          {avatarUploading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Camera size={13} />}
+                          {avatarUploading ? "Subiendo..." : "Subir foto"}
+                          <input type="file" accept="image/*" style={{ display: "none" }} disabled={avatarUploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); e.target.value = "" }} />
+                        </label>
+                        {avatarUrl && (
+                          <button
+                            onClick={handleAvatarRemove}
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: "0.375rem",
+                              padding: "0.4rem 0.875rem", borderRadius: "var(--radius-md)",
+                              border: "1.5px solid #fecaca", background: "#fef2f2",
+                              cursor: "pointer", fontSize: "0.8125rem", fontWeight: 600,
+                              color: "#ef4444", width: "fit-content",
+                            }}
+                          >
+                            <Trash2 size={13} /> Eliminar
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -879,6 +1008,26 @@ export function SettingsModal() {
                       ) : null
                     })()}
                     <input type="date" className="input" value={data.couple.anniversary_date ?? ""} max={new Date().toISOString().slice(0, 10)} disabled={updateCouple.isPending} onChange={(e) => handleAnniversaryChange(e.target.value)} />
+
+                    {/* Couple stats pills */}
+                    {(completedPlans > 0 || totalTasks > 0 || daysTogether(data.couple.anniversary_date) !== null) && (
+                      <div style={{ marginTop: "0.75rem" }}>
+                        <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground-light)", marginBottom: "0.5rem" }}>
+                          Nuestros números
+                        </p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
+                          {[
+                            daysTogether(data.couple.anniversary_date) !== null && { emoji: "🗓️", label: `${daysTogether(data.couple.anniversary_date)} días juntos` },
+                            completedPlans > 0 && { emoji: "✅", label: `${completedPlans} planes completados` },
+                            totalTasks > 0 && { emoji: "🎯", label: `${totalTasks} tareas hechas` },
+                          ].filter(Boolean).map((s: any) => (
+                            <span key={s.label} style={{ fontSize: "0.6875rem", fontWeight: 600, background: "var(--primary-lighter)", color: "var(--primary)", borderRadius: "999px", padding: "3px 10px" }}>
+                              {s.emoji} {s.label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Unlink */}

@@ -51,7 +51,7 @@ function getPageTitle(path: string, coupleName: string): string {
 }
 
 export function AppHeader() {
-  const { coupleName, setCoupleName, setPartnerNickname, setCardSize, openPhoneModal, openSettingsModal } = useAppStore()
+  const { coupleName, setCoupleName, setPartnerNickname, setCardSize, openPhoneModal, openSettingsModal, setPartnerLastActive } = useAppStore()
   const pathname = usePathname()
   const { data } = useCoupleStatus()
   const [isAnniversary, setIsAnniversary] = useState(false)
@@ -65,7 +65,11 @@ export function AppHeader() {
         const res = await fetch("/api/activity/partner", { headers: { Authorization: `Bearer ${token}` } })
         if (!res.ok) return
         const { lastActive } = await res.json()
-        if (lastActive) setPartnerActive((Date.now() - new Date(lastActive).getTime()) / 3_600_000 < 24)
+        if (lastActive) {
+          const lastActiveMs = new Date(lastActive).getTime()
+          setPartnerActive((Date.now() - lastActiveMs) / 3_600_000 < 24)
+          setPartnerLastActive(lastActiveMs)
+        }
       } catch { /* ignore */ }
     }
     check()

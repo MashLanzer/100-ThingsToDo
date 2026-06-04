@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAppStore } from "@/stores/app-store"
 import { useCoupleStatus, useLinkPartner, useUnlinkPartner } from "@/hooks/use-couple"
 import { toast } from "sonner"
 import { X, Copy, Check, Heart, Users, Sparkles } from "lucide-react"
 import { showConfirm } from "@/lib/confirm"
+import QRCodeLib from "qrcode"
 
 export function CoupleModal() {
   const { showCoupleModal, closeCoupleModal } = useAppStore()
@@ -14,6 +15,20 @@ export function CoupleModal() {
   const unlinkMutation = useUnlinkPartner()
   const [code, setCode] = useState("")
   const [copied, setCopied] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+
+  const coupleCode = data?.user.couple_code ?? null
+
+  useEffect(() => {
+    if (!coupleCode) return
+    QRCodeLib.toDataURL(coupleCode, {
+      width: 150,
+      margin: 2,
+      color: { dark: "#8B5CF6", light: "#FFFFFF" },
+    })
+      .then(setQrDataUrl)
+      .catch(() => {})
+  }, [coupleCode])
 
   if (!showCoupleModal) return null
 
@@ -113,6 +128,19 @@ export function CoupleModal() {
                     {copied ? <Check size={16} color="var(--success-dark)" /> : <Copy size={16} />}
                   </button>
                 </div>
+                {qrDataUrl && (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem", marginTop: "0.75rem" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={qrDataUrl}
+                      alt="QR code para vincular pareja"
+                      width={150}
+                      height={150}
+                      style={{ borderRadius: "0.5rem", border: "1px solid var(--border)" }}
+                    />
+                    <span style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>Escanea para vincular</span>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", color: "var(--foreground-muted)" }}>

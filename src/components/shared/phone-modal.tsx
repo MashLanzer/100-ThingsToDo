@@ -9,7 +9,7 @@ import { SavingsGoalsApp } from "@/components/features/savings-goals-app"
 import { MusicApp } from "@/components/features/music-app"
 import { MapApp } from "@/components/features/map-app"
 import { ChallengesFavorsApp } from "@/components/features/challenges-favors-app"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 
 type AppDef = { id: string; Icon: React.FC<{ size?: number; color?: string }>; name: string; bg: string; iconColor: string }
 const APPS: AppDef[] = [
@@ -45,6 +45,10 @@ export function PhoneModal() {
   const [lastJournalDate, setLastJournalDate] = useState<string | null>(null)
   // E1: Boot animation — brief dark flash when modal opens
   const [booting, setBooting] = useState(false)
+  // UX-A: Swipe-down-to-close
+  const [dragY, setDragY] = useState(0)
+  const isDragging = useRef(false)
+  const startY = useRef(0)
 
   useEffect(() => {
     const updateTime = () => {
@@ -88,7 +92,25 @@ export function PhoneModal() {
     <div className="phone-modal-overlay" onClick={closePhoneModal}>
       <div className="phone-slide-in">
         {/* Phone */}
-        <div className="phone-container" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="phone-container"
+          onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => { startY.current = e.touches[0].clientY; isDragging.current = true }}
+          onTouchMove={(e) => {
+            if (!isDragging.current) return
+            const dy = e.touches[0].clientY - startY.current
+            if (dy > 0) setDragY(dy)
+          }}
+          onTouchEnd={() => {
+            isDragging.current = false
+            if (dragY > 80) { setDragY(0); closePhoneModal() }
+            else setDragY(0)
+          }}
+          style={{
+            transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+            transition: isDragging.current ? "none" : "transform 0.25s ease",
+          }}
+        >
           <div className="phone-notch" />
           <div className="phone-screen">
 

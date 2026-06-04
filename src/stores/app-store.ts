@@ -19,6 +19,7 @@ interface AppStore {
   cardSize: "compact" | "normal" | "large"
   nowPlayingTrack: NowPlayingTrack | null
   musicIsPlaying: boolean
+  partnerLastActive: number | null
 
   openCoupleModal: () => void
   closeCoupleModal: () => void
@@ -36,6 +37,7 @@ interface AppStore {
   setCardSize: (size: "compact" | "normal" | "large") => void
   setNowPlayingTrack: (track: NowPlayingTrack | null) => void
   setMusicIsPlaying: (playing: boolean) => void
+  setPartnerLastActive: (ts: number | null) => void
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -50,6 +52,7 @@ export const useAppStore = create<AppStore>((set) => ({
   cardSize: "normal",
   nowPlayingTrack: null,
   musicIsPlaying: false,
+  partnerLastActive: null,
 
   openCoupleModal: () => set({ showCoupleModal: true }),
   closeCoupleModal: () => set({ showCoupleModal: false }),
@@ -68,4 +71,5 @@ export const useAppStore = create<AppStore>((set) => ({
   setCardSize: (size) => set({ cardSize: size }),
   setNowPlayingTrack: (track) => set({ nowPlayingTrack: track }),
   setMusicIsPlaying: (playing) => set({ musicIsPlaying: playing }),
+  setPartnerLastActive: (ts) => set({ partnerLastActive: ts }),
 }))
