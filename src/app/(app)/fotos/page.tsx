@@ -287,7 +287,7 @@ function groupPhotosIntoPosts(photos: Photo[]): FeedPost[] {
   return posts.sort((a, b) => new Date(b.photos[0].created_at).getTime() - new Date(a.photos[0].created_at).getTime())
 }
 
-function PhotoCarousel({ photos }: { photos: Photo[] }) {
+function PhotoCarousel({ photos, onPhotoClick }: { photos: Photo[]; onPhotoClick?: (photo: Photo) => void }) {
   const [idx, setIdx] = useState(0)
   const [imgLoading, setImgLoading] = useState(false)
   const touchStartX = useRef<number>(0)
@@ -321,9 +321,11 @@ function PhotoCarousel({ photos }: { photos: Photo[] }) {
           alt={photos[idx].caption ?? ""}
           decoding="async"
           onLoad={() => setImgLoading(false)}
+          onClick={() => onPhotoClick?.(photos[idx])}
           style={{
             width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block",
             animation: "imgFadeIn 0.25s ease forwards",
+            cursor: onPhotoClick ? "pointer" : undefined,
           }}
         />
         {imgLoading && (
@@ -363,13 +365,14 @@ function PhotoCarousel({ photos }: { photos: Photo[] }) {
 }
 
 // F5: Double-tap to like FeedCard
-function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onOpenComments, partnerViewed, groupPhotos, onDelete }: {
+function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onOpenComments, partnerViewed, groupPhotos, onGroupPhotoClick, onDelete }: {
   photo: Photo; onClick: () => void
   reactions: PhotoReaction[]; commentCount: number; myUid: string
   onReact: (emoji: string) => void
   onOpenComments: () => void
   partnerViewed?: boolean
   groupPhotos?: Photo[]
+  onGroupPhotoClick?: (photo: Photo) => void
   onDelete?: () => void
 }) {
   const appName = photo.source === "14feb" ? "14-Febrero" : "ThingsToDo"
@@ -577,7 +580,7 @@ function FeedCard({ photo, onClick, reactions, commentCount, myUid, onReact, onO
       {/* Image — for group posts show carousel; for solo use double-tap to like / single tap lightbox */}
       {groupPhotos ? (
         <div style={{ position: "relative" }}>
-          <PhotoCarousel photos={groupPhotos} />
+          <PhotoCarousel photos={groupPhotos} onPhotoClick={onGroupPhotoClick} />
           {/* Long-press reaction picker overlay for group posts */}
           {picker && (
             <>
@@ -2602,6 +2605,7 @@ export default function FotosPage() {
                         onClick={() => setLightboxIndex(filteredPhotos.findIndex((p) => p.id === primaryPhoto.id))}
                         partnerViewed={(photoViews as Record<string, PhotoViewData>)[primaryPhoto.id]?.partner_viewed}
                         groupPhotos={post.isGroup ? post.photos : undefined}
+                        onGroupPhotoClick={post.isGroup ? (p) => setLightboxIndex(filteredPhotos.findIndex((fp) => fp.id === p.id)) : undefined}
                         onDelete={() => handleDelete(primaryPhoto.id)}
                       />
                     )
