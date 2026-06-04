@@ -9,7 +9,7 @@ import { TaskItem } from "@/components/features/task-item"
 import { KAWAII_ICON_REGISTRY, KawaiiIcon } from "@/components/ui/kawaii-icon"
 import { Modal } from "@/components/ui/modal"
 import type { Task } from "@/types"
-import { ArrowLeft, Plus, Edit2, X, Trash2, Star, Image, Calendar, Tag, Upload, Archive, CheckCircle2, ChevronDown, Pencil, Bell, User, ImageIcon, Loader2 } from "lucide-react"
+import { ArrowLeft, Plus, Edit2, X, Trash2, Star, Image, Calendar, Tag, Upload, Archive, CheckCircle2, ChevronDown, Pencil, Bell, User, ImageIcon, Loader2, Search } from "lucide-react"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
@@ -134,8 +134,32 @@ export default function PlanDetailPage() {
   const displayTasksRaw = localTasks ?? tasks ?? []
   const displayTasks = Array.isArray(displayTasksRaw) ? displayTasksRaw : []
 
-  const pendingTasks = displayTasks.filter((t) => !t.completed)
-  const completedTasksList = displayTasks.filter((t) => t.completed)
+  // ── T-A: Complete all pending tasks ─────────────────────────────
+  const [completeAllConfirm, setCompleteAllConfirm] = useState(false)
+  const [completingAll, setCompletingAll] = useState(false)
+
+  // ── T-B: Task search ─────────────────────────────────────────────
+  const [taskSearchOpen, setTaskSearchOpen] = useState(false)
+  const [taskSearch, setTaskSearch] = useState("")
+
+  const pendingTasksAll = displayTasks.filter((t) => !t.completed)
+  const completedTasksAll = displayTasks.filter((t) => t.completed)
+
+  const searchActive = taskSearchOpen && taskSearch.trim() !== ""
+  const searchLower = taskSearch.toLowerCase()
+  const pendingTasks = searchActive
+    ? pendingTasksAll.filter((t) =>
+        t.title.toLowerCase().includes(searchLower) ||
+        (t.notes ?? "").toLowerCase().includes(searchLower)
+      )
+    : pendingTasksAll
+  const completedTasksList = searchActive
+    ? completedTasksAll.filter((t) =>
+        t.title.toLowerCase().includes(searchLower) ||
+        (t.notes ?? "").toLowerCase().includes(searchLower)
+      )
+    : completedTasksAll
+  const searchResultsCount = searchActive ? pendingTasks.length + completedTasksList.length : 0
 
   const partner = coupleStatus?.partner ?? null
 
@@ -155,6 +179,37 @@ export default function PlanDetailPage() {
       }
     }
     toggleTask.mutate({ taskId: task.id, planId: params.id, completed: task.completed })
+  }
+
+  // ── T-A: Complete all pending tasks ──────────────────────────────
+  async function handleCompleteAll() {
+    setCompleteAllConfirm(false)
+    setCompletingAll(true)
+    // Optimistic: mark all pending as completed in local state
+    const currentTasks = localTasks ?? tasks ?? []
+    setLocalTasks(currentTasks.map((t) => t.completed ? t : { ...t, completed: true }))
+    try {
+      const token = await getFirebaseToken()
+      if (!token) throw new Error("Not authenticated")
+      await Promise.all(
+        pendingTasksAll.map((t) =>
+          fetch(`/api/tasks/${t.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ completed: true }),
+          })
+        )
+      )
+      toast.success(`${pendingTasksAll.length} tarea${pendingTasksAll.length !== 1 ? "s" : ""} completada${pendingTasksAll.length !== 1 ? "s" : ""} ✅`)
+      await refetchTasks()
+      setLocalTasks(null)
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al completar tareas")
+      setLocalTasks(null)
+      await refetchTasks()
+    } finally {
+      setCompletingAll(false)
+    }
   }
 
   const iconEntries = Object.keys(KAWAII_ICON_REGISTRY)
@@ -599,6 +654,117 @@ export default function PlanDetailPage() {
               )
             })()}
           </div>
+
+          {/* T-A / T-B toolbar */}
+          <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+            {/* T-A: Complete all button */}
+            {pendingTasksAll.length > 0 && (
+              <div style={{ position: "relative" }}>
+                <button
+                  onClick={() => setCompleteAllConfirm((v) => !v)}
+                  disabled={completingAll}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                    fontSize: "0.6875rem", fontWeight: 700,
+                    background: "rgba(255,255,255,0.22)", color: "white",
+                    border: "none", borderRadius: "999px", padding: "3px 10px",
+                    cursor: "pointer", backdropFilter: "blur(4px)",
+                    opacity: completingAll ? 0.6 : 1,
+                  }}
+                >
+                  {completingAll ? <Loader2 size={11} style={{ animation: "spin 1s linear infinite" }} /> : "✅"}
+                  {completingAll ? "Completando..." : "Completar todo"}
+                </button>
+                {completeAllConfirm && !completingAll && (
+                  <div
+                    style={{
+                      position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 60,
+                      background: "var(--surface)", border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-md)", padding: "0.625rem 0.75rem",
+                      boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+                      minWidth: "200px", whiteSpace: "nowrap",
+                    }}
+                  >
+                    <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)", margin: "0 0 0.5rem" }}>
+                      ¿Completar {pendingTasksAll.length} tarea{pendingTasksAll.length !== 1 ? "s" : ""}?
+                    </p>
+                    <div style={{ display: "flex", gap: "0.375rem" }}>
+                      <button
+                        onClick={handleCompleteAll}
+                        className="btn btn-primary"
+                        style={{ fontSize: "0.75rem", padding: "4px 14px" }}
+                      >
+                        Sí
+                      </button>
+                      <button
+                        onClick={() => setCompleteAllConfirm(false)}
+                        className="btn btn-outline"
+                        style={{ fontSize: "0.75rem", padding: "4px 14px" }}
+                      >
+                        No
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* T-B: Search toggle */}
+            <button
+              onClick={() => {
+                setTaskSearchOpen((v) => !v)
+                if (taskSearchOpen) setTaskSearch("")
+              }}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                fontSize: "0.6875rem", fontWeight: 700,
+                background: taskSearchOpen ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.22)",
+                color: "white", border: "none", borderRadius: "999px", padding: "3px 10px",
+                cursor: "pointer", backdropFilter: "blur(4px)",
+              }}
+              title="Buscar tareas"
+            >
+              <Search size={11} />
+              Buscar
+            </button>
+          </div>
+
+          {/* T-B: Search input (shown when open) */}
+          {taskSearchOpen && (
+            <div style={{ marginTop: "0.5rem", position: "relative" }}>
+              <input
+                className="input"
+                type="text"
+                placeholder="Buscar tareas..."
+                value={taskSearch}
+                onChange={(e) => setTaskSearch(e.target.value)}
+                autoFocus
+                style={{
+                  paddingRight: taskSearch ? "2rem" : undefined,
+                  background: "rgba(255,255,255,0.95)",
+                  fontSize: "0.875rem",
+                }}
+              />
+              {taskSearch && (
+                <button
+                  onClick={() => setTaskSearch("")}
+                  style={{
+                    position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)",
+                    background: "none", border: "none", cursor: "pointer",
+                    color: "var(--foreground-muted)", display: "flex", alignItems: "center",
+                    padding: 2,
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+              {searchActive && (
+                <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.85)", marginTop: "0.25rem", fontWeight: 600 }}>
+                  {searchResultsCount} resultado{searchResultsCount !== 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </header>
 

@@ -127,6 +127,7 @@ export interface SavingsGoal {
   name: string
   target_amount: number
   emoji?: string
+  deadline?: string | null
   created_by: string
   created_at: string
   contributions?: GoalContribution[]
@@ -139,6 +140,7 @@ export interface GoalContribution {
   amount: number
   contributed_by: string
   created_at: string
+  note?: string | null
 }
 
 export type FavorDifficulty = "easy" | "medium" | "hard"

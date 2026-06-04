@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Play, Pause, SkipForward, SkipBack, Plus, Trash2, ListMusic, Heart, Moon, X } from "lucide-react"
+import { Play, Pause, SkipForward, SkipBack, Plus, Trash2, ListMusic, Heart, Moon, X, Pencil, Search } from "lucide-react"
 import { useAppStore } from "@/stores/app-store"
 import { toast } from "sonner"
 
@@ -177,6 +177,11 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   const [newColor, setNewColor] = useState(COLOR_OPTIONS[0])
   const [newDedication, setNewDedication] = useState("")
   const [newPlaylistName, setNewPlaylistName] = useState("")
+  // M-B: editing track
+  const [editingTrack, setEditingTrack] = useState<Track | null>(null)
+  // M-C: search within playlist
+  const [trackSearch, setTrackSearch] = useState("")
+  const [showTrackSearch, setShowTrackSearch] = useState(false)
 
   useEffect(() => { setLikedTracks(loadLiked()) }, [])
 
@@ -371,8 +376,58 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
     return () => window.removeEventListener("ttd:music:toggle", handler)
   }, [togglePlay])
 
+  function clearTrackForm() {
+    setNewTitle(""); setNewArtist(""); setNewUrl(""); setNewEmoji("🎵")
+    setNewColor(COLOR_OPTIONS[0]); setNewDedication("")
+  }
+
+  function startEditTrack(t: Track) {
+    setEditingTrack(t)
+    setNewTitle(t.title)
+    setNewArtist(t.artist)
+    setNewUrl(t.url)
+    setNewEmoji(t.emoji)
+    setNewColor(t.color)
+    setNewDedication(t.dedication ?? "")
+    setView("addTrack")
+  }
+
+  function cancelEditTrack() {
+    setEditingTrack(null)
+    clearTrackForm()
+    setView("player")
+  }
+
   function addTrack() {
     if (!newTitle.trim()) return
+    if (editingTrack) {
+      // Save edit
+      const updated = playlists.map((pl, i) =>
+        i === playlistIdx
+          ? {
+              ...pl,
+              tracks: pl.tracks.map((t) =>
+                t.id === editingTrack.id
+                  ? {
+                      ...t,
+                      title: newTitle.trim(),
+                      artist: newArtist.trim() || "Artista desconocido",
+                      url: newUrl.trim(),
+                      emoji: newEmoji,
+                      color: newColor,
+                      dedication: newDedication.trim() || undefined,
+                    }
+                  : t
+              ),
+            }
+          : pl
+      )
+      persist(updated)
+      setEditingTrack(null)
+      clearTrackForm()
+      setView("player")
+      return
+    }
     const t: Track = {
       id: Date.now().toString(),
       title: newTitle.trim(),
@@ -383,8 +438,7 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
       dedication: newDedication.trim() || undefined,
     }
     persist(playlists.map((pl, i) => i === playlistIdx ? { ...pl, tracks: [...pl.tracks, t] } : pl))
-    setNewTitle(""); setNewArtist(""); setNewUrl(""); setNewEmoji("🎵")
-    setNewColor(COLOR_OPTIONS[0]); setNewDedication("")
+    clearTrackForm()
     setView("player")
   }
 
@@ -497,12 +551,12 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
     </>
   )
 
-  // ── ADD TRACK VIEW ──────────────────────────────────────────────────────────
+  // ── ADD / EDIT TRACK VIEW ───────────────────────────────────────────────────
   if (view === "addTrack") return (
     <>
       <div className="app-content-header">
-        <button className="back-btn-phone" onClick={() => setView("player")}>‹</button>
-        <span>Añadir Canción</span>
+        <button className="back-btn-phone" onClick={editingTrack ? cancelEditTrack : () => setView("player")}>‹</button>
+        <span>{editingTrack ? "✏️ Editar Canción" : "Añadir Canción"}</span>
       </div>
       <div className="app-content-body" style={{ gap: "0.625rem" }}>
         <input className="input" placeholder="Título *" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} maxLength={80} autoFocus />
@@ -545,8 +599,16 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
           </div>
         </div>
         <button className="btn btn-primary" onClick={addTrack} disabled={!newTitle.trim()}>
-          <Plus size={15} style={{ marginRight: "5px" }} /> Añadir Canción
+          {editingTrack
+            ? <><Pencil size={15} style={{ marginRight: "5px" }} /> Guardar cambios</>
+            : <><Plus size={15} style={{ marginRight: "5px" }} /> Añadir Canción</>
+          }
         </button>
+        {editingTrack && (
+          <button className="btn btn-outline" onClick={cancelEditTrack}>
+            Cancelar
+          </button>
+        )}
       </div>
     </>
   )

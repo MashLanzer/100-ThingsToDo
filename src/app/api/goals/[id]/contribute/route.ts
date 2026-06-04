@@ -25,16 +25,49 @@ export async function POST(req: NextRequest, { params }: Context) {
 
   if (!goal) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { amount } = await req.json()
-  if (!amount || Number(amount) <= 0) {
-    return NextResponse.json({ error: "amount must be positive" }, { status: 400 })
+  const body = await req.json()
+  const { amount, note } = body
+  if (amount === undefined || Number(amount) === 0) {
+    return NextResponse.json({ error: "amount must not be zero" }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const numAmount = Number(amount)
+
+  // If withdrawal, check that it won't make the total go negative
+  if (numAmount < 0) {
+    const { data: current } = await supabase
+      .from("savings_goals_with_total")
+      .select("total_saved")
+      .eq("id", goalId)
+      .single()
+    if ((current?.total_saved ?? 0) + numAmount < 0) {
+      return NextResponse.json({ error: "No hay suficiente saldo para retirar" }, { status: 400 })
+    }
+  }
+
+  const insertData: Record<string, unknown> = {
+    goal_id: goalId,
+    amount: numAmount,
+    contributed_by: user.uid,
+  }
+  if (note) insertData.note = note
+
+  let { data, error } = await supabase
     .from("goal_contributions")
-    .insert({ goal_id: goalId, amount: Number(amount), contributed_by: user.uid })
+    .insert(insertData)
     .select()
     .single()
+
+  // Retry without note if the column doesn't exist yet
+  if (error && error.message.includes("note column does not exist")) {
+    const { note: _n, ...insertWithoutNote } = insertData
+    void _n
+    ;({ data, error } = await supabase
+      .from("goal_contributions")
+      .insert(insertWithoutNote)
+      .select()
+      .single())
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data, { status: 201 })
