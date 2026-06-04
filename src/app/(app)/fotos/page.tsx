@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
+import { createPortal } from "react-dom"
 import {
   usePhotos, useUploadPhoto, useDeletePhoto, useUpdatePhotoCaption,
   usePhotoReactions, useTogglePhotoReaction, type PhotoReaction,
@@ -2684,9 +2685,9 @@ export default function FotosPage() {
       )}
 
       {/* Photo Upload Wizard */}
-      {wizardStep && (pendingFiles || wizardStep === "uploading") && (
+      {wizardStep && (pendingFiles || wizardStep === "uploading") && createPortal(
         <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 100,
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9000,
           display: "flex", flexDirection: "column",
           backdropFilter: "blur(4px)",
         }}>
@@ -2809,14 +2810,15 @@ export default function FotosPage() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Comments bottom sheet */}
       {commentsPhotoId && (() => {
         const photo = allPhotos.find((p) => p.id === commentsPhotoId)
         if (!photo) return null
-        return (
+        return createPortal(
           <CommentsSheet
             photo={photo}
             comments={comments}
@@ -2824,12 +2826,13 @@ export default function FotosPage() {
             onClose={() => setCommentsPhotoId(null)}
             onAddComment={(content, parentCommentId) => addComment.mutateAsync({ photoId: photo.id, content, parentCommentId })}
             onDeleteComment={(id) => deleteComment.mutate(id)}
-          />
+          />,
+          document.body
         )
       })()}
 
       {/* Lightbox (F10 + F11) */}
-      {lightboxIndex !== null && filteredPhotos.length > 0 && (
+      {lightboxIndex !== null && filteredPhotos.length > 0 && createPortal(
         <Lightbox
           photos={filteredPhotos}
           initialIndex={lightboxIndex}
@@ -2846,7 +2849,8 @@ export default function FotosPage() {
           onOpenComments={(photoId) => { setLightboxIndex(null); setCommentsPhotoId(photoId) }}
           comments={comments}
           onMarkViewed={(photoId) => markViewed.mutate(photoId)}
-        />
+        />,
+        document.body
       )}
     </div>
   )
