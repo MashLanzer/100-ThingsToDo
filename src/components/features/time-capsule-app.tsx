@@ -524,6 +524,33 @@ export function TimeCapsuleApp({ onBack }: Props) {
                         ? `Se abre el ${formatDateTime(c.unlock_at)}`
                         : `Se abre en ${countdown}`}
                     </div>
+                    {!c.is_opened && !canOpen && (
+                      <div style={{
+                        display: "inline-flex", alignItems: "center",
+                        marginTop: "0.25rem",
+                        padding: "1px 8px",
+                        borderRadius: "999px",
+                        fontSize: "0.5625rem",
+                        fontWeight: 700,
+                        background: days === 0
+                          ? "#dcfce7"
+                          : days <= 7
+                          ? "#FEF3C7"
+                          : "var(--primary-lighter)",
+                        color: days === 0
+                          ? "#059669"
+                          : days <= 7
+                          ? "#92400E"
+                          : "var(--primary)",
+                        animation: days > 0 && days <= 7 ? "urgentPulse 1.5s ease-in-out infinite" : "none",
+                      }}>
+                        {days === 0
+                          ? "¡Lista para abrir! 🔓"
+                          : days <= 7
+                          ? `¡Abre en ${days} días! 🔓`
+                          : `Se abre en ${days} días`}
+                      </div>
+                    )}
                     {canOpen && !c.is_opened && (
                       <div style={{ fontSize: "0.625rem", fontWeight: 700, color: "#059669", marginTop: "0.125rem" }}>
                         ¡Ábrela!
@@ -598,6 +625,13 @@ export function TimeCapsuleApp({ onBack }: Props) {
           Crear Cápsula
         </button>
       </div>
+
+      <style>{`
+        @keyframes urgentPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(1.04); }
+        }
+      `}</style>
     </>
   )
 }

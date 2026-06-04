@@ -550,10 +550,31 @@ export function ChallengesFavorsApp({ onBack }: Props) {
             ) : (
               <>
                 {/* C1: challenge card with blur reveal overlay */}
+                {(() => {
+                  const chCat = getCategory(challenge.text)
+                  const chBg = chCat === "romantic"
+                    ? "rgba(236, 72, 153, 0.08)"
+                    : chCat === "adventure"
+                    ? "rgba(249, 115, 22, 0.08)"
+                    : chCat === "creative"
+                    ? "rgba(139, 92, 246, 0.08)"
+                    : chCat === "chill"
+                    ? "rgba(16, 185, 129, 0.08)"
+                    : `linear-gradient(135deg, ${catColor.from}18, ${catColor.to}18)`
+                  const chBorder = chCat === "romantic"
+                    ? "rgba(236,72,153,0.2)"
+                    : chCat === "adventure"
+                    ? "rgba(249,115,22,0.2)"
+                    : chCat === "creative"
+                    ? "rgba(139,92,246,0.2)"
+                    : chCat === "chill"
+                    ? "rgba(16,185,129,0.2)"
+                    : catColor.from
+                  return (
                 <div style={{ position: "relative" }}>
                   <div style={{
-                    background: completed ? "linear-gradient(135deg, #D1FAE5, #A7F3D0)" : `linear-gradient(135deg, ${catColor.from}18, ${catColor.to}18)`,
-                    border: `2px solid ${completed ? "#10B981" : catColor.from}`,
+                    background: completed ? "linear-gradient(135deg, #D1FAE5, #A7F3D0)" : chBg,
+                    border: `2px solid ${completed ? "#10B981" : chBorder}`,
                     borderRadius: "20px", padding: "1.5rem 1.25rem",
                     display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", textAlign: "center",
                     filter: !revealed && !completed ? "blur(5px)" : "none",
@@ -604,6 +625,8 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                     </div>
                   )}
                 </div>
+                  )
+                })()}
 
                 {/* Action buttons */}
                 {!completed && (
