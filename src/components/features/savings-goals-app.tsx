@@ -6,6 +6,20 @@ import { toast } from "sonner"
 import type { SavingsGoal } from "@/types"
 import { PhoneLoader } from "@/components/features/phone-loader"
 import { formatDate } from "@/lib/utils"
+
+function relativeContribDate(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000)
+  if (diff === 0) return "hoy"
+  if (diff === 1) return "ayer"
+  if (diff < 7) return `hace ${diff} días`
+  if (diff < 30) return `hace ${Math.floor(diff / 7)} sem`
+  if (diff < 365) return `hace ${Math.floor(diff / 30)} mes${Math.floor(diff / 30) > 1 ? "es" : ""}`
+  return formatDate(dateStr)
+}
+
+function formatEuro(amount: number): string {
+  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 2 }).format(amount)
+}
 import { useAuth } from "@/hooks/use-auth"
 import { Plane, Home, Car, Gem, Baby, GraduationCap, Laptop, Umbrella, Target, Wallet, Moon, Tent, Gift, PiggyBank, Sparkles, Trash2, Pencil, ClipboardList } from "lucide-react"
 import { showConfirm } from "@/lib/confirm"
@@ -126,7 +140,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
           if (newPct >= 100) {
             toast.success("¡Meta completada!")
           } else {
-            toast.success(`+$${amount} aportado`)
+            toast.success(`+${formatEuro(Number(amount))} aportado`)
           }
           setSelected(g)
         }
@@ -207,7 +221,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
             </div>
           </div>
           <div className="form-group">
-            <label className="form-label">Cantidad objetivo ($)</label>
+            <label className="form-label">Cantidad objetivo (€)</label>
             <input
               className="input"
               type="number"
@@ -249,7 +263,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
         {editingGoal && (
           <div style={{ padding: "0.75rem", background: "var(--primary-lighter)", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <input className="input" value={editGoalName} onChange={(e) => setEditGoalName(e.target.value)} placeholder="Nombre" autoFocus />
-            <input className="input" type="number" value={editGoalTarget} onChange={(e) => setEditGoalTarget(e.target.value)} placeholder="Objetivo ($)" />
+            <input className="input" type="number" value={editGoalTarget} onChange={(e) => setEditGoalTarget(e.target.value)} placeholder="Objetivo (€)" />
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
               {GOAL_ICONS.map(({ key, Icon }) => (
                 <button key={key} onClick={() => setEditGoalIconKey(key)} title={key} style={{
@@ -311,9 +325,9 @@ export function SavingsGoalsApp({ onBack }: Props) {
               {isComplete ? "¡Meta cumplida!" : selected.name}
             </p>
             <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>
-              <strong style={{ color: "var(--foreground)" }}>${saved.toLocaleString()}</strong>
+              <strong style={{ color: "var(--foreground)" }}>{formatEuro(saved)}</strong>
               {" de "}
-              <strong style={{ color: "var(--foreground)" }}>${selected.target_amount.toLocaleString()}</strong>
+              <strong style={{ color: "var(--foreground)" }}>{formatEuro(selected.target_amount)}</strong>
               {" ahorrados"}
             </p>
           </div>
@@ -359,10 +373,10 @@ export function SavingsGoalsApp({ onBack }: Props) {
                         background: isMe ? "var(--primary)" : "var(--secondary)",
                       }} />
                       <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground)" }}>
-                        +${Number(c.amount).toLocaleString()}
+                        +{formatEuro(Number(c.amount))}
                       </span>
                       <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", flex: 1 }}>
-                        {isMe ? "Tú" : "Pareja"} · {formatDate(c.created_at)}
+                        {isMe ? "Tú" : "Pareja"} · {relativeContribDate(c.created_at)}
                       </span>
                       {c.contributed_by === user?.uid && (
                         <button
@@ -402,8 +416,8 @@ export function SavingsGoalsApp({ onBack }: Props) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", textAlign: "center" }}>
           {[
             { label: "Metas", value: goals.length },
-            { label: "Ahorrado", value: `$${totalSaved}` },
-            { label: "Objetivo", value: `$${totalTarget}` },
+            { label: "Ahorrado", value: formatEuro(totalSaved) },
+            { label: "Objetivo", value: formatEuro(totalTarget) },
           ].map((s) => (
             <div key={s.label} style={{ background: "var(--muted)", borderRadius: "var(--radius-md)", padding: "0.5rem" }}>
               <div style={{ fontWeight: 700, fontSize: "1rem", color: "var(--primary)" }}>{s.value}</div>
@@ -488,7 +502,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
                     {g.name}
                   </div>
                   <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
-                    ${saved.toLocaleString()} / ${g.target_amount.toLocaleString()}
+                    {formatEuro(saved)} / {formatEuro(g.target_amount)}
                   </div>
                 </div>
               </button>

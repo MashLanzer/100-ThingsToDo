@@ -218,6 +218,7 @@ export function JournalApp({ onBack }: Props) {
   // New-feature state
   const [moodFilter, setMoodFilter] = useState<string | null>(null)   // F7: filter calendar/timeline by mood
   const [writeTags, setWriteTags] = useState<string[]>([])            // F8: tags on the entry being written
+  const [writeIsPrivate, setWriteIsPrivate] = useState(false)         // J-C: per-entry privacy toggle
   const [tagInput, setTagInput] = useState("")
   const [writeLocation, setWriteLocation] = useState("")             // F12: place of the day
   const [gettingLocation, setGettingLocation] = useState(false)
@@ -405,6 +406,7 @@ export function JournalApp({ onBack }: Props) {
     setAudioUrl(entry.audio_url ?? null)
     setWriteTags(entry.tags ?? [])
     setWriteLocation(entry.location ?? "")
+    setWriteIsPrivate(entry.is_private ?? false)
     setTagInput("")
     setIsEditing(true)
     setView("write")
@@ -455,7 +457,7 @@ export function JournalApp({ onBack }: Props) {
       const res = await fetch("/api/journal", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ date: selectedDate, content: writeContent.trim(), mood: writeMood, photos: photoUrls, audio_url: audioUrl, tags: writeTags, location: writeLocation.trim() || null }),
+        body: JSON.stringify({ date: selectedDate, content: writeContent.trim(), mood: writeMood, photos: photoUrls, audio_url: audioUrl, tags: writeTags, location: writeLocation.trim() || null, is_private: writeIsPrivate }),
       })
       if (!res.ok) throw new Error("Error al guardar")
       // F5: celebratory burst before bouncing back to the calendar
@@ -475,6 +477,7 @@ export function JournalApp({ onBack }: Props) {
           setTimeout(() => setStreakToast(null), 3000)
         }
       }
+      setWriteIsPrivate(false)
       setView("calendar")
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error")
@@ -1021,6 +1024,11 @@ export function JournalApp({ onBack }: Props) {
                           <span style={{ fontSize: "0.5625rem", fontWeight: 700, padding: "0.125rem 0.375rem", borderRadius: "999px", background: isMe ? "var(--primary-lighter)" : "#fce7f3", color: isMe ? "var(--primary)" : "var(--secondary)" }}>
                             {isMe ? "Tú" : "Pareja"}
                           </span>
+                          {entry.is_private && isMe && (
+                            <span style={{ fontSize: "0.5625rem", fontWeight: 700, padding: "0.125rem 0.375rem", borderRadius: "999px", background: "#f3f4f6", color: "#6b7280" }}>
+                              🔒 Privada
+                            </span>
+                          )}
                           {entry.audio_url && <span style={{ fontSize: "0.6875rem" }}>🎙️</span>}
                         </div>
                         {/* Mood pill */}
@@ -1668,7 +1676,40 @@ export function JournalApp({ onBack }: Props) {
             )}
           </div>
 
-          <button className="btn btn-primary" style={{ marginTop: "0.25rem" }} onClick={saveEntry} disabled={saving || !writeContent.trim()}>
+          {/* J-C: Per-entry privacy toggle */}
+          <button
+            type="button"
+            onClick={() => setWriteIsPrivate(v => !v)}
+            style={{
+              display: "flex", alignItems: "center", gap: "0.5rem",
+              padding: "0.5rem 0.75rem", borderRadius: "var(--radius-md)",
+              border: writeIsPrivate ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+              background: writeIsPrivate ? "var(--primary-lighter)" : "var(--surface)",
+              color: writeIsPrivate ? "var(--primary)" : "var(--foreground-muted)",
+              fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 600,
+              cursor: "pointer", width: "100%", marginTop: "0.25rem",
+              transition: "all 0.15s",
+            }}
+          >
+            <span style={{ fontSize: "1rem" }}>{writeIsPrivate ? "🔒" : "👥"}</span>
+            <span style={{ flex: 1, textAlign: "left" }}>
+              {writeIsPrivate ? "Solo para mí (entrada privada)" : "Compartir con tu pareja"}
+            </span>
+            <span style={{
+              width: 32, height: 18, borderRadius: 999, flexShrink: 0,
+              background: writeIsPrivate ? "var(--primary)" : "var(--border)",
+              position: "relative", transition: "background 0.2s",
+              display: "inline-block",
+            }}>
+              <span style={{
+                position: "absolute", top: 2, left: writeIsPrivate ? 16 : 2,
+                width: 14, height: 14, borderRadius: "50%",
+                background: "white", transition: "left 0.2s",
+              }} />
+            </span>
+          </button>
+
+          <button className="btn btn-primary" style={{ marginTop: "0.5rem" }} onClick={saveEntry} disabled={saving || !writeContent.trim()}>
             {saving ? "Guardando..." : isEditing ? "Actualizar entrada" : "Guardar Recuerdo"}
           </button>
         </div>

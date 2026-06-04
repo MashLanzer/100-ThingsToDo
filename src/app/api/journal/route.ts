@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     .from("journal_entries")
     .select("*")
     .eq("couple_id", me.couple_id)
+    .or(`created_by.eq.${user.uid},is_private.eq.false`)
     .order("date", { ascending: false })
 
   if (year && month) {
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
   const { data: me } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
   if (!me?.couple_id) return NextResponse.json({ error: "Not in a couple" }, { status: 403 })
 
-  const { date, content, mood, photos, audio_url, tags, location } = await req.json()
+  const { date, content, mood, photos, audio_url, tags, location, is_private } = await req.json()
   if (!date || !content?.trim()) {
     return NextResponse.json({ error: "date and content required" }, { status: 400 })
   }
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
   const baseRow = {
     couple_id: me.couple_id, date, content: content.trim(), mood: mood ?? "happy",
     created_by: user.uid, photos: photos ?? [], audio_url: audio_url ?? null,
+    is_private: is_private === true,
   }
   const fullRow = {
     ...baseRow,

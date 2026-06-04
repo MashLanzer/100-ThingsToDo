@@ -80,6 +80,7 @@ export interface JournalEntry {
   tags?: string[]
   location?: string | null
   reactions?: Record<string, string>
+  is_private?: boolean
   created_by: string
   created_at: string
 }
