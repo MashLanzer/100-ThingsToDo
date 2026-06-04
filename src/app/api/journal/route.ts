@@ -21,7 +21,6 @@ export async function GET(req: NextRequest) {
     .from("journal_entries")
     .select("*")
     .eq("couple_id", me.couple_id)
-    .or(`created_by.eq.${user.uid},is_private.eq.false`)
     .order("date", { ascending: false })
 
   if (year && month) {
@@ -40,10 +39,16 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const { data, error } = await query
+  let { data, error } = await query
+    .or(`created_by.eq.${user.uid},is_private.eq.false`)
+
+  // If is_private column doesn't exist yet (migration pending), retry without the filter
+  if (error && /is_private|column.*does not exist/i.test(error.message)) {
+    ;({ data, error } = await query)
+  }
+
   if (error) {
     console.error("[journal GET]", error.message)
-    // Return empty array instead of 500 so the app degrades gracefully
     return NextResponse.json([])
   }
   return NextResponse.json(data ?? [])
