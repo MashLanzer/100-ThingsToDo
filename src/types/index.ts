@@ -80,6 +80,7 @@ export interface JournalEntry {
   tags?: string[]
   location?: string | null
   reactions?: Record<string, string>
+  is_pinned?: boolean
   created_by: string
   created_at: string
 }
@@ -93,6 +94,9 @@ export interface Letter {
   subject: string | null
   is_read: boolean
   created_at: string
+  send_at?: string | null
+  photo_url?: string | null
+  reactions?: Record<string, string>
 }
 
 export type CapsuleType =
@@ -114,6 +118,7 @@ export interface TimeCapsule {
   attachments: string[]
   created_by: string
   created_at: string
+  photo_url?: string | null
 }
 
 export interface SavingsGoal {
@@ -152,6 +157,8 @@ export interface Favor {
   completed_at: string | null
   created_by: string
   created_at: string
+  assigned_to?: string | null
+  completion_note?: string | null
 }
 
 export type ChallengeCategory = "all" | "romantic" | "adventure" | "chill" | "creative"

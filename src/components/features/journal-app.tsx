@@ -228,7 +228,9 @@ export function JournalApp({ onBack }: Props) {
   // New design improvements
   const [monthDir, setMonthDir] = useState<"left" | "right" | null>(null)
   const [calendarKey, setCalendarKey] = useState(0)
-  const [timelineFilter, setTimelineFilter] = useState<"all" | "me" | "partner">("all")
+  const [timelineFilter, setTimelineFilter] = useState<"all" | "me" | "partner" | "pinned">("all")
+  const [journalSearch, setJournalSearch] = useState("")
+  const [journalSearchOpen, setJournalSearchOpen] = useState(false)
 
   // Letters state
   const [letters, setLetters] = useState<Letter[]>([])
@@ -236,6 +238,16 @@ export function JournalApp({ onBack }: Props) {
   const [letterSubject, setLetterSubject] = useState("")
   const [letterContent, setLetterContent] = useState("")
   const [sendingLetter, setSendingLetter] = useState(false)
+  // L-A: scheduled send
+  const [scheduleEnabled, setScheduleEnabled] = useState(false)
+  const [letterSendDate, setLetterSendDate] = useState("")
+  // L-B: photo attachment
+  const [letterPhoto, setLetterPhoto] = useState<string | null>(null)
+  const [showLetterGallery, setShowLetterGallery] = useState(false)
+  const [galleryPhotos, setGalleryPhotos] = useState<{ id: string; image_url: string; thumb_url: string | null }[]>([])
+  const [loadingGallery, setLoadingGallery] = useState(false)
+  // L-C: reactions
+  const [reactingLetterId, setReactingLetterId] = useState<string | null>(null)
 
   // ── PIN state ──────────────────────────────────────────────────────────────
   const [pinRequired, setPinRequired] = useState(false)
@@ -367,6 +379,41 @@ export function JournalApp({ onBack }: Props) {
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error al eliminar")
     }
+  }
+
+  // J-E: toggle pin on an entry
+  async function togglePin(entry: JournalEntry) {
+    const newPinned = !entry.is_pinned
+    const apply = (e: JournalEntry): JournalEntry =>
+      e.id === entry.id ? { ...e, is_pinned: newPinned } : e
+    setEntries(prev => prev.map(apply))
+    setAllEntries(prev => prev.map(apply))
+    if (selectedEntry?.id === entry.id) setSelectedEntry(prev => prev ? { ...prev, is_pinned: newPinned } : prev)
+    try {
+      const token = await getToken()
+      if (!token) return
+      await fetch(`/api/journal/${entry.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ is_pinned: newPinned }),
+      })
+    } catch { /* keep optimistic state */ }
+  }
+
+  // J-F: share an entry
+  async function shareEntry(entry: JournalEntry) {
+    const moodEmojis: Record<string, string> = { happy: "😊", love: "❤️", fun: "🎉", romantic: "🌹", chill: "😌", sad: "😢" }
+    const preview = entry.content.slice(0, 120) + (entry.content.length > 120 ? "..." : "")
+    const moodEmoji = entry.mood ? (moodEmojis[entry.mood] ?? "") : ""
+    const shareText = `📓 ${entry.date}: ${preview} ${moodEmoji}`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Entrada del diario", text: shareText })
+      } else {
+        await navigator.clipboard.writeText(shareText)
+        toast.success("¡Enlace copiado! 📋")
+      }
+    } catch { /* user cancelled share */ }
   }
 
   function openDay(dateStr: string) {
@@ -710,20 +757,68 @@ export function JournalApp({ onBack }: Props) {
     try {
       const token = await getToken()
       if (!token) throw new Error("No auth")
+      const sendAt = scheduleEnabled && letterSendDate
+        ? new Date(letterSendDate + "T09:00:00").toISOString()
+        : undefined
       const res = await fetch("/api/letters", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ subject: letterSubject, content: letterContent }),
+        body: JSON.stringify({
+          subject: letterSubject,
+          content: letterContent,
+          ...(sendAt ? { send_at: sendAt } : {}),
+          ...(letterPhoto ? { photo_url: letterPhoto } : {}),
+        }),
       })
       if (!res.ok) throw new Error("Error al enviar")
-      toast.success("Carta enviada 💌")
+      toast.success(scheduleEnabled && letterSendDate ? "Carta programada 📅" : "Carta enviada 💌")
       setLetterSubject("")
       setLetterContent("")
+      setLetterPhoto(null)
+      setScheduleEnabled(false)
+      setLetterSendDate("")
       await loadLetters()
       setView("letters")
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error")
     } finally { setSendingLetter(false) }
+  }
+
+  async function openGalleryForLetter() {
+    setShowLetterGallery(true)
+    if (galleryPhotos.length > 0) return
+    setLoadingGallery(true)
+    try {
+      const token = await getToken()
+      if (!token) return
+      const res = await fetch("/api/photos", { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) return
+      const data = await res.json()
+      setGalleryPhotos(Array.isArray(data) ? data : [])
+    } catch { /* silently fail */ } finally { setLoadingGallery(false) }
+  }
+
+  async function toggleLetterReaction(letter: Letter, emoji: string) {
+    setReactingLetterId(letter.id)
+    const applyReaction = (l: Letter): Letter => {
+      if (l.id !== letter.id) return l
+      const r = { ...(l.reactions ?? {}) }
+      if (r[myUid] === emoji) delete r[myUid]; else r[myUid] = emoji
+      return { ...l, reactions: r }
+    }
+    setLetters(prev => prev.map(applyReaction))
+    if (selectedLetter?.id === letter.id) setSelectedLetter(applyReaction(selectedLetter))
+    try {
+      const token = await getToken()
+      if (!token) return
+      await fetch(`/api/letters/${letter.id}/react`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ emoji }),
+      })
+    } catch { /* keep optimistic state; reactions column may not exist yet */ } finally {
+      setReactingLetterId(null)
+    }
   }
 
   async function openLetter(letter: Letter) {
@@ -951,32 +1046,74 @@ export function JournalApp({ onBack }: Props) {
 
   // ── TIMELINE view ──────────────────────────────────────────────────────────
   if (view === "timeline") {
+    const tlSearch = journalSearch.toLowerCase()
     const sorted = [...mergedEntries()]
       .sort((a, b) => b.date.localeCompare(a.date))
-      .filter(e => timelineFilter === "all" || (timelineFilter === "me" ? e.created_by === myUid : e.created_by !== myUid))
+      .filter(e => {
+        // Author filter
+        if (timelineFilter === "me" && e.created_by !== myUid) return false
+        if (timelineFilter === "partner" && e.created_by === myUid) return false
+        if (timelineFilter === "pinned" && !e.is_pinned) return false
+        // Search filter
+        if (tlSearch) {
+          const haystack = [e.content, e.location ?? "", (e.tags ?? []).join(" "), e.mood ?? ""].join(" ").toLowerCase()
+          if (!haystack.includes(tlSearch)) return false
+        }
+        return true
+      })
     return (
       <>
         <style>{`
           @keyframes recordingPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
         `}</style>
         <div className="app-content-header">
-          <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
+          <button className="back-btn-phone" onClick={() => { setView("calendar"); setJournalSearch(""); setJournalSearchOpen(false) }}>‹</button>
           <span>Timeline</span>
+          {/* J-D: search toggle */}
+          <button
+            onClick={() => { setJournalSearchOpen(o => !o); if (journalSearchOpen) setJournalSearch("") }}
+            style={{ background: journalSearchOpen ? "var(--primary-lighter)" : "none", border: "none", cursor: "pointer", padding: "0.25rem", borderRadius: "6px", color: journalSearchOpen ? "var(--primary)" : "var(--foreground-muted)", display: "flex", alignItems: "center" }}
+            aria-label="Buscar"
+          >
+            <SearchIcon size={16} />
+          </button>
         </div>
         <div className="app-content-body">
+          {/* J-D: search input */}
+          {journalSearchOpen && (
+            <div style={{ position: "relative", marginBottom: "0.625rem" }}>
+              <span style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--foreground-muted)" }}><SearchIcon size={14} /></span>
+              <input
+                className="input"
+                type="search"
+                autoFocus
+                placeholder="Buscar en el timeline..."
+                value={journalSearch}
+                onChange={e => setJournalSearch(e.target.value)}
+                style={{ paddingLeft: "2rem", paddingRight: journalSearch ? "2rem" : undefined }}
+              />
+              {journalSearch && (
+                <button
+                  onClick={() => setJournalSearch("")}
+                  style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", fontSize: "1rem", lineHeight: 1, padding: 0 }}
+                  aria-label="Limpiar búsqueda"
+                >×</button>
+              )}
+            </div>
+          )}
           {/* Filter toggle */}
-          <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.625rem", justifyContent: "center" }}>
-            {(["all", "me", "partner"] as const).map(f => (
+          <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.625rem", overflowX: "auto", scrollbarWidth: "none" }}>
+            {(["all", "me", "partner", "pinned"] as const).map(f => (
               <button key={f} onClick={() => setTimelineFilter(f)}
-                style={{ fontSize: "0.6875rem", fontWeight: 700, padding: "0.3125rem 0.875rem", borderRadius: "999px", border: "none", cursor: "pointer", fontFamily: "inherit", background: timelineFilter === f ? "var(--primary)" : "var(--muted)", color: timelineFilter === f ? "white" : "var(--foreground-muted)", transition: "all 0.15s ease" }}>
-                {f === "all" ? "Todos" : f === "me" ? "Yo" : "Pareja"}
+                style={{ flexShrink: 0, fontSize: "0.6875rem", fontWeight: 700, padding: "0.3125rem 0.875rem", borderRadius: "999px", border: "none", cursor: "pointer", fontFamily: "inherit", background: timelineFilter === f ? "var(--primary)" : "var(--muted)", color: timelineFilter === f ? "white" : "var(--foreground-muted)", transition: "all 0.15s ease" }}>
+                {f === "all" ? "Todos" : f === "me" ? "Yo" : f === "partner" ? "Pareja" : "⭐ Guardados"}
               </button>
             ))}
           </div>
           {sorted.length === 0 && (
             <div style={{ textAlign: "center", padding: "2rem 0", color: "var(--foreground-muted)" }}>
               <p style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📖</p>
-              <p style={{ fontSize: "0.875rem" }}>Aún no hay entradas</p>
+              <p style={{ fontSize: "0.875rem" }}>{journalSearch ? "Sin resultados" : "Aún no hay entradas"}</p>
             </div>
           )}
           <div style={{ position: "relative", paddingLeft: "1.5rem" }}>
@@ -985,7 +1122,7 @@ export function JournalApp({ onBack }: Props) {
               <div style={{ position: "absolute", left: "0.4375rem", top: "1rem", bottom: "1rem", width: 2, background: "linear-gradient(to bottom, var(--primary), var(--secondary))", borderRadius: 1 }} />
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {sorted.map((entry, idx) => {
+              {sorted.map((entry) => {
                 const isMe = entry.created_by === myUid
                 const mood = getMoodById(entry.mood)
                 const firstPhoto = entry.photos?.[0] ?? null
@@ -1005,6 +1142,8 @@ export function JournalApp({ onBack }: Props) {
                             {isMe ? "Tú" : "Pareja"}
                           </span>
                           {entry.audio_url && <span style={{ fontSize: "0.6875rem" }}>🎙️</span>}
+                          {/* J-E: pinned badge */}
+                          {entry.is_pinned && <span style={{ fontSize: "0.6875rem" }}>⭐</span>}
                         </div>
                         {/* Mood pill */}
                         {mood && (
@@ -1036,6 +1175,9 @@ export function JournalApp({ onBack }: Props) {
   // ── LETTER READ view ───────────────────────────────────────────────────────
   if (view === "letter-read" && selectedLetter) {
     const isFromMe = selectedLetter.from_user_id === myUid
+    const letterReactions = selectedLetter.reactions ?? {}
+    const myLetterReaction = letterReactions[myUid]
+    const LETTER_REACTION_EMOJIS = ["❤️", "🥹", "😍", "😂"]
     return (
       <>
         <div className="app-content-header">
@@ -1066,10 +1208,44 @@ export function JournalApp({ onBack }: Props) {
             <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1.0625rem", lineHeight: 1.75, color: "#3d2000", whiteSpace: "pre-wrap" }}>
               {selectedLetter.content}
             </p>
+            {/* L-B: photo attachment */}
+            {selectedLetter.photo_url && (
+              <img
+                src={selectedLetter.photo_url}
+                alt=""
+                style={{ borderRadius: 12, maxWidth: "100%", marginTop: 12, display: "block" }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+              />
+            )}
             <div style={{ marginTop: "1rem", textAlign: "right" }}>
               <span style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "#92400e" }}>Con cariño, {isFromMe ? "tú 💜" : "tu pareja 💕"}</span>
             </div>
           </div>
+          {/* L-C: reactions (only for received letters) */}
+          {!isFromMe && (
+            <div style={{ marginTop: "0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {/* Show existing reactions */}
+              {Object.keys(letterReactions).length > 0 && (
+                <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+                  {Object.entries(letterReactions).map(([uid, emo]) => (
+                    <span key={uid} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.1875rem 0.5rem", borderRadius: "999px", background: uid === myUid ? "var(--primary-lighter)" : "#fce7f3", border: `1px solid ${uid === myUid ? "var(--primary-light)" : "#fbcfe8"}`, fontSize: "0.75rem", fontWeight: 700, color: uid === myUid ? "var(--primary)" : "var(--secondary)" }}>
+                      {emo} {uid === myUid ? "tú" : "pareja"}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: "flex", gap: "0.375rem", alignItems: "center" }}>
+                <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", fontWeight: 600 }}>Reaccionar:</span>
+                {LETTER_REACTION_EMOJIS.map(emo => (
+                  <button key={emo} onClick={() => toggleLetterReaction(selectedLetter, emo)} disabled={reactingLetterId === selectedLetter.id}
+                    style={{ fontSize: "1.25rem", lineHeight: 1, padding: "0.25rem 0.375rem", borderRadius: "999px", border: myLetterReaction === emo ? "2px solid var(--primary)" : "2px solid transparent", background: myLetterReaction === emo ? "var(--primary-lighter)" : "transparent", cursor: "pointer", transition: "transform 0.1s" }}
+                    onMouseDown={e => (e.currentTarget.style.transform = "scale(1.2)")}
+                    onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
+                  >{emo}</button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </>
     )
@@ -1077,8 +1253,37 @@ export function JournalApp({ onBack }: Props) {
 
   // ── LETTERS COMPOSE view ───────────────────────────────────────────────────
   if (view === "letters-compose") {
+    const todayISO = toLocalDateStr(new Date())
     return (
       <>
+        {/* L-B: gallery picker overlay */}
+        {showLetterGallery && (
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.6)", display: "flex", flexDirection: "column" }}
+            onClick={() => setShowLetterGallery(false)}
+          >
+            <div style={{ marginTop: "auto", background: "white", borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "60vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--foreground)" }}>Elegir foto</span>
+                <button onClick={() => setShowLetterGallery(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: "var(--foreground-muted)", lineHeight: 1 }}>×</button>
+              </div>
+              {loadingGallery ? (
+                <div style={{ textAlign: "center", padding: "2rem", color: "var(--foreground-muted)" }}>Cargando fotos...</div>
+              ) : galleryPhotos.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "2rem", color: "var(--foreground-muted)" }}>Sin fotos aún</div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.375rem" }}>
+                  {galleryPhotos.map(p => (
+                    <div key={p.id} onClick={() => { setLetterPhoto(p.image_url); setShowLetterGallery(false) }}
+                      style={{ cursor: "pointer", borderRadius: 8, overflow: "hidden", aspectRatio: "1", border: letterPhoto === p.image_url ? "3px solid var(--primary)" : "2px solid transparent" }}>
+                      <img src={p.thumb_url ?? p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("letters")}>‹</button>
           <span>Escribir carta</span>
@@ -1101,9 +1306,56 @@ export function JournalApp({ onBack }: Props) {
               onChange={e => setLetterContent(e.target.value)}
               style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", lineHeight: 1.75, background: "rgba(255,255,255,0.7)", borderColor: "#f5e6c8", color: "#3d2000" }}
             />
+            {/* L-B: photo preview */}
+            {letterPhoto && (
+              <div style={{ position: "relative", marginTop: "0.75rem", display: "inline-block" }}>
+                <img src={letterPhoto} alt="" style={{ borderRadius: 12, maxWidth: "100%", maxHeight: 160, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
+                <button onClick={() => setLetterPhoto(null)} style={{ position: "absolute", top: -6, right: -6, background: "#ef4444", color: "white", border: "none", borderRadius: "50%", width: 20, height: 20, cursor: "pointer", fontSize: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+              </div>
+            )}
           </div>
+
+          {/* L-B: add photo button */}
+          <button
+            type="button"
+            onClick={openGalleryForLetter}
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 0.875rem", borderRadius: "999px", border: "1.5px solid #f5e6c8", background: "#fffbf0", cursor: "pointer", fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 600, color: "#92400e", marginBottom: "0.75rem" }}
+          >
+            📷 Añadir foto
+          </button>
+
+          {/* L-A: schedule send */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.75rem" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.375rem", cursor: "pointer", fontSize: "0.8125rem", fontWeight: 600, color: scheduleEnabled ? "var(--primary)" : "var(--foreground-muted)" }}>
+              <input
+                type="checkbox"
+                checked={scheduleEnabled}
+                onChange={e => { setScheduleEnabled(e.target.checked); if (!e.target.checked) setLetterSendDate("") }}
+                style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
+              />
+              📅 Programar envío
+            </label>
+          </div>
+          {scheduleEnabled && (
+            <div style={{ marginBottom: "0.75rem" }}>
+              <input
+                type="date"
+                className="input"
+                value={letterSendDate}
+                min={todayISO}
+                onChange={e => setLetterSendDate(e.target.value)}
+                style={{ borderColor: "var(--primary-light)", background: "var(--primary-lighter)" }}
+              />
+              {letterSendDate && (
+                <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>
+                  Se enviará el {new Date(letterSendDate + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                </p>
+              )}
+            </div>
+          )}
+
           <button className="btn btn-primary" onClick={sendLetter} disabled={sendingLetter || !letterContent.trim()}>
-            {sendingLetter ? "Enviando..." : "Enviar carta"}
+            {sendingLetter ? "Enviando..." : scheduleEnabled && letterSendDate ? "Programar carta" : "Enviar carta"}
           </button>
         </div>
       </>
@@ -1141,23 +1393,28 @@ export function JournalApp({ onBack }: Props) {
             <div style={{ marginBottom: "1rem" }}>
               <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.5rem" }}>RECIBIDAS</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {received.map(l => (
-                  <button key={l.id} onClick={() => openLetter(l)}
-                    style={{ width: "100%", textAlign: "left", background: l.is_read ? "white" : "linear-gradient(135deg, #fff0fb, #fffbf0)", border: `1.5px solid ${l.is_read ? "var(--border)" : "#f5e6c8"}`, borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
-                  >
-                    <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>{l.is_read ? "📩" : "💌"}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.125rem" }}>
-                        {!l.is_read && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ec4899", flexShrink: 0, display: "inline-block" }} />}
-                        <span style={{ fontSize: "0.8125rem", fontWeight: l.is_read ? 600 : 700, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {l.subject ?? "Sin asunto"}
-                        </span>
+                {received.map(l => {
+                  const myReaction = l.reactions?.[myUid]
+                  return (
+                    <button key={l.id} onClick={() => openLetter(l)}
+                      style={{ width: "100%", textAlign: "left", background: l.is_read ? "white" : "linear-gradient(135deg, #fff0fb, #fffbf0)", border: `1.5px solid ${l.is_read ? "var(--border)" : "#f5e6c8"}`, borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
+                    >
+                      <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>{l.is_read ? "📩" : "💌"}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.125rem" }}>
+                          {!l.is_read && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ec4899", flexShrink: 0, display: "inline-block" }} />}
+                          <span style={{ fontSize: "0.8125rem", fontWeight: l.is_read ? 600 : 700, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {l.subject ?? "Sin asunto"}
+                          </span>
+                          {/* L-C: my reaction badge */}
+                          {myReaction && <span style={{ fontSize: "0.875rem", flexShrink: 0 }}>{myReaction}</span>}
+                        </div>
+                        <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{l.content}</p>
+                        <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>{new Date(l.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}</p>
                       </div>
-                      <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{l.content}</p>
-                      <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>{new Date(l.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}</p>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -1166,20 +1423,28 @@ export function JournalApp({ onBack }: Props) {
             <div>
               <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.5rem" }}>ENVIADAS</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {sent.map(l => (
-                  <button key={l.id} onClick={() => openLetter(l)}
-                    style={{ width: "100%", textAlign: "left", background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
-                  >
-                    <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>📤</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground-light)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
-                        {l.subject ?? "Sin asunto"}
-                      </span>
-                      <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{l.content}</p>
-                      <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>{l.is_read ? "✅ Leída" : "⏳ Sin leer"} · {new Date(l.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</p>
-                    </div>
-                  </button>
-                ))}
+                {sent.map(l => {
+                  const isScheduled = l.send_at && new Date(l.send_at) > new Date()
+                  return (
+                    <button key={l.id} onClick={() => openLetter(l)}
+                      style={{ width: "100%", textAlign: "left", background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
+                    >
+                      <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>{isScheduled ? "⏰" : "📤"}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground-light)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
+                          {l.subject ?? "Sin asunto"}
+                        </span>
+                        <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{l.content}</p>
+                        <p style={{ fontSize: "0.625rem", color: isScheduled ? "var(--primary)" : "var(--foreground-muted)", marginTop: "0.25rem", fontWeight: isScheduled ? 700 : 400 }}>
+                          {isScheduled
+                            ? `⏰ Se enviará el ${new Date(l.send_at!).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}`
+                            : `${l.is_read ? "✅ Leída" : "⏳ Sin leer"} · ${new Date(l.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}`
+                          }
+                        </p>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -1242,11 +1507,28 @@ export function JournalApp({ onBack }: Props) {
         <div className="app-content-header">
           <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
           <span style={{ fontSize: "0.8125rem" }}>{formatDateShortEs(selectedDate)}</span>
-          {!showPartnerEntry && getMyEntry(selectedDate) && (
-            <button onClick={() => deleteEntry(getMyEntry(selectedDate)!)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: "0.25rem" }} aria-label="Eliminar entrada">
-              <Trash2 size={16} />
-            </button>
-          )}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.125rem" }}>
+            {/* J-F: share button */}
+            {displayEntry && (
+              <button onClick={() => shareEntry(displayEntry)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "0.25rem" }} aria-label="Compartir entrada">
+                📤
+              </button>
+            )}
+            {/* J-E: pin button — only for own entries */}
+            {!showPartnerEntry && getMyEntry(selectedDate) && (() => {
+              const myE = getMyEntry(selectedDate)!
+              return (
+                <button onClick={() => togglePin(myE)} style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem", fontSize: "1rem", lineHeight: 1 }} aria-label={myE.is_pinned ? "Quitar de guardados" : "Guardar entrada"}>
+                  {myE.is_pinned ? "⭐" : "☆"}
+                </button>
+              )
+            })()}
+            {!showPartnerEntry && getMyEntry(selectedDate) && (
+              <button onClick={() => deleteEntry(getMyEntry(selectedDate)!)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: "0.25rem" }} aria-label="Eliminar entrada">
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
         </div>
         <div className="app-content-body" style={{ animation: "fadeSlideIn 0.2s ease" }}>
           {partnerVisible && (

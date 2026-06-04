@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { usePlans, useCreatePlan } from "@/hooks/use-plans"
 import { useCoupleStatus } from "@/hooks/use-couple"
 import { useAuth } from "@/hooks/use-auth"
@@ -139,15 +140,64 @@ const MONTH_GRADIENTS = [
   "linear-gradient(135deg, #EC4899 0%, #F59E0B 100%)",
 ]
 
+interface ActivityEvent {
+  id: string
+  type: "task_complete" | "plan_created" | "favor_complete" | "journal_entry" | "photo_upload"
+  description: string
+  created_at: string
+}
+
+function activityEmoji(type: ActivityEvent["type"]): string {
+  switch (type) {
+    case "task_complete": return "✅"
+    case "plan_created": return "📋"
+    case "favor_complete": return "💝"
+    case "journal_entry": return "📝"
+    case "photo_upload": return "📸"
+    default: return "💫"
+  }
+}
+
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 1) return "ahora"
+  if (mins < 60) return `${mins}m`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h`
+  return `${Math.floor(hrs / 24)}d`
+}
+
 export default function DashboardPage() {
+  const router = useRouter()
   const { data: plans, isLoading, refetch } = usePlans()
   const { data: coupleData } = useCoupleStatus()
   const { user } = useAuth()
   const createPlan = useCreatePlan()
-  const { openCoupleModal } = useAppStore()
+  const { openCoupleModal, openPhoneModal } = useAppStore()
   const partnerNickname = useAppStore((s) => s.partnerNickname)
   const cardSize = useAppStore((s) => s.cardSize)
   const ptr = useWindowPTR(() => { refetch() })
+
+  // D-A: partner activity feed
+  const [partnerActivities, setPartnerActivities] = useState<ActivityEvent[]>([])
+
+  const fetchPartnerActivity = useCallback(async () => {
+    try {
+      const token = await getFirebaseToken()
+      if (!token) return
+      const res = await fetch("/api/activity/partner", { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) return
+      const json = await res.json()
+      if (Array.isArray(json.events)) setPartnerActivities(json.events)
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    fetchPartnerActivity()
+    const id = setInterval(fetchPartnerActivity, 60_000)
+    return () => clearInterval(id)
+  }, [fetchPartnerActivity])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -414,6 +464,71 @@ export default function DashboardPage() {
                   </span>
                 ) : null
               })()}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* D-B: Quick actions row */}
+      {hasCouple && (
+        <div style={{
+          display: "flex", gap: "0.5rem", justifyContent: "center",
+          marginBottom: "0.875rem",
+        }}>
+          {([
+            { emoji: "✍️", label: "Diario",  onClick: () => openPhoneModal("journal") },
+            { emoji: "📷", label: "Foto",    onClick: () => router.push("/fotos") },
+            { emoji: "💌", label: "Carta",   onClick: () => openPhoneModal("journal") },
+            { emoji: "⏳", label: "Cápsula", onClick: () => openPhoneModal("capsule") },
+          ]).map((action) => (
+            <button
+              key={action.label}
+              onClick={action.onClick}
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "center", gap: "2px",
+                padding: "0.375rem 0.625rem", borderRadius: "12px", border: "none", cursor: "pointer",
+                background: "rgba(139,92,246,0.1)",
+                fontFamily: "inherit",
+                flex: 1,
+              }}
+            >
+              <span style={{ fontSize: "1.125rem", lineHeight: 1 }}>{action.emoji}</span>
+              <span style={{ fontSize: "0.5625rem", fontWeight: 600, color: "var(--primary)" }}>{action.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* D-A: Partner activity feed */}
+      {hasCouple && partnerActivities.length > 0 && (() => {
+        const partner = coupleData?.partner
+        const partnerFirst = partnerNickname.trim() || partner?.name?.split(" ")[0] || "tu pareja"
+        return (
+          <div style={{ marginBottom: "0.875rem" }}>
+            <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.375rem", paddingLeft: "2px" }}>
+              Últimas acciones de {partnerFirst}
+            </p>
+            <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px", scrollbarWidth: "none" as const }}>
+              {partnerActivities.slice(0, 5).map((act) => (
+                <div
+                  key={act.id}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "4px",
+                    background: "var(--primary-lighter)",
+                    border: "1px solid var(--primary-light)",
+                    borderRadius: "999px",
+                    padding: "4px 10px",
+                    whiteSpace: "nowrap" as const,
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{ fontSize: "0.75rem" }}>{activityEmoji(act.type)}</span>
+                  <span style={{ fontSize: "0.5625rem", fontWeight: 600, color: "var(--foreground)", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {act.description}
+                  </span>
+                  <span style={{ fontSize: "0.5rem", color: "var(--foreground-muted)" }}>· {relativeTime(act.created_at)}</span>
+                </div>
+              ))}
             </div>
           </div>
         )
