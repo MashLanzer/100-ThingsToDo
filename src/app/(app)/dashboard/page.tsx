@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { PlanCard } from "@/components/features/plan-card"
 import { useAppStore } from "@/stores/app-store"
 import { useWindowPTR } from "@/hooks/use-window-ptr"
-import { Plus, X, Trash2, Search, GripVertical, Tag, ImagePlus, Calendar, Heart, Mail, CheckCircle2, ClipboardList, ChevronDown, Loader2 } from "lucide-react"
+import { Plus, X, Trash2, Search, GripVertical, Tag, ImagePlus, Calendar, Heart, Mail, CheckCircle2, ClipboardList, ChevronDown, Loader2, LayoutGrid, Rows3 } from "lucide-react"
 import { toast } from "sonner"
 import { getFirebaseToken } from "@/lib/firebase/client"
 import { showConfirm } from "@/lib/confirm"
@@ -176,6 +176,10 @@ export default function DashboardPage() {
     if (typeof window === "undefined") return false
     return !localStorage.getItem("ttd_onboarding_done_v1")
   })
+  const [listView, setListView] = useState<boolean>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("ttd_plans_listview") === "1"
+    return false
+  })
 
   const hasCouple = !!coupleData?.couple
 
@@ -194,6 +198,10 @@ export default function DashboardPage() {
       document.removeEventListener("touchstart", handle)
     }
   }, [showSortMenu])
+
+  useEffect(() => {
+    localStorage.setItem("ttd_plans_listview", listView ? "1" : "0")
+  }, [listView])
 
   // Restore scroll position on mount, save on unmount
   useEffect(() => {
@@ -491,6 +499,20 @@ export default function DashboardPage() {
         )
       })()}
 
+      {/* D1: Plans section header */}
+      {hasCouple && hasAnyPlans && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem", marginTop: "0.25rem" }}>
+          <div>
+            <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "var(--foreground)", margin: 0, lineHeight: 1.2 }}>
+              Nuestros planes
+            </h2>
+            <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", margin: 0, marginTop: "0.125rem" }}>
+              ¿Qué aventura sigue? ✨
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Completion counter */}
       {hasCouple && allPlans.length > 0 && (() => {
         const totalDone = allPlans.reduce((s, p) => s + (p.completed_count ?? 0), 0)
@@ -539,7 +561,18 @@ export default function DashboardPage() {
 
       {/* Tag filter pills */}
       {hasAnyPlans && allTags.length > 0 && (
-        <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", marginBottom: "0.5rem", paddingBottom: "2px", scrollbarWidth: "none" as const }}>
+        <div style={{
+          display: "flex",
+          flexDirection: "row",
+          gap: "0.375rem",
+          overflowX: "auto",
+          scrollSnapType: "x mandatory",
+          WebkitOverflowScrolling: "touch",
+          paddingBottom: "4px",
+          msOverflowStyle: "none",
+          scrollbarWidth: "none",
+          marginBottom: "0.5rem",
+        } as React.CSSProperties}>
           <button
             onClick={() => setActiveTagFilter(null)}
             style={{
@@ -556,7 +589,9 @@ export default function DashboardPage() {
               display: "inline-flex",
               alignItems: "center",
               gap: "4px",
-            }}
+              scrollSnapAlign: "start",
+              flexShrink: 0,
+            } as React.CSSProperties}
           >
             <Tag size={11} /> Todos
           </button>
@@ -575,7 +610,9 @@ export default function DashboardPage() {
                 background: activeTagFilter === tag ? "var(--primary)" : "var(--muted)",
                 color: activeTagFilter === tag ? "white" : "var(--foreground-muted)",
                 transition: "background 0.15s, color 0.15s",
-              }}
+                scrollSnapAlign: "start",
+                flexShrink: 0,
+              } as React.CSSProperties}
             >
               {tag}
             </button>
@@ -690,6 +727,20 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
+          {/* D5: List/grid toggle */}
+          <button
+            onClick={() => setListView(v => !v)}
+            style={{
+              background: "var(--muted)", border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)", padding: "0.375rem 0.625rem",
+              cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem",
+              fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)",
+              fontFamily: "inherit",
+            }}
+            title={listView ? "Vista cuadrícula" : "Vista lista"}
+          >
+            {listView ? <LayoutGrid size={15} /> : <Rows3 size={15} />}
+          </button>
         </div>
       )}
 
@@ -896,9 +947,9 @@ export default function DashboardPage() {
             {inProgressPlans.length > 0 && (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handlePlanDragEnd}>
                 <SortableContext items={inProgressPlans.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-                  <div>
+                  <div style={listView ? { display: "flex", flexDirection: "column", gap: "0.5rem" } : { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.75rem" }}>
                     {inProgressPlans.map((plan, i) => (
-                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} cardSize={cardSize} isNew={plan.id === newlyCreatedId} />
+                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} cardSize={listView ? "compact" : cardSize} isNew={plan.id === newlyCreatedId} />
                     ))}
                   </div>
                 </SortableContext>
@@ -924,9 +975,9 @@ export default function DashboardPage() {
                   </span>
                 </button>
                 {showArchived && (
-                  <div className="animate-fade-in">
+                  <div className="animate-fade-in" style={listView ? { display: "flex", flexDirection: "column", gap: "0.5rem" } : { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.75rem" }}>
                     {allCompletedPlans.map((plan, i) => (
-                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} cardSize={cardSize} />
+                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} cardSize={listView ? "compact" : cardSize} />
                     ))}
                   </div>
                 )}

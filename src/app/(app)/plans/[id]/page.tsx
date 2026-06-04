@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import React, { useState, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { usePlan, useUpdatePlan, useDeletePlan } from "@/hooks/use-plans"
 import { useTasks, useCreateTask, useToggleTask, useDeleteTask, useUpdateTask } from "@/hooks/use-tasks"
@@ -115,6 +115,7 @@ export default function PlanDetailPage() {
   const [editingDesc, setEditingDesc] = useState(false)
   const [inlineDesc, setInlineDesc] = useState("")
   const [savingDesc, setSavingDesc] = useState(false)
+  const [descExpanded, setDescExpanded] = useState(false)
 
   // ── Task editing state ───────────────────────────────────────
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
@@ -661,29 +662,50 @@ export default function PlanDetailPage() {
               </div>
             </div>
           ) : plan?.description ? (
-            <div
-              className="group"
-              onClick={() => { setInlineDesc(plan.description ?? ""); setEditingDesc(true) }}
-              style={{
-                position: "relative", cursor: "pointer",
-                padding: "0.5rem 0.625rem",
-                borderRadius: "var(--radius-md)",
-                border: "1px solid transparent",
-                transition: "border-color 0.15s, background 0.15s",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)"
-                ;(e.currentTarget as HTMLDivElement).style.background = "var(--muted)"
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLDivElement).style.borderColor = "transparent"
-                ;(e.currentTarget as HTMLDivElement).style.background = "transparent"
-              }}
-            >
-              <p style={{ fontSize: "0.875rem", color: "var(--foreground-light)", lineHeight: 1.5, margin: 0 }}>
-                {plan.description}
-              </p>
-              <Pencil size={12} style={{ position: "absolute", top: "0.5rem", right: "0.5rem", color: "var(--foreground-muted)", opacity: 0.6 }} />
+            <div>
+              <div
+                className="group"
+                onClick={() => { setInlineDesc(plan.description ?? ""); setEditingDesc(true) }}
+                style={{
+                  position: "relative", cursor: "pointer",
+                  padding: "0.5rem 0.625rem",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid transparent",
+                  transition: "border-color 0.15s, background 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)"
+                  ;(e.currentTarget as HTMLDivElement).style.background = "var(--muted)"
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.borderColor = "transparent"
+                  ;(e.currentTarget as HTMLDivElement).style.background = "transparent"
+                }}
+              >
+                <p style={{
+                  fontSize: "0.875rem", color: "var(--foreground-light)", lineHeight: 1.5, margin: 0,
+                  overflow: descExpanded ? "visible" : "hidden",
+                  display: "-webkit-box",
+                  WebkitLineClamp: descExpanded ? "unset" : "3",
+                  WebkitBoxOrient: "vertical",
+                } as React.CSSProperties}>
+                  {plan.description}
+                </p>
+                <Pencil size={12} style={{ position: "absolute", top: "0.5rem", right: "0.5rem", color: "var(--foreground-muted)", opacity: 0.6 }} />
+              </div>
+              {plan.description.length > 120 && (
+                <button
+                  onClick={() => setDescExpanded((v) => !v)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    fontSize: "0.75rem", fontWeight: 600, color: "var(--primary)",
+                    padding: "0.125rem 0.625rem 0",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {descExpanded ? "Ver menos ▲" : "Ver más ▼"}
+                </button>
+              )}
             </div>
           ) : (tasks && tasks.length === 0) ? (
             <button
