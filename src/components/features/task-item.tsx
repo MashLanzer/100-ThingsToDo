@@ -397,13 +397,13 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, show
   // Keep ref in sync with state
   useEffect(() => { swipeXRef.current = swipeX }, [swipeX])
 
-  // ── Long-press to show reaction picker (on title area) ────────
+  // ── Long-press to open edit modal (on title area) ────────────
   function startLongPress() {
     longPressTriggered.current = false
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true
       navigator.vibrate?.(40)
-      setShowPicker(true)
+      onEdit?.()
     }, 500)
   }
 
@@ -582,7 +582,7 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, show
               <button
                 onClick={(e) => { e.stopPropagation(); onEdit() }}
                 style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "var(--foreground-muted)", lineHeight: 1, flexShrink: 0, display: "flex", alignItems: "center" }}
-                title="Editar (o doble toque en el texto)"
+                title="Editar (o mantén pulsado el texto)"
               >
                 <Edit2 size={15} />
               </button>

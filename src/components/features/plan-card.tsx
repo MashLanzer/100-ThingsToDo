@@ -1,9 +1,96 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Share2, Sparkles, Calendar, AlertTriangle } from "lucide-react"
+import { Share2, Sparkles, Calendar, AlertTriangle, Heart, Flame, Star } from "lucide-react"
 import { toast } from "sonner"
+import { useState, useEffect, useCallback } from "react"
 import type { Plan } from "@/types"
+import { getFirebaseToken } from "@/lib/firebase/client"
+
+interface PlanReaction { id: string; emoji: string; user_id: string }
+const PLAN_REACTIONS = [
+  { key: "heart", icon: <Heart size={14} />, label: "❤️" },
+  { key: "fire",  icon: <Flame size={14} />, label: "🔥" },
+  { key: "star",  icon: <Star  size={14} />, label: "✨" },
+]
+
+async function planAuthFetch(path: string, init?: RequestInit) {
+  const token = await getFirebaseToken()
+  if (!token) return null
+  const res = await fetch(path, {
+    ...init,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(init?.headers ?? {}) },
+  })
+  if (!res.ok) return null
+  return res.json()
+}
+
+function PlanReactionStrip({ planId, currentUserId }: { planId: string; currentUserId?: string }) {
+  const [reactions, setReactions] = useState<PlanReaction[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const fetchReactions = useCallback(async () => {
+    const data = await planAuthFetch(`/api/plans/${planId}/reactions`)
+    if (Array.isArray(data)) setReactions(data)
+  }, [planId])
+
+  useEffect(() => { fetchReactions() }, [fetchReactions])
+
+  async function handleReact(e: React.MouseEvent, key: string) {
+    e.stopPropagation()
+    if (loading) return
+    setLoading(true)
+    const mine = reactions.some((r) => r.emoji === key && r.user_id === currentUserId)
+    setReactions((prev) =>
+      mine
+        ? prev.filter((r) => !(r.emoji === key && r.user_id === currentUserId))
+        : [...prev, { id: "tmp", emoji: key, user_id: currentUserId ?? "" }]
+    )
+    try {
+      await planAuthFetch(`/api/plans/${planId}/reactions`, { method: "POST", body: JSON.stringify({ emoji: key }) })
+      await fetchReactions()
+    } catch { await fetchReactions() }
+    finally { setLoading(false) }
+  }
+
+  const groups = PLAN_REACTIONS.reduce<Record<string, { count: number; mine: boolean }>>((acc, r) => {
+    const group = reactions.filter((x) => x.emoji === r.key)
+    if (group.length > 0) acc[r.key] = { count: group.length, mine: group.some((x) => x.user_id === currentUserId) }
+    return acc
+  }, {})
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{ display: "flex", alignItems: "center", gap: "0.25rem", padding: "0.375rem 0.875rem 0.5rem" }}
+    >
+      {PLAN_REACTIONS.map(({ key, icon }) => {
+        const g = groups[key]
+        const mine = g?.mine ?? false
+        return (
+          <button
+            key={key}
+            onClick={(e) => handleReact(e, key)}
+            disabled={loading}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "3px",
+              padding: "3px 9px", borderRadius: "999px", cursor: "pointer",
+              border: mine ? "1px solid var(--primary)" : "1px solid var(--border)",
+              background: mine ? "var(--primary-lighter)" : "var(--muted)",
+              color: mine ? "var(--primary)" : "var(--foreground-muted)",
+              fontSize: "0.6875rem", fontWeight: 700, transition: "transform 0.1s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+          >
+            {icon}
+            {g ? g.count : ""}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 function relativeDate(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000)
@@ -72,9 +159,10 @@ interface Props {
   index?: number
   cardSize?: "compact" | "normal" | "large"
   isNew?: boolean
+  currentUserId?: string
 }
 
-export function PlanCard({ plan, index = 0, cardSize = "normal", isNew = false }: Props) {
+export function PlanCard({ plan, index = 0, cardSize = "normal", isNew = false, currentUserId }: Props) {
   const router = useRouter()
   const total = plan.task_count ?? 0
   const done = plan.completed_count ?? 0
@@ -111,6 +199,7 @@ export function PlanCard({ plan, index = 0, cardSize = "normal", isNew = false }
     >
       {hasCover ? (
         // ── A1: FULL-COVER CARD ──────────────────────────────────────────────
+        <>
         <div style={{ position: "relative", minHeight: coverHeight }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -205,6 +294,11 @@ export function PlanCard({ plan, index = 0, cardSize = "normal", isNew = false }
             </p>
           </div>
         </div>
+        {/* F5: Reaction strip for cover card */}
+        <div style={{ background: "var(--surface)", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+          <PlanReactionStrip planId={plan.id} currentUserId={currentUserId} />
+        </div>
+        </>
       ) : (
         // ── A2: GRADIENT HEADER CARD ─────────────────────────────────────────
         <>
@@ -364,6 +458,10 @@ export function PlanCard({ plan, index = 0, cardSize = "normal", isNew = false }
                 <Share2 size={12} /> Compartir
               </button>
             )}
+          </div>
+          {/* F5: Reaction strip */}
+          <div style={{ borderTop: "1px solid var(--border)" }}>
+            <PlanReactionStrip planId={plan.id} currentUserId={currentUserId} />
           </div>
         </>
       )}

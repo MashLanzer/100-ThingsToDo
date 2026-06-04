@@ -33,7 +33,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
-function SwipePlanCard({ plan, index, onDelete, cardSize, isNew }: { plan: Plan; index: number; onDelete: () => void; cardSize?: "compact" | "normal" | "large"; isNew?: boolean }) {
+function SwipePlanCard({ plan, index, onDelete, cardSize, isNew, currentUserId }: { plan: Plan; index: number; onDelete: () => void; cardSize?: "compact" | "normal" | "large"; isNew?: boolean; currentUserId?: string }) {
   const [swipeX, setSwipeX] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const touchStartX = useRef<number>(0)
@@ -102,11 +102,21 @@ function SwipePlanCard({ plan, index, onDelete, cardSize, isNew }: { plan: Plan;
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <PlanCard plan={plan} index={index} cardSize={cardSize} isNew={isNew} />
+        <PlanCard plan={plan} index={index} cardSize={cardSize} isNew={isNew} currentUserId={currentUserId} />
       </div>
     </div>
   )
 }
+
+// F1: Plan templates
+const PLAN_TEMPLATES = [
+  { emoji: "✈️", title: "Viaje de pareja", desc: "Escapada y nueva aventura juntos", tags: ["Viajes"], tasks: ["Buscar vuelos y fechas", "Reservar alojamiento", "Hacer las maletas", "Crear itinerario", "Cambiar divisas", "Contratar seguro de viaje"] },
+  { emoji: "🍽️", title: "Cena especial", desc: "Una noche para recordar", tags: ["Romántico"], tasks: ["Elegir restaurante", "Hacer la reserva", "Preparar el look", "Llegar a tiempo", "Pedir el postre especial"] },
+  { emoji: "🛋️", title: "Fin de semana en casa", desc: "Tiempo de calidad sin salir", tags: ["Casa"], tasks: ["Comprar snacks ricos", "Elegir películas", "Preparar manta y cojines", "Cocinar algo especial", "Apagar notificaciones"] },
+  { emoji: "💑", title: "Plan de citas", desc: "Sorpresas y momentos bonitos", tags: ["Romántico"], tasks: ["Buscar un sitio nuevo", "Pasear juntos", "Helado de postre", "Foto juntos", "Planear la próxima cita"] },
+  { emoji: "🏞️", title: "Aventura al aire libre", desc: "Naturaleza y desconexión total", tags: ["Aventura"], tasks: ["Revisar el tiempo", "Preparar la mochila", "Descargar mapas offline", "Llevar snacks y agua", "Salida a primera hora"] },
+  { emoji: "🎲", title: "Noche de juegos", desc: "Diversión en casa sin pantallas", tags: ["Casa"], tasks: ["Elegir juegos de mesa", "Preparar aperitivos", "Poner música de fondo", "Preparar premios divertidos", "Prohibido hacer trampa 😄"] },
+] as const
 
 type SortBy = "newest" | "oldest" | "progress_asc" | "progress_desc"
 
@@ -180,6 +190,8 @@ export default function DashboardPage() {
     if (typeof window !== "undefined") return localStorage.getItem("ttd_plans_listview") === "1"
     return false
   })
+  const [templateTasks, setTemplateTasks] = useState<string[]>([])
+  const [showTemplates, setShowTemplates] = useState(false)
 
   const hasCouple = !!coupleData?.couple
 
@@ -317,7 +329,22 @@ export default function DashboardPage() {
       setNewTags([])
       setNewTagInput("")
       setShowForm(false)
-      toast.success("Plan creado 🎉")
+      const tasks = templateTasks
+      setTemplateTasks([])
+      setShowTemplates(false)
+      if (created?.id && tasks.length > 0) {
+        const token = await getFirebaseToken()
+        await Promise.all(tasks.map((taskTitle, i) =>
+          fetch(`/api/plans/${created.id}/tasks`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ title: taskTitle, sort_order: i }),
+          })
+        ))
+        toast.success(`Plan creado con ${tasks.length} tareas 🎉`)
+      } else {
+        toast.success("Plan creado 🎉")
+      }
       if (created?.id) {
         setNewlyCreatedId(created.id)
         setTimeout(() => setNewlyCreatedId(null), 1500)
@@ -747,7 +774,7 @@ export default function DashboardPage() {
       {/* New plan modal */}
       <Modal
         open={showForm}
-        onClose={() => setShowForm(false)}
+        onClose={() => { setShowForm(false); setShowTemplates(false); setTemplateTasks([]) }}
         title="Nuevo Plan"
         footer={
           <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -759,6 +786,69 @@ export default function DashboardPage() {
         }
       >
           <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+            {/* F1: Template picker */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowTemplates((v) => !v)}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "0.5rem 0.75rem", borderRadius: "var(--radius-md)",
+                  border: "1.5px dashed var(--primary)", background: "var(--primary-lighter)",
+                  color: "var(--primary)", fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                <span>✨ Usar plantilla</span>
+                <ChevronDown size={14} style={{ transition: "transform 0.2s", transform: showTemplates ? "rotate(180deg)" : "none" }} />
+              </button>
+              {showTemplates && (
+                <div style={{
+                  display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.375rem",
+                  marginTop: "0.375rem",
+                }}>
+                  {PLAN_TEMPLATES.map((tpl) => {
+                    const selected = tpl.tasks.every((t) => templateTasks.includes(t))
+                    return (
+                      <button
+                        key={tpl.title}
+                        type="button"
+                        onClick={() => {
+                          if (selected) {
+                            setTemplateTasks([])
+                            setTitle("")
+                            setDesc("")
+                            setNewTags([])
+                          } else {
+                            setTemplateTasks([...tpl.tasks])
+                            setTitle(tpl.title)
+                            setDesc(tpl.desc)
+                            setNewTags([...tpl.tags])
+                          }
+                        }}
+                        style={{
+                          display: "flex", flexDirection: "column", alignItems: "flex-start",
+                          gap: "2px", padding: "0.5rem 0.625rem",
+                          borderRadius: "var(--radius-md)",
+                          border: selected ? "2px solid var(--primary)" : "1px solid var(--border)",
+                          background: selected ? "var(--primary-lighter)" : "var(--surface)",
+                          cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                        }}
+                      >
+                        <span style={{ fontSize: "1.125rem" }}>{tpl.emoji}</span>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: selected ? "var(--primary)" : "var(--foreground)", lineHeight: 1.2 }}>{tpl.title}</span>
+                        <span style={{ fontSize: "0.625rem", color: "var(--foreground-muted)" }}>{tpl.tasks.length} tareas</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+              {templateTasks.length > 0 && (
+                <div style={{ marginTop: "0.375rem", fontSize: "0.6875rem", color: "var(--primary)", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                  <CheckCircle2 size={12} /> {templateTasks.length} tareas se crearán automáticamente
+                </div>
+              )}
+            </div>
             <input
               className="input"
               type="text"
@@ -949,7 +1039,7 @@ export default function DashboardPage() {
                 <SortableContext items={inProgressPlans.map((p) => p.id)} strategy={verticalListSortingStrategy}>
                   <div style={listView ? { display: "flex", flexDirection: "column", gap: "0.5rem" } : { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.75rem" }}>
                     {inProgressPlans.map((plan, i) => (
-                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} cardSize={listView ? "compact" : cardSize} isNew={plan.id === newlyCreatedId} />
+                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} cardSize={listView ? "compact" : cardSize} isNew={plan.id === newlyCreatedId} currentUserId={user?.uid} />
                     ))}
                   </div>
                 </SortableContext>
@@ -977,7 +1067,7 @@ export default function DashboardPage() {
                 {showArchived && (
                   <div className="animate-fade-in" style={listView ? { display: "flex", flexDirection: "column", gap: "0.5rem" } : { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.75rem" }}>
                     {allCompletedPlans.map((plan, i) => (
-                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} cardSize={listView ? "compact" : cardSize} />
+                      <SwipePlanCard key={plan.id} plan={plan} index={i} onDelete={() => handleDeletePlan(plan.id)} cardSize={listView ? "compact" : cardSize} currentUserId={user?.uid} />
                     ))}
                   </div>
                 )}
