@@ -11,7 +11,7 @@ import { Plus, X, Trash2, Search, GripVertical, Tag, ImagePlus, Calendar, Heart,
 import { toast } from "sonner"
 import { getFirebaseToken } from "@/lib/firebase/client"
 import { showConfirm } from "@/lib/confirm"
-import { daysTogether } from "@/lib/utils"
+import { daysTogether, daysUntilAnniversary } from "@/lib/utils"
 import type { Plan } from "@/types"
 import { OnboardingModal } from "@/components/shared/onboarding-modal"
 import { PlanCalendar } from "@/components/features/plan-calendar"
@@ -429,6 +429,64 @@ export default function DashboardPage() {
                 ) : null
               })()}
             </div>
+          </div>
+        )
+      })()}
+
+      {/* Anniversary card */}
+      {hasCouple && (() => {
+        const anniversaryDate = coupleData?.couple?.anniversary_date
+        const days = daysTogether(anniversaryDate)
+        const until = daysUntilAnniversary(anniversaryDate)
+        if (!days || until === null) return null
+        const isToday = until === 0
+        const dateLabel = anniversaryDate
+          ? new Date(anniversaryDate + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
+          : ""
+        return (
+          <div style={{
+            marginBottom: "0.875rem",
+            borderRadius: "var(--radius-lg)",
+            background: isToday
+              ? "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)"
+              : "linear-gradient(135deg, var(--primary-lighter) 0%, var(--pink-light) 100%)",
+            border: isToday ? "none" : "1px solid var(--primary-light)",
+            padding: "0.875rem 1rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.875rem",
+          }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%", flexShrink: 0,
+              background: isToday ? "rgba(255,255,255,0.25)" : "rgba(139,92,246,0.12)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "1.5rem",
+            }}>
+              {isToday ? "🎉" : "💕"}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{
+                fontFamily: "'Fredoka', sans-serif", fontWeight: 700,
+                fontSize: "1.0625rem", lineHeight: 1.2,
+                color: isToday ? "white" : "var(--foreground)",
+                marginBottom: "0.125rem",
+              }}>
+                {isToday ? "¡Feliz aniversario! 🥂" : `${days.toLocaleString("es-ES")} días juntos`}
+              </p>
+              <p style={{ fontSize: "0.6875rem", color: isToday ? "rgba(255,255,255,0.85)" : "var(--foreground-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {isToday ? dateLabel : `Desde el ${dateLabel}`}
+              </p>
+            </div>
+            {!isToday && (
+              <div style={{ textAlign: "center", flexShrink: 0 }}>
+                <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1.125rem", color: "var(--primary)", lineHeight: 1 }}>
+                  {until === 0 ? "hoy" : until === 1 ? "mañana" : `${until}d`}
+                </p>
+                <p style={{ fontSize: "0.5625rem", color: "var(--foreground-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  próx. aniv.
+                </p>
+              </div>
+            )}
           </div>
         )
       })()}
