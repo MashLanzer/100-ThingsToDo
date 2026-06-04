@@ -1,14 +1,16 @@
 "use client"
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
+import { createPortal } from "react-dom"
 import type { Task } from "@/types"
-import { Trash2, Check, GripVertical, Heart, Flame, Laugh, Star, Zap, AlertTriangle, Calendar, CheckCircle2, Sparkles, Edit2, Bell, User, Plus, X, Loader2, ListChecks, SmilePlus, Pencil } from "lucide-react"
+import { Trash2, Check, GripVertical, Heart, Flame, Laugh, Star, Zap, AlertTriangle, Calendar, CheckCircle2, Sparkles, Edit2, Bell, User, Plus, X, Loader2, ListChecks, SmilePlus, Pencil, Copy, ChevronLeft, ChevronRight } from "lucide-react"
 import { KawaiiIcon } from "@/components/ui/kawaii-icon"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { getFirebaseToken } from "@/lib/firebase/client"
 import { useSubtasks, useCreateSubtask, useToggleSubtask, useDeleteSubtask, useUpdateSubtask } from "@/hooks/use-subtasks"
 import { Modal } from "@/components/ui/modal"
+import { toast } from "sonner"
 
 const REACTIONS: Array<{ key: string; icon: React.ReactNode; label: string }> = [
   { key: "heart", icon: <Heart  size={13} />, label: "Me encanta" },
@@ -26,6 +28,7 @@ interface Props {
   onToggle: () => void
   onDelete: () => void
   onEdit?: () => void
+  onDuplicated?: () => void
   currentUserId?: string
   showSubtasks?: boolean
 }
@@ -227,7 +230,131 @@ function SubtasksModal({ task, open, onClose }: { task: Task; open: boolean; onC
   )
 }
 
-export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, showSubtasks = true }: Props) {
+// ─────────────────────────────────────────────────────────────────────────────
+// PhotoLightbox — full-screen image viewer rendered via portal
+// ─────────────────────────────────────────────────────────────────────────────
+function PhotoLightbox({
+  photos,
+  index,
+  onClose,
+  onNext,
+  onPrev,
+}: {
+  photos: string[]
+  index: number
+  onClose: () => void
+  onNext: () => void
+  onPrev: () => void
+}) {
+  const [mounted, setMounted] = useState(false)
+  const touchStartX = useRef(0)
+
+  useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+      if (e.key === "ArrowRight") onNext()
+      if (e.key === "ArrowLeft") onPrev()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose, onNext, onPrev])
+
+  if (!mounted) return null
+
+  const lightboxJSX = (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 2000,
+        background: "rgba(0,0,0,0.92)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}
+      onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX }}
+      onTouchEnd={(e) => {
+        const delta = e.changedTouches[0].clientX - touchStartX.current
+        if (delta > 50) onPrev()
+        else if (delta < -50) onNext()
+      }}
+    >
+      {/* Close button */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onClose() }}
+        style={{
+          position: "absolute", top: 16, right: 16, zIndex: 1,
+          background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%",
+          width: 40, height: 40, cursor: "pointer", color: "white",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          backdropFilter: "blur(4px)",
+        }}
+      >
+        <X size={20} />
+      </button>
+
+      {/* Prev button */}
+      {photos.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev() }}
+          style={{
+            position: "absolute", left: 12, zIndex: 1,
+            background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%",
+            width: 40, height: 40, cursor: "pointer", color: "white",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <ChevronLeft size={24} />
+        </button>
+      )}
+
+      {/* Image */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photos[index]}
+        alt={`Foto ${index + 1}`}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: "min(92vw, 900px)", maxHeight: "88dvh",
+          objectFit: "contain", borderRadius: 12,
+          boxShadow: "0 8px 48px rgba(0,0,0,0.6)",
+          userSelect: "none",
+        }}
+      />
+
+      {/* Next button */}
+      {photos.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext() }}
+          style={{
+            position: "absolute", right: 12, zIndex: 1,
+            background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%",
+            width: 40, height: 40, cursor: "pointer", color: "white",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <ChevronRight size={24} />
+        </button>
+      )}
+
+      {/* Counter */}
+      {photos.length > 1 && (
+        <div style={{
+          position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)",
+          background: "rgba(255,255,255,0.15)", color: "white", borderRadius: 999,
+          padding: "4px 14px", fontSize: "0.8125rem", fontWeight: 700, backdropFilter: "blur(4px)",
+        }}>
+          {index + 1} / {photos.length}
+        </div>
+      )}
+    </div>
+  )
+
+  return createPortal(lightboxJSX, document.body)
+}
+
+export function TaskItem({ task, onToggle, onDelete, onEdit, onDuplicated, currentUserId, showSubtasks = true }: Props) {
   const [popping, setPopping] = useState(false)
   const [sparkle, setSparkle] = useState(false)
   const [swipeX, setSwipeX] = useState(0)
@@ -235,6 +362,9 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, show
   const [showPicker, setShowPicker] = useState(false)
   const [reactLoading, setReactLoading] = useState(false)
   const [subtasksOpen, setSubtasksOpen] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
+  // Lightbox state
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   // Subtask counts (lightweight; cached by react-query so shared with modal)
   const { data: subtaskList = [] } = useSubtasks(showSubtasks ? task.id : "")
@@ -422,6 +552,32 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, show
   // Photo strip: up to 3 thumbnails
   const photos = task.task_photos ?? []
 
+  // ── Duplicate task ────────────────────────────────────────────
+  async function handleDuplicate() {
+    if (duplicating) return
+    setDuplicating(true)
+    try {
+      const token = await getFirebaseToken()
+      if (!token) throw new Error("Not authenticated")
+      const res = await fetch(`/api/plans/${task.plan_id}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          title: `${task.title} (copia)`,
+          icon: task.icon,
+          notes: task.notes ?? undefined,
+        }),
+      })
+      if (!res.ok) throw new Error("Error al duplicar")
+      toast.success("Tarea duplicada ✓")
+      onDuplicated?.()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al duplicar")
+    } finally {
+      setDuplicating(false)
+    }
+  }
+
   // Whether the meta row should render at all
   const showMetaRow = showSubtasks || hasReactions || !task.completed
 
@@ -577,6 +733,16 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, show
               </div>
             )}
 
+            {/* Duplicate button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDuplicate() }}
+              disabled={duplicating}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "var(--foreground-muted)", lineHeight: 1, flexShrink: 0, display: "flex", alignItems: "center", opacity: duplicating ? 0.5 : 1 }}
+              title="Duplicar tarea"
+            >
+              {duplicating ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Copy size={14} />}
+            </button>
+
             {/* Edit button */}
             {onEdit && (
               <button
@@ -593,7 +759,11 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, show
           {photos.length > 0 && (
             <div style={{ display: "flex", gap: 5, padding: "0 0.75rem 0.5rem 0.75rem" }}>
               {photos.slice(0, 3).map((url, i) => (
-                <div key={i} style={{ position: "relative" }}>
+                <div
+                  key={i}
+                  style={{ position: "relative", cursor: "pointer" }}
+                  onClick={(e) => { e.stopPropagation(); setLightboxIndex(i) }}
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={url}
@@ -612,6 +782,17 @@ export function TaskItem({ task, onToggle, onDelete, onEdit, currentUserId, show
                 </div>
               ))}
             </div>
+          )}
+
+          {/* ── Photo Lightbox ── */}
+          {lightboxIndex !== null && photos.length > 0 && (
+            <PhotoLightbox
+              photos={photos}
+              index={lightboxIndex}
+              onClose={() => setLightboxIndex(null)}
+              onNext={() => setLightboxIndex((prev) => prev === null ? 0 : (prev + 1) % photos.length)}
+              onPrev={() => setLightboxIndex((prev) => prev === null ? 0 : (prev - 1 + photos.length) % photos.length)}
+            />
           )}
 
           {/* ── Meta row: subtasks chip + reaction chips + add-reaction ── */}

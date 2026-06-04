@@ -34,6 +34,14 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
+const CURRENT_VERSION = "5.0"
+const WHATS_NEW = [
+  "✏️ Editar pistas en la app de música",
+  "⏳ Fechas límite en metas de ahorro",
+  "📷 Ver fotos de tareas a pantalla completa",
+  "✅ Completar todas las tareas del plan de una vez",
+]
+
 function SwipePlanCard({ plan, index, onDelete, cardSize, isNew, currentUserId }: { plan: Plan; index: number; onDelete: () => void; cardSize?: "compact" | "normal" | "large"; isNew?: boolean; currentUserId?: string }) {
   const [swipeX, setSwipeX] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
@@ -244,6 +252,11 @@ export default function DashboardPage() {
   const [showTemplates, setShowTemplates] = useState(false)
 
   const hasCouple = !!coupleData?.couple
+
+  const [showWhatsNew, setShowWhatsNew] = useState(() => {
+    if (typeof window === "undefined") return false
+    return localStorage.getItem("ttd_seen_v") !== CURRENT_VERSION
+  })
 
   // Close sort menu when clicking outside
   useEffect(() => {

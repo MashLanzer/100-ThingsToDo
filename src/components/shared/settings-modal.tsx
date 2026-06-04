@@ -226,6 +226,7 @@ export function SettingsModal() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
   const [deletingData, setDeletingData] = useState(false)
+  const [exportingAll, setExportingAll] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
   const [showDeleteZone, setShowDeleteZone] = useState(false)
   const { subscribe: subscribePush, subscribing: pushSubscribing, isSubscribed: pushSubscribed } = usePushNotifications()
@@ -800,6 +801,41 @@ export function SettingsModal() {
       }
       downloadText(text, "diario-thingstodo.txt")
     } catch { toast.error("Error al exportar") }
+  }
+
+  async function handleExportAll() {
+    setExportingAll(true)
+    try {
+      const token = await getAuthToken()
+      if (!token) { toast.error("No autenticado"); return }
+      const headers = { Authorization: `Bearer ${token}` }
+
+      const [plans, journal, letters, capsules, goals, places, favors] = await Promise.all([
+        fetch("/api/plans", { headers }).then(r => r.json()).catch(() => []),
+        fetch("/api/journal", { headers }).then(r => r.json()).catch(() => []),
+        fetch("/api/letters", { headers }).then(r => r.json()).catch(() => []),
+        fetch("/api/capsules", { headers }).then(r => r.json()).catch(() => []),
+        fetch("/api/goals", { headers }).then(r => r.json()).catch(() => []),
+        fetch("/api/places", { headers }).then(r => r.json()).catch(() => []),
+        fetch("/api/favors", { headers }).then(r => r.json()).catch(() => []),
+      ])
+
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        plans, journal, letters, capsules, goals, places, favors,
+      }
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `mis-datos-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success("¡Descargado! ✨")
+    } catch { toast.error("Error al exportar") } finally {
+      setExportingAll(false)
+    }
   }
 
   function downloadText(content: string, filename: string) {
@@ -1604,6 +1640,14 @@ export function SettingsModal() {
                     onClick={handleExportJournal}
                   >
                     📓 Exportar diario
+                  </button>
+                  <button
+                    className="btn btn-outline"
+                    style={{ fontSize: "0.8125rem", justifyContent: "flex-start" }}
+                    onClick={handleExportAll}
+                    disabled={exportingAll}
+                  >
+                    📦 {exportingAll ? "Exportando..." : "Exportar todo (JSON)"}
                   </button>
                 </div>
               </SettingsCard>

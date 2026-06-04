@@ -47,7 +47,7 @@ function getGoalIcon(key: string | undefined): React.FC<LucideProps> {
   return GOAL_ICONS.find(g => g.key === key)?.Icon ?? PiggyBank
 }
 
-interface Contribution { id: string; amount: number; contributed_by: string; created_at: string }
+interface Contribution { id: string; amount: number; contributed_by: string; created_at: string; note?: string | null }
 interface Props { onBack: () => void }
 
 export function SavingsGoalsApp({ onBack }: Props) {
@@ -67,6 +67,13 @@ export function SavingsGoalsApp({ onBack }: Props) {
   const [editGoalTarget, setEditGoalTarget] = useState("")
   const [goalIconKey, setGoalIconKey] = useState("piggy")
   const [editGoalIconKey, setEditGoalIconKey] = useState("piggy")
+  // G-A: deadline
+  const [goalDeadline, setGoalDeadline] = useState("")
+  const [editGoalDeadline, setEditGoalDeadline] = useState("")
+  // G-B: contribution note
+  const [contribNote, setContribNote] = useState("")
+  // G-C: withdraw mode
+  const [withdrawMode, setWithdrawMode] = useState(false)
 
   useEffect(() => { loadGoals() }, [])
 
@@ -108,12 +115,13 @@ export function SavingsGoalsApp({ onBack }: Props) {
     try {
       await authFetch("/api/goals", {
         method: "POST",
-        body: JSON.stringify({ name: goalName.trim(), target_amount: Number(goalTarget), emoji: goalIconKey }),
+        body: JSON.stringify({ name: goalName.trim(), target_amount: Number(goalTarget), emoji: goalIconKey, deadline: goalDeadline || null }),
       })
       toast.success("Meta creada")
       setGoalName("")
       setGoalTarget("")
       setGoalIconKey("piggy")
+      setGoalDeadline("")
       setView("list")
       loadGoals()
     } catch (e: unknown) {
@@ -123,14 +131,21 @@ export function SavingsGoalsApp({ onBack }: Props) {
 
   async function handleContribute() {
     if (!selected || !contribution) return
+    const rawAmount = Number(contribution)
+    const amount = withdrawMode ? -Math.abs(rawAmount) : Math.abs(rawAmount)
+    if (withdrawMode && (selected.total_saved ?? 0) + amount < 0) {
+      toast.error("No hay suficiente saldo para retirar")
+      return
+    }
     setSaving(true)
     try {
       await authFetch(`/api/goals/${selected.id}/contribute`, {
         method: "POST",
-        body: JSON.stringify({ amount: Number(contribution) }),
+        body: JSON.stringify({ amount, note: contribNote.trim() || null }),
       })
-      const amount = Number(contribution)
       setContribution("")
+      setContribNote("")
+      setWithdrawMode(false)
       await loadGoals()
       const updated = await authFetch(`/api/goals?id=${selected.id}`)
       if (Array.isArray(updated)) {
@@ -139,6 +154,8 @@ export function SavingsGoalsApp({ onBack }: Props) {
           const newPct = g.target_amount > 0 ? Math.min(100, Math.round(((g.total_saved ?? 0) / g.target_amount) * 100)) : 0
           if (newPct >= 100) {
             toast.success("¡Meta completada!")
+          } else if (amount < 0) {
+            toast.success(`📤 Retirada de $${Math.abs(amount)}`)
           } else {
             toast.success(`+${formatEuro(Number(amount))} aportado`)
           }
@@ -157,7 +174,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
     try {
       const updated = await authFetch(`/api/goals/${selected.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name: editGoalName.trim(), target_amount: Number(editGoalTarget), emoji: editGoalIconKey }),
+        body: JSON.stringify({ name: editGoalName.trim(), target_amount: Number(editGoalTarget), emoji: editGoalIconKey, deadline: editGoalDeadline || null }),
       })
       setSelected(updated)
       setEditingGoal(false)
@@ -230,6 +247,15 @@ export function SavingsGoalsApp({ onBack }: Props) {
               onChange={(e) => setGoalTarget(e.target.value)}
             />
           </div>
+          <div className="form-group">
+            <label className="form-label">📅 Fecha objetivo (opcional)</label>
+            <input
+              className="input"
+              type="date"
+              value={goalDeadline}
+              onChange={(e) => setGoalDeadline(e.target.value)}
+            />
+          </div>
           <button className="btn btn-primary" onClick={handleCreate} disabled={saving}>
             {saving ? "Creando..." : "Empezar a Ahorrar"}
           </button>
@@ -255,7 +281,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
             {selected.name}
           </span>
           <button
-            onClick={() => { setEditGoalName(selected.name); setEditGoalTarget(String(selected.target_amount)); setEditGoalIconKey(selected.emoji ?? "piggy"); setEditingGoal(true) }}
+            onClick={() => { setEditGoalName(selected.name); setEditGoalTarget(String(selected.target_amount)); setEditGoalIconKey(selected.emoji ?? "piggy"); setEditGoalDeadline(selected.deadline ?? ""); setEditingGoal(true) }}
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "4px", display: "flex", alignItems: "center", flexShrink: 0 }}
           ><Pencil size={14} /></button>
         </div>
@@ -263,7 +289,8 @@ export function SavingsGoalsApp({ onBack }: Props) {
         {editingGoal && (
           <div style={{ padding: "0.75rem", background: "var(--primary-lighter)", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <input className="input" value={editGoalName} onChange={(e) => setEditGoalName(e.target.value)} placeholder="Nombre" autoFocus />
-            <input className="input" type="number" value={editGoalTarget} onChange={(e) => setEditGoalTarget(e.target.value)} placeholder="Objetivo (€)" />
+            <input className="input" type="number" value={editGoalTarget} onChange={(e) => setEditGoalTarget(e.target.value)} placeholder="Objetivo ($)" />
+            <input className="input" type="date" value={editGoalDeadline} onChange={(e) => setEditGoalDeadline(e.target.value)} placeholder="Fecha objetivo (opcional)" />
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
               {GOAL_ICONS.map(({ key, Icon }) => (
                 <button key={key} onClick={() => setEditGoalIconKey(key)} title={key} style={{
@@ -334,20 +361,42 @@ export function SavingsGoalsApp({ onBack }: Props) {
 
           {!isComplete && (
             <div className="form-group" style={{ width: "100%" }}>
-              <label className="form-label">Añadir aportación</label>
+              <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.375rem" }}>
+                <button
+                  onClick={() => setWithdrawMode(false)}
+                  style={{ flex: 1, padding: "0.25rem 0.5rem", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 600, border: "1.5px solid", cursor: "pointer", fontFamily: "inherit", background: !withdrawMode ? "var(--primary)" : "transparent", color: !withdrawMode ? "white" : "var(--foreground-muted)", borderColor: !withdrawMode ? "var(--primary)" : "var(--border)" }}
+                >💰 Añadir</button>
+                <button
+                  onClick={() => setWithdrawMode(true)}
+                  style={{ flex: 1, padding: "0.25rem 0.5rem", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 600, border: "1.5px solid", cursor: "pointer", fontFamily: "inherit", background: withdrawMode ? "#ef4444" : "transparent", color: withdrawMode ? "white" : "var(--foreground-muted)", borderColor: withdrawMode ? "#ef4444" : "var(--border)" }}
+                >📤 Retirar</button>
+              </div>
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <input
                   className="input"
                   type="number"
                   inputMode="numeric"
-                  placeholder="Importe ($)"
+                  placeholder={withdrawMode ? "Importe a retirar ($)" : "Importe ($)"}
                   value={contribution}
                   onChange={(e) => setContribution(e.target.value)}
                 />
-                <button className="btn btn-primary" style={{ flexShrink: 0 }} onClick={handleContribute} disabled={saving}>
-                  {saving ? "..." : "Aportar"}
+                <button
+                  className="btn"
+                  style={{ flexShrink: 0, background: withdrawMode ? "#ef4444" : "var(--primary)", color: "white" }}
+                  onClick={handleContribute}
+                  disabled={saving}
+                >
+                  {saving ? "..." : withdrawMode ? "Retirar" : "Aportar"}
                 </button>
               </div>
+              <input
+                className="input"
+                placeholder="💬 Nota opcional (máx. 100 chars)"
+                maxLength={100}
+                value={contribNote}
+                onChange={(e) => setContribNote(e.target.value)}
+                style={{ marginTop: "0.375rem", fontSize: "0.8125rem" }}
+              />
             </div>
           )}
 
@@ -366,22 +415,32 @@ export function SavingsGoalsApp({ onBack }: Props) {
               <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
                 {contributions.slice(0, 10).map((c) => {
                   const isMe = c.contributed_by === user?.uid
+                  const isWithdrawal = Number(c.amount) < 0
                   return (
-                    <div key={c.id} style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+                    <div key={c.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem" }}>
                       <div style={{
-                        width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
-                        background: isMe ? "var(--primary)" : "var(--secondary)",
+                        width: 8, height: 8, borderRadius: "50%", flexShrink: 0, marginTop: "0.25rem",
+                        background: isWithdrawal ? "#ef4444" : (isMe ? "var(--primary)" : "var(--secondary)"),
                       }} />
-                      <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--foreground)" }}>
-                        +{formatEuro(Number(c.amount))}
-                      </span>
-                      <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", flex: 1 }}>
-                        {isMe ? "Tú" : "Pareja"} · {relativeContribDate(c.created_at)}
-                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                          <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: isWithdrawal ? "#ef4444" : "var(--foreground)" }}>
+                            {isWithdrawal ? `📤 -${formatEuro(Math.abs(Number(c.amount)))}` : `+${formatEuro(Number(c.amount))}`}
+                          </span>
+                          <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
+                            {isMe ? "Tú" : "Pareja"} · {relativeContribDate(c.created_at)}
+                          </span>
+                        </div>
+                        {c.note && (
+                          <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", fontStyle: "italic", margin: "0.125rem 0 0 0" }}>
+                            {c.note}
+                          </p>
+                        )}
+                      </div>
                       {c.contributed_by === user?.uid && (
                         <button
                           onClick={() => handleDeleteContribution(selected.id, c.id)}
-                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "2px", opacity: 0.6, display: "flex", alignItems: "center" }}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "2px", opacity: 0.6, display: "flex", alignItems: "center", flexShrink: 0 }}
                         >
                           <Trash2 size={13} />
                         </button>
@@ -504,6 +563,16 @@ export function SavingsGoalsApp({ onBack }: Props) {
                   <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
                     {formatEuro(saved)} / {formatEuro(g.target_amount)}
                   </div>
+                  {g.deadline && !isComplete && (() => {
+                    const daysLeft = Math.ceil((new Date(g.deadline).getTime() - Date.now()) / 86400000)
+                    const color = daysLeft > 7 ? "#16a34a" : daysLeft > 0 ? "#d97706" : "#ef4444"
+                    const label = daysLeft < 0 ? "⚠️ vencida" : daysLeft === 0 ? "⚠️ hoy" : `faltan ${daysLeft}d`
+                    return (
+                      <span style={{ display: "inline-block", marginTop: "0.25rem", fontSize: "0.5625rem", fontWeight: 700, color, background: `${color}18`, borderRadius: "999px", padding: "1px 6px", border: `1px solid ${color}40` }}>
+                        📅 {label}
+                      </span>
+                    )
+                  })()}
                 </div>
               </button>
             )
