@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { getFirebaseToken } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import type { TimeCapsule, CapsuleType } from "@/types"
@@ -30,6 +30,8 @@ type CapsuleFilter = "all" | "waiting" | "ready" | "opened"
 interface Props { onBack: () => void }
 type View = "list" | "create" | "read"
 
+const CONFETTI = ["💜", "✨", "💕", "⭐", "🌟"]
+
 export function TimeCapsuleApp({ onBack }: Props) {
   const [view, setView] = useState<View>("list")
   const [capsules, setCapsules] = useState<TimeCapsule[]>([])
@@ -48,6 +50,19 @@ export function TimeCapsuleApp({ onBack }: Props) {
   const [editMessage, setEditMessage] = useState("")
   const [editDate, setEditDate] = useState("")
   const [editTime, setEditTime] = useState("")
+
+  // Cap-A: opening animation
+  const [openingCapsule, setOpeningCapsule] = useState<TimeCapsule | null>(null)
+  const [countdownStep, setCountdownStep] = useState<number>(0) // 0=idle 1=3 2=2 3=1 4=✨ 5=done
+  const countdownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Cap-B: photo in capsule
+  const [capsulePhoto, setCapsulePhoto] = useState<string | null>(null)
+  const [editCapsulePhoto, setEditCapsulePhoto] = useState<string | null>(null)
+  const [showCapsuleGallery, setShowCapsuleGallery] = useState(false)
+  const [showEditCapsuleGallery, setShowEditCapsuleGallery] = useState(false)
+  const [galleryPhotos, setGalleryPhotos] = useState<{ id: string; image_url: string; thumb_url: string | null }[]>([])
+  const [loadingGallery, setLoadingGallery] = useState(false)
 
   useEffect(() => { loadCapsules() }, [])
 
@@ -69,6 +84,19 @@ export function TimeCapsuleApp({ onBack }: Props) {
     } catch { /* ignore */ } finally { setLoading(false) }
   }
 
+  async function loadGallery() {
+    if (galleryPhotos.length > 0) return
+    setLoadingGallery(true)
+    try {
+      const token = await getFirebaseToken()
+      if (!token) return
+      const res = await fetch("/api/photos", { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) return
+      const data = await res.json()
+      setGalleryPhotos(Array.isArray(data) ? data : [])
+    } catch { /* silently fail */ } finally { setLoadingGallery(false) }
+  }
+
   async function handleSave() {
     if (!message.trim()) { toast.error("Escribe un mensaje"); return }
     const unlock_date = useCustom && customDate
@@ -83,15 +111,59 @@ export function TimeCapsuleApp({ onBack }: Props) {
     try {
       await authFetch("/api/capsules", {
         method: "POST",
-        body: JSON.stringify({ message: message.trim(), type: capsuleType, unlock_date, unlock_at }),
+        body: JSON.stringify({
+          message: message.trim(),
+          type: capsuleType,
+          unlock_date,
+          unlock_at,
+          ...(capsulePhoto ? { photo_url: capsulePhoto } : {}),
+        }),
       })
       toast.success("Cápsula creada 💎")
       setMessage("")
+      setCapsulePhoto(null)
       setView("list")
       loadCapsules()
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error")
     } finally { setSaving(false) }
+  }
+
+  // Cap-A: animate opening
+  function startOpeningAnimation(capsule: TimeCapsule) {
+    setOpeningCapsule(capsule)
+    setCountdownStep(1)
+    let step = 1
+    function next() {
+      step++
+      setCountdownStep(step)
+      if (step < 5) {
+        countdownRef.current = setTimeout(next, 800)
+      } else {
+        // step 5 = done, trigger actual open
+        countdownRef.current = setTimeout(() => doOpenCapsule(capsule), 600)
+      }
+    }
+    countdownRef.current = setTimeout(next, 800)
+  }
+
+  async function doOpenCapsule(capsule: TimeCapsule) {
+    try {
+      await authFetch(`/api/capsules/${capsule.id}/open`, { method: "PATCH" })
+      await loadCapsules()
+      const updated = { ...capsule, is_opened: true }
+      setSelected(updated)
+      setOpeningCapsule(null)
+      setCountdownStep(0)
+      setView("read")
+      toast.success("¡Cápsula abierta! ✨")
+    } catch (e: unknown) {
+      setOpeningCapsule(null)
+      setCountdownStep(0)
+      const msg = e instanceof Error ? e.message : ""
+      if (msg.includes("not_ready")) toast.error("🔒 Esta cápsula aún no está lista para abrir")
+      else toast.error("Error al abrir")
+    }
   }
 
   async function handleOpen(capsule: TimeCapsule) {
@@ -104,18 +176,8 @@ export function TimeCapsuleApp({ onBack }: Props) {
       return
     }
     if (!await showConfirm({ title: "Abrir cápsula ⏳", message: "Una vez abierta no podrás volver a cerrarla.", danger: false, confirmLabel: "Abrir" })) return
-    try {
-      await authFetch(`/api/capsules/${capsule.id}/open`, { method: "PATCH" })
-      await loadCapsules()
-      const updated = { ...capsule, is_opened: true }
-      setSelected(updated)
-      setView("read")
-      toast.success("¡Cápsula abierta! ✨")
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : ""
-      if (msg.includes("not_ready")) toast.error("🔒 Esta cápsula aún no está lista para abrir")
-      else toast.error("Error al abrir")
-    }
+    // Cap-A: start countdown animation, actual open happens after countdown
+    startOpeningAnimation(capsule)
   }
 
   async function handleEditSave(capsule: TimeCapsule) {
@@ -127,10 +189,16 @@ export function TimeCapsuleApp({ onBack }: Props) {
     try {
       await authFetch(`/api/capsules/${capsule.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ message: editMessage.trim(), unlock_date: newDate, unlock_at: newUnlockAt }),
+        body: JSON.stringify({
+          message: editMessage.trim(),
+          unlock_date: newDate,
+          unlock_at: newUnlockAt,
+          ...(editCapsulePhoto !== null ? { photo_url: editCapsulePhoto } : {}),
+        }),
       })
       toast.success("Cápsula actualizada ✨")
       setEditingId(null)
+      setEditCapsulePhoto(null)
       loadCapsules()
     } catch { toast.error("Error al actualizar") } finally { setSaving(false) }
   }
@@ -182,6 +250,72 @@ export function TimeCapsuleApp({ onBack }: Props) {
     return true
   })
 
+  // Cap-A: opening animation overlay
+  if (openingCapsule && countdownStep > 0) {
+    const t = CAPSULE_TYPES.find(ct => ct.id === openingCapsule.type)
+    const COUNTDOWN_LABELS = ["", "3", "2", "1", "✨", ""]
+    const label = COUNTDOWN_LABELS[countdownStep] ?? ""
+    return (
+      <>
+        <style>{`
+          @keyframes capsuleFloatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-120px) scale(1.4); }
+          }
+          @keyframes capsulePop {
+            0% { transform: scale(0.7); opacity: 0; }
+            60% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+          }
+          @keyframes capsulePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+          }
+        `}</style>
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9999,
+          background: "linear-gradient(135deg, #2d1b3e 0%, #1a0f2e 100%)",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          gap: "1.5rem",
+        }}>
+          {/* Confetti particles */}
+          {CONFETTI.map((emoji, i) => (
+            <div key={i} style={{
+              position: "absolute",
+              left: `${15 + i * 17}%`,
+              top: `${30 + (i % 3) * 15}%`,
+              fontSize: "1.5rem",
+              animation: countdownStep >= 4 ? `capsuleFloatUp ${0.8 + i * 0.15}s ease forwards ${i * 0.1}s` : "none",
+              opacity: countdownStep >= 4 ? 1 : 0,
+              pointerEvents: "none",
+            }}>{emoji}</div>
+          ))}
+
+          {/* Capsule icon */}
+          <div style={{ animation: "capsulePulse 1.2s ease infinite" }}>
+            {t ? <t.Icon size={72} color={t.color} /> : <Gem size={72} color="var(--primary)" />}
+          </div>
+
+          {/* Countdown */}
+          {label && (
+            <div key={countdownStep} style={{
+              fontFamily: "'Fredoka', sans-serif",
+              fontSize: countdownStep <= 3 ? "5rem" : "3rem",
+              fontWeight: 700,
+              color: "white",
+              animation: "capsulePop 0.4s ease",
+              textShadow: "0 0 30px rgba(139,92,246,0.8)",
+            }}>{label}</div>
+          )}
+
+          <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", color: "rgba(255,255,255,0.6)" }}>
+            Abriendo cápsula...
+          </p>
+        </div>
+      </>
+    )
+  }
+
   if (view === "read" && selected) {
     const t = CAPSULE_TYPES.find((ct) => ct.id === selected.type)
     const typeColors: Record<string, string> = {
@@ -210,6 +344,15 @@ export function TimeCapsuleApp({ onBack }: Props) {
               Creada el {formatDate(selected.created_at)}
             </span>
           </div>
+          {/* Cap-B: photo between icon and message */}
+          {selected.photo_url && (
+            <img
+              src={selected.photo_url}
+              alt=""
+              style={{ width: "100%", borderRadius: "var(--radius-lg)", objectFit: "cover", maxHeight: 200, filter: "sepia(0.4) saturate(0.8)" }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+            />
+          )}
           {/* Message card */}
           <div style={{
             background: "white",
@@ -371,6 +514,52 @@ export function TimeCapsuleApp({ onBack }: Props) {
             )}
           </div>
 
+          {/* Cap-B: photo gallery picker for create */}
+          {showCapsuleGallery && (
+            <div
+              style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.6)", display: "flex", flexDirection: "column" }}
+              onClick={() => setShowCapsuleGallery(false)}
+            >
+              <div style={{ marginTop: "auto", background: "white", borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "60vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                  <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--foreground)" }}>Elegir foto</span>
+                  <button onClick={() => setShowCapsuleGallery(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: "var(--foreground-muted)", lineHeight: 1 }}>×</button>
+                </div>
+                {loadingGallery ? (
+                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--foreground-muted)" }}>Cargando fotos...</div>
+                ) : galleryPhotos.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--foreground-muted)" }}>Sin fotos aún</div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.375rem" }}>
+                    {galleryPhotos.map(p => (
+                      <div key={p.id} onClick={() => { setCapsulePhoto(p.image_url); setShowCapsuleGallery(false) }}
+                        style={{ cursor: "pointer", borderRadius: 8, overflow: "hidden", aspectRatio: "1", border: capsulePhoto === p.image_url ? "3px solid var(--primary)" : "2px solid transparent" }}>
+                        <img src={p.thumb_url ?? p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="form-group">
+            <label className="form-label">📷 Foto (opcional)</label>
+            <button
+              type="button"
+              onClick={() => { setShowCapsuleGallery(true); loadGallery() }}
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 0.875rem", borderRadius: "999px", border: "1.5px solid var(--primary-light)", background: "var(--primary-lighter)", cursor: "pointer", fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 600, color: "var(--primary)" }}
+            >
+              📷 Añadir foto
+            </button>
+            {capsulePhoto && (
+              <div style={{ position: "relative", display: "inline-block", marginTop: "0.5rem" }}>
+                <img src={capsulePhoto} alt="" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 10, border: "2px solid var(--border)" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
+                <button onClick={() => setCapsulePhoto(null)} style={{ position: "absolute", top: -6, right: -6, background: "#ef4444", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", fontSize: "0.625rem", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+              </div>
+            )}
+          </div>
+
           <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
             {saving ? "Guardando..." : "Crear Cápsula"}
           </button>
@@ -512,8 +701,10 @@ export function TimeCapsuleApp({ onBack }: Props) {
 
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => handleOpen(c)}>
-                    <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)" }}>
-                      {t && <t.Icon size={14} color={t.color} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />}{t?.label}
+                    <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", display: "flex", alignItems: "center", gap: 4 }}>
+                      {t && <t.Icon size={14} color={t.color} style={{ display: "inline", verticalAlign: "middle" }} />}{t?.label}
+                      {/* Cap-B: photo badge */}
+                      {c.photo_url && <span style={{ fontSize: "0.75rem" }}>📷</span>}
                     </div>
                     <div style={{ fontSize: "0.6875rem", color: canOpen && !c.is_opened ? "var(--primary)" : "var(--foreground-muted)", fontWeight: canOpen && !c.is_opened ? 700 : 400 }}>
                       {c.is_opened
@@ -567,6 +758,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
                           setEditingId(c.id)
                           setEditMessage(c.message)
                           setEditDate(c.unlock_date)
+                          setEditCapsulePhoto(c.photo_url ?? null)
                           if (c.unlock_at) {
                             const d = new Date(c.unlock_at)
                             setEditTime(`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`)
@@ -595,6 +787,34 @@ export function TimeCapsuleApp({ onBack }: Props) {
                       gap: "0.5rem",
                     }}
                   >
+                    {/* Cap-B: edit gallery picker */}
+                    {showEditCapsuleGallery && (
+                      <div
+                        style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.6)", display: "flex", flexDirection: "column" }}
+                        onClick={() => setShowEditCapsuleGallery(false)}
+                      >
+                        <div style={{ marginTop: "auto", background: "white", borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "60vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                            <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem" }}>Elegir foto</span>
+                            <button onClick={() => setShowEditCapsuleGallery(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: "var(--foreground-muted)", lineHeight: 1 }}>×</button>
+                          </div>
+                          {loadingGallery ? (
+                            <div style={{ textAlign: "center", padding: "2rem", color: "var(--foreground-muted)" }}>Cargando...</div>
+                          ) : galleryPhotos.length === 0 ? (
+                            <div style={{ textAlign: "center", padding: "2rem", color: "var(--foreground-muted)" }}>Sin fotos</div>
+                          ) : (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.375rem" }}>
+                              {galleryPhotos.map(p => (
+                                <div key={p.id} onClick={() => { setEditCapsulePhoto(p.image_url); setShowEditCapsuleGallery(false) }}
+                                  style={{ cursor: "pointer", borderRadius: 8, overflow: "hidden", aspectRatio: "1", border: editCapsulePhoto === p.image_url ? "3px solid var(--primary)" : "2px solid transparent" }}>
+                                  <img src={p.thumb_url ?? p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <textarea
                       className="textarea"
                       rows={3}
@@ -606,6 +826,19 @@ export function TimeCapsuleApp({ onBack }: Props) {
                     <div style={{ display: "flex", gap: "0.375rem" }}>
                       <input type="date" className="input" value={editDate} min={now} onChange={(e) => setEditDate(e.target.value)} style={{ flex: 1 }} />
                       <input type="time" className="input" value={editTime} onChange={(e) => setEditTime(e.target.value)} style={{ flex: "0 0 100px" }} />
+                    </div>
+                    {/* Cap-B: photo in edit */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <button type="button" onClick={() => { setShowEditCapsuleGallery(true); loadGallery() }}
+                        style={{ fontSize: "0.75rem", padding: "0.375rem 0.75rem", borderRadius: "999px", border: "1.5px solid var(--primary-light)", background: "var(--primary-lighter)", cursor: "pointer", fontFamily: "inherit", fontWeight: 600, color: "var(--primary)" }}>
+                        📷 {editCapsulePhoto ? "Cambiar foto" : "Añadir foto"}
+                      </button>
+                      {editCapsulePhoto && (
+                        <div style={{ position: "relative" }}>
+                          <img src={editCapsulePhoto} alt="" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
+                          <button onClick={() => setEditCapsulePhoto(null)} style={{ position: "absolute", top: -4, right: -4, background: "#ef4444", color: "white", border: "none", borderRadius: "50%", width: 14, height: 14, cursor: "pointer", fontSize: "0.5rem", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <button className="btn btn-primary" onClick={() => handleEditSave(c)} disabled={saving} style={{ flex: 1, fontSize: "0.75rem" }}>

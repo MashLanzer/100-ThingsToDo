@@ -9,6 +9,7 @@ import { PullToRefresh } from "@/components/shared/pull-to-refresh"
 import { PhoneLoader } from "@/components/features/phone-loader"
 import type { Favor, FavorDifficulty, FavorCategory } from "@/types"
 import { useAuth } from "@/hooks/use-auth"
+import { useCoupleStatus } from "@/hooks/use-couple"
 
 // ── Challenge data ────────────────────────────────────────────────────────────
 
@@ -136,6 +137,8 @@ interface Props { onBack: () => void }
 
 export function ChallengesFavorsApp({ onBack }: Props) {
   const { user } = useAuth()
+  const { data: coupleData } = useCoupleStatus()
+  const partner = coupleData?.partner ?? null
   const [mainTab, setMainTab] = useState<"challenge" | "favors">("challenge")
 
   // ── Challenge state ───────────────────────────────────────────────────────
@@ -188,8 +191,12 @@ export function ChallengesFavorsApp({ onBack }: Props) {
   const [favDesc, setFavDesc] = useState("")
   const [difficulty, setDifficulty] = useState<FavorDifficulty>("medium")
   const [favCategory, setFavCategory] = useState<FavorCategory>("romantic")
+  const [assignedTo, setAssignedTo] = useState<string | null>(null)
   const [savingFavor, setSavingFavor] = useState(false)
   const [favCategoryFilter, setFavCategoryFilter] = useState<FavorCategory | "all">("all")
+  // Fav-B: inline completion note state
+  const [completingFavorId, setCompletingFavorId] = useState<string | null>(null)
+  const [completionNote, setCompletionNote] = useState("")
 
   // ── Auth helper ───────────────────────────────────────────────────────────
   async function authFetch(path: string, init?: RequestInit) {
@@ -304,18 +311,30 @@ export function ChallengesFavorsApp({ onBack }: Props) {
     try {
       await authFetch("/api/favors", {
         method: "POST",
-        body: JSON.stringify({ title: favTitle.trim(), description: favDesc.trim(), difficulty, category: favCategory, points: pts }),
+        body: JSON.stringify({
+          title: favTitle.trim(),
+          description: favDesc.trim(),
+          difficulty,
+          category: favCategory,
+          points: pts,
+          assigned_to: assignedTo ?? undefined,
+        }),
       })
       toast.success("Favor creado 💝")
-      setFavTitle(""); setFavDesc(""); setFavTab("active")
+      setFavTitle(""); setFavDesc(""); setAssignedTo(null); setFavTab("active")
       loadFavors()
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Error") } finally { setSavingFavor(false) }
   }
 
-  async function handleCompleteFavor(id: string) {
+  async function handleCompleteFavor(id: string, note?: string) {
     try {
-      await authFetch(`/api/favors/${id}/complete`, { method: "PATCH" })
+      await authFetch(`/api/favors/${id}/complete`, {
+        method: "PATCH",
+        body: JSON.stringify({ completion_note: note?.trim() || null }),
+      })
       toast.success("¡Favor completado! 🎉")
+      setCompletingFavorId(null)
+      setCompletionNote("")
       loadFavors()
     } catch { toast.error("Error") }
   }
@@ -744,6 +763,28 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                   onChange={(e) => setFavTitle(e.target.value)} maxLength={60} />
                 <textarea className="textarea" placeholder="Descripción..." rows={2} value={favDesc}
                   onChange={(e) => setFavDesc(e.target.value)} maxLength={200} />
+                {/* Fav-A: ¿Para quién? toggle */}
+                {partner && (
+                  <div>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "0.375rem", display: "block" }}>¿Para quién?</label>
+                    <div style={{ display: "flex", gap: "0.375rem" }}>
+                      <button onClick={() => setAssignedTo(null)} style={{
+                        flex: 1, padding: "0.375rem 0.5rem", borderRadius: "var(--radius-md)",
+                        border: assignedTo === null ? "2px solid var(--primary)" : "2px solid var(--border)",
+                        background: assignedTo === null ? "var(--primary-lighter)" : "white",
+                        cursor: "pointer", fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
+                        color: assignedTo === null ? "var(--primary)" : "var(--foreground-light)",
+                      }}>Para mí</button>
+                      <button onClick={() => setAssignedTo(partner.id)} style={{
+                        flex: 1, padding: "0.375rem 0.5rem", borderRadius: "var(--radius-md)",
+                        border: assignedTo === partner.id ? "2px solid var(--primary)" : "2px solid var(--border)",
+                        background: assignedTo === partner.id ? "var(--primary-lighter)" : "white",
+                        cursor: "pointer", fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
+                        color: assignedTo === partner.id ? "var(--primary)" : "var(--foreground-light)",
+                      }}>Para mi pareja 🎁</button>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "0.375rem", display: "block" }}>Dificultad</label>
                   <div style={{ display: "flex", gap: "0.375rem" }}>
@@ -804,78 +845,164 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                       const diffColor = f.difficulty === "easy" ? "#10B981" : f.difficulty === "medium" ? "#F59E0B" : "#EF4444"
 
                       // C3: coupon-style card
+                      const currentUserId = user?.uid ?? ""
+                      const partnerId = partner?.id ?? ""
+                      // Fav-A: can current user complete this favor?
+                      const canComplete = !f.assigned_to || f.assigned_to === currentUserId
+                      const isExpandingNote = completingFavorId === f.id
+
                       return (
-                        <div key={f.id} className="animate-slide-up" style={{
-                          display: "flex", borderRadius: "var(--radius-lg)",
-                          border: f.is_completed
-                            ? "1.5px dashed var(--border)"
-                            : `1.5px dashed ${cat?.color ?? "var(--primary)"}66`,
-                          overflow: "hidden",
-                          opacity: f.is_completed ? 0.75 : 1,
-                          background: f.is_completed ? "var(--muted)" : "white",
-                          boxShadow: f.is_completed ? "none" : `0 2px 12px ${cat?.color ?? "#8B5CF6"}1A`,
-                        }}>
-                          {/* Coupon left panel */}
+                        <div key={f.id} className="animate-slide-up" style={{ borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
                           <div style={{
-                            width: "54px", flexShrink: 0,
-                            background: f.is_completed
-                              ? "#E5E7EB"
-                              : `linear-gradient(180deg, ${cat?.color ?? "#8B5CF6"}22, ${cat?.color ?? "#EC4899"}11)`,
-                            display: "flex", flexDirection: "column",
-                            alignItems: "center", justifyContent: "center",
-                            borderRight: `1.5px dashed ${cat?.color ?? "var(--border)"}44`,
-                            gap: "4px", padding: "0.625rem 0",
+                            display: "flex",
+                            border: f.is_completed
+                              ? "1.5px dashed var(--border)"
+                              : `1.5px dashed ${cat?.color ?? "var(--primary)"}66`,
+                            borderRadius: isExpandingNote ? "var(--radius-lg) var(--radius-lg) 0 0" : "var(--radius-lg)",
+                            overflow: "hidden",
+                            opacity: f.is_completed ? 0.75 : 1,
+                            background: f.is_completed ? "var(--muted)" : "white",
+                            boxShadow: f.is_completed ? "none" : `0 2px 12px ${cat?.color ?? "#8B5CF6"}1A`,
                           }}>
-                            <span style={{ fontSize: "1.625rem", lineHeight: 1 }}>
-                              {cat?.id === "romantic" ? "💕" : cat?.id === "fun" ? "✨" : cat?.id === "help" ? "🤝" : "🎁"}
-                            </span>
-                            <div style={{ display: "flex", gap: "1px" }}>
-                              {Array.from({ length: diff?.stars ?? 1 }).map((_, i) => (
-                                <Star key={i} size={7} fill={diffColor} color={diffColor} />
-                              ))}
+                            {/* Coupon left panel */}
+                            <div style={{
+                              width: "54px", flexShrink: 0,
+                              background: f.is_completed
+                                ? "#E5E7EB"
+                                : `linear-gradient(180deg, ${cat?.color ?? "#8B5CF6"}22, ${cat?.color ?? "#EC4899"}11)`,
+                              display: "flex", flexDirection: "column",
+                              alignItems: "center", justifyContent: "center",
+                              borderRight: `1.5px dashed ${cat?.color ?? "var(--border)"}44`,
+                              gap: "4px", padding: "0.625rem 0",
+                            }}>
+                              <span style={{ fontSize: "1.625rem", lineHeight: 1 }}>
+                                {cat?.id === "romantic" ? "💕" : cat?.id === "fun" ? "✨" : cat?.id === "help" ? "🤝" : "🎁"}
+                              </span>
+                              <div style={{ display: "flex", gap: "1px" }}>
+                                {Array.from({ length: diff?.stars ?? 1 }).map((_, i) => (
+                                  <Star key={i} size={7} fill={diffColor} color={diffColor} />
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Coupon content */}
+                            <div style={{ flex: 1, padding: "0.625rem 0.75rem", minWidth: 0 }}>
+                              <h4 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", lineHeight: 1.3, margin: "0 0 2px" }}>
+                                {f.title}
+                              </h4>
+                              {f.description && (
+                                <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", margin: "0 0 0.375rem", lineHeight: 1.4 }}>
+                                  {f.description}
+                                </p>
+                              )}
+                              {/* Fav-A: assignment badges */}
+                              {!f.is_completed && f.assigned_to && (
+                                <div style={{ marginBottom: "0.25rem" }}>
+                                  {f.assigned_to === currentUserId ? (
+                                    <span style={{ fontSize: "0.5625rem", fontWeight: 700, color: "#7C3AED", background: "#EDE9FE", padding: "1px 6px", borderRadius: "999px" }}>
+                                      🎁 Tu pareja te lo regala
+                                    </span>
+                                  ) : f.assigned_to === partnerId ? (
+                                    <span style={{ fontSize: "0.5625rem", fontWeight: 700, color: "#EC4899", background: "#FCE7F3", padding: "1px 6px", borderRadius: "999px" }}>
+                                      🎁 Para tu pareja
+                                    </span>
+                                  ) : null}
+                                </div>
+                              )}
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", flexWrap: "wrap" }}>
+                                <span style={{
+                                  fontSize: "0.5625rem", fontWeight: 700,
+                                  color: diffColor, background: `${diffColor}18`,
+                                  padding: "1px 6px", borderRadius: "999px",
+                                }}>
+                                  {diff?.label} · {diff?.pts}pts
+                                </span>
+                                {!f.is_completed ? (
+                                  canComplete ? (
+                                    <button onClick={() => {
+                                      setCompletingFavorId(f.id)
+                                      setCompletionNote("")
+                                    }} style={{
+                                      marginLeft: "auto", fontSize: "0.625rem", fontWeight: 700,
+                                      padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none",
+                                      background: `linear-gradient(135deg, ${cat?.color ?? "var(--primary)"}, ${cat?.color ?? "var(--secondary)"})`,
+                                      color: "white", cursor: "pointer", fontFamily: "inherit",
+                                    }}>
+                                      ✅ Canjear
+                                    </button>
+                                  ) : (
+                                    <span style={{ marginLeft: "auto", fontSize: "0.5625rem", color: "var(--foreground-muted)", fontStyle: "italic" }}>
+                                      Solo tu pareja puede canjear
+                                    </span>
+                                  )
+                                ) : (
+                                  <span style={{ marginLeft: "auto", fontSize: "0.5625rem", color: "var(--success-dark)", fontWeight: 700 }}>
+                                    ✓ {f.completed_by === user?.uid ? "Tú" : "Pareja"}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteFavor(f.id) }}
+                                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "2px", opacity: 0.5, display: "flex", alignItems: "center" }}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                              {/* Fav-B: completion note on completed favors */}
+                              {f.is_completed && f.completion_note && (
+                                <p style={{ fontSize: "0.5625rem", color: "var(--foreground-muted)", margin: "0.25rem 0 0", fontStyle: "italic", lineHeight: 1.4 }}>
+                                  &ldquo;{f.completion_note}&rdquo;
+                                </p>
+                              )}
                             </div>
                           </div>
 
-                          {/* Coupon content */}
-                          <div style={{ flex: 1, padding: "0.625rem 0.75rem", minWidth: 0 }}>
-                            <h4 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", lineHeight: 1.3, margin: "0 0 2px" }}>
-                              {f.title}
-                            </h4>
-                            {f.description && (
-                              <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", margin: "0 0 0.375rem", lineHeight: 1.4 }}>
-                                {f.description}
+                          {/* Fav-B: inline note expansion */}
+                          {isExpandingNote && (
+                            <div style={{
+                              border: `1.5px dashed ${cat?.color ?? "var(--primary)"}66`,
+                              borderTop: "none",
+                              borderRadius: "0 0 var(--radius-lg) var(--radius-lg)",
+                              background: "white",
+                              padding: "0.625rem 0.75rem",
+                              display: "flex", flexDirection: "column", gap: "0.375rem",
+                            }}>
+                              <p style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--foreground-muted)", margin: 0 }}>
+                                ¿Quieres añadir una nota?
                               </p>
-                            )}
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", flexWrap: "wrap" }}>
-                              <span style={{
-                                fontSize: "0.5625rem", fontWeight: 700,
-                                color: diffColor, background: `${diffColor}18`,
-                                padding: "1px 6px", borderRadius: "999px",
-                              }}>
-                                {diff?.label} · {diff?.pts}pts
-                              </span>
-                              {!f.is_completed ? (
-                                <button onClick={() => handleCompleteFavor(f.id)} style={{
-                                  marginLeft: "auto", fontSize: "0.625rem", fontWeight: 700,
-                                  padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none",
-                                  background: `linear-gradient(135deg, ${cat?.color ?? "var(--primary)"}, ${cat?.color ?? "var(--secondary)"})`,
-                                  color: "white", cursor: "pointer", fontFamily: "inherit",
-                                }}>
-                                  ✅ Canjear
+                              <textarea
+                                className="textarea"
+                                rows={2}
+                                placeholder="Opcional..."
+                                value={completionNote}
+                                onChange={(e) => setCompletionNote(e.target.value)}
+                                maxLength={200}
+                                style={{ fontSize: "0.75rem" }}
+                                autoFocus
+                              />
+                              <div style={{ display: "flex", gap: "0.375rem" }}>
+                                <button
+                                  onClick={() => handleCompleteFavor(f.id)}
+                                  style={{
+                                    flex: 1, padding: "0.375rem 0.5rem", borderRadius: "999px", border: "none",
+                                    background: "var(--muted)", color: "var(--foreground-muted)",
+                                    fontFamily: "inherit", fontSize: "0.625rem", fontWeight: 600, cursor: "pointer",
+                                  }}
+                                >
+                                  Completar sin nota
                                 </button>
-                              ) : (
-                                <span style={{ marginLeft: "auto", fontSize: "0.5625rem", color: "var(--success-dark)", fontWeight: 700 }}>
-                                  ✓ {f.completed_by === user?.uid ? "Tú" : "Pareja"}
-                                </span>
-                              )}
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDeleteFavor(f.id) }}
-                                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", padding: "2px", opacity: 0.5, display: "flex", alignItems: "center" }}
-                              >
-                                <Trash2 size={12} />
-                              </button>
+                                <button
+                                  onClick={() => handleCompleteFavor(f.id, completionNote)}
+                                  style={{
+                                    flex: 2, padding: "0.375rem 0.5rem", borderRadius: "999px", border: "none",
+                                    background: `linear-gradient(135deg, ${cat?.color ?? "var(--primary)"}, ${cat?.color ?? "var(--secondary)"})`,
+                                    color: "white", fontFamily: "inherit", fontSize: "0.625rem", fontWeight: 700, cursor: "pointer",
+                                  }}
+                                >
+                                  Completar ✓
+                                </button>
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       )
                     })

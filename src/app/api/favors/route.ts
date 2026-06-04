@@ -32,23 +32,29 @@ export async function POST(req: NextRequest) {
   const { data: me } = await supabase.from("users").select("couple_id").eq("id", user.uid).single()
   if (!me?.couple_id) return NextResponse.json({ error: "Not in a couple" }, { status: 403 })
 
-  const { title, description, difficulty, category, points } = await req.json()
+  const { title, description, difficulty, category, points, assigned_to } = await req.json()
   if (!title?.trim()) return NextResponse.json({ error: "title required" }, { status: 400 })
 
-  const { data, error } = await supabase
-    .from("favors")
-    .insert({
-      couple_id: me.couple_id,
-      title: title.trim(),
-      description: description?.trim() ?? null,
-      difficulty: difficulty ?? "medium",
-      category: category ?? "romantic",
-      points: points ?? 25,
-      created_by: user.uid,
-    })
-    .select()
-    .single()
+  const insertData: Record<string, unknown> = {
+    couple_id: me.couple_id,
+    title: title.trim(),
+    description: description?.trim() ?? null,
+    difficulty: difficulty ?? "medium",
+    category: category ?? "romantic",
+    points: points ?? 25,
+    created_by: user.uid,
+  }
+  if (assigned_to) insertData.assigned_to = assigned_to
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data, { status: 201 })
+  // Try insert with assigned_to; fall back without it if column doesn't exist
+  let result = await supabase.from("favors").insert(insertData).select().single()
+
+  if (result.error && result.error.message?.includes("assigned_to") && assigned_to) {
+    const fallback: Record<string, unknown> = { ...insertData }
+    delete fallback.assigned_to
+    result = await supabase.from("favors").insert(fallback).select().single()
+  }
+
+  if (result.error) return NextResponse.json({ error: result.error.message }, { status: 500 })
+  return NextResponse.json(result.data, { status: 201 })
 }
