@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback } from "react"
 import { ChevronLeft } from "lucide-react"
 
-// ── Static game data ────────────────────────────────────────────────────────
+// ── Static game data (fallback local — full pool served by /api/games/question) ──
 
-const VERDADES: string[] = [
+const VERDADES_PAREJAS: string[] = [
   "¿Cuál es tu recuerdo favorito de nuestra relación hasta ahora?",
   "¿En qué momento supiste que yo era especial para ti?",
   "¿Qué es lo primero que pensaste cuando me viste por primera vez?",
@@ -89,7 +89,7 @@ const VERDADES: string[] = [
   "¿Qué cosa me dirías si supieras que no te voy a juzgar?",
 ]
 
-const RETOS: string[] = [
+const RETOS_PAREJAS: string[] = [
   "Imita la voz de tu pareja durante 1 minuto",
   "Cuéntale a tu pareja algo que nunca le hayas dicho",
   "Da a tu pareja el masaje de espalda más increíble de su vida",
@@ -171,6 +171,177 @@ const RETOS: string[] = [
   "Di tres cosas que te dan miedo admitir que te gustan",
   "Cuenta en 60 segundos por qué vuestra historia merece una película",
   "Haz la imitación de tu pareja cuando está nervioso/a",
+]
+
+const VERDADES_NEUTRAL: string[] = [
+  "¿Cuál es tu mayor talento oculto?",
+  "¿Qué harías si supieras que no puedes fracasar?",
+  "¿Cuál es la cosa más estúpida que has hecho por quedar bien?",
+  "¿Qué es lo que más te arrepientes de no haber hecho?",
+  "¿Cuántas veces has fingido entender algo que no entendías?",
+  "¿Cuál es el insulto más creativo que has usado?",
+  "¿Qué opinas realmente de las redes sociales?",
+  "¿Qué personaje de serie o película crees que eres en la vida real?",
+  "¿Cuál es el cotilleo más jugoso que sabes y no has contado?",
+  "¿Qué harías diferente si pudieras vivir el último año de nuevo?",
+  "¿Cuál es tu opinión más impopular?",
+  "¿Cuál es la peor excusa que has puesto para no salir?",
+  "¿Qué es lo que más te cuesta hacer por vergüenza?",
+  "¿Cuál es tu mayor vicio inconfesable?",
+  "¿Qué es lo más ridículo en lo que has gastado dinero?",
+  "¿Cuál es la cosa más impulsiva que has hecho en tu vida?",
+  "¿A quién le has mentido más recientemente y por qué?",
+  "¿Qué es lo que más te da pereza hacer aunque sabes que deberías?",
+  "¿Qué es lo que más envidias de alguien que conoces?",
+  "¿Cuál ha sido tu mayor malentendido con alguien?",
+  "¿Qué es lo primero que haces al despertar que no admitirías públicamente?",
+  "¿Cuántas veces revisas el teléfono en una hora?",
+  "¿Cuál es la canción más vergonzosa que tienes en tu lista de reproducción?",
+  "¿Qué es lo más raro que comes o comes de forma rara?",
+  "¿Cuál es la excusa más creativa que has inventado para no hacer algo?",
+  "¿Qué es lo que más te molesta de la gente aunque no lo dices?",
+  "¿Cuál es la peor actuación que has dado en tu vida?",
+  "¿Qué es lo que más tiempo procrastinas?",
+  "¿Cuál ha sido tu mayor vergüenza en público?",
+  "¿Qué ley cambiarías si pudieras?",
+  "¿Qué aplicación del móvil usas más de lo que admitirías?",
+  "¿Cuál es la comida que comes a escondidas porque te da vergüenza que gusta?",
+  "¿Cuál es tu recuerdo más embarazoso del colegio?",
+  "¿Qué es lo que dices que odias pero en realidad disfrutas en secreto?",
+  "¿Cuál es el reto que llevas años posponiendo?",
+  "¿Qué harías si supieras que nadie te va a ver durante 24 horas?",
+  "¿Cuál es la cosa más absurda que te ha dado miedo?",
+  "¿Qué momento de tu vida cambiarías aunque nadie lo notara?",
+  "¿Cuál es el comentario más hiriente que has recibido y que no puedes olvidar?",
+  "¿Qué hábito saludable intentas adoptar y que siempre abandonas?",
+  "¿Qué es lo más infantil que sigues haciendo?",
+  "¿Cuál es la pregunta que más miedo te da que te hagan?",
+  "¿Qué es lo que más te cuesta perdonar?",
+  "¿Cuántas notificaciones no leídas tienes ahora mismo?",
+  "¿Qué es lo que más te cuesta decirle a alguien a la cara?",
+  "¿Cuál es la situación social que más te agota?",
+  "¿Cuál es la serie que llevas empezada meses sin terminar?",
+  "¿Qué es lo más raro que has buscado en internet?",
+  "¿Cuál es tu fobia más irracional?",
+  "¿Qué es lo primero en lo que te fijas cuando conoces a alguien?",
+  "¿Cuántas horas a la semana sientes que has perdido el tiempo de verdad?",
+  "¿Cuál es tu opinión sobre las reuniones de trabajo o estudio?",
+  "¿Cuál es la mentira más creativa que has contado?",
+  "¿Qué es lo que más te cuesta admitir que no sabes hacer?",
+  "¿Cuál es el cumpleaños más importante que has olvidado?",
+  "¿Cuál es el consejo que das pero que tú mismo/a no sigues?",
+  "¿Qué es lo que más te da vergüenza de ti mismo/a?",
+  "¿Cuál es el plan que más veces has cancelado en el último año?",
+  "¿Qué es lo que más tardas en decidir?",
+  "¿Qué es lo más caro que has comprado por impulso y de lo que te arrepientes?",
+  "¿Cuándo fue la última vez que te equivocaste claramente y lo admitiste?",
+  "¿Cuál es la creencia que tenías de pequeño/a que hoy te parece absurda?",
+  "¿Qué harías si encontraras 500€ en la calle?",
+  "¿Cuál es el mayor riesgo que has tomado en tu vida?",
+  "¿Qué cosa tuya sabes que irrita a los demás aunque no te lo digan?",
+  "¿Cuál es tu mayor inseguridad cuando estás en grupo?",
+  "¿Qué harías si tuvieras poderes durante un solo día?",
+  "¿Qué película o serie te ha hecho llorar y niegas haberlo hecho?",
+  "¿Qué es lo más generoso que has hecho sin que nadie lo sepa?",
+  "¿Cuánto tiempo llevas pensando en hacer algo que aún no has empezado?",
+  "¿Cuál es el comentario que guardas para ti pero que casi sueltas?",
+  "¿Cuándo fue la última vez que hiciste algo que te daba miedo?",
+  "¿Cuál es tu debilidad más conocida entre tus amigos?",
+  "¿Cuál es la experiencia más fuera de tu zona de confort que has vivido?",
+  "¿Qué cambiarías de ti mismo/a con un clic si pudieras?",
+  "¿Cuál es el momento en que más has sentido que te has superado?",
+  "¿Qué cosa de ti mismo/a llevas más tiempo intentando mejorar?",
+  "¿Cuánto tiempo llevas sin leer un libro completo?",
+  "¿Cuál fue la última decisión que tomaste sin pensar y que resultó ser la mejor?",
+  "¿Qué harías si tuvieras un día libre sin responsabilidades absolutamente ninguna?",
+  "¿Cuál es la cosa más cara que has roto y no lo has contado?",
+]
+
+const RETOS_NEUTRAL: string[] = [
+  "Habla durante 1 minuto completo sin decir 'eeeh' ni 'mmm'",
+  "Imita a un famoso/a hasta que alguien adivine de quién se trata",
+  "Di el trabalenguas más largo que sepas sin equivocarte",
+  "Haz la coreografía de un anuncio de televisión que todos conozcan",
+  "Describe un color sin nombrarlo ni decir a qué objetos se asocia",
+  "Convence al grupo de que eres un robot durante 2 minutos",
+  "Haz una parodia de un presentador del tiempo con lo que ves por la ventana",
+  "Di en 30 segundos todos los países de Europa que recuerdes",
+  "Actúa como si estuvieras en una película de acción durante 1 minuto",
+  "Haz el ruido de 5 animales sin repetirte",
+  "Cuenta un chiste tan malo que provoque silencio incómodo",
+  "Describe tu película favorita sin decir el título y que el grupo la adivine",
+  "Haz mímica de un oficio o profesión hasta que alguien lo adivine",
+  "Di el abecedario al revés en menos de 30 segundos",
+  "Habla en otro idioma (o inventado) durante 1 minuto sin parar",
+  "Representa una escena de película de terror sin sonido",
+  "Haz de comentarista deportivo de algo mundano como servirse agua",
+  "Imita cómo camina alguien del grupo hasta que adivinen quién es",
+  "Canta una canción sustituyendo todas las vocales por la 'e'",
+  "Haz el monólogo de un político inventado durante 45 segundos",
+  "Da un discurso apasionado a favor de algo completamente absurdo",
+  "Dibuja un autorretrato con los ojos cerrados",
+  "Haz la cara de 5 emociones diferentes en 10 segundos cada una",
+  "Describe un objeto de la habitación como si fuera una joya de museo",
+  "Inventa el tráiler de una película con el peor título posible",
+  "Convence al grupo de comprar algo completamente inútil",
+  "Haz que el grupo se ría en menos de 30 segundos",
+  "Inventa un refrán nuevo que suene antiguo y sabio",
+  "Di 10 palabras en inglés mientras alguien cuenta hasta 10",
+  "Haz una coreografía de 30 segundos con la canción que te pongan",
+  "Explica cómo funciona internet a alguien de 80 años en 1 minuto",
+  "Haz que parezca que estás hablando por teléfono con el presidente",
+  "Describe tu día de hoy como si fuera una épica aventura medieval",
+  "Di un piropo inventado y creativo a alguien del grupo",
+  "Haz que el grupo adivine una película solo con sonidos",
+  "Inventa un trabalenguas nuevo en este momento",
+  "Explica qué es un smartphone a alguien de la antigüedad",
+  "Haz de chef estrella explicando cómo preparas un bocadillo",
+  "Convierte una noticia aburrida en algo emocionante en 45 segundos",
+  "Haz una entrevista de trabajo a alguien del grupo para un trabajo absurdo",
+  "Sé el presentador de un programa de teletienda con un objeto de la sala",
+  "Imita el sonido de una tormenta usando solo partes de tu cuerpo",
+  "Da un discurso de agradecimiento por ganar un Oscar por lavarte los dientes",
+  "Convierte una receta de cocina en una canción de reggaeton",
+  "Recita un poema espontáneo sobre el sofá o la silla en la que estás",
+  "Haz de árbitro de un partido de fútbol de lo que sea que esté pasando",
+  "Inventa tres nombres de productos de farmacia que suenen reales",
+  "Haz mímica de un momento vergonzoso sin decir lo que es",
+  "Explica cómo sobrevivir en una isla desierta con lo que tienes en los bolsillos",
+  "Di 15 palabras que rimen con 'amor' en menos de 20 segundos",
+  "Actúa como si el suelo fuera lava durante 30 segundos",
+  "Haz de guía turístico de la habitación en la que estáis",
+  "Cuenta tu día de hoy como si fuera un capítulo de serie de suspense",
+  "Haz que alguien del grupo se ría sin hacerle cosquillas",
+  "Inventa un superpoder inútil y explica para qué serviría",
+  "Habla durante 30 segundos sin usar la letra 'a'",
+  "Di en qué película serías el primero en morir y por qué",
+  "Actúa como si fueras el villano de una película de Disney durante 1 minuto",
+  "Haz la voz de un locutor de radio de los años 80 hablando de lo que quieras",
+  "Inventa un producto de limpieza con nombre en latín y explica sus beneficios",
+  "Crea el jingle publicitario de algo que no se puede anunciar",
+  "Haz de embajador/a de un país imaginario y da un discurso",
+  "Describe tu almuerzo de hoy como si fuera un plato de alta cocina",
+  "Actúa como si fueras un robot que acaba de descubrir las emociones",
+  "Inventa tres leyes absurdas que mejorarían el mundo",
+  "Haz la parodia de un tutorial de YouTube sobre algo que no sabes hacer",
+  "Di los meses del año pero en orden alfabético",
+  "Inventa el nombre de una banda de música y el título de su primer álbum",
+  "Da instrucciones para hacer algo cotidiano como si fuera un manual de IKEA",
+  "Imita cómo explica algo una persona cuando no tiene ni idea del tema",
+  "Inventa una leyenda urbana sobre el lugar donde estáis ahora",
+  "Haz de periodista entrevistando a la persona más aburrida del mundo",
+  "Haz el doblaje de un documental sobre alguien del grupo",
+  "Inventa tres emojis que deberían existir y no existen",
+  "Explica la teoría de la relatividad usando solo monosílabos",
+  "Di 10 onomatopeyas distintas en 15 segundos",
+  "Inventa un trabalenguas con el nombre de alguien del grupo",
+  "Haz de crítico literario describiendo el último mensaje que mandaste por WhatsApp",
+  "Di el discurso más emocionante posible sobre por qué el agua es el mejor invento",
+  "Imita a tres famosos en menos de 1 minuto",
+  "Haz de detective investigando por qué hay un calcetín en el suelo",
+  "Inventa una excusa brillante para llegar tarde que nadie haya usado nunca",
+  "Recita los planetas del sistema solar de memoria en orden",
+  "Cuenta hasta 30 alternando con otra persona sin que ninguno falle",
 ]
 
 interface Dilemma { a: string; b: string }
@@ -312,13 +483,13 @@ export function CoupleGamesApp({ onBack }: Props) {
 
   // — Verdad o Reto —
   const [vorMode, setVorMode] = useState<VorMode>("verdad")
+  const [vorCategory, setVorCategory] = useState<"parejas" | "neutral">("parejas")
   const [verdades, setVerdades] = useState<string[]>([])
   const [retos, setRetos] = useState<string[]>([])
   const [vIdx, setVIdx] = useState(0)
   const [rIdx, setRIdx] = useState(0)
   const [vorFlipped, setVorFlipped] = useState(false)
   const [vorLoading, setVorLoading] = useState(false)
-  const [vorSource, setVorSource] = useState<"api" | "static">("static")
 
   // — ¿Qué prefieres? —
   const [dilemmas, setDilemmas] = useState<Dilemma[]>([])
@@ -333,24 +504,22 @@ export function CoupleGamesApp({ onBack }: Props) {
     return 0
   })
 
-  async function loadVorQuestions() {
+  async function loadVorQuestions(cat: "parejas" | "neutral" = vorCategory) {
     setVorLoading(true)
+    const fbVerdades = cat === "neutral" ? VERDADES_NEUTRAL : VERDADES_PAREJAS
+    const fbRetos    = cat === "neutral" ? RETOS_NEUTRAL    : RETOS_PAREJAS
     try {
       const [tRes, dRes] = await Promise.all([
-        fetch("/api/games/question?type=truth&count=20"),
-        fetch("/api/games/question?type=dare&count=20"),
+        fetch(`/api/games/question?type=truth&category=${cat}&count=25`),
+        fetch(`/api/games/question?type=dare&category=${cat}&count=25`),
       ])
       const tData = tRes.ok ? await tRes.json() : null
       const dData = dRes.ok ? await dRes.json() : null
-      const truths: string[] = tData?.questions?.length ? tData.questions : shuffled(VERDADES)
-      const dares: string[] = dData?.questions?.length ? dData.questions : shuffled(RETOS)
-      setVerdades(truths)
-      setRetos(dares)
-      setVorSource(tData?.source === "api" ? "api" : "static")
+      setVerdades(tData?.questions?.length ? tData.questions : shuffled(fbVerdades))
+      setRetos(dData?.questions?.length ? dData.questions : shuffled(fbRetos))
     } catch {
-      setVerdades(shuffled(VERDADES))
-      setRetos(shuffled(RETOS))
-      setVorSource("static")
+      setVerdades(shuffled(fbVerdades))
+      setRetos(shuffled(fbRetos))
     } finally {
       setVorLoading(false)
     }
@@ -360,7 +529,7 @@ export function CoupleGamesApp({ onBack }: Props) {
     if (v === "verdad-reto") {
       setVIdx(0); setRIdx(0)
       setVorMode("verdad"); setVorFlipped(false)
-      loadVorQuestions()
+      loadVorQuestions("parejas")
     } else if (v === "prefieres") {
       setDilemmas(shuffled(QUE_PREFIERES))
       setDIdx(0); setDChoice(null)
@@ -459,10 +628,38 @@ export function CoupleGamesApp({ onBack }: Props) {
             🎴 Verdad o Reto
           </h3>
           {!vorLoading && (
-            <span style={{ fontSize: "0.5625rem", fontWeight: 700, color: "#059669", background: "#d1fae5", borderRadius: "999px", padding: "2px 7px", letterSpacing: "0.04em" }}>
-              ✨ {verdades.length + retos.length} preguntas
+            <span style={{ fontSize: "0.5625rem", fontWeight: 700, color: vorCategory === "neutral" ? "#0369a1" : "#7c3aed", background: vorCategory === "neutral" ? "#dbeafe" : "#ede9fe", borderRadius: "999px", padding: "2px 7px", letterSpacing: "0.04em" }}>
+              {verdades.length + retos.length} preguntas
             </span>
           )}
+        </div>
+
+        {/* Category switch */}
+        <div style={{ display: "flex", background: "var(--muted)", borderRadius: "999px", padding: "3px", marginBottom: "0.625rem", gap: "2px" }}>
+          {(["parejas", "neutral"] as const).map((cat) => {
+            const active = vorCategory === cat
+            return (
+              <button
+                key={cat}
+                disabled={vorLoading}
+                onClick={() => {
+                  if (cat === vorCategory) return
+                  setVorCategory(cat)
+                  setVIdx(0); setRIdx(0); setVorFlipped(false)
+                  loadVorQuestions(cat)
+                }}
+                style={{
+                  flex: 1, padding: "0.3rem 0", borderRadius: "999px", border: "none",
+                  background: active ? (cat === "parejas" ? "#7c3aed" : "#0369a1") : "transparent",
+                  color: active ? "white" : "var(--foreground-muted)",
+                  fontWeight: 700, fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit",
+                  transition: "all 0.18s ease",
+                }}
+              >
+                {cat === "parejas" ? "🧡 Parejas" : "😂 Neutral"}
+              </button>
+            )
+          })}
         </div>
 
         {/* Mode selector */}
