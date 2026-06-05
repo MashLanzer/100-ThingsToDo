@@ -250,6 +250,11 @@ export default function DashboardPage() {
   })
   const [templateTasks, setTemplateTasks] = useState<string[]>([])
   const [showTemplates, setShowTemplates] = useState(false)
+  // Hero stories slider
+  const [heroSlide, setHeroSlide] = useState(0)
+  const heroTouchStartX = useRef(0)
+  // Scroll collapse
+  const [isScrolled, setIsScrolled] = useState(false)
 
   const hasCouple = !!coupleData?.couple
 
@@ -285,6 +290,13 @@ export default function DashboardPage() {
     return () => {
       sessionStorage.setItem("ttd_scroll_dashboard", String(window.scrollY))
     }
+  }, [])
+
+  // Scroll-collapse listener
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 140)
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
   const allPlans = Array.isArray(plans) ? plans : []
@@ -476,7 +488,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* D1: Hero section */}
+      {/* ── HERO STORIES CARD ─────────────────────────────────────────── */}
       {hasCouple && (() => {
         const now = new Date()
         const dayName = ES_DAYS_SHORT[now.getDay()]
@@ -486,210 +498,191 @@ export default function DashboardPage() {
         const partner = coupleData?.partner
         const firstName = user?.displayName?.split(" ")[0] ?? "tú"
         const partnerFirst = partnerNickname.trim() || partner?.name?.split(" ")[0] || "pareja"
-        const activePlanCount = filteredActive.length
         const couplePhoto = coupleData?.couple?.photo_url ?? null
-        return (
-          <div style={{
-            borderRadius: "var(--radius-xl)",
-            padding: "1.25rem 1.25rem 1rem",
-            marginBottom: "1rem",
-            position: "relative",
-            overflow: "hidden",
-            color: "white",
-            // If a couple photo exists, use it as bg with a dark overlay; else use the gradient
-            background: couplePhoto
-              ? `linear-gradient(160deg, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.38) 60%, rgba(0,0,0,0.62) 100%), center / cover no-repeat url("${couplePhoto}")`
-              : grad,
-          }}>
-            {/* Decorative circles only when no photo (they'd show through the overlay) */}
+        const days = daysTogether(coupleData?.couple?.anniversary_date)
+        const until = daysUntilAnniversary(coupleData?.couple?.anniversary_date)
+        const activePlanCount = filteredActive.length
+        const totalDone = allPlans.reduce((s, p) => s + (p.completed_count ?? 0), 0)
+        const totalTasks = allPlans.reduce((s, p) => s + (p.task_count ?? 0), 0)
+
+        const slides = [
+          // Slide 0 — Saludo
+          <div key="s0" style={{ position: "relative", width: "100%", height: "100%", flexShrink: 0, padding: "1rem 1.25rem 1.5rem", display: "flex", flexDirection: "column", justifyContent: "flex-end", color: "white" }}>
             {!couplePhoto && (
               <>
                 <div aria-hidden style={{ position: "absolute", top: "-20%", right: "-10%", width: "180px", height: "180px", borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
-                <div aria-hidden style={{ position: "absolute", bottom: "-30%", left: "-5%", width: "140px", height: "140px", borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
+                <div aria-hidden style={{ position: "absolute", bottom: 0, left: "-5%", width: "120px", height: "120px", borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
               </>
             )}
-            <p style={{ fontFamily: "'Quicksand', sans-serif", fontSize: "0.75rem", fontWeight: 600, opacity: 0.85, marginBottom: "0.25rem", textTransform: "capitalize", textShadow: couplePhoto ? "0 1px 6px rgba(0,0,0,0.5)" : undefined }}>
+            <p style={{ fontFamily: "'Quicksand', sans-serif", fontSize: "0.6875rem", fontWeight: 600, opacity: 0.85, textTransform: "capitalize", textShadow: couplePhoto ? "0 1px 6px rgba(0,0,0,0.5)" : undefined, marginBottom: "0.125rem" }}>
               {dayName} {dayNum} de {monthName}
             </p>
-            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.5rem", fontWeight: 700, lineHeight: 1.2, marginBottom: "0.625rem", textShadow: couplePhoto ? "0 2px 10px rgba(0,0,0,0.55)" : undefined }}>
+            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, lineHeight: 1.15, marginBottom: "0.5rem", textShadow: couplePhoto ? "0 2px 10px rgba(0,0,0,0.55)" : undefined }}>
               Hola, {firstName} & {partnerFirst} 💕
             </h1>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: "999px", padding: "2px 10px", fontSize: "0.75rem", fontWeight: 600, backdropFilter: "blur(4px)" }}>
+            <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+              {days !== null && (
+                <span style={{ background: "rgba(255,255,255,0.22)", borderRadius: "999px", padding: "2px 9px", fontSize: "0.6875rem", fontWeight: 600, backdropFilter: "blur(4px)" }}>
+                  {days.toLocaleString("es-ES")} días juntos 💕
+                </span>
+              )}
+              {until !== null && until >= 0 && (
+                <span style={{ background: "rgba(255,255,255,0.22)", borderRadius: "999px", padding: "2px 9px", fontSize: "0.6875rem", fontWeight: 600, backdropFilter: "blur(4px)" }}>
+                  {until === 0 ? "¡Aniversario hoy! 🎉" : `${until}d próx. aniv.`}
+                </span>
+              )}
+              <span style={{ background: "rgba(255,255,255,0.22)", borderRadius: "999px", padding: "2px 9px", fontSize: "0.6875rem", fontWeight: 600, backdropFilter: "blur(4px)" }}>
                 {activePlanCount === 0 ? "Sin planes activos" : `${activePlanCount} plan${activePlanCount !== 1 ? "es" : ""} activo${activePlanCount !== 1 ? "s" : ""}`}
               </span>
-              {(() => {
-                const days = daysTogether(coupleData?.couple?.anniversary_date)
-                return days !== null ? (
-                  <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: "999px", padding: "2px 10px", fontSize: "0.75rem", fontWeight: 600, backdropFilter: "blur(4px)" }}>
-                    {days.toLocaleString("es-ES")} días juntos 💕
-                  </span>
-                ) : null
-              })()}
             </div>
-          </div>
-        )
-      })()}
+          </div>,
 
-      {/* Anniversary card */}
-      {hasCouple && (() => {
-        const anniversaryDate = coupleData?.couple?.anniversary_date
-        const days = daysTogether(anniversaryDate)
-        const until = daysUntilAnniversary(anniversaryDate)
-        if (!days || until === null) return null
-        const isToday = until === 0
-        const dateLabel = anniversaryDate
-          ? new Date(anniversaryDate + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
-          : ""
-        return (
-          <div style={{
-            marginBottom: "0.875rem",
-            borderRadius: "var(--radius-lg)",
-            background: isToday
-              ? "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)"
-              : "linear-gradient(135deg, var(--primary-lighter) 0%, var(--pink-light) 100%)",
-            border: isToday ? "none" : "1px solid var(--primary-light)",
-            padding: "0.875rem 1rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.875rem",
-          }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: "50%", flexShrink: 0,
-              background: isToday ? "rgba(255,255,255,0.25)" : "rgba(139,92,246,0.12)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "1.5rem",
-            }}>
-              {isToday ? "🎉" : "💕"}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{
-                fontFamily: "'Fredoka', sans-serif", fontWeight: 700,
-                fontSize: "1.0625rem", lineHeight: 1.2,
-                color: isToday ? "white" : "var(--foreground)",
-                marginBottom: "0.125rem",
-              }}>
-                {isToday ? "¡Feliz aniversario! 🥂" : `${days.toLocaleString("es-ES")} días juntos`}
-              </p>
-              <p style={{ fontSize: "0.6875rem", color: isToday ? "rgba(255,255,255,0.85)" : "var(--foreground-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {isToday ? dateLabel : `Desde el ${dateLabel}`}
-              </p>
-            </div>
-            {!isToday && (
-              <div style={{ textAlign: "center", flexShrink: 0 }}>
-                <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1.125rem", color: "var(--primary)", lineHeight: 1 }}>
-                  {until === 0 ? "hoy" : until === 1 ? "mañana" : `${until}d`}
-                </p>
-                <p style={{ fontSize: "0.5625rem", color: "var(--foreground-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  próx. aniv.
-                </p>
-              </div>
-            )}
-          </div>
-        )
-      })()}
-
-      {/* D-B: Quick actions row */}
-      {hasCouple && (
-        <div style={{
-          display: "flex", gap: "0.5rem", justifyContent: "center",
-          marginBottom: "0.875rem",
-        }}>
-          {([
-            { emoji: "✍️", label: "Diario",  onClick: () => openPhoneModal("journal") },
-            { emoji: "📷", label: "Foto",    onClick: () => router.push("/fotos") },
-            { emoji: "💌", label: "Carta",   onClick: () => openPhoneModal("journal") },
-            { emoji: "⏳", label: "Cápsula", onClick: () => openPhoneModal("capsule") },
-          ]).map((action) => (
-            <button
-              key={action.label}
-              onClick={action.onClick}
-              style={{
-                display: "flex", flexDirection: "column", alignItems: "center", gap: "2px",
-                padding: "0.375rem 0.625rem", borderRadius: "12px", border: "none", cursor: "pointer",
-                background: "rgba(139,92,246,0.1)",
-                fontFamily: "inherit",
-                flex: 1,
-              }}
-            >
-              <span style={{ fontSize: "1.125rem", lineHeight: 1 }}>{action.emoji}</span>
-              <span style={{ fontSize: "0.5625rem", fontWeight: 600, color: "var(--primary)" }}>{action.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* D-A: Partner activity feed */}
-      {hasCouple && partnerActivities.length > 0 && (() => {
-        const partner = coupleData?.partner
-        const partnerFirst = partnerNickname.trim() || partner?.name?.split(" ")[0] || "tu pareja"
-        return (
-          <div style={{ marginBottom: "0.875rem" }}>
-            <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.375rem", paddingLeft: "2px" }}>
-              Últimas acciones de {partnerFirst}
-            </p>
-            <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px", scrollbarWidth: "none" as const }}>
-              {partnerActivities.slice(0, 5).map((act) => (
-                <div
-                  key={act.id}
+          // Slide 1 — Acciones rápidas
+          <div key="s1" style={{ width: "100%", height: "100%", flexShrink: 0, padding: "0.875rem 1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+              {([
+                { emoji: "✍️", label: "Diario",   onClick: () => openPhoneModal("journal") },
+                { emoji: "📷", label: "Foto",     onClick: () => router.push("/fotos") },
+                { emoji: "💌", label: "Carta",    onClick: () => openPhoneModal("journal") },
+                { emoji: "⏳", label: "Cápsula",  onClick: () => openPhoneModal("capsule") },
+              ]).map((action) => (
+                <button
+                  key={action.label}
+                  onClick={action.onClick}
                   style={{
-                    display: "flex", alignItems: "center", gap: "4px",
-                    background: "var(--primary-lighter)",
-                    border: "1px solid var(--primary-light)",
-                    borderRadius: "999px",
-                    padding: "4px 10px",
-                    whiteSpace: "nowrap" as const,
-                    flexShrink: 0,
+                    display: "flex", alignItems: "center", gap: "0.5rem",
+                    padding: "0.5rem 0.75rem", borderRadius: "12px", border: "1px solid var(--border)",
+                    cursor: "pointer", background: "var(--card)", fontFamily: "inherit",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                   }}
                 >
-                  <span style={{ fontSize: "0.75rem" }}>{activityEmoji(act.type)}</span>
-                  <span style={{ fontSize: "0.5625rem", fontWeight: 600, color: "var(--foreground)", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {act.description}
-                  </span>
-                  <span style={{ fontSize: "0.5rem", color: "var(--foreground-muted)" }}>· {relativeTime(act.created_at)}</span>
-                </div>
+                  <span style={{ fontSize: "1.125rem", lineHeight: 1 }}>{action.emoji}</span>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground)" }}>{action.label}</span>
+                </button>
               ))}
             </div>
-          </div>
-        )
-      })()}
+            {totalDone > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.375rem 0.625rem", background: "var(--primary-lighter)", borderRadius: "999px", alignSelf: "flex-start" }}>
+                <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--primary)", lineHeight: 1 }}>{totalDone}</span>
+                <span style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", fontWeight: 600 }}>cosas hechas · {Math.round((totalDone / (totalTasks || 1)) * 100)}%</span>
+              </div>
+            )}
+          </div>,
 
-      {/* D1: Plans section header */}
-      {hasCouple && hasAnyPlans && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem", marginTop: "0.25rem" }}>
-          <div>
-            <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "var(--foreground)", margin: 0, lineHeight: 1.2 }}>
-              Nuestros planes
-            </h2>
-            <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", margin: 0, marginTop: "0.125rem" }}>
-              ¿Qué aventura sigue? ✨
+          // Slide 2 — Actividad del partner
+          <div key="s2" style={{ width: "100%", height: "100%", flexShrink: 0, padding: "0.875rem 1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem", overflowY: "auto" }}>
+            <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", margin: 0 }}>
+              Últimas acciones de {partnerFirst}
             </p>
-          </div>
-        </div>
-      )}
+            {partnerActivities.length === 0 ? (
+              <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", margin: 0 }}>Sin actividad reciente</p>
+            ) : (
+              partnerActivities.slice(0, 5).map((act) => (
+                <div key={act.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "var(--primary-lighter)", borderRadius: "999px", padding: "4px 10px" }}>
+                  <span style={{ fontSize: "0.75rem" }}>{activityEmoji(act.type)}</span>
+                  <span style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--foreground)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                    {act.description}
+                  </span>
+                  <span style={{ fontSize: "0.5625rem", color: "var(--foreground-muted)", flexShrink: 0 }}>{relativeTime(act.created_at)}</span>
+                </div>
+              ))
+            )}
+          </div>,
+        ]
 
-
-      {/* Completion counter */}
-      {hasCouple && allPlans.length > 0 && (() => {
-        const totalDone = allPlans.reduce((s, p) => s + (p.completed_count ?? 0), 0)
-        const totalTasks = allPlans.reduce((s, p) => s + (p.task_count ?? 0), 0)
-        if (totalDone === 0) return null
         return (
-          <div style={{
-            marginBottom: "0.875rem", borderRadius: "var(--radius-lg)", padding: "0.75rem 1rem",
-            background: "linear-gradient(135deg, var(--primary-lighter) 0%, var(--pink-light) 100%)",
-            border: "1px solid var(--primary-light)", display: "flex", alignItems: "center", gap: "0.75rem",
-          }}>
-            <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "2rem", fontWeight: 700, color: "var(--primary)", lineHeight: 1 }}>
-              {totalDone}
-            </span>
-            <div>
-              <p style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--foreground)" }}>cosas hechas juntos</p>
-              <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
-                {totalTasks} en total · {Math.round((totalDone / (totalTasks || 1)) * 100)}% completado
-              </p>
+          <>
+            {/* HeroCard */}
+            <div
+              style={{
+                borderRadius: "var(--radius-xl)",
+                marginBottom: "0.75rem",
+                overflow: "hidden",
+                position: "relative",
+                height: 172,
+                background: heroSlide === 0
+                  ? (couplePhoto
+                    ? `linear-gradient(160deg, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.38) 60%, rgba(0,0,0,0.62) 100%), center / cover no-repeat url("${couplePhoto}")`
+                    : grad)
+                  : "var(--card)",
+                border: heroSlide === 0 ? "none" : "1px solid var(--border)",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+              }}
+              onTouchStart={(e) => { heroTouchStartX.current = e.touches[0].clientX }}
+              onTouchEnd={(e) => {
+                const delta = e.changedTouches[0].clientX - heroTouchStartX.current
+                if (delta < -50) setHeroSlide((s) => Math.min(s + 1, slides.length - 1))
+                if (delta > 50) setHeroSlide((s) => Math.max(s - 1, 0))
+              }}
+            >
+              {/* Slides strip */}
+              <div style={{
+                display: "flex", width: `${slides.length * 100}%`, height: "100%",
+                transform: `translateX(calc(-${heroSlide * (100 / slides.length)}%))`,
+                transition: "transform 0.3s ease",
+              }}>
+                {slides}
+              </div>
+              {/* Dot indicators */}
+              <div style={{
+                position: "absolute", bottom: "0.375rem", left: "50%", transform: "translateX(-50%)",
+                display: "flex", gap: "5px", alignItems: "center",
+              }}>
+                {slides.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setHeroSlide(i)}
+                    style={{
+                      width: heroSlide === i ? 16 : 6, height: 6, borderRadius: "999px",
+                      border: "none", cursor: "pointer", padding: 0,
+                      background: heroSlide === i
+                        ? (heroSlide === 0 ? "rgba(255,255,255,0.9)" : "var(--primary)")
+                        : (heroSlide === 0 ? "rgba(255,255,255,0.35)" : "var(--border)"),
+                      transition: "width 0.2s ease, background 0.2s ease",
+                    }}
+                    aria-label={`Slide ${i + 1}`}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+
+            {/* Sticky collapsed bar — appears when scrolled past hero */}
+            <div style={{
+              position: "sticky",
+              top: 56,
+              zIndex: 30,
+              marginLeft: "-1rem",
+              marginRight: "-1rem",
+              marginBottom: isScrolled ? "0.75rem" : 0,
+              transform: isScrolled ? "translateY(0)" : "translateY(-100%)",
+              opacity: isScrolled ? 1 : 0,
+              pointerEvents: isScrolled ? "auto" : "none",
+              transition: "transform 0.22s ease, opacity 0.22s ease, margin-bottom 0.22s ease",
+              background: "var(--background)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              borderBottom: "1px solid var(--border)",
+              display: "flex", alignItems: "center", padding: "0 1rem", height: 48, gap: "0.5rem",
+            }}>
+              <span style={{ fontSize: "0.8125rem", fontWeight: 700, flex: 1, color: "var(--primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                💕 {firstName} & {partnerFirst}{days !== null ? ` · ${days.toLocaleString("es-ES")}d` : ""}
+              </span>
+              {([
+                { emoji: "✍️", onClick: () => openPhoneModal("journal") },
+                { emoji: "📷", onClick: () => router.push("/fotos") },
+                { emoji: "💌", onClick: () => openPhoneModal("journal") },
+                { emoji: "⏳", onClick: () => openPhoneModal("capsule") },
+              ]).map((a, i) => (
+                <button
+                  key={i}
+                  onClick={a.onClick}
+                  style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.125rem", padding: "4px", lineHeight: 1, borderRadius: "8px" }}
+                >
+                  {a.emoji}
+                </button>
+              ))}
+            </div>
+          </>
         )
       })()}
 
