@@ -2,7 +2,7 @@
 
 import { useAppStore } from "@/stores/app-store"
 import { useShallow } from "zustand/react/shallow"
-import { X, Dices, Map, Clock, Wallet, Wifi, Battery, Sun, Flower2, Moon, Music2, Play, Pause, Gamepad2, Tv2, Sparkles, BookHeart } from "lucide-react"
+import { Dices, Map, Clock, Wallet, Wifi, Battery, Sun, Flower2, Moon, Music2, Play, Pause, Gamepad2, Tv2, Sparkles, BookHeart } from "lucide-react"
 import { TimeCapsuleApp } from "@/components/features/time-capsule-app"
 import { SavingsGoalsApp } from "@/components/features/savings-goals-app"
 import { MusicApp } from "@/components/features/music-app"
@@ -118,23 +118,8 @@ export function PhoneModal() {
           <div className="phone-notch" />
           <div className="phone-screen">
 
-            {/* X close button — inside phone, top-right overlay */}
-            <button
-              onClick={closePhoneModal}
-              style={{
-                position: "absolute", top: 10, right: 10,
-                width: 30, height: 30, borderRadius: "50%",
-                background: "rgba(0,0,0,0.32)",
-                backdropFilter: "blur(4px)",
-                border: "none", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                zIndex: 30,
-              }}
-            >
-              <X size={14} color="white" />
-            </button>
 
-            {/* E1: Boot flash overlay */}
+{/* E1: Boot flash overlay */}
             {booting && (
               <div style={{
                 position: "absolute", inset: 0, zIndex: 999,
