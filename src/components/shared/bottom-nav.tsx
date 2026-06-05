@@ -1,13 +1,14 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { ClipboardList, Images } from "lucide-react"
+import { ClipboardList, Images, BookOpen } from "lucide-react"
 import { useAppStore } from "@/stores/app-store"
 import { useEffect, useState } from "react"
 
 const TABS = [
   { id: "planes", label: "Planes", Icon: ClipboardList, href: "/dashboard", storageKey: "ttd_last_visit_dashboard", emoji: "📋" },
-  { id: "fotos", label: "Fotos", Icon: Images, href: "/fotos", storageKey: "ttd_last_visit_fotos", emoji: "📷" },
+  { id: "diario", label: "Diario", Icon: BookOpen,      href: "/diario",    storageKey: "ttd_last_visit_diario",    emoji: "📔" },
+  { id: "fotos",  label: "Fotos",  Icon: Images,        href: "/fotos",     storageKey: "ttd_last_visit_fotos",     emoji: "📷" },
 ] as const
 
 export function BottomNav() {

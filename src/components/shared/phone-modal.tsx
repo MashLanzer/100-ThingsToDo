@@ -2,8 +2,7 @@
 
 import { useAppStore } from "@/stores/app-store"
 import { useShallow } from "zustand/react/shallow"
-import { X, BookOpen, Dices, Map, Clock, Wallet, Wifi, Battery, Sun, Flower2, Moon, Music2, Play, Pause, Gamepad2, Tv2, Sparkles, BookHeart } from "lucide-react"
-import { JournalApp } from "@/components/features/journal-app"
+import { X, Dices, Map, Clock, Wallet, Wifi, Battery, Sun, Flower2, Moon, Music2, Play, Pause, Gamepad2, Tv2, Sparkles, BookHeart } from "lucide-react"
 import { TimeCapsuleApp } from "@/components/features/time-capsule-app"
 import { SavingsGoalsApp } from "@/components/features/savings-goals-app"
 import { MusicApp } from "@/components/features/music-app"
@@ -17,7 +16,6 @@ import { useState, useEffect, useRef } from "react"
 
 type AppDef = { id: string; Icon: React.FC<{ size?: number; color?: string }>; name: string; bg: string; iconColor: string }
 const APPS: AppDef[] = [
-  { id: "journal",  Icon: BookOpen, name: "Diario",    bg: "linear-gradient(135deg, #c3e6cb 0%, #a8d5b5 100%)", iconColor: "#065F46" },
   { id: "music",    Icon: Music2,   name: "Música",    bg: "linear-gradient(135deg, #a2d2ff 0%, #7ab9f5 100%)", iconColor: "#1e40af" },
   { id: "desafios", Icon: Dices,    name: "Desafíos",  bg: "linear-gradient(135deg, #ffe8d6 0%, #f5c9a0 100%)", iconColor: "#9a3412" },
   { id: "map",      Icon: Map,      name: "Aventuras", bg: "linear-gradient(135deg, #d4f1f9 0%, #a0daf0 100%)", iconColor: "#0369a1" },
@@ -50,7 +48,6 @@ export function PhoneModal() {
   )
   const [time, setTime] = useState("")
   const [hiddenApps, setHiddenApps] = useState<string[]>([])
-  const [lastJournalDate, setLastJournalDate] = useState<string | null>(null)
   // E1: Boot animation — brief dark flash when modal opens
   const [booting, setBooting] = useState(false)
   // UX-A: Swipe-down-to-close
@@ -86,7 +83,6 @@ export function PhoneModal() {
           setHiddenApps([])
         }
       } catch { setHiddenApps([]) }
-      setLastJournalDate(localStorage.getItem("ttd_last_journal_date"))
     }
   }, [showPhoneModal])
 
@@ -204,57 +200,28 @@ export function PhoneModal() {
                     </div>
 
                     <div className="app-grid">
-                      {APPS.filter((app) => !hiddenApps.includes(app.id)).map((app, idx) => {
-                        const journalDays = app.id === "journal" && lastJournalDate
-                          ? Math.floor((Date.now() - new Date(lastJournalDate).getTime()) / 86_400_000)
-                          : null
-                        const showBadge = app.id === "journal" && journalDays !== null && journalDays > 0
-                        return (
+                      {APPS.filter((app) => !hiddenApps.includes(app.id)).map((app, idx) => (
+                        <div
+                          key={app.id}
+                          className="app-icon-item"
+                          onClick={() => setActivePhoneApp(app.id)}
+                          style={{ animation: `appIconIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both`, animationDelay: `${idx * 0.05}s` }}
+                        >
                           <div
-                            key={app.id}
-                            className="app-icon-item"
-                            onClick={() => setActivePhoneApp(app.id)}
-                            style={{ animation: `appIconIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both`, animationDelay: `${idx * 0.05}s` }}
+                            className="app-icon-bg"
+                            style={{ background: app.bg, display: "flex", alignItems: "center", justifyContent: "center" }}
                           >
-                            <div style={{ position: "relative" }}>
-                              <div
-                                className="app-icon-bg"
-                                style={{ background: app.bg, display: "flex", alignItems: "center", justifyContent: "center" }}
-                              >
-                                <app.Icon size={26} color={app.iconColor} />
-                              </div>
-                              {showBadge && (
-                                <span style={{
-                                  position: "absolute", top: -4, right: -4,
-                                  background: "var(--secondary)",
-                                  color: "white",
-                                  fontSize: "0.45rem",
-                                  fontWeight: 700,
-                                  borderRadius: "999px",
-                                  padding: "1px 4px",
-                                  lineHeight: 1.4,
-                                  border: "1.5px solid white",
-                                  fontFamily: "'Quicksand', sans-serif",
-                                }}>
-                                  {journalDays === 1 ? "ayer" : `${journalDays}d`}
-                                </span>
-                              )}
-                            </div>
-                            <span className="app-icon-name">{app.name}</span>
+                            <app.Icon size={26} color={app.iconColor} />
                           </div>
-                        )
-                      })}
+                          <span className="app-icon-name">{app.name}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Individual apps */}
-              {activePhoneApp === "journal" && (
-                <div className="phone-app-view active">
-                  <JournalApp onBack={goHome} />
-                </div>
-              )}
               {/* MusicApp always mounted so audio persists when navigating away */}
               <div className="phone-app-view active" style={{ display: activePhoneApp === "music" ? "flex" : "none" }}>
                 <MusicApp onBack={goHome} />
