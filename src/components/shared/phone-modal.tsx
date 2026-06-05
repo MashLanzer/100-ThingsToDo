@@ -2,7 +2,7 @@
 
 import { useAppStore } from "@/stores/app-store"
 import { useShallow } from "zustand/react/shallow"
-import { X, BookOpen, Dices, Map, Clock, Wallet, Wifi, Battery, Sun, Flower2, Moon, Music2, Play, Pause, Gamepad2, Tv2 } from "lucide-react"
+import { X, BookOpen, Dices, Map, Clock, Wallet, Wifi, Battery, Sun, Flower2, Moon, Music2, Play, Pause, Gamepad2, Tv2, Sparkles, BookHeart } from "lucide-react"
 import { JournalApp } from "@/components/features/journal-app"
 import { TimeCapsuleApp } from "@/components/features/time-capsule-app"
 import { SavingsGoalsApp } from "@/components/features/savings-goals-app"
@@ -11,6 +11,8 @@ import { MapApp } from "@/components/features/map-app"
 import { ChallengesFavorsApp } from "@/components/features/challenges-favors-app"
 import { CoupleGamesApp } from "@/components/features/couple-games-app"
 import { SeriesApp } from "@/components/features/series-app"
+import { MomentsApp } from "@/components/features/moments-app"
+import { BookApp } from "@/components/features/book-app"
 import { useState, useEffect, useRef } from "react"
 
 type AppDef = { id: string; Icon: React.FC<{ size?: number; color?: string }>; name: string; bg: string; iconColor: string }
@@ -21,8 +23,10 @@ const APPS: AppDef[] = [
   { id: "map",      Icon: Map,      name: "Aventuras", bg: "linear-gradient(135deg, #d4f1f9 0%, #a0daf0 100%)", iconColor: "#0369a1" },
   { id: "capsule",  Icon: Clock,    name: "Cápsulas",  bg: "linear-gradient(135deg, #f3e8ff 0%, #dcc9f5 100%)", iconColor: "#6d28d9" },
   { id: "goals",    Icon: Wallet,   name: "Metas",     bg: "linear-gradient(135deg, #d1fae5 0%, #a3e4c7 100%)", iconColor: "#065F46" },
-  { id: "games",    Icon: Gamepad2, name: "Juegos",    bg: "linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)", iconColor: "#7c3aed" },
-  { id: "series",   Icon: Tv2,      name: "Peliculero", bg: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 100%)", iconColor: "#c4b5fd" },
+  { id: "games",    Icon: Gamepad2,  name: "Juegos",    bg: "linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)", iconColor: "#7c3aed" },
+  { id: "series",   Icon: Tv2,       name: "Peliculero", bg: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 100%)", iconColor: "#c4b5fd" },
+  { id: "moments",  Icon: Sparkles,  name: "Momentos",  bg: "linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)", iconColor: "#be185d" },
+  { id: "book",     Icon: BookHeart, name: "Nuestro Libro", bg: "linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)", iconColor: "#92400e" },
 ]
 
 type GreetingDef = { main: React.ReactNode; sub: string }
@@ -283,6 +287,16 @@ export function PhoneModal() {
               {activePhoneApp === "series" && (
                 <div className="phone-app-view active">
                   <SeriesApp onBack={goHome} />
+                </div>
+              )}
+              {activePhoneApp === "moments" && (
+                <div className="phone-app-view active">
+                  <MomentsApp onBack={goHome} />
+                </div>
+              )}
+              {activePhoneApp === "book" && (
+                <div className="phone-app-view active">
+                  <BookApp onBack={goHome} />
                 </div>
               )}
             </div>
