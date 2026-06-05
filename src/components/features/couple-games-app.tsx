@@ -200,6 +200,8 @@ export function CoupleGamesApp({ onBack }: Props) {
   const [vIdx, setVIdx] = useState(0)
   const [rIdx, setRIdx] = useState(0)
   const [vorFlipped, setVorFlipped] = useState(false)
+  const [vorLoading, setVorLoading] = useState(false)
+  const [vorSource, setVorSource] = useState<"api" | "static">("static")
 
   // — ¿Qué prefieres? —
   const [dilemmas, setDilemmas] = useState<Dilemma[]>([])
@@ -214,17 +216,40 @@ export function CoupleGamesApp({ onBack }: Props) {
     return 0
   })
 
-  const enterGame = useCallback((v: View) => {
-    if (v === "verdad-reto") {
+  async function loadVorQuestions() {
+    setVorLoading(true)
+    try {
+      const [tRes, dRes] = await Promise.all([
+        fetch("/api/games/question?type=truth&count=20"),
+        fetch("/api/games/question?type=dare&count=20"),
+      ])
+      const tData = tRes.ok ? await tRes.json() : null
+      const dData = dRes.ok ? await dRes.json() : null
+      const truths: string[] = tData?.questions?.length ? tData.questions : shuffled(VERDADES)
+      const dares: string[] = dData?.questions?.length ? dData.questions : shuffled(RETOS)
+      setVerdades(truths)
+      setRetos(dares)
+      setVorSource(tData?.source === "api" ? "api" : "static")
+    } catch {
       setVerdades(shuffled(VERDADES))
       setRetos(shuffled(RETOS))
+      setVorSource("static")
+    } finally {
+      setVorLoading(false)
+    }
+  }
+
+  const enterGame = useCallback((v: View) => {
+    if (v === "verdad-reto") {
       setVIdx(0); setRIdx(0)
       setVorMode("verdad"); setVorFlipped(false)
+      loadVorQuestions()
     } else if (v === "prefieres") {
       setDilemmas(shuffled(QUE_PREFIERES))
       setDIdx(0); setDChoice(null)
     }
     setView(v)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -312,9 +337,16 @@ export function CoupleGamesApp({ onBack }: Props) {
     return (
       <div style={{ padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
         {backBtn("Juegos")}
-        <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "var(--foreground)", margin: 0, marginBottom: "0.875rem" }}>
-          🎴 Verdad o Reto
-        </h3>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
+          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "var(--foreground)", margin: 0 }}>
+            🎴 Verdad o Reto
+          </h3>
+          {!vorLoading && (
+            <span style={{ fontSize: "0.5625rem", fontWeight: 700, color: vorSource === "api" ? "#059669" : "var(--foreground-muted)", background: vorSource === "api" ? "#d1fae5" : "var(--muted)", borderRadius: "999px", padding: "2px 7px", letterSpacing: "0.04em" }}>
+              {vorSource === "api" ? "🌐 EN LÍNEA" : "📦 LOCAL"}
+            </span>
+          )}
+        </div>
 
         {/* Mode selector */}
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
@@ -334,28 +366,37 @@ export function CoupleGamesApp({ onBack }: Props) {
         }}>
           <div aria-hidden style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
           <div aria-hidden style={{ position: "absolute", bottom: -20, left: -20, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
-          <p style={{ fontSize: "2.5rem", marginBottom: "1rem", lineHeight: 1 }}>
-            {isVerdad ? "💬" : "🎯"}
-          </p>
-          <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "rgba(255,255,255,0.75)", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            {isVerdad ? "Verdad" : "Reto"}
-          </p>
-          <p style={{ fontSize: "1rem", fontWeight: 600, color: "white", textAlign: "center", lineHeight: 1.45, position: "relative", zIndex: 1 }}>
-            {currentCard}
-          </p>
+          {vorLoading ? (
+            <p style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.8)", textAlign: "center" }}>Cargando preguntas...</p>
+          ) : (
+            <>
+              <p style={{ fontSize: "2.5rem", marginBottom: "1rem", lineHeight: 1 }}>
+                {isVerdad ? "💬" : "🎯"}
+              </p>
+              <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "rgba(255,255,255,0.75)", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                {isVerdad ? "Verdad" : "Reto"}
+              </p>
+              <p style={{ fontSize: "1rem", fontWeight: 600, color: "white", textAlign: "center", lineHeight: 1.45, position: "relative", zIndex: 1 }}>
+                {currentCard}
+              </p>
+            </>
+          )}
         </div>
 
         {/* Next button */}
         <button
+          disabled={vorLoading}
           onClick={() => {
-            if (isVerdad) setVIdx(i => (i + 1) % verdades.length)
-            else setRIdx(i => (i + 1) % retos.length)
+            if (isVerdad) setVIdx(i => (i + 1) % Math.max(verdades.length, 1))
+            else setRIdx(i => (i + 1) % Math.max(retos.length, 1))
           }}
           style={{
-            padding: "0.75rem", borderRadius: "14px", border: "none", cursor: "pointer",
+            padding: "0.75rem", borderRadius: "14px", border: "none",
+            cursor: vorLoading ? "default" : "pointer",
             background: isVerdad ? "#7c3aed" : "#ea580c", color: "white",
             fontWeight: 700, fontSize: "0.9375rem", fontFamily: "inherit",
             boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            opacity: vorLoading ? 0.6 : 1,
           }}
         >
           Siguiente →
