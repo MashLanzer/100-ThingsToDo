@@ -61,6 +61,10 @@ const APP_CSS = `
     from { opacity: 0; transform: translateX(18px); }
     to   { opacity: 1; transform: translateX(0); }
   }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-18px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
 `
 
 function stripHtml(html: string | null) {
@@ -108,6 +112,7 @@ export function SeriesApp({ onBack }: Props) {
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<SeriesStatus | "all" | "juntos">("all")
   const [gridView, setGridView] = useState(false)
+  const [prevView, setPrevView] = useState<View | null>(null)
 
   const [searchQ, setSearchQ] = useState("")
   const [searchResults, setSearchResults] = useState<TVMazeShow[]>([])
@@ -185,7 +190,7 @@ export function SeriesApp({ onBack }: Props) {
     try {
       await authFetch(`/api/series/${id}`, { method: "DELETE" })
       setEntries(prev => prev.filter(e => e.id !== id))
-      setSelected(null); setView("list"); setDeleteConfirm(false)
+      setSelected(null); setPrevView("detail"); setView("list"); setDeleteConfirm(false)
       toast.success("Serie eliminada")
     } catch { toast.error("Error al eliminar") }
   }
@@ -323,7 +328,7 @@ export function SeriesApp({ onBack }: Props) {
             <img src={selected.image_url} alt="" style={{ position: "absolute", inset: -20, width: "calc(100% + 40px)", height: "calc(100% + 40px)", objectFit: "cover", filter: "blur(18px)", transform: "scale(1.1)", opacity: 0.7 }} />
           )}
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 100%)" }} />
-          <button onClick={() => { setView("list"); setSelected(null); setDeleteConfirm(false) }}
+          <button onClick={() => { setPrevView("detail"); setView("list"); setSelected(null); setDeleteConfirm(false) }}
             style={{ position: "absolute", top: "0.75rem", left: "0.75rem", background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white" }}
           >
             <ChevronLeft size={18} />
@@ -436,7 +441,7 @@ export function SeriesApp({ onBack }: Props) {
   ]
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", position: "relative" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", position: "relative", animation: prevView === "detail" ? "slideInLeft 0.22s ease both" : undefined }}>
       <style>{APP_CSS}</style>
 
       {/* #1 Cinematic header */}
