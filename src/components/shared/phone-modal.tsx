@@ -16,15 +16,15 @@ import { useState, useEffect, useRef } from "react"
 
 type AppDef = { id: string; Icon: React.FC<{ size?: number; color?: string }>; name: string; bg: string; iconColor: string }
 const APPS: AppDef[] = [
-  { id: "music",    Icon: Music2,   name: "Música",    bg: "linear-gradient(135deg, #a2d2ff 0%, #7ab9f5 100%)", iconColor: "#1e40af" },
-  { id: "desafios", Icon: Dices,    name: "Desafíos",  bg: "linear-gradient(135deg, #ffe8d6 0%, #f5c9a0 100%)", iconColor: "#9a3412" },
-  { id: "map",      Icon: Map,      name: "Aventuras", bg: "linear-gradient(135deg, #d4f1f9 0%, #a0daf0 100%)", iconColor: "#0369a1" },
-  { id: "capsule",  Icon: Clock,    name: "Cápsulas",  bg: "linear-gradient(135deg, #f3e8ff 0%, #dcc9f5 100%)", iconColor: "#6d28d9" },
-  { id: "goals",    Icon: Wallet,   name: "Metas",     bg: "linear-gradient(135deg, #d1fae5 0%, #a3e4c7 100%)", iconColor: "#065F46" },
-  { id: "games",    Icon: Gamepad2,  name: "Juegos",    bg: "linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)", iconColor: "#7c3aed" },
-  { id: "series",   Icon: Tv2,       name: "Peliculero", bg: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 100%)", iconColor: "#c4b5fd" },
-  { id: "moments",  Icon: Sparkles,  name: "Momentos",  bg: "linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)", iconColor: "#be185d" },
+  { id: "series",   Icon: Tv2,       name: "Peliculero",    bg: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 100%)", iconColor: "#c4b5fd" },
+  { id: "moments",  Icon: Sparkles,  name: "Momentos",      bg: "linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)", iconColor: "#be185d" },
   { id: "book",     Icon: BookHeart, name: "Nuestro Libro", bg: "linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)", iconColor: "#92400e" },
+  { id: "music",    Icon: Music2,    name: "Música",        bg: "linear-gradient(135deg, #a2d2ff 0%, #7ab9f5 100%)", iconColor: "#1e40af" },
+  { id: "desafios", Icon: Dices,     name: "Desafíos",      bg: "linear-gradient(135deg, #ffe8d6 0%, #f5c9a0 100%)", iconColor: "#9a3412" },
+  { id: "map",      Icon: Map,       name: "Aventuras",     bg: "linear-gradient(135deg, #d4f1f9 0%, #a0daf0 100%)", iconColor: "#0369a1" },
+  { id: "capsule",  Icon: Clock,     name: "Cápsulas",      bg: "linear-gradient(135deg, #f3e8ff 0%, #dcc9f5 100%)", iconColor: "#6d28d9" },
+  { id: "goals",    Icon: Wallet,    name: "Metas",         bg: "linear-gradient(135deg, #d1fae5 0%, #a3e4c7 100%)", iconColor: "#065F46" },
+  { id: "games",    Icon: Gamepad2,  name: "Juegos",        bg: "linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)", iconColor: "#7c3aed" },
 ]
 
 type GreetingDef = { main: React.ReactNode; sub: string }
