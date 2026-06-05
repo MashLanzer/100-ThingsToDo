@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { verifyFirebaseToken } from "@/lib/firebase/admin"
-import { getSupabaseAdmin } from "@/lib/supabase/admin"
+import { verifyFirebaseToken } from "@/lib/api-auth"
+import { getSupabaseAdmin } from "@/lib/supabase/server"
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await verifyFirebaseToken(req)
