@@ -634,32 +634,34 @@ export function CoupleGamesApp({ onBack }: Props) {
           )}
         </div>
 
-        {/* Category switch */}
-        <div style={{ display: "flex", background: "var(--muted)", borderRadius: "999px", padding: "3px", marginBottom: "0.625rem", gap: "2px" }}>
-          {(["parejas", "neutral"] as const).map((cat) => {
-            const active = vorCategory === cat
-            return (
-              <button
-                key={cat}
-                disabled={vorLoading}
-                onClick={() => {
-                  if (cat === vorCategory) return
-                  setVorCategory(cat)
-                  setVIdx(0); setRIdx(0); setVorFlipped(false)
-                  loadVorQuestions(cat)
-                }}
-                style={{
-                  flex: 1, padding: "0.3rem 0", borderRadius: "999px", border: "none",
-                  background: active ? (cat === "parejas" ? "#7c3aed" : "#0369a1") : "transparent",
-                  color: active ? "white" : "var(--foreground-muted)",
-                  fontWeight: 700, fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit",
-                  transition: "all 0.18s ease",
-                }}
-              >
-                {cat === "parejas" ? "🧡 Parejas" : "😂 Neutral"}
-              </button>
-            )
-          })}
+        {/* Category switch — centrado */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.625rem" }}>
+          <div style={{ display: "inline-flex", background: "var(--muted)", borderRadius: "999px", padding: "3px", gap: "2px" }}>
+            {(["parejas", "neutral"] as const).map((cat) => {
+              const active = vorCategory === cat
+              return (
+                <button
+                  key={cat}
+                  disabled={vorLoading}
+                  onClick={() => {
+                    if (cat === vorCategory) return
+                    setVorCategory(cat)
+                    setVIdx(0); setRIdx(0); setVorFlipped(false)
+                    loadVorQuestions(cat)
+                  }}
+                  style={{
+                    width: "6rem", padding: "0.3rem 0", borderRadius: "999px", border: "none",
+                    background: active ? (cat === "parejas" ? "#7c3aed" : "#0369a1") : "transparent",
+                    color: active ? "white" : "var(--foreground-muted)",
+                    fontWeight: 700, fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit",
+                    transition: "all 0.18s ease",
+                  }}
+                >
+                  {cat === "parejas" ? "🧡 Parejas" : "😂 Neutral"}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Mode selector */}
