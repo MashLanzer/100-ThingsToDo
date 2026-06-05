@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
-// Static fallback — used when the external API is unavailable
-const STATIC_TRUTHS = [
-  "¿Cuál es tu recuerdo favorito de nuestra relación?",
+const VERDADES: string[] = [
+  "¿Cuál es tu recuerdo favorito de nuestra relación hasta ahora?",
   "¿En qué momento supiste que yo era especial para ti?",
   "¿Qué es lo primero que pensaste cuando me viste por primera vez?",
   "¿Qué es lo que más te gusta de mí?",
@@ -32,9 +31,64 @@ const STATIC_TRUTHS = [
   "¿Hay algo que hayas querido preguntarme y no te hayas atrevido?",
   "¿Cuándo fue la última vez que lloraste y por qué?",
   "¿Qué significa para ti que sigamos juntos dentro de 10 años?",
+  "¿Qué persona (además de mí) ha marcado más tu vida?",
+  "¿Cuál es tu peor manía o hábito?",
+  "¿Qué película o serie me recomendarías para entenderme mejor?",
+  "¿Qué es lo que más te tranquiliza cuando estás estresado/a?",
+  "¿Qué harías con un millón de euros?",
+  "¿Cuál es tu mayor arrepentimiento?",
+  "¿Qué superpower elegirías si pudieras tener uno?",
+  "¿Si pudieras vivir en cualquier ciudad del mundo, cuál elegirías y por qué?",
+  "¿Cuál es tu tipo de vejez ideal?",
+  "¿Cuándo fue la primera vez que te sentiste verdaderamente enamorado/a?",
+  "¿Qué es lo que más valoras en una persona?",
+  "¿Cuál es el cumplido que nunca olvidarás?",
+  "¿Qué es lo que te da más miedo de nuestro futuro juntos?",
+  "¿Qué cosa tuya crees que me sorprendería si la descubriera?",
+  "¿Cuál es tu forma favorita de demostrar que quieres a alguien?",
+  "¿Qué es lo que más disfrutas de pasar tiempo conmigo?",
+  "¿Hay algo que sientas que nunca entenderé de ti?",
+  "¿Cuál sería tu último deseo si pudieras pedir uno?",
+  "¿Qué es lo que más te cuesta en una relación?",
+  "¿Cuándo fue la última vez que hiciste algo por primera vez?",
+  "¿Qué hobby secreto tienes o te gustaría tener?",
+  "¿Qué es lo que más te gusta de ti mismo/a?",
+  "¿A qué persona famosa te gustaría parecerte y por qué?",
+  "¿Qué es lo que más extrañarías de mí si no estuviera?",
+  "¿Cuál es la decisión más difícil que has tomado en tu vida?",
+  "¿Qué es lo que te hace único/a?",
+  "¿Cuál es tu mayor logro personal hasta ahora?",
+  "¿Qué es lo que te gustaría que la gente dijera de ti cuando no estás?",
+  "¿Cuándo te sentiste más solo/a en tu vida?",
+  "¿Qué cosa pequeña me haces notar cada día sin que yo lo sepa?",
+  "¿Cuál es la mentira más grande que has dicho?",
+  "¿Qué es lo que más te cuesta compartir con los demás?",
+  "¿Qué harías diferente si pudieras vivir tu adolescencia de nuevo?",
+  "¿Cuál es el momento de tu vida del que más orgulloso/a te sientes?",
+  "¿Qué es lo que más te ha enseñado nuestra relación?",
+  "¿Cuándo fue la última vez que te sorprendiste a ti mismo/a?",
+  "¿Qué es lo que más te gusta de cómo te trato?",
+  "¿Qué cambiarías de cómo te tratan las personas que más quieres?",
+  "¿Cuál es tu miedo más irracional?",
+  "¿Qué es lo que más te cuesta decirme?",
+  "¿Qué es lo que te hace reír hasta llorar?",
+  "¿Cuál es el momento más romántico que has vivido?",
+  "¿Qué es lo que más te gusta hacer cuando estás solo/a?",
+  "¿Cuál es la conversación más importante que hemos tenido?",
+  "¿Qué cosa de mí te enamoró sin que te dieras cuenta?",
+  "¿Cuántos hijos te gustaría tener o no tener, y por qué?",
+  "¿Qué es lo que más valoras en la vida?",
+  "¿Cuál es tu recuerdo más feliz de la infancia?",
+  "¿Qué harías si descubrieras que tienes un talento oculto?",
+  "¿Qué es lo que más te gusta de cómo nos llevamos?",
+  "¿Cuál sería tu lugar perfecto para vivir juntos?",
+  "¿Qué cosa te dije que cambió tu forma de pensar sobre algo?",
+  "¿Cuál es la aventura que más te gustaría vivir conmigo?",
+  "¿Qué es lo que nunca renunciarías por nadie?",
+  "¿Cuándo sentiste que de verdad me conocías?",
 ]
 
-const STATIC_DARES = [
+const RETOS: string[] = [
   "Imita la voz de tu pareja durante 1 minuto",
   "Cuéntale a tu pareja algo que nunca le hayas dicho",
   "Da a tu pareja el masaje de espalda más increíble de su vida",
@@ -65,46 +119,73 @@ const STATIC_DARES = [
   "Crea una frase de amor usando solo palabras de 3 letras",
   "Propón un plan sorpresa para el próximo fin de semana",
   "Cuenta en 1 minuto cómo sería vuestro día perfecto juntos",
+  "Envíale un audio muy dramático a alguien de tu familia diciéndoles que los quieres",
+  "Describe nuestra relación como si fuera la sinopsis de una película",
+  "Di 10 cosas que admiras de tu pareja sin repetir nada",
+  "Haz el chiste más malo que sepas y no te rías",
+  "Pon una canción que os represente como pareja y explica por qué",
+  "Imita al personaje de tu película favorita durante 30 segundos",
+  "Comparte el meme más gracioso que tengas guardado",
+  "Haz 10 flexiones o sentadillas ahora mismo",
+  "Di tres cosas que harías diferente si tuvieras que enamorarte de cero",
+  "Imita a un famoso/a que le guste a tu pareja",
+  "Cuéntale la historia de cómo os conocisteis con todos los detalles dramáticos",
+  "Haz una foto artística de lo que tengas más cerca ahora mismo",
+  "Escribe en papel la lista de las 5 cosas que más amas de tu pareja y dásela",
+  "Di el nombre de tu pareja con 5 acentos diferentes",
+  "Inventa un eslogan para vuestra pareja como si fueran una marca",
+  "Canta los primeros 30 segundos de vuestra canción favorita",
+  "Cuéntame tu primer recuerdo de mí con todo lujo de detalles",
+  "Haz una parodia de cómo me comporto cuando estoy enfadado/a",
+  "Cuenta un secreto tonto que nunca le hayas contado a nadie",
+  "Haz el baile más ridículo que conozcas durante 15 segundos",
+  "Di tres cosas que quieres que hagamos juntos antes de que acabe el año",
+  "Recrea la escena más romántica de tu película favorita",
+  "Describe a tu pareja como si fuera un plato de restaurante con estrellas Michelin",
+  "Muéstrame cómo bailarías si estuvieras solo/a en casa",
+  "Llora de forma teatral durante 20 segundos sin motivo",
+  "Inventa tres apodos nuevos para tu pareja ahora mismo",
+  "Haz una declaración de amor usando solo palabras que empiecen por la misma letra",
+  "Describe el olor favorito de tu pareja con palabras poéticas",
+  "Convence a tu pareja en 30 segundos de que eres la mejor persona del mundo",
+  "Haz una caricatura de tu pareja con los ojos cerrados",
+  "Cuéntame el peor regalo que has recibido en tu vida y reacciona como si fuera el mejor",
+  "Di tres frases en otro idioma que suenen románticas aunque no sepas qué significan",
+  "Actúa como si fueras el protagonista de una telenovela durante 1 minuto",
+  "Haz una lista de 5 tradiciones nuevas que quieres empezar con tu pareja",
+  "Imita cómo habla tu pareja por teléfono",
+  "Describe nuestra primera cita como si fuera un anuncio de televisión",
+  "Crea un brindis especial para vosotros ahora mismo",
+  "Haz el ruido de 5 animales diferentes en menos de 20 segundos",
+  "Di tres cosas que nunca te cansarías de hacer con tu pareja",
+  "Escenifica cómo pedirías matrimonio sin palabras",
+  "Inventa un chiste sobre vuestra relación que sea tan malo que sea bueno",
+  "Haz una reverencia real como si tu pareja fuera la realeza",
+  "Cuéntame tu sueño más raro que recuerdes",
+  "Di en voz alta qué es lo que más te gusta del físico de tu pareja",
+  "Imita a tu pareja cuando le hablas a las mascotas o a los bebés",
+  "Propón un viaje improvisado para el próximo mes con destino sorpresa",
+  "Haz el sonido de tu pareja despertándose por la mañana",
+  "Explica por qué eres la mejor pareja del mundo en exactamente 10 palabras",
+  "Recita los votos de boda más cursis que puedas imaginar",
+  "Cuéntame la historia de nuestra relación al revés, desde hoy hasta el principio",
+  "Di cuánto te gusta tu pareja usando solo números y porcentajes",
+  "Diseña con mímica el logo de vuestra pareja",
 ]
 
-function random<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]
+function pick<T>(arr: T[], n: number): T[] {
+  const copy = [...arr]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy.slice(0, Math.min(n, copy.length))
 }
 
 export async function GET(req: NextRequest) {
   const type = req.nextUrl.searchParams.get("type") ?? "truth"
-  const count = Math.min(parseInt(req.nextUrl.searchParams.get("count") ?? "10"), 20)
-
-  // Try external API first — falls back to static if unavailable
-  try {
-    // truthordaredare.com — free, no key, English
-    const category = type === "truth" ? "truth" : "dare"
-    const apiUrl = `https://api.truthordaredare.com/api/${category}?limit=${count}`
-    const res = await fetch(apiUrl, { signal: AbortSignal.timeout(3000) })
-
-    if (res.ok) {
-      const data = await res.json()
-      // The API returns { result: string[] } or similar — normalise
-      const questions: string[] = Array.isArray(data)
-        ? data.map((q: { question?: string; text?: string } | string) =>
-            typeof q === "string" ? q : (q.question ?? q.text ?? ""))
-        : Array.isArray(data?.result)
-          ? data.result
-          : Array.isArray(data?.questions)
-            ? data.questions.map((q: { question?: string; text?: string } | string) =>
-                typeof q === "string" ? q : (q.question ?? q.text ?? ""))
-            : []
-
-      if (questions.length > 0) {
-        return NextResponse.json({ source: "api", questions, type })
-      }
-    }
-  } catch {
-    // API unavailable — use fallback below
-  }
-
-  // Static fallback
-  const pool = type === "truth" ? STATIC_TRUTHS : STATIC_DARES
-  const questions = Array.from({ length: count }, () => random(pool))
-  return NextResponse.json({ source: "static", questions, type })
+  const count = Math.min(parseInt(req.nextUrl.searchParams.get("count") ?? "20"), 30)
+  const pool = type === "truth" ? VERDADES : RETOS
+  const questions = pick(pool, count)
+  return NextResponse.json({ source: "api", questions, type })
 }
