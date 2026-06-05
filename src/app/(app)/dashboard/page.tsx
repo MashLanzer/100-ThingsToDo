@@ -505,9 +505,11 @@ export default function DashboardPage() {
         const totalDone = allPlans.reduce((s, p) => s + (p.completed_count ?? 0), 0)
         const totalTasks = allPlans.reduce((s, p) => s + (p.task_count ?? 0), 0)
 
+        const pct = `calc(100% / 3)`  // each slide = 1/3 of the 300%-wide strip = 100% of card
+        const totalPct = Math.round((totalDone / (totalTasks || 1)) * 100)
         const slides = [
           // Slide 0 — Saludo
-          <div key="s0" style={{ position: "relative", width: "100%", height: "100%", flexShrink: 0, padding: "1rem 1.25rem 1.5rem", display: "flex", flexDirection: "column", justifyContent: "flex-end", color: "white" }}>
+          <div key="s0" style={{ position: "relative", flex: `0 0 ${pct}`, height: "100%", padding: "1rem 1.25rem 1.5rem", display: "flex", flexDirection: "column", justifyContent: "flex-end", color: "white", overflow: "hidden" }}>
             {!couplePhoto && (
               <>
                 <div aria-hidden style={{ position: "absolute", top: "-20%", right: "-10%", width: "180px", height: "180px", borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
@@ -537,9 +539,12 @@ export default function DashboardPage() {
             </div>
           </div>,
 
-          // Slide 1 — Acciones rápidas
-          <div key="s1" style={{ width: "100%", height: "100%", flexShrink: 0, padding: "0.875rem 1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+          // Slide 1 — Acciones rápidas + progreso
+          <div key="s1" style={{ flex: `0 0 ${pct}`, height: "100%", padding: "0.75rem 1rem 1.375rem", display: "flex", flexDirection: "column", gap: "0.5rem", background: "var(--card)" }}>
+            <p style={{ margin: 0, fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Acciones rápidas
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem", flex: 1 }}>
               {([
                 { emoji: "✍️", label: "Diario",   onClick: () => openPhoneModal("journal") },
                 { emoji: "📷", label: "Foto",     onClick: () => router.push("/fotos") },
@@ -550,37 +555,57 @@ export default function DashboardPage() {
                   key={action.label}
                   onClick={action.onClick}
                   style={{
-                    display: "flex", alignItems: "center", gap: "0.5rem",
-                    padding: "0.5rem 0.75rem", borderRadius: "12px", border: "1px solid var(--border)",
-                    cursor: "pointer", background: "var(--card)", fontFamily: "inherit",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                    display: "flex", alignItems: "center", gap: "0.4rem",
+                    padding: "0.4rem 0.625rem", borderRadius: "10px", border: "1px solid var(--border)",
+                    cursor: "pointer", background: "var(--background)", fontFamily: "inherit",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
                   }}
                 >
-                  <span style={{ fontSize: "1.125rem", lineHeight: 1 }}>{action.emoji}</span>
-                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground)" }}>{action.label}</span>
+                  <span style={{ fontSize: "1rem", lineHeight: 1 }}>{action.emoji}</span>
+                  <span style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--foreground)" }}>{action.label}</span>
                 </button>
               ))}
             </div>
-            {totalDone > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.375rem 0.625rem", background: "var(--primary-lighter)", borderRadius: "999px", alignSelf: "flex-start" }}>
-                <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--primary)", lineHeight: 1 }}>{totalDone}</span>
-                <span style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", fontWeight: 600 }}>cosas hechas · {Math.round((totalDone / (totalTasks || 1)) * 100)}%</span>
+            {/* Barra de progreso */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.6rem", color: "var(--foreground-muted)", fontWeight: 600 }}>
+                  {totalDone > 0 ? `${totalDone} tarea${totalDone !== 1 ? "s" : ""} completada${totalDone !== 1 ? "s" : ""}` : "Sin tareas completadas aún"}
+                </span>
+                <span style={{ fontSize: "0.6rem", fontWeight: 700, color: "var(--primary)" }}>{totalPct}%</span>
               </div>
-            )}
+              <div style={{ height: 4, borderRadius: "999px", background: "var(--border)", overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${totalPct}%`, borderRadius: "999px", background: "linear-gradient(90deg, var(--primary-light), var(--primary))", transition: "width 0.4s ease" }} />
+              </div>
+            </div>
           </div>,
 
           // Slide 2 — Actividad del partner
-          <div key="s2" style={{ width: "100%", height: "100%", flexShrink: 0, padding: "0.875rem 1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem", overflowY: "auto" }}>
-            <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", margin: 0 }}>
-              Últimas acciones de {partnerFirst}
-            </p>
+          <div key="s2" style={{ flex: `0 0 ${pct}`, height: "100%", padding: "0.75rem 1rem 1.375rem", display: "flex", flexDirection: "column", gap: "0.4rem", background: "var(--card)", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.125rem" }}>
+              {partner?.avatar_url ? (
+                <img src={partner.avatar_url} alt="" style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--primary-light)", flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--primary-lighter)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6875rem", flexShrink: 0 }}>
+                  {partnerFirst[0]?.toUpperCase()}
+                </div>
+              )}
+              <p style={{ margin: 0, fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Actividad de {partnerFirst}
+              </p>
+            </div>
             {partnerActivities.length === 0 ? (
-              <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", margin: 0 }}>Sin actividad reciente</p>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}>
+                <span style={{ fontSize: "1.5rem" }}>👀</span>
+                <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", margin: 0, textAlign: "center" }}>
+                  {partnerFirst} no ha hecho nada aún
+                </p>
+              </div>
             ) : (
-              partnerActivities.slice(0, 5).map((act) => (
-                <div key={act.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "var(--primary-lighter)", borderRadius: "999px", padding: "4px 10px" }}>
-                  <span style={{ fontSize: "0.75rem" }}>{activityEmoji(act.type)}</span>
-                  <span style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--foreground)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+              partnerActivities.slice(0, 4).map((act) => (
+                <div key={act.id} style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "var(--primary-lighter)", borderRadius: "8px", padding: "5px 8px", flexShrink: 0 }}>
+                  <span style={{ fontSize: "0.875rem", lineHeight: 1 }}>{activityEmoji(act.type)}</span>
+                  <span style={{ fontSize: "0.6rem", fontWeight: 600, color: "var(--foreground)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
                     {act.description}
                   </span>
                   <span style={{ fontSize: "0.5625rem", color: "var(--foreground-muted)", flexShrink: 0 }}>{relativeTime(act.created_at)}</span>
