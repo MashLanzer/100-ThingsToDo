@@ -1855,6 +1855,7 @@ export default function FotosPage() {
   // F2: search + month filter
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
+  const [isScrolled, setIsScrolled] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const selectionMode = selectedIds.size > 0
@@ -1956,6 +1957,12 @@ export default function FotosPage() {
         setMyUid(getFirebaseAuth().currentUser?.uid ?? "")
       })
     })
+  }, [])
+
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 100)
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
   // F4: Memories banner
@@ -2068,61 +2075,76 @@ export default function FotosPage() {
 
   return (
     <div className="page-container">
-      {/* Hero Header */}
+      {/* Hero Header — compactado, stats integradas */}
       <div style={{
         background: "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)",
         borderRadius: "var(--radius-xl)",
-        padding: "1.25rem 1.375rem 1.125rem",
-        marginBottom: "1rem",
+        padding: "0.875rem 1rem 1rem",
+        marginBottom: "0.75rem",
         color: "white",
         position: "relative",
         overflow: "hidden",
       }}>
-        <div style={{ position: "absolute", top: -24, right: -24, width: 110, height: 110, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
-        <div style={{ position: "absolute", bottom: -28, right: 50, width: 72, height: 72, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", position: "relative", zIndex: 1 }}>
-          <div>
-            <p style={{ fontSize: "0.6875rem", fontWeight: 700, opacity: 0.8, letterSpacing: "0.08em", marginBottom: "0.2rem", textTransform: "uppercase" }}>
+        <div style={{ position: "absolute", top: -20, right: -20, width: 90, height: 90, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
+        <div style={{ position: "absolute", bottom: -22, right: 44, width: 58, height: 58, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", zIndex: 1 }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: "0.5625rem", fontWeight: 700, opacity: 0.8, letterSpacing: "0.08em", marginBottom: "0.125rem", textTransform: "uppercase" }}>
               Galería
             </p>
-            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.75rem", fontWeight: 700, lineHeight: 1.1, marginBottom: "0.75rem" }}>
-              Nuestros<br />Recuerdos ✨
+            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, lineHeight: 1.15, marginBottom: "0.5rem" }}>
+              Nuestros Recuerdos ✨
             </h1>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "rgba(255,255,255,0.22)", borderRadius: "999px", padding: "3px 10px" }}>
-                📷 {allPhotos.length} foto{allPhotos.length !== 1 ? "s" : ""}
-              </span>
-              {monthsCount > 0 && (
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "rgba(255,255,255,0.22)", borderRadius: "999px", padding: "3px 10px" }}>
-                  💕 {monthsCount} {monthsCount === 1 ? "mes" : "meses"} juntos
+            <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+              {thisMonth.length > 0 && !isLoading && (
+                <span style={{ fontSize: "0.6875rem", fontWeight: 600, background: "rgba(255,255,255,0.22)", borderRadius: "999px", padding: "2px 9px", backdropFilter: "blur(4px)" }}>
+                  📸 {thisMonth.length} este mes
                 </span>
               )}
+              {daysSinceLast !== null && !isLoading && (
+                <span style={{ fontSize: "0.6875rem", fontWeight: 600, background: "rgba(255,255,255,0.22)", borderRadius: "999px", padding: "2px 9px", backdropFilter: "blur(4px)" }}>
+                  {daysSinceLast === 0 ? "⚡ hoy" : daysSinceLast === 1 ? "⏰ ayer" : `⏰ hace ${daysSinceLast}d`}
+                </span>
+              )}
+              <span style={{ fontSize: "0.6875rem", fontWeight: 600, background: "rgba(255,255,255,0.22)", borderRadius: "999px", padding: "2px 9px", backdropFilter: "blur(4px)" }}>
+                🗓️ {allPhotos.length} en total
+              </span>
             </div>
           </div>
-          <div style={{ fontSize: "3rem", lineHeight: 1, marginTop: "0.25rem", filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.18))" }}>
+          <div style={{ fontSize: "2.25rem", lineHeight: 1, flexShrink: 0, filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.18))" }}>
             📷
           </div>
         </div>
       </div>
 
-      {/* Stats strip */}
-      {allPhotos.length > 0 && !isLoading && (
-        <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", marginBottom: "0.875rem", paddingBottom: "2px" }}>
-          {thisMonth.length > 0 && (
-            <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "var(--primary-lighter)", color: "var(--primary)", borderRadius: "999px", padding: "4px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>
-              📸 {thisMonth.length} este mes
-            </span>
-          )}
-          {daysSinceLast !== null && (
-            <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "var(--muted)", color: "var(--foreground-muted)", borderRadius: "999px", padding: "4px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>
-              {daysSinceLast === 0 ? "⚡ Último recuerdo: hoy" : daysSinceLast === 1 ? "⏰ Último: ayer" : `⏰ Último: hace ${daysSinceLast}d`}
-            </span>
-          )}
-          <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "var(--muted)", color: "var(--foreground-muted)", borderRadius: "999px", padding: "4px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>
-            🗓️ {allPhotos.length} en total
-          </span>
-        </div>
-      )}
+      {/* Barra colapsada — aparece al scrollear >100px */}
+      <div style={{
+        position: "sticky",
+        top: 56,
+        zIndex: 30,
+        marginLeft: "-1rem",
+        marginRight: "-1rem",
+        marginBottom: isScrolled ? "0.75rem" : 0,
+        transform: isScrolled ? "translateY(0)" : "translateY(-100%)",
+        opacity: isScrolled ? 1 : 0,
+        pointerEvents: isScrolled ? "auto" : "none",
+        transition: "transform 0.22s ease, opacity 0.22s ease, margin-bottom 0.22s ease",
+        background: "var(--background)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid var(--border)",
+        display: "flex", alignItems: "center", padding: "0 1rem", height: 48, gap: "0.5rem",
+      }}>
+        <span style={{ fontSize: "0.8125rem", fontWeight: 700, flex: 1, color: "var(--primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+          📷 Nuestros Recuerdos · {allPhotos.length} foto{allPhotos.length !== 1 ? "s" : ""}
+        </span>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          style={{ background: "var(--primary)", color: "white", border: "none", borderRadius: "999px", padding: "4px 14px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem" }}
+        >
+          <Camera size={13} /> Subir
+        </button>
+      </div>
 
       {/* F4: Memories banner */}
       {memory && !isLoading && (
