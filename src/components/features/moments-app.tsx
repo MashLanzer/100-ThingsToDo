@@ -43,6 +43,37 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
 }
 
+function timeAgo(dateStr: string) {
+  const d = new Date(dateStr + "T12:00:00")
+  const now = new Date()
+  const diffMs = now.getTime() - d.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  if (diffDays === 0) return "hoy"
+  if (diffDays === 1) return "ayer"
+  if (diffDays < 30) return `hace ${diffDays} días`
+  const months = Math.floor(diffDays / 30)
+  if (months < 12) return `hace ${months} mes${months > 1 ? "es" : ""}`
+  const years = Math.floor(months / 12)
+  const remMonths = months % 12
+  if (remMonths === 0) return `hace ${years} año${years > 1 ? "s" : ""}`
+  return `hace ${years} año${years > 1 ? "s" : ""} y ${remMonths} mes${remMonths > 1 ? "es" : ""}`
+}
+
+const MOMENTS_CSS = `
+@keyframes momentCardIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes detailIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+`
+
 export function MomentsApp({ onBack }: { onBack: () => void }) {
   const [view, setView] = useState<View>("list")
   const [moments, setMoments] = useState<Moment[]>([])
@@ -132,61 +163,94 @@ export function MomentsApp({ onBack }: { onBack: () => void }) {
   if (view === "list") {
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-        {/* header */}
-        <div style={{ padding: "1rem 1rem 0.75rem", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-          <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", fontWeight: 600, fontSize: "0.8125rem", padding: 0, fontFamily: "inherit", marginBottom: "0.625rem" }}>
+        <style>{MOMENTS_CSS}</style>
+
+        {/* Header */}
+        <div style={{
+          padding: "1rem 1rem 0.875rem", flexShrink: 0,
+          background: "linear-gradient(135deg, #831843 0%, #be185d 50%, #ec4899 100%)",
+          boxShadow: "0 2px 16px rgba(190,24,93,0.3)",
+        }}>
+          <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: "0.8125rem", padding: 0, fontFamily: "inherit", marginBottom: "0.5rem" }}>
             <ChevronLeft size={16} /> Inicio
           </button>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", fontWeight: 700, color: "var(--foreground)", margin: 0 }}>💫 Momentos Especiales</h2>
-              <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", margin: "0.125rem 0 0" }}>Los hitos de vuestra historia</p>
+              <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", fontWeight: 700, color: "white", margin: 0 }}>💫 Momentos Especiales</h2>
+              <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.6)", margin: "0.125rem 0 0" }}>
+                {moments.length > 0 ? `${moments.length} hito${moments.length !== 1 ? "s" : ""} en vuestra historia` : "Los hitos de vuestra historia"}
+              </p>
             </div>
             <button
               onClick={() => setView("create")}
-              style={{ width: 36, height: 36, borderRadius: "50%", background: "#be185d", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+              style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.3)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, backdropFilter: "blur(4px)" }}
             >
               <Plus size={18} color="white" />
             </button>
           </div>
         </div>
 
-        {/* content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "0.75rem 1rem" }}>
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "0.875rem 1rem", background: "#fdf2f8" }}>
           {loading ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--foreground-muted)", fontSize: "0.875rem" }}>Cargando...</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#be185d", fontSize: "0.875rem" }}>Cargando...</div>
           ) : moments.length === 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "0.5rem", paddingBottom: "2rem" }}>
-              <span style={{ fontSize: "3rem" }}>💫</span>
-              <p style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)", margin: 0, textAlign: "center" }}>Aún no hay momentos</p>
-              <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", margin: 0, textAlign: "center" }}>Guarda vuestros hitos más especiales</p>
-              <button onClick={() => setView("create")} style={{ marginTop: "0.5rem", padding: "0.5rem 1.25rem", borderRadius: "999px", background: "#be185d", color: "white", border: "none", fontWeight: 700, fontSize: "0.8125rem", cursor: "pointer", fontFamily: "inherit" }}>
-                Añadir el primero
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "0.75rem", paddingBottom: "2rem", textAlign: "center" }}>
+              <span style={{ fontSize: "4rem", lineHeight: 1 }}>💫</span>
+              <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "#be185d", margin: 0 }}>Aún no hay momentos</p>
+              <p style={{ fontSize: "0.8125rem", color: "#9d174d", margin: 0, lineHeight: 1.5, maxWidth: "220px" }}>Guarda vuestros hitos más especiales para recordarlos siempre</p>
+              <button
+                onClick={() => setView("create")}
+                style={{ marginTop: "0.25rem", padding: "0.625rem 1.375rem", borderRadius: "999px", background: "linear-gradient(135deg, #be185d, #ec4899)", color: "white", border: "none", fontWeight: 700, fontSize: "0.875rem", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(190,24,93,0.35)" }}
+              >
+                Añadir el primero ✨
               </button>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-              {moments.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => { setSelected(m); setView("detail") }}
-                  style={{ display: "flex", alignItems: "center", gap: "0.875rem", padding: "0.75rem", borderRadius: "16px", background: "var(--card)", border: "1.5px solid var(--border)", cursor: "pointer", textAlign: "left", fontFamily: "inherit", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", width: "100%" }}
-                >
-                  {m.thumb_url || m.photo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.thumb_url ?? m.photo_url ?? ""} alt="" style={{ width: 52, height: 52, borderRadius: "12px", objectFit: "cover", flexShrink: 0 }} />
-                  ) : (
-                    <div style={{ width: 52, height: 52, borderRadius: "12px", background: "linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.75rem", flexShrink: 0 }}>
-                      {m.emoji}
+            /* Timeline list */
+            <div style={{ position: "relative" }}>
+              {/* Timeline line */}
+              <div style={{ position: "absolute", left: "1.1875rem", top: 8, bottom: 8, width: 2, background: "linear-gradient(to bottom, #f9a8d4, #fce7f3)", borderRadius: "1px" }} />
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {moments.map((m, i) => (
+                  <button
+                    key={m.id}
+                    onClick={() => { setSelected(m); setView("detail") }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "0.875rem",
+                      padding: "0.75rem 0.875rem 0.75rem 2.5rem",
+                      borderRadius: "16px",
+                      background: "white",
+                      border: "1.5px solid #fce7f3",
+                      cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                      boxShadow: "0 2px 8px rgba(190,24,93,0.08)",
+                      width: "100%",
+                      position: "relative",
+                      animation: `momentCardIn 0.35s ease both`,
+                      animationDelay: `${i * 0.05}s`,
+                    }}
+                  >
+                    {/* Timeline dot */}
+                    <div style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", width: 14, height: 14, borderRadius: "50%", background: "#be185d", border: "2.5px solid #fce7f3", boxShadow: "0 0 0 2px #be185d20" }} />
+
+                    {m.thumb_url || m.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={m.thumb_url ?? m.photo_url ?? ""} alt="" style={{ width: 52, height: 52, borderRadius: "12px", objectFit: "cover", flexShrink: 0, border: "1.5px solid #fce7f3" }} />
+                    ) : (
+                      <div style={{ width: 52, height: 52, borderRadius: "12px", background: "linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.75rem", flexShrink: 0, border: "1.5px solid #fce7f3" }}>
+                        {m.emoji}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#1c1917", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.emoji} {m.title}</p>
+                      <p style={{ fontSize: "0.6875rem", color: "#be185d", margin: "0.125rem 0 0", fontWeight: 600 }}>{formatDate(m.moment_date)}</p>
+                      <p style={{ fontSize: "0.625rem", color: "#9d174d", margin: "0.0625rem 0 0", opacity: 0.7 }}>{timeAgo(m.moment_date)}</p>
                     </div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.emoji} {m.title}</p>
-                    <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", margin: "0.125rem 0 0" }}>{formatDate(m.moment_date)}</p>
-                    {m.description && <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", margin: "0.25rem 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.description}</p>}
-                  </div>
-                </button>
-              ))}
+                    <span style={{ color: "#f9a8d4", flexShrink: 0, fontSize: "1rem" }}>›</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -199,67 +263,89 @@ export function MomentsApp({ onBack }: { onBack: () => void }) {
   if (view === "create") {
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-        <div style={{ padding: "1rem 1rem 0.75rem", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-          <button onClick={() => setView("list")} style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", fontWeight: 600, fontSize: "0.8125rem", padding: 0, fontFamily: "inherit", marginBottom: "0.5rem" }}>
+        <style>{MOMENTS_CSS}</style>
+
+        {/* Header */}
+        <div style={{ padding: "1rem 1rem 0.875rem", flexShrink: 0, background: "linear-gradient(135deg, #831843 0%, #be185d 100%)" }}>
+          <button onClick={() => setView("list")} style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: "0.8125rem", padding: 0, fontFamily: "inherit", marginBottom: "0.5rem" }}>
             <ChevronLeft size={16} /> Momentos
           </button>
-          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Nuevo momento</h3>
+          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "white", margin: 0 }}>✨ Nuevo momento</h3>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
-          {/* emoji selector */}
-          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Icono</p>
+        <div style={{ flex: 1, overflowY: "auto", padding: "1rem", background: "#fdf2f8" }}>
+          {/* Emoji selector */}
+          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#be185d", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Icono</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem", marginBottom: "1rem" }}>
             {EMOJIS.map((e) => (
-              <button key={e} onClick={() => setFEmoji(e)} style={{ width: 38, height: 38, borderRadius: "10px", border: `2px solid ${fEmoji === e ? "#be185d" : "var(--border)"}`, background: fEmoji === e ? "#fdf2f8" : "var(--card)", fontSize: "1.25rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button
+                key={e}
+                onClick={() => setFEmoji(e)}
+                style={{
+                  width: 40, height: 40, borderRadius: "12px",
+                  border: `2px solid ${fEmoji === e ? "#be185d" : "#fce7f3"}`,
+                  background: fEmoji === e ? "white" : "transparent",
+                  fontSize: "1.375rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: fEmoji === e ? "0 2px 8px rgba(190,24,93,0.25)" : "none",
+                  transition: "all 0.12s",
+                }}
+              >
                 {e}
               </button>
             ))}
           </div>
 
-          {/* title */}
-          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.375rem" }}>Título *</p>
+          {/* Title */}
+          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#be185d", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.375rem" }}>Título *</p>
           <input
             value={fTitle}
             onChange={(e) => setFTitle(e.target.value)}
             placeholder="Primera cita, Primer viaje..."
             maxLength={60}
-            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "12px", border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--foreground)", fontSize: "0.9375rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box", marginBottom: "1rem" }}
+            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "12px", border: "1.5px solid #fce7f3", background: "white", color: "#1c1917", fontSize: "0.9375rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box", marginBottom: "1rem" }}
           />
 
-          {/* date */}
-          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.375rem" }}>Fecha *</p>
+          {/* Date */}
+          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#be185d", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.375rem" }}>Fecha *</p>
           <input
             type="date"
             value={fDate}
             onChange={(e) => setFDate(e.target.value)}
-            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "12px", border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--foreground)", fontSize: "0.9375rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box", marginBottom: "1rem" }}
+            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "12px", border: "1.5px solid #fce7f3", background: "white", color: "#1c1917", fontSize: "0.9375rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box", marginBottom: "0.375rem" }}
           />
+          {fDate && (
+            <p style={{ fontSize: "0.6875rem", color: "#9d174d", marginBottom: "1rem", fontWeight: 600 }}>
+              📅 {formatDate(fDate)} · {timeAgo(fDate)}
+            </p>
+          )}
 
-          {/* description */}
-          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.375rem" }}>Descripción</p>
+          {/* Description */}
+          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#be185d", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.375rem" }}>Descripción</p>
           <textarea
             value={fDesc}
             onChange={(e) => setFDesc(e.target.value)}
             placeholder="¿Qué pasó ese día?"
             maxLength={300}
             rows={3}
-            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "12px", border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--foreground)", fontSize: "0.875rem", fontFamily: "inherit", outline: "none", resize: "none", boxSizing: "border-box", marginBottom: "0.25rem" }}
+            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "12px", border: "1.5px solid #fce7f3", background: "white", color: "#1c1917", fontSize: "0.875rem", fontFamily: "inherit", outline: "none", resize: "none", boxSizing: "border-box", marginBottom: "0.25rem" }}
           />
-          <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", textAlign: "right", marginBottom: "1rem" }}>{fDesc.length}/300</p>
+          <p style={{ fontSize: "0.625rem", color: "#9d174d", textAlign: "right", marginBottom: "1rem" }}>{fDesc.length}/300</p>
 
-          {/* photo */}
-          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.375rem" }}>Foto</p>
+          {/* Photo */}
+          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#be185d", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.375rem" }}>Foto</p>
           {fPhoto ? (
             <div style={{ position: "relative", marginBottom: "1rem" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={fThumb ?? fPhoto} alt="" style={{ width: "100%", height: 160, objectFit: "cover", borderRadius: "12px" }} />
+              <img src={fThumb ?? fPhoto} alt="" style={{ width: "100%", height: 160, objectFit: "cover", borderRadius: "14px", border: "1.5px solid #fce7f3" }} />
               <button onClick={() => { setFPhoto(null); setFThumb(null) }} style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", cursor: "pointer", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 ✕
               </button>
             </div>
           ) : (
-            <button onClick={openGallery} style={{ width: "100%", padding: "0.75rem", borderRadius: "12px", border: "1.5px dashed var(--border)", background: "var(--card)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", color: "var(--foreground-muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
+            <button
+              onClick={openGallery}
+              style={{ width: "100%", padding: "0.875rem", borderRadius: "12px", border: "2px dashed #f9a8d4", background: "white", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", color: "#be185d", fontSize: "0.875rem", marginBottom: "1rem", fontWeight: 600 }}
+            >
               <Image size={16} /> Elegir de la galería
             </button>
           )}
@@ -267,32 +353,38 @@ export function MomentsApp({ onBack }: { onBack: () => void }) {
           <button
             onClick={handleCreate}
             disabled={saving}
-            style={{ width: "100%", padding: "0.75rem", borderRadius: "14px", background: "#be185d", color: "white", border: "none", fontWeight: 700, fontSize: "0.9375rem", fontFamily: "inherit", cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}
+            style={{
+              width: "100%", padding: "0.8125rem", borderRadius: "14px",
+              background: "linear-gradient(135deg, #be185d, #ec4899)", color: "white",
+              border: "none", fontWeight: 700, fontSize: "0.9375rem", fontFamily: "inherit",
+              cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1,
+              boxShadow: "0 4px 16px rgba(190,24,93,0.35)",
+            }}
           >
             {saving ? "Guardando..." : "Guardar momento 💫"}
           </button>
         </div>
 
-        {/* gallery modal */}
+        {/* Gallery modal */}
         {showGallery && (
           <div style={{ position: "absolute", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.55)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-            <div style={{ background: "var(--background)", borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "65%", display: "flex", flexDirection: "column" }}>
+            <div style={{ background: "white", borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "65%", display: "flex", flexDirection: "column" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem", flexShrink: 0 }}>
-                <p style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)", margin: 0 }}>Elige una foto</p>
-                <button onClick={() => setShowGallery(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", fontSize: "1.25rem" }}>✕</button>
+                <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "#1c1917", margin: 0 }}>Elige una foto</p>
+                <button onClick={() => setShowGallery(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "1.25rem" }}>✕</button>
               </div>
               <div style={{ overflowY: "auto", flex: 1 }}>
                 {galleryLoading ? (
-                  <p style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: "0.875rem", padding: "2rem 0" }}>Cargando fotos...</p>
+                  <p style={{ textAlign: "center", color: "#9ca3af", fontSize: "0.875rem", padding: "2rem 0" }}>Cargando fotos...</p>
                 ) : galleryPhotos.length === 0 ? (
-                  <p style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: "0.875rem", padding: "2rem 0" }}>No hay fotos en la galería</p>
+                  <p style={{ textAlign: "center", color: "#9ca3af", fontSize: "0.875rem", padding: "2rem 0" }}>No hay fotos en la galería</p>
                 ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.25rem" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.375rem" }}>
                     {galleryPhotos.map((p, i) => (
                       <button
                         key={p.id ?? i}
                         onClick={() => { setFPhoto(p.image_url); setFThumb(p.thumb_url ?? p.medium_url ?? p.image_url); setShowGallery(false) }}
-                        style={{ aspectRatio: "1", padding: 0, border: "none", cursor: "pointer", borderRadius: "6px", overflow: "hidden" }}
+                        style={{ aspectRatio: "1", padding: 0, border: "2px solid transparent", cursor: "pointer", borderRadius: "8px", overflow: "hidden" }}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={p.thumb_url ?? p.medium_url ?? p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -312,43 +404,67 @@ export function MomentsApp({ onBack }: { onBack: () => void }) {
 
   if (view === "detail" && selected) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-        {/* photo header */}
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", animation: "slideInRight 0.3s ease" }}>
+        <style>{MOMENTS_CSS}</style>
+
+        {/* Photo header */}
         <div style={{ position: "relative", flexShrink: 0 }}>
           {selected.photo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={selected.photo_url} alt="" style={{ width: "100%", height: 200, objectFit: "cover" }} />
+            <img src={selected.photo_url} alt="" style={{ width: "100%", height: 220, objectFit: "cover" }} />
           ) : (
-            <div style={{ height: 160, background: "linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "5rem" }}>
+            <div style={{ height: 180, background: "linear-gradient(135deg, #831843 0%, #be185d 50%, #ec4899 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "5rem" }}>
               {selected.emoji}
             </div>
           )}
           {selected.photo_url && (
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 60%)" }} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(131,24,67,0.7) 0%, transparent 55%)" }} />
           )}
           <button
             onClick={() => { setView("list"); setSelected(null) }}
-            style={{ position: "absolute", top: 12, left: 12, width: 34, height: 34, borderRadius: "50%", background: "rgba(0,0,0,0.35)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ position: "absolute", top: 12, left: 12, width: 36, height: 36, borderRadius: "50%", background: "rgba(0,0,0,0.35)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <ChevronLeft size={18} color="white" />
           </button>
           <button
             onClick={() => handleDelete(selected)}
             disabled={deleting}
-            style={{ position: "absolute", top: 12, right: 12, width: 34, height: 34, borderRadius: "50%", background: "rgba(0,0,0,0.35)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ position: "absolute", top: 12, right: 12, width: 36, height: 36, borderRadius: "50%", background: "rgba(0,0,0,0.35)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <Trash2 size={16} color="white" />
           </button>
+
+          {/* Title overlay on photo */}
+          {selected.photo_url && (
+            <div style={{ position: "absolute", bottom: "0.875rem", left: "1rem", right: "1rem" }}>
+              <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "white", margin: 0, textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>
+                {selected.emoji} {selected.title}
+              </h2>
+            </div>
+          )}
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem 1rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.25rem" }}>
-            {selected.photo_url && <span style={{ fontSize: "1.75rem" }}>{selected.emoji}</span>}
-            <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)", margin: 0 }}>{selected.title}</h2>
+        <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem 1rem", background: "#fdf2f8", animation: "detailIn 0.3s ease" }}>
+          {!selected.photo_url && (
+            <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "#1c1917", margin: "0 0 0.5rem" }}>
+              {selected.title}
+            </h2>
+          )}
+
+          {/* Date + relative time */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "0.8125rem", color: "white", background: "#be185d", fontWeight: 700, borderRadius: "999px", padding: "3px 10px" }}>
+              📅 {formatDate(selected.moment_date)}
+            </span>
+            <span style={{ fontSize: "0.75rem", color: "#9d174d", fontWeight: 600 }}>
+              {timeAgo(selected.moment_date)}
+            </span>
           </div>
-          <p style={{ fontSize: "0.8125rem", color: "#be185d", fontWeight: 600, margin: "0 0 1rem" }}>📅 {formatDate(selected.moment_date)}</p>
+
           {selected.description && (
-            <p style={{ fontSize: "0.9375rem", color: "var(--foreground)", lineHeight: 1.6, margin: 0 }}>{selected.description}</p>
+            <p style={{ fontFamily: "Georgia, serif", fontSize: "0.9375rem", color: "#1c1917", lineHeight: 1.65, margin: 0, background: "white", padding: "1rem", borderRadius: "14px", border: "1.5px solid #fce7f3" }}>
+              {selected.description}
+            </p>
           )}
         </div>
       </div>
