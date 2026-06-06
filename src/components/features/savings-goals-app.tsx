@@ -276,7 +276,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
                 const active = goalIconKey === key
                 return (
                   <button key={key} onClick={() => setGoalIconKey(key)} title={key} style={{
-                    width: 40, height: 40, borderRadius: 12, border: "none", cursor: "pointer",
+                    width: 40, height: 40, borderRadius: 12, cursor: "pointer",
                     background: active ? "rgba(52,211,153,0.2)" : "rgba(255,255,255,0.06)",
                     border: active ? "1.5px solid #34d39966" : "1.5px solid rgba(255,255,255,0.08)",
                     boxShadow: active ? "0 0 12px rgba(52,211,153,0.3)" : "none",
@@ -415,7 +415,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
               {GOAL_ICONS.map(({ key, Icon }) => {
                 const active = editGoalIconKey === key
                 return (
-                  <button key={key} onClick={() => setEditGoalIconKey(key)} title={key} style={{ width: 36, height: 36, borderRadius: 10, border: "none", cursor: "pointer", background: active ? "rgba(52,211,153,0.2)" : "rgba(255,255,255,0.06)", border: active ? "1.5px solid #34d39966" : "1.5px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" } as React.CSSProperties}>
+                  <button key={key} onClick={() => setEditGoalIconKey(key)} title={key} style={{ width: 36, height: 36, borderRadius: 10, cursor: "pointer", background: active ? "rgba(52,211,153,0.2)" : "rgba(255,255,255,0.06)", border: active ? "1.5px solid #34d39966" : "1.5px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" } as React.CSSProperties}>
                     <Icon size={16} color={active ? "#34d399" : "#64748b"} />
                   </button>
                 )
@@ -480,7 +480,7 @@ export function SavingsGoalsApp({ onBack }: Props) {
 
           {/* History */}
           <div>
-            <p style={{ fontWeight: 700, fontSize: "0.8125rem", color: "#94a3b8", marginBottom: "0.625rem", display: "flex", alignItems: "center", gap: 4, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "0.6875rem" }}>
+            <p style={{ fontWeight: 700, color: "#94a3b8", marginBottom: "0.625rem", display: "flex", alignItems: "center", gap: 4, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "0.6875rem" }}>
               <ClipboardList size={12} /> Historial de aportaciones
             </p>
             {loadingContribs ? (
