@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { ChevronLeft } from "lucide-react"
 
 // ── Static game data (fallback local — full pool served by /api/games/question) ──
@@ -466,6 +466,41 @@ function shuffled<T>(arr: T[]): T[] {
   return a
 }
 
+const GAME_KEYFRAMES = `
+@keyframes gameCardIn {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes flipCard {
+  0%   { transform: rotateY(0deg) scale(1); }
+  45%  { transform: rotateY(88deg) scale(0.95); }
+  55%  { transform: rotateY(88deg) scale(0.95); }
+  100% { transform: rotateY(0deg) scale(1); }
+}
+@keyframes choiceReveal {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+@keyframes celebratePop {
+  0%   { transform: scale(0.4) rotate(-8deg); opacity: 0; }
+  65%  { transform: scale(1.18) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes glowPulse {
+  0%,100% { text-shadow: 0 0 8px rgba(167,139,250,0.6), 0 0 20px rgba(167,139,250,0.3); }
+  50%     { text-shadow: 0 0 16px rgba(167,139,250,0.9), 0 0 40px rgba(167,139,250,0.5); }
+}
+@keyframes burstFloat {
+  0%   { transform: translateY(0) scale(1.2); opacity: 1; }
+  100% { transform: translateY(-48px) scale(0.4); opacity: 0; }
+}
+@keyframes floatBounce {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-6px); }
+}
+`
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface Props { onBack: () => void }
@@ -473,10 +508,15 @@ type View = "home" | "verdad-reto" | "prefieres" | "36-preguntas"
 type VorMode = "verdad" | "reto"
 
 const MODES = [
-  { id: "verdad-reto" as View,   emoji: "🎴", name: "Verdad o Reto",    desc: "Preguntas íntimas y retos divertidos", color: "#7c3aed" },
-  { id: "prefieres" as View,     emoji: "⚖️", name: "¿Qué prefieres?",  desc: "Dilemas para conocerse mejor",         color: "#0369a1" },
-  { id: "36-preguntas" as View,  emoji: "💬", name: "36 Preguntas",     desc: "El estudio que une corazones",         color: "#b45309" },
+  { id: "verdad-reto" as View,  emoji: "🎴", name: "Verdad o Reto",   desc: "Preguntas íntimas y retos divertidos", color: "#7c3aed", count: "174 cartas" },
+  { id: "prefieres" as View,    emoji: "⚖️", name: "¿Qué prefieres?", desc: "Dilemas para conocerse mejor",         color: "#0369a1", count: "64 dilemas" },
+  { id: "36-preguntas" as View, emoji: "💬", name: "36 Preguntas",    desc: "El estudio que une corazones",         color: "#b45309", count: "36 preguntas" },
 ]
+
+const DARK_BG: React.CSSProperties = {
+  background: "linear-gradient(160deg, #0d0d1a 0%, #1a0f2e 55%, #0f1a2e 100%)",
+  minHeight: "100%",
+}
 
 export function CoupleGamesApp({ onBack }: Props) {
   const [view, setView] = useState<View>("home")
@@ -490,11 +530,14 @@ export function CoupleGamesApp({ onBack }: Props) {
   const [rIdx, setRIdx] = useState(0)
   const [vorFlipped, setVorFlipped] = useState(false)
   const [vorLoading, setVorLoading] = useState(false)
+  const [flipping, setFlipping] = useState(false)
 
   // — ¿Qué prefieres? —
   const [dilemmas, setDilemmas] = useState<Dilemma[]>([])
   const [dIdx, setDIdx] = useState(0)
   const [dChoice, setDChoice] = useState<"a" | "b" | null>(null)
+  const [burstOpt, setBurstOpt] = useState<"a" | "b" | null>(null)
+  const burstTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // — 36 Preguntas —
   const [q36Idx, setQ36Idx] = useState(() => {
@@ -528,11 +571,11 @@ export function CoupleGamesApp({ onBack }: Props) {
   const enterGame = useCallback((v: View) => {
     if (v === "verdad-reto") {
       setVIdx(0); setRIdx(0)
-      setVorMode("verdad"); setVorFlipped(false)
+      setVorMode("verdad"); setVorFlipped(false); setFlipping(false)
       loadVorQuestions("parejas")
     } else if (v === "prefieres") {
       setDilemmas(shuffled(QUE_PREFIERES))
-      setDIdx(0); setDChoice(null)
+      setDIdx(0); setDChoice(null); setBurstOpt(null)
     }
     setView(v)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -544,6 +587,9 @@ export function CoupleGamesApp({ onBack }: Props) {
     }
   }, [q36Idx])
 
+  // cleanup burst timer on unmount
+  useEffect(() => () => { if (burstTimer.current) clearTimeout(burstTimer.current) }, [])
+
   // — Derived —
   const currentVerdad = verdades[vIdx % Math.max(verdades.length, 1)]
   const currentReto   = retos[rIdx % Math.max(retos.length, 1)]
@@ -553,58 +599,83 @@ export function CoupleGamesApp({ onBack }: Props) {
   const q36Progress   = Math.min(q36Idx + 1, 36)
   const q36Set        = currentQ36?.set ?? 1
 
-  // ── Render helpers ────────────────────────────────────────────────────────
+  // — VoR flip helper —
+  function goNextVor(isVerdad: boolean) {
+    if (flipping || vorLoading) return
+    setFlipping(true)
+    setTimeout(() => {
+      if (isVerdad) setVIdx(i => (i + 1) % Math.max(verdades.length, 1))
+      else setRIdx(i => (i + 1) % Math.max(retos.length, 1))
+      setFlipping(false)
+    }, 220)
+  }
 
-  const chipStyle = (active: boolean, color: string) => ({
-    padding: "0.4rem 1rem", borderRadius: "999px", border: `2px solid ${active ? color : "var(--border)"}`,
-    background: active ? color : "transparent", color: active ? "white" : "var(--foreground-muted)",
-    fontWeight: 700, fontSize: "0.8125rem", cursor: "pointer", fontFamily: "inherit",
-    transition: "all 0.15s ease",
-  } as React.CSSProperties)
-
-  const backBtn = (label: string) => (
-    <button
-      onClick={() => setView("home")}
-      style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "0.75rem" }}
-    >
-      <ChevronLeft size={16} /> {label}
-    </button>
-  )
+  // — ¿Qué prefieres? choice helper —
+  function pickChoice(opt: "a" | "b") {
+    setDChoice(opt)
+    setBurstOpt(opt)
+    if (burstTimer.current) clearTimeout(burstTimer.current)
+    burstTimer.current = setTimeout(() => setBurstOpt(null), 650)
+  }
 
   // ── Views ─────────────────────────────────────────────────────────────────
 
   if (view === "home") {
     return (
-      <div style={{ padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
-        <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "0.5rem" }}>
+      <div style={{ ...DARK_BG, padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
+        <style>{GAME_KEYFRAMES}</style>
+
+        {/* Back button */}
+        <button
+          onClick={onBack}
+          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.45)", fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "1.25rem" }}
+        >
           <ChevronLeft size={16} /> Inicio
         </button>
-        <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.25rem" }}>
-          🎮 Juegos de Pareja
-        </h2>
-        <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "1.25rem" }}>
-          Para conectar, reír y conocerse más
-        </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {MODES.map((m) => (
+
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <div style={{ fontSize: "3rem", lineHeight: 1, marginBottom: "0.625rem", animation: "glowPulse 2.8s ease-in-out infinite" }}>
+            🎮
+          </div>
+          <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.625rem", fontWeight: 700, color: "white", margin: 0, marginBottom: "0.375rem" }}>
+            Juegos de Pareja
+          </h2>
+          <p style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.45)", margin: 0 }}>
+            Para conectar, reír y conocerse más
+          </p>
+        </div>
+
+        {/* Mode cards */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+          {MODES.map((m, idx) => (
             <button
               key={m.id}
               onClick={() => enterGame(m.id)}
               style={{
                 display: "flex", alignItems: "center", gap: "1rem",
-                padding: "1rem 1.125rem", borderRadius: "16px",
-                background: `linear-gradient(135deg, ${m.color}18 0%, ${m.color}08 100%)`,
-                border: `1.5px solid ${m.color}30`,
+                padding: "1.125rem 1.25rem", borderRadius: "20px",
+                background: `linear-gradient(135deg, ${m.color}28 0%, ${m.color}10 100%)`,
+                border: `1.5px solid ${m.color}45`,
                 cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                transition: "transform 0.12s ease, box-shadow 0.12s ease",
+                boxShadow: `0 4px 24px ${m.color}18, inset 0 1px 0 rgba(255,255,255,0.06)`,
+                animation: `gameCardIn 0.4s ease both`,
+                animationDelay: `${idx * 0.09}s`,
+                position: "relative", overflow: "hidden",
               }}
             >
-              <span style={{ fontSize: "2rem", lineHeight: 1, flexShrink: 0 }}>{m.emoji}</span>
-              <div>
-                <p style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--foreground)", margin: 0 }}>{m.name}</p>
-                <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", margin: 0, marginTop: "0.125rem" }}>{m.desc}</p>
+              {/* subtle glow orb */}
+              <div aria-hidden style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: `${m.color}18`, filter: "blur(20px)" }} />
+              <span style={{ fontSize: "2.75rem", lineHeight: 1, flexShrink: 0, animation: "floatBounce 3s ease-in-out infinite", animationDelay: `${idx * 0.4}s` }}>
+                {m.emoji}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontWeight: 700, fontSize: "1rem", color: "white", margin: 0 }}>{m.name}</p>
+                <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", margin: 0, marginTop: "0.125rem" }}>{m.desc}</p>
               </div>
+              <span style={{ fontSize: "0.625rem", fontWeight: 700, color: m.color, background: `${m.color}22`, border: `1px solid ${m.color}40`, borderRadius: "999px", padding: "3px 8px", flexShrink: 0, letterSpacing: "0.02em" }}>
+                {m.count}
+              </span>
             </button>
           ))}
         </div>
@@ -616,29 +687,44 @@ export function CoupleGamesApp({ onBack }: Props) {
 
   if (view === "verdad-reto") {
     const isVerdad = vorMode === "verdad"
+    const accentColor = isVerdad ? "#7c3aed" : "#ea580c"
     const cardBg = isVerdad
-      ? "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)"
-      : "linear-gradient(135deg, #ea580c 0%, #f97316 100%)"
+      ? "linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #a855f7 100%)"
+      : "linear-gradient(135deg, #c2410c 0%, #ea580c 50%, #f97316 100%)"
+    const cardGlow = isVerdad ? "rgba(124,58,237,0.35)" : "rgba(234,88,12,0.35)"
+    const cardIdx = isVerdad ? vIdx + 1 : rIdx + 1
+    const cardTotal = isVerdad ? verdades.length : retos.length
 
     return (
-      <div style={{ padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-        {backBtn("Juegos")}
+      <div style={{ ...DARK_BG, padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        <style>{GAME_KEYFRAMES}</style>
+
+        {/* Back */}
+        <button
+          onClick={() => setView("home")}
+          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.45)", fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "0.75rem" }}
+        >
+          <ChevronLeft size={16} /> Juegos
+        </button>
+
+        {/* Header row */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
-          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "var(--foreground)", margin: 0 }}>
+          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "white", margin: 0 }}>
             🎴 Verdad o Reto
           </h3>
-          {!vorLoading && (
-            <span style={{ fontSize: "0.5625rem", fontWeight: 700, color: vorCategory === "neutral" ? "#0369a1" : "#7c3aed", background: vorCategory === "neutral" ? "#dbeafe" : "#ede9fe", borderRadius: "999px", padding: "2px 7px", letterSpacing: "0.04em" }}>
-              {verdades.length + retos.length} preguntas
+          {!vorLoading && cardTotal > 0 && (
+            <span style={{ fontSize: "0.625rem", fontWeight: 700, color: accentColor, background: `${accentColor}22`, border: `1px solid ${accentColor}40`, borderRadius: "999px", padding: "3px 8px", letterSpacing: "0.04em" }}>
+              {cardIdx} / {cardTotal}
             </span>
           )}
         </div>
 
-        {/* Category switch — centrado */}
+        {/* Category toggle */}
         <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.625rem" }}>
-          <div style={{ display: "inline-flex", background: "var(--muted)", borderRadius: "999px", padding: "3px", gap: "2px" }}>
+          <div style={{ display: "inline-flex", background: "rgba(255,255,255,0.07)", borderRadius: "999px", padding: "3px", gap: "2px" }}>
             {(["parejas", "neutral"] as const).map((cat) => {
               const active = vorCategory === cat
+              const catColor = cat === "parejas" ? "#7c3aed" : "#0369a1"
               return (
                 <button
                   key={cat}
@@ -650,10 +736,10 @@ export function CoupleGamesApp({ onBack }: Props) {
                     loadVorQuestions(cat)
                   }}
                   style={{
-                    width: "6rem", padding: "0.3rem 0", borderRadius: "999px", border: "none",
-                    background: active ? (cat === "parejas" ? "#7c3aed" : "#0369a1") : "transparent",
-                    color: active ? "white" : "var(--foreground-muted)",
-                    fontWeight: 700, fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit",
+                    width: "6.25rem", padding: "0.3rem 0", borderRadius: "999px", border: "none",
+                    background: active ? catColor : "transparent",
+                    color: active ? "white" : "rgba(255,255,255,0.45)",
+                    fontWeight: 700, fontSize: "0.75rem", cursor: vorLoading ? "default" : "pointer", fontFamily: "inherit",
                     transition: "all 0.18s ease",
                   }}
                 >
@@ -664,35 +750,63 @@ export function CoupleGamesApp({ onBack }: Props) {
           </div>
         </div>
 
-        {/* Mode selector */}
+        {/* Mode chips */}
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-          <button style={chipStyle(isVerdad, "#7c3aed")} onClick={() => { setVorMode("verdad"); setVorFlipped(false) }}>
-            💬 Verdad
-          </button>
-          <button style={chipStyle(!isVerdad, "#ea580c")} onClick={() => { setVorMode("reto"); setVorFlipped(false) }}>
-            🎯 Reto
-          </button>
+          {([
+            { mode: "verdad" as VorMode, color: "#7c3aed", label: "💬 Verdad" },
+            { mode: "reto"   as VorMode, color: "#ea580c", label: "🎯 Reto" },
+          ]).map(({ mode, color, label }) => {
+            const active = vorMode === mode
+            return (
+              <button
+                key={mode}
+                onClick={() => { setVorMode(mode); setVorFlipped(false) }}
+                style={{
+                  padding: "0.4rem 1rem", borderRadius: "999px",
+                  border: `2px solid ${active ? color : "rgba(255,255,255,0.15)"}`,
+                  background: active ? color : "transparent",
+                  color: active ? "white" : "rgba(255,255,255,0.45)",
+                  fontWeight: 700, fontSize: "0.8125rem", cursor: "pointer", fontFamily: "inherit",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
         </div>
 
         {/* Card */}
-        <div style={{
-          flex: 1, borderRadius: "20px", background: cardBg, padding: "1.5rem",
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.15)", marginBottom: "1rem", position: "relative", overflow: "hidden",
-        }}>
-          <div aria-hidden style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
-          <div aria-hidden style={{ position: "absolute", bottom: -20, left: -20, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
+        <div
+          style={{
+            flex: 1, borderRadius: "22px", background: cardBg, padding: "1.5rem",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            boxShadow: `0 8px 32px ${cardGlow}, 0 2px 8px rgba(0,0,0,0.3)`,
+            marginBottom: "1rem", position: "relative", overflow: "hidden",
+            transition: "background 0.3s ease",
+            transform: flipping ? "rotateY(88deg) scale(0.95)" : "rotateY(0deg) scale(1)",
+            transformOrigin: "center center",
+            transitionProperty: "transform, background",
+            transitionDuration: flipping ? "0.2s" : "0.25s",
+            transitionTimingFunction: "ease",
+          }}
+        >
+          {/* Decorative orbs */}
+          <div aria-hidden style={{ position: "absolute", top: -40, right: -40, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.07)" }} />
+          <div aria-hidden style={{ position: "absolute", bottom: -30, left: -30, width: 100, height: 100, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
+          <div aria-hidden style={{ position: "absolute", top: "30%", left: "10%", width: 60, height: 60, borderRadius: "50%", background: "rgba(255,255,255,0.04)" }} />
+
           {vorLoading ? (
-            <p style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.8)", textAlign: "center" }}>Cargando preguntas...</p>
+            <p style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.7)", textAlign: "center" }}>Cargando preguntas...</p>
           ) : (
             <>
-              <p style={{ fontSize: "2.5rem", marginBottom: "1rem", lineHeight: 1 }}>
+              <p style={{ fontSize: "3.5rem", marginBottom: "0.75rem", lineHeight: 1, position: "relative", zIndex: 1 }}>
                 {isVerdad ? "💬" : "🎯"}
               </p>
-              <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "rgba(255,255,255,0.75)", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.1em", position: "relative", zIndex: 1 }}>
                 {isVerdad ? "Verdad" : "Reto"}
               </p>
-              <p style={{ fontSize: "1rem", fontWeight: 600, color: "white", textAlign: "center", lineHeight: 1.45, position: "relative", zIndex: 1 }}>
+              <p style={{ fontSize: "1.0625rem", fontWeight: 600, color: "white", textAlign: "center", lineHeight: 1.5, position: "relative", zIndex: 1, maxWidth: "90%" }}>
                 {currentCard}
               </p>
             </>
@@ -701,21 +815,20 @@ export function CoupleGamesApp({ onBack }: Props) {
 
         {/* Next button */}
         <button
-          disabled={vorLoading}
-          onClick={() => {
-            if (isVerdad) setVIdx(i => (i + 1) % Math.max(verdades.length, 1))
-            else setRIdx(i => (i + 1) % Math.max(retos.length, 1))
-          }}
+          disabled={vorLoading || flipping}
+          onClick={() => goNextVor(isVerdad)}
           style={{
-            padding: "0.75rem", borderRadius: "14px", border: "none",
-            cursor: vorLoading ? "default" : "pointer",
-            background: isVerdad ? "#7c3aed" : "#ea580c", color: "white",
-            fontWeight: 700, fontSize: "0.9375rem", fontFamily: "inherit",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            opacity: vorLoading ? 0.6 : 1,
+            padding: "0.8125rem", borderRadius: "16px", border: "none",
+            cursor: (vorLoading || flipping) ? "default" : "pointer",
+            background: `linear-gradient(135deg, ${accentColor}, ${isVerdad ? "#a855f7" : "#f97316"})`,
+            color: "white", fontWeight: 700, fontSize: "0.9375rem", fontFamily: "inherit",
+            boxShadow: `0 4px 20px ${cardGlow}`,
+            opacity: (vorLoading || flipping) ? 0.6 : 1,
+            letterSpacing: "0.04em",
+            transition: "opacity 0.15s ease",
           }}
         >
-          Siguiente →
+          ✦ Siguiente
         </button>
       </div>
     )
@@ -724,68 +837,121 @@ export function CoupleGamesApp({ onBack }: Props) {
   // ── ¿Qué prefieres? ───────────────────────────────────────────────────────
 
   if (view === "prefieres") {
+    const optColors: Record<"a" | "b", string> = { a: "#0369a1", b: "#7c3aed" }
+
     return (
-      <div style={{ padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-        {backBtn("Juegos")}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
-          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "var(--foreground)", margin: 0 }}>
+      <div style={{ ...DARK_BG, padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        <style>{GAME_KEYFRAMES}</style>
+
+        {/* Back */}
+        <button
+          onClick={() => setView("home")}
+          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.45)", fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "0.75rem" }}
+        >
+          <ChevronLeft size={16} /> Juegos
+        </button>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "white", margin: 0 }}>
             ⚖️ ¿Qué prefieres?
           </h3>
-          <span style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", fontWeight: 600 }}>
+          <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>
             {dIdx + 1} / {dilemmas.length}
           </span>
         </div>
 
-        <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "1rem" }}>
+        {/* Progress bar */}
+        <div style={{ height: 5, borderRadius: "999px", background: "rgba(255,255,255,0.08)", overflow: "hidden", marginBottom: "0.75rem" }}>
+          <div style={{
+            height: "100%",
+            width: `${((dIdx + 1) / Math.max(dilemmas.length, 1)) * 100}%`,
+            borderRadius: "999px",
+            background: "linear-gradient(90deg, #0369a1, #7c3aed)",
+            transition: "width 0.35s ease",
+          }} />
+        </div>
+
+        <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", marginBottom: "0.875rem" }}>
           Cada uno elige en voz alta. ¡Sin pensar mucho!
         </p>
 
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1rem" }}>
+        {/* Options */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.625rem", marginBottom: "0.875rem" }}>
           {(["a", "b"] as const).map((opt) => {
             const selected = dChoice === opt
+            const color = optColors[opt]
             const text = opt === "a" ? currentDilemma.a : currentDilemma.b
             const label = opt === "a" ? "A" : "B"
-            const color = opt === "a" ? "#0369a1" : "#7c3aed"
+            const isBursting = burstOpt === opt
+
             return (
-              <button
-                key={opt}
-                onClick={() => setDChoice(opt)}
-                style={{
-                  flex: 1, padding: "1rem", borderRadius: "16px", border: `2px solid ${selected ? color : "var(--border)"}`,
-                  background: selected ? `${color}15` : "var(--card)",
-                  cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-                  display: "flex", alignItems: "center", gap: "0.75rem",
-                  transition: "all 0.15s ease",
-                  boxShadow: selected ? `0 4px 16px ${color}25` : "0 2px 8px rgba(0,0,0,0.04)",
-                }}
-              >
-                <span style={{
-                  width: 32, height: 32, borderRadius: "50%", background: selected ? color : "var(--border)",
-                  color: selected ? "white" : "var(--foreground-muted)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontWeight: 800, fontSize: "0.875rem", flexShrink: 0,
-                  transition: "all 0.15s ease",
-                }}>
-                  {label}
-                </span>
-                <span style={{ fontWeight: 600, fontSize: "0.875rem", color: selected ? color : "var(--foreground)", lineHeight: 1.35 }}>
-                  {text}
-                </span>
-              </button>
+              <div key={opt} style={{ flex: 1, position: "relative" }}>
+                <button
+                  onClick={() => pickChoice(opt)}
+                  style={{
+                    width: "100%", height: "100%", padding: "1rem 1rem", borderRadius: "18px",
+                    border: `2px solid ${selected ? color : "rgba(255,255,255,0.1)"}`,
+                    background: selected ? `${color}20` : "rgba(255,255,255,0.04)",
+                    cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                    display: "flex", alignItems: "center", gap: "0.875rem",
+                    transition: "border-color 0.15s ease, background 0.15s ease",
+                    boxShadow: selected ? `0 4px 20px ${color}30, inset 0 1px 0 ${color}15` : "none",
+                    animation: selected ? "choiceReveal 0.22s ease" : "none",
+                  }}
+                >
+                  <span style={{
+                    width: 34, height: 34, borderRadius: "50%",
+                    background: selected ? color : "rgba(255,255,255,0.1)",
+                    color: selected ? "white" : "rgba(255,255,255,0.5)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontWeight: 800, fontSize: "0.875rem", flexShrink: 0,
+                    transition: "all 0.15s ease",
+                    boxShadow: selected ? `0 2px 8px ${color}50` : "none",
+                  }}>
+                    {label}
+                  </span>
+                  <span style={{ fontWeight: 600, fontSize: "0.9rem", color: "rgba(255,255,255,0.9)", lineHeight: 1.4 }}>
+                    {text}
+                  </span>
+                </button>
+                {/* burst emoji */}
+                {isBursting && (
+                  <span aria-hidden style={{
+                    position: "absolute", top: "50%", left: "50%",
+                    transform: "translate(-50%,-50%)",
+                    fontSize: "1.5rem", pointerEvents: "none", zIndex: 10,
+                    animation: "burstFloat 0.65s ease forwards",
+                  }}>
+                    ✨
+                  </span>
+                )}
+              </div>
             )
           })}
+
+          {/* VS separator */}
+          <div style={{ textAlign: "center", fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 700, color: "#f59e0b", letterSpacing: "0.12em", flexShrink: 0, order: -1, padding: "0.125rem 0" }}>
+            — VS —
+          </div>
         </div>
 
+        {/* Next */}
         <button
-          onClick={() => { setDIdx(i => (i + 1) % dilemmas.length); setDChoice(null) }}
+          disabled={dChoice === null}
+          onClick={() => { setDIdx(i => (i + 1) % dilemmas.length); setDChoice(null); setBurstOpt(null) }}
           style={{
-            padding: "0.75rem", borderRadius: "14px", border: "none", cursor: "pointer",
-            background: "#0369a1", color: "white",
-            fontWeight: 700, fontSize: "0.9375rem", fontFamily: "inherit",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+            padding: "0.8125rem", borderRadius: "16px", border: "none",
+            cursor: dChoice === null ? "not-allowed" : "pointer",
+            background: "linear-gradient(135deg, #0369a1, #7c3aed)",
+            color: "white", fontWeight: 700, fontSize: "0.9375rem", fontFamily: "inherit",
+            boxShadow: dChoice !== null ? "0 4px 20px rgba(3,105,161,0.35)" : "none",
+            opacity: dChoice === null ? 0.38 : 1,
+            transition: "opacity 0.2s ease, box-shadow 0.2s ease",
+            letterSpacing: "0.04em",
           }}
         >
-          Siguiente →
+          ✦ Siguiente
         </button>
       </div>
     )
@@ -796,69 +962,133 @@ export function CoupleGamesApp({ onBack }: Props) {
   if (view === "36-preguntas") {
     const finished = q36Idx >= PREGUNTAS_36.length
     const setColors: Record<number, string> = { 1: "#b45309", 2: "#0369a1", 3: "#7c3aed" }
+    const setColorLight: Record<number, string> = { 1: "#fbbf24", 2: "#38bdf8", 3: "#a78bfa" }
     const setColor = setColors[q36Set] ?? "#b45309"
-    const setLabel = `Ronda ${q36Set} de 3`
+    const setColorL = setColorLight[q36Set] ?? "#fbbf24"
 
     return (
-      <div style={{ padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-        {backBtn("Juegos")}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
-          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "var(--foreground)", margin: 0 }}>
+      <div style={{ ...DARK_BG, padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        <style>{GAME_KEYFRAMES}</style>
+
+        {/* Back */}
+        <button
+          onClick={() => setView("home")}
+          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.45)", fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "0.75rem" }}
+        >
+          <ChevronLeft size={16} /> Juegos
+        </button>
+
+        {/* Header row */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "white", margin: 0 }}>
             💬 36 Preguntas
           </h3>
           {!finished && (
-            <span style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>
               {q36Progress} / 36
             </span>
           )}
         </div>
 
+        {/* Round indicator — 3 circles */}
+        {!finished && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.625rem" }}>
+            {[1, 2, 3].map((s) => {
+              const done = s < q36Set
+              const active = s === q36Set
+              const dotColor = setColors[s] ?? "#b45309"
+              const dotLight = setColorLight[s] ?? "#fbbf24"
+              return (
+                <div key={s} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: "50%",
+                    background: done ? dotColor : active ? `linear-gradient(135deg, ${dotColor}, ${dotLight})` : "rgba(255,255,255,0.08)",
+                    border: `2px solid ${(done || active) ? dotColor : "rgba(255,255,255,0.15)"}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "0.6875rem", fontWeight: 800,
+                    color: (done || active) ? "white" : "rgba(255,255,255,0.25)",
+                    boxShadow: active ? `0 0 10px ${dotColor}60` : "none",
+                    transition: "all 0.3s ease",
+                  }}>
+                    {done ? "✓" : s}
+                  </div>
+                  {s < 3 && (
+                    <div style={{ flex: 1, height: 2, width: 24, background: s < q36Set ? dotColor : "rgba(255,255,255,0.1)", borderRadius: "1px", transition: "background 0.3s ease" }} />
+                  )}
+                </div>
+              )
+            })}
+            <span style={{ marginLeft: "0.25rem", fontSize: "0.6875rem", color: setColor, fontWeight: 700 }}>
+              Ronda {q36Set} de 3
+            </span>
+          </div>
+        )}
+
         {/* Progress bar */}
-        <div style={{ height: 4, borderRadius: "999px", background: "var(--border)", overflow: "hidden", marginBottom: "0.875rem" }}>
-          <div style={{ height: "100%", width: `${(q36Progress / 36) * 100}%`, borderRadius: "999px", background: setColor, transition: "width 0.3s ease" }} />
+        <div style={{ height: 7, borderRadius: "999px", background: "rgba(255,255,255,0.08)", overflow: "hidden", marginBottom: "1rem" }}>
+          <div style={{
+            height: "100%",
+            width: `${(q36Progress / 36) * 100}%`,
+            borderRadius: "999px",
+            background: `linear-gradient(90deg, ${setColor}, ${setColorL})`,
+            boxShadow: `0 0 10px ${setColor}70`,
+            transition: "width 0.35s ease, background 0.4s ease",
+          }} />
         </div>
 
         {finished ? (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem" }}>
-            <span style={{ fontSize: "3rem" }}>🎉</span>
-            <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", fontWeight: 700, color: "var(--foreground)", margin: 0, textAlign: "center" }}>
-              ¡Habéis completado las 36 preguntas!
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", textAlign: "center" }}>
+            <span style={{ fontSize: "5rem", lineHeight: 1, animation: "celebratePop 0.7s ease both" }}>🎉</span>
+            <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "white", margin: 0 }}>
+              ¡Lo lograron!
             </h3>
-            <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", textAlign: "center", margin: 0 }}>
-              Según el estudio, responder juntos estas preguntas fortalece el vínculo de pareja. ¡Enhorabuena!
+            <p style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.55)", margin: 0, lineHeight: 1.55, maxWidth: "85%" }}>
+              Según el estudio de Arthur Aron, responder estas 36 preguntas juntos crea un vínculo profundo y duradero. ¡Enhorabuena a los dos! ❤️
             </p>
             <button
               onClick={() => setQ36Idx(0)}
-              style={{ marginTop: "0.5rem", padding: "0.625rem 1.25rem", borderRadius: "12px", border: "none", cursor: "pointer", background: "#7c3aed", color: "white", fontWeight: 700, fontSize: "0.875rem", fontFamily: "inherit" }}
+              style={{
+                marginTop: "0.5rem", padding: "0.75rem 1.5rem", borderRadius: "14px", border: "none",
+                cursor: "pointer", background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+                color: "white", fontWeight: 700, fontSize: "0.9375rem", fontFamily: "inherit",
+                boxShadow: "0 4px 20px rgba(124,58,237,0.4)",
+              }}
             >
               Empezar de nuevo
             </button>
           </div>
         ) : (
           <>
+            {/* Question card */}
             <div style={{
-              flex: 1, borderRadius: "20px", padding: "1.25rem",
-              background: `linear-gradient(135deg, ${setColor}18 0%, ${setColor}08 100%)`,
-              border: `1.5px solid ${setColor}30`,
+              flex: 1, borderRadius: "20px", padding: "1.375rem",
+              background: "rgba(255,255,255,0.04)",
+              border: `1px solid rgba(255,255,255,0.08)`,
+              borderLeft: `4px solid ${setColor}`,
               display: "flex", flexDirection: "column", justifyContent: "space-between",
               marginBottom: "1rem",
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
             }}>
-              <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: setColor, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                {setLabel}
-              </span>
-              <p style={{ fontSize: "1rem", fontWeight: 600, color: "var(--foreground)", lineHeight: 1.5, margin: "1rem 0" }}>
+              <p style={{ fontSize: "1.0625rem", fontWeight: 600, color: "white", lineHeight: 1.55, margin: 0 }}>
                 {currentQ36.text}
               </p>
-              <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", margin: 0 }}>
+              <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.3)", margin: 0, marginTop: "1rem" }}>
                 Turnarse para responder. Tomad vuestro tiempo.
               </p>
             </div>
 
+            {/* Navigation */}
             <div style={{ display: "flex", gap: "0.5rem" }}>
               {q36Idx > 0 && (
                 <button
                   onClick={() => setQ36Idx(i => i - 1)}
-                  style={{ padding: "0.75rem", borderRadius: "14px", border: "1.5px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)", fontWeight: 700, fontSize: "0.9375rem", fontFamily: "inherit", flex: "0 0 auto" }}
+                  style={{
+                    padding: "0.8125rem 1rem", borderRadius: "14px",
+                    border: "1.5px solid rgba(255,255,255,0.12)",
+                    cursor: "pointer", background: "rgba(255,255,255,0.06)",
+                    color: "rgba(255,255,255,0.7)", fontWeight: 700, fontSize: "0.9375rem",
+                    fontFamily: "inherit", flexShrink: 0,
+                  }}
                 >
                   ←
                 </button>
@@ -866,13 +1096,15 @@ export function CoupleGamesApp({ onBack }: Props) {
               <button
                 onClick={() => setQ36Idx(i => Math.min(i + 1, PREGUNTAS_36.length))}
                 style={{
-                  flex: 1, padding: "0.75rem", borderRadius: "14px", border: "none", cursor: "pointer",
-                  background: setColor, color: "white",
-                  fontWeight: 700, fontSize: "0.9375rem", fontFamily: "inherit",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                  flex: 1, padding: "0.8125rem", borderRadius: "14px", border: "none",
+                  cursor: "pointer",
+                  background: `linear-gradient(135deg, ${setColor}, ${setColorL})`,
+                  color: "white", fontWeight: 700, fontSize: "0.9375rem", fontFamily: "inherit",
+                  boxShadow: `0 4px 20px ${setColor}50`,
+                  letterSpacing: "0.04em",
                 }}
               >
-                Siguiente →
+                ✦ Siguiente
               </button>
             </div>
           </>
