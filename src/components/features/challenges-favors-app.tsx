@@ -735,13 +735,13 @@ export function ChallengesFavorsApp({ onBack }: Props) {
 
       {/* ── FAVORS TAB ── */}
       {mainTab === "favors" && (
-        <>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", background: CF_DARK_BG, overflow: "hidden" }}>
           {/* C6: Points/levels banner */}
           <div style={{
             margin: "0.5rem 0.75rem 0",
             padding: "0.625rem 0.875rem",
-            background: "linear-gradient(135deg, rgba(236,72,153,0.12) 0%, rgba(139,92,246,0.08) 100%)",
-            border: "1.5px solid rgba(236,72,153,0.3)",
+            background: "linear-gradient(135deg, rgba(236,72,153,0.18) 0%, rgba(139,92,246,0.12) 100%)",
+            border: "1.5px solid rgba(236,72,153,0.35)",
             borderRadius: "16px",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.375rem" }}>
@@ -1076,7 +1076,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
               </div>
             )}
           </PullToRefresh>
-        </>
+        </div>
       )}
 
       <style>{`
