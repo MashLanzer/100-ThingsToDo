@@ -888,6 +888,31 @@ export function JournalApp({ onBack }: Props) {
 
   function handlePinBackspace() { setPinInput(prev => prev.slice(0, -1)) }
 
+  // ── Dark theme constants ───────────────────────────────────────────────────
+  const J_DARK_BG = "linear-gradient(160deg, #0d0d1a 0%, #1a0f2e 55%, #0f1a2e 100%)"
+  const J_HEADER_STYLE: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: "0.5rem",
+    padding: "0.75rem 1rem",
+    background: "linear-gradient(135deg, #1a0f2e 0%, #0d0d1a 100%)",
+    borderBottom: "1px solid rgba(139,92,246,0.2)", flexShrink: 0,
+  }
+  const J_BODY_STYLE: React.CSSProperties = {
+    flex: 1, overflowY: "auto", padding: "0.75rem",
+    display: "flex", flexDirection: "column", gap: "0.5rem",
+    background: J_DARK_BG,
+  }
+  const J_INPUT_STYLE: React.CSSProperties = {
+    width: "100%", padding: "0.625rem 0.875rem", borderRadius: "12px",
+    border: "1.5px solid rgba(139,92,246,0.25)", background: "rgba(255,255,255,0.06)",
+    color: "white", fontFamily: "inherit", fontSize: "0.875rem",
+    boxSizing: "border-box" as const, outline: "none",
+  }
+  const J_CARD_STYLE: React.CSSProperties = {
+    background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: "14px", padding: "0.875rem",
+  }
+  void J_CARD_STYLE
+
   // ── PIN lock screen ────────────────────────────────────────────────────────
   if (pinRequired && !pinUnlocked) {
     return (
@@ -901,21 +926,21 @@ export function JournalApp({ onBack }: Props) {
             0%{transform:scale(0.8);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1}
           }
         `}</style>
-        <div className="app-content-header">
+        <div style={J_HEADER_STYLE}>
           <button className="back-btn-phone" onClick={onBack}>‹</button>
           <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Lock size={16} /> Diario Privado</span>
         </div>
-        <div className="app-content-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1.5rem", paddingTop: "2rem" }}>
-          <div style={{ animation: pinSuccess ? "pinPop 0.5s ease" : undefined, color: pinSuccess ? "#10b981" : "var(--primary)" }}>
+        <div style={{ ...J_BODY_STYLE, alignItems: "center", justifyContent: "center", paddingTop: "2rem" }}>
+          <div style={{ animation: pinSuccess ? "pinPop 0.5s ease" : undefined, color: pinSuccess ? "#10b981" : "#8b5cf6" }}>
             {pinSuccess ? <Unlock size={56} /> : <Lock size={56} />}
           </div>
           <div style={{ textAlign: "center" }}>
-            <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.25rem" }}>Diario privado</p>
-            <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)" }}>Ingresa tu PIN para continuar</p>
+            <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", fontWeight: 700, color: "white", marginBottom: "0.25rem" }}>Diario privado</p>
+            <p style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.5)" }}>Ingresa tu PIN para continuar</p>
           </div>
           <div style={{ display: "flex", gap: "0.875rem", animation: pinShake ? "pinShake 0.7s ease" : undefined }}>
             {[0, 1, 2, 3].map(i => (
-              <div key={i} style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid", borderColor: pinShake ? "#ef4444" : pinSuccess ? "#10b981" : "var(--primary)", background: pinInput.length > i ? (pinShake ? "#ef4444" : pinSuccess ? "#10b981" : "var(--primary)") : "transparent", transition: "background 0.15s, border-color 0.15s" }} />
+              <div key={i} style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid", borderColor: pinShake ? "#ef4444" : pinSuccess ? "#10b981" : "#8b5cf6", background: pinInput.length > i ? (pinShake ? "#ef4444" : pinSuccess ? "#10b981" : "#8b5cf6") : "transparent", transition: "background 0.15s, border-color 0.15s" }} />
             ))}
           </div>
           <input ref={pinHiddenRef} type="tel" inputMode="numeric" maxLength={4} value={pinInput}
@@ -933,24 +958,24 @@ export function JournalApp({ onBack }: Props) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.625rem", width: "100%", maxWidth: 240 }}>
             {[1,2,3,4,5,6,7,8,9].map(n => (
               <button key={n} onClick={() => handlePinKeyPress(String(n))}
-                style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid var(--border)", background: "white", cursor: "pointer", fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 600, color: "var(--foreground)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.06)", transition: "background 0.1s, transform 0.1s" }}
+                style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.06)", cursor: "pointer", fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 600, color: "white", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.3)", transition: "background 0.1s, transform 0.1s" }}
                 onMouseDown={e => (e.currentTarget.style.transform = "scale(0.92)")}
                 onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
               >{n}</button>
             ))}
             <div />
             <button onClick={() => handlePinKeyPress("0")}
-              style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid var(--border)", background: "white", cursor: "pointer", fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 600, color: "var(--foreground)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.06)", transition: "background 0.1s, transform 0.1s" }}
+              style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.06)", cursor: "pointer", fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 600, color: "white", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.3)", transition: "background 0.1s, transform 0.1s" }}
               onMouseDown={e => (e.currentTarget.style.transform = "scale(0.92)")}
               onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
             >0</button>
             <button onClick={handlePinBackspace}
-              style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid var(--border)", background: "white", cursor: "pointer", fontSize: "1.125rem", color: "var(--foreground-light)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.06)", transition: "background 0.1s, transform 0.1s" }}
+              style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.06)", cursor: "pointer", fontSize: "1.125rem", color: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.3)", transition: "background 0.1s, transform 0.1s" }}
               onMouseDown={e => (e.currentTarget.style.transform = "scale(0.92)")}
               onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
             >⌫</button>
           </div>
-          <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.8125rem", color: "var(--foreground-muted)", fontFamily: "inherit", textDecoration: "underline", marginTop: "0.25rem" }}>
+          <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.8125rem", color: "rgba(255,255,255,0.5)", fontFamily: "inherit", textDecoration: "underline", marginTop: "0.25rem" }}>
             Cancelar
           </button>
         </div>
@@ -1017,20 +1042,20 @@ export function JournalApp({ onBack }: Props) {
     const favDowLabel = ES_DAYS[favDow].charAt(0).toUpperCase() + ES_DAYS[favDow].slice(1)
 
     const statCard = (emoji: string, label: string, value: string) => (
-      <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+      <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "var(--radius-md)", padding: "0.875rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
         <span style={{ fontSize: "1.25rem" }}>{emoji}</span>
-        <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", fontWeight: 600 }}>{label}</span>
-        <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "var(--primary)" }}>{value}</span>
+        <span style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.5)", fontWeight: 600 }}>{label}</span>
+        <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "#8b5cf6" }}>{value}</span>
       </div>
     )
 
     return (
       <>
-        <div className="app-content-header">
+        <div style={J_HEADER_STYLE}>
           <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
           <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><BarChart2 size={14} /> Estadísticas</span>
         </div>
-        <div className="app-content-body">
+        <div style={J_BODY_STYLE}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.625rem", marginBottom: "1rem" }}>
             {statCard("🔥", "Racha máxima", `${maxStreak} día${maxStreak !== 1 ? "s" : ""}`)}
             {statCard("📝", "Mis entradas", `${myEntries.length}`)}
@@ -1040,8 +1065,8 @@ export function JournalApp({ onBack }: Props) {
             {statCard("📖", "Total juntos", `${statsEntries.length}`)}
           </div>
 
-          <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem" }}>
-            <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.9375rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.75rem" }}>Mis estados de ánimo</p>
+          <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "var(--radius-md)", padding: "0.875rem" }}>
+            <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.9375rem", fontWeight: 700, color: "white", marginBottom: "0.75rem" }}>Mis estados de ánimo</p>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
               {MOODS.map(m => {
                 const count = moodCounts[m.id] ?? 0
@@ -1049,11 +1074,11 @@ export function JournalApp({ onBack }: Props) {
                 return (
                   <div key={m.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                     <m.Icon size={16} style={{ color: m.accentBorder, flexShrink: 0 }} />
-                    <span style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--foreground-light)", width: 72, flexShrink: 0 }}>{m.label}</span>
-                    <div style={{ flex: 1, height: 14, background: "var(--muted)", borderRadius: "999px", overflow: "hidden" }}>
+                    <span style={{ fontSize: "0.6875rem", fontWeight: 600, color: "rgba(255,255,255,0.6)", width: 72, flexShrink: 0 }}>{m.label}</span>
+                    <div style={{ flex: 1, height: 14, background: "rgba(255,255,255,0.08)", borderRadius: "999px", overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${pct}%`, background: m.accentBorder, borderRadius: "999px", transition: "width 0.5s ease" }} />
                     </div>
-                    <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", width: 20, textAlign: "right", flexShrink: 0 }}>{count}</span>
+                    <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "rgba(255,255,255,0.5)", width: 20, textAlign: "right", flexShrink: 0 }}>{count}</span>
                   </div>
                 )
               })}
@@ -1086,23 +1111,23 @@ export function JournalApp({ onBack }: Props) {
         <style>{`
           @keyframes recordingPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
         `}</style>
-        <div className="app-content-header">
+        <div style={J_HEADER_STYLE}>
           <button className="back-btn-phone" onClick={() => { setView("calendar"); setJournalSearch(""); setJournalSearchOpen(false) }}>‹</button>
           <span>Timeline</span>
           {/* J-D: search toggle */}
           <button
             onClick={() => { setJournalSearchOpen(o => !o); if (journalSearchOpen) setJournalSearch("") }}
-            style={{ background: journalSearchOpen ? "var(--primary-lighter)" : "none", border: "none", cursor: "pointer", padding: "0.25rem", borderRadius: "6px", color: journalSearchOpen ? "var(--primary)" : "var(--foreground-muted)", display: "flex", alignItems: "center" }}
+            style={{ background: journalSearchOpen ? "rgba(139,92,246,0.2)" : "none", border: "none", cursor: "pointer", padding: "0.25rem", borderRadius: "6px", color: journalSearchOpen ? "#8b5cf6" : "rgba(255,255,255,0.5)", display: "flex", alignItems: "center" }}
             aria-label="Buscar"
           >
             <SearchIcon size={16} />
           </button>
         </div>
-        <div className="app-content-body">
+        <div style={J_BODY_STYLE}>
           {/* J-D: search input */}
           {journalSearchOpen && (
             <div style={{ position: "relative", marginBottom: "0.625rem" }}>
-              <span style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--foreground-muted)" }}><SearchIcon size={14} /></span>
+              <span style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "rgba(255,255,255,0.5)" }}><SearchIcon size={14} /></span>
               <input
                 className="input"
                 type="search"
@@ -1110,12 +1135,12 @@ export function JournalApp({ onBack }: Props) {
                 placeholder="Buscar en el timeline..."
                 value={journalSearch}
                 onChange={e => setJournalSearch(e.target.value)}
-                style={{ paddingLeft: "2rem", paddingRight: journalSearch ? "2rem" : undefined }}
+                style={{ ...J_INPUT_STYLE, paddingLeft: "2rem", paddingRight: journalSearch ? "2rem" : undefined }}
               />
               {journalSearch && (
                 <button
                   onClick={() => setJournalSearch("")}
-                  style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--foreground-muted)", fontSize: "1rem", lineHeight: 1, padding: 0 }}
+                  style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", fontSize: "1rem", lineHeight: 1, padding: 0 }}
                   aria-label="Limpiar búsqueda"
                 >×</button>
               )}
@@ -1125,13 +1150,13 @@ export function JournalApp({ onBack }: Props) {
           <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.625rem", overflowX: "auto", scrollbarWidth: "none" }}>
             {(["all", "me", "partner", "pinned"] as const).map(f => (
               <button key={f} onClick={() => setTimelineFilter(f)}
-                style={{ flexShrink: 0, fontSize: "0.6875rem", fontWeight: 700, padding: "0.3125rem 0.875rem", borderRadius: "999px", border: "none", cursor: "pointer", fontFamily: "inherit", background: timelineFilter === f ? "var(--primary)" : "var(--muted)", color: timelineFilter === f ? "white" : "var(--foreground-muted)", transition: "all 0.15s ease" }}>
+                style={{ flexShrink: 0, fontSize: "0.6875rem", fontWeight: 700, padding: "0.3125rem 0.875rem", borderRadius: "999px", border: "none", cursor: "pointer", fontFamily: "inherit", background: timelineFilter === f ? "#8b5cf6" : "rgba(255,255,255,0.08)", color: timelineFilter === f ? "white" : "rgba(255,255,255,0.5)", transition: "all 0.15s ease" }}>
                 {f === "all" ? "Todos" : f === "me" ? "Yo" : f === "partner" ? "Pareja" : "⭐ Guardados"}
               </button>
             ))}
           </div>
           {sorted.length === 0 && (
-            <div style={{ textAlign: "center", padding: "2rem 0", color: "var(--foreground-muted)" }}>
+            <div style={{ textAlign: "center", padding: "2rem 0", color: "rgba(255,255,255,0.5)" }}>
               <p style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📖</p>
               <p style={{ fontSize: "0.875rem" }}>{journalSearch ? "Sin resultados" : "Aún no hay entradas"}</p>
             </div>
@@ -1139,7 +1164,7 @@ export function JournalApp({ onBack }: Props) {
           <div style={{ position: "relative", paddingLeft: "1.5rem" }}>
             {/* Vertical line */}
             {sorted.length > 0 && (
-              <div style={{ position: "absolute", left: "0.4375rem", top: "1rem", bottom: "1rem", width: 2, background: "linear-gradient(to bottom, var(--primary), var(--secondary))", borderRadius: 1 }} />
+              <div style={{ position: "absolute", left: "0.4375rem", top: "1rem", bottom: "1rem", width: 2, background: "linear-gradient(to bottom, #8b5cf6, #ec4899)", borderRadius: 1 }} />
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               {sorted.map((entry) => {
@@ -1149,20 +1174,20 @@ export function JournalApp({ onBack }: Props) {
                 return (
                   <div key={entry.id} style={{ position: "relative" }}>
                     {/* Dot on the line */}
-                    <div style={{ position: "absolute", left: -20, top: "1rem", width: 10, height: 10, borderRadius: "50%", background: isMe ? "var(--primary)" : "var(--secondary)", border: "2px solid white", boxShadow: "0 0 0 2px " + (isMe ? "var(--primary)" : "var(--secondary)"), zIndex: 1 }} />
+                    <div style={{ position: "absolute", left: -20, top: "1rem", width: 10, height: 10, borderRadius: "50%", background: isMe ? "#8b5cf6" : "#ec4899", border: "2px solid rgba(255,255,255,0.15)", boxShadow: "0 0 0 2px " + (isMe ? "#8b5cf6" : "#ec4899"), zIndex: 1 }} />
                     <button
                       onClick={() => openEntry(entry)}
-                      style={{ width: "100%", textAlign: "left", background: "white", border: `1.5px solid ${isMe ? "var(--primary-light)" : "var(--secondary-light)"}`, borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", boxShadow: "var(--shadow-sm)", display: "flex", gap: "0.75rem", alignItems: "flex-start" }}
+                      style={{ width: "100%", textAlign: "left", background: "rgba(255,255,255,0.05)", border: `1.5px solid ${isMe ? "rgba(139,92,246,0.3)" : "rgba(236,72,153,0.3)"}`, borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", display: "flex", gap: "0.75rem", alignItems: "flex-start" }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
                         {/* Date + author badge */}
                         <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.25rem", flexWrap: "wrap" }}>
-                          <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: isMe ? "var(--primary)" : "var(--secondary)" }}>{formatDateEs(entry.date)}</span>
-                          <span style={{ fontSize: "0.5625rem", fontWeight: 700, padding: "0.125rem 0.375rem", borderRadius: "999px", background: isMe ? "var(--primary-lighter)" : "#fce7f3", color: isMe ? "var(--primary)" : "var(--secondary)" }}>
+                          <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: isMe ? "#8b5cf6" : "#ec4899" }}>{formatDateEs(entry.date)}</span>
+                          <span style={{ fontSize: "0.5625rem", fontWeight: 700, padding: "0.125rem 0.375rem", borderRadius: "999px", background: isMe ? "rgba(139,92,246,0.2)" : "rgba(236,72,153,0.2)", color: isMe ? "#8b5cf6" : "#ec4899" }}>
                             {isMe ? "Tú" : "Pareja"}
                           </span>
                           {entry.is_private && isMe && (
-                            <span style={{ fontSize: "0.5625rem", fontWeight: 700, padding: "0.125rem 0.375rem", borderRadius: "999px", background: "#f3f4f6", color: "#6b7280" }}>
+                            <span style={{ fontSize: "0.5625rem", fontWeight: 700, padding: "0.125rem 0.375rem", borderRadius: "999px", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }}>
                               🔒 Privada
                             </span>
                           )}
@@ -1178,7 +1203,7 @@ export function JournalApp({ onBack }: Props) {
                           </div>
                         )}
                         {/* Preview */}
-                        <p style={{ fontSize: "0.8125rem", color: "var(--foreground)", lineHeight: 1.55, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
+                        <p style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.9)", lineHeight: 1.55, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
                           {entry.content}
                         </p>
                       </div>
@@ -1205,7 +1230,7 @@ export function JournalApp({ onBack }: Props) {
     const LETTER_REACTION_EMOJIS = ["❤️", "🥹", "😍", "😂"]
     return (
       <>
-        <div className="app-content-header">
+        <div style={J_HEADER_STYLE}>
           <button className="back-btn-phone" onClick={() => setView("letters")}>‹</button>
           <span>Carta</span>
           {isFromMe && (
@@ -1214,23 +1239,23 @@ export function JournalApp({ onBack }: Props) {
             </button>
           )}
         </div>
-        <div className="app-content-body">
-          <div style={{ background: "linear-gradient(135deg, #fffbf0 0%, #fff8e8 100%)", border: "1.5px solid #f5e6c8", borderRadius: "var(--radius-lg)", padding: "1.25rem", boxShadow: "0 4px 16px rgba(245,158,11,0.12)" }}>
+        <div style={J_BODY_STYLE}>
+          <div style={{ background: "linear-gradient(135deg, #1a1208 0%, #120d05 100%)", border: "1.5px solid rgba(245,158,11,0.3)", borderRadius: "var(--radius-lg)", padding: "1.25rem", boxShadow: "0 4px 24px rgba(245,158,11,0.15)" }}>
             {/* Header */}
-            <div style={{ borderBottom: "1px solid #f5e6c8", paddingBottom: "0.75rem", marginBottom: "0.875rem" }}>
+            <div style={{ borderBottom: "1px solid rgba(245,158,11,0.2)", paddingBottom: "0.75rem", marginBottom: "0.875rem" }}>
               {selectedLetter.subject && (
-                <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "#92400e", marginBottom: "0.25rem" }}>{selectedLetter.subject}</p>
+                <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "#fbbf24", marginBottom: "0.25rem" }}>{selectedLetter.subject}</p>
               )}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "0.75rem", color: "#a16207", fontWeight: 600 }}>
+                <span style={{ fontSize: "0.75rem", color: "rgba(251,191,36,0.8)", fontWeight: 600 }}>
                   {isFromMe ? "✍️ De ti para tu pareja" : "💌 De tu pareja para ti"}
                 </span>
-                <span style={{ fontSize: "0.6875rem", color: "#92400e" }}>
+                <span style={{ fontSize: "0.6875rem", color: "rgba(251,191,36,0.7)" }}>
                   {new Date(selectedLetter.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
                 </span>
               </div>
             </div>
-            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1.0625rem", lineHeight: 1.75, color: "#3d2000", whiteSpace: "pre-wrap" }}>
+            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1.0625rem", lineHeight: 1.75, color: "rgba(255,245,220,0.9)", whiteSpace: "pre-wrap" }}>
               {selectedLetter.content}
             </p>
             {/* L-B: photo attachment */}
@@ -1243,7 +1268,7 @@ export function JournalApp({ onBack }: Props) {
               />
             )}
             <div style={{ marginTop: "1rem", textAlign: "right" }}>
-              <span style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "#92400e" }}>Con cariño, {isFromMe ? "tú 💜" : "tu pareja 💕"}</span>
+              <span style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "rgba(251,191,36,0.8)" }}>Con cariño, {isFromMe ? "tú 💜" : "tu pareja 💕"}</span>
             </div>
           </div>
           {/* L-C: reactions (only for received letters) */}
@@ -1253,17 +1278,17 @@ export function JournalApp({ onBack }: Props) {
               {Object.keys(letterReactions).length > 0 && (
                 <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
                   {Object.entries(letterReactions).map(([uid, emo]) => (
-                    <span key={uid} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.1875rem 0.5rem", borderRadius: "999px", background: uid === myUid ? "var(--primary-lighter)" : "#fce7f3", border: `1px solid ${uid === myUid ? "var(--primary-light)" : "#fbcfe8"}`, fontSize: "0.75rem", fontWeight: 700, color: uid === myUid ? "var(--primary)" : "var(--secondary)" }}>
+                    <span key={uid} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.1875rem 0.5rem", borderRadius: "999px", background: uid === myUid ? "rgba(139,92,246,0.2)" : "rgba(236,72,153,0.15)", border: `1px solid ${uid === myUid ? "rgba(139,92,246,0.4)" : "rgba(236,72,153,0.3)"}`, fontSize: "0.75rem", fontWeight: 700, color: uid === myUid ? "#8b5cf6" : "#ec4899" }}>
                       {emo} {uid === myUid ? "tú" : "pareja"}
                     </span>
                   ))}
                 </div>
               )}
               <div style={{ display: "flex", gap: "0.375rem", alignItems: "center" }}>
-                <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", fontWeight: 600 }}>Reaccionar:</span>
+                <span style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.5)", fontWeight: 600 }}>Reaccionar:</span>
                 {LETTER_REACTION_EMOJIS.map(emo => (
                   <button key={emo} onClick={() => toggleLetterReaction(selectedLetter, emo)} disabled={reactingLetterId === selectedLetter.id}
-                    style={{ fontSize: "1.25rem", lineHeight: 1, padding: "0.25rem 0.375rem", borderRadius: "999px", border: myLetterReaction === emo ? "2px solid var(--primary)" : "2px solid transparent", background: myLetterReaction === emo ? "var(--primary-lighter)" : "transparent", cursor: "pointer", transition: "transform 0.1s" }}
+                    style={{ fontSize: "1.25rem", lineHeight: 1, padding: "0.25rem 0.375rem", borderRadius: "999px", border: myLetterReaction === emo ? "2px solid #8b5cf6" : "2px solid transparent", background: myLetterReaction === emo ? "rgba(139,92,246,0.2)" : "transparent", cursor: "pointer", transition: "transform 0.1s" }}
                     onMouseDown={e => (e.currentTarget.style.transform = "scale(1.2)")}
                     onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
                   >{emo}</button>
@@ -1287,15 +1312,15 @@ export function JournalApp({ onBack }: Props) {
             style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.6)", display: "flex", flexDirection: "column" }}
             onClick={() => setShowLetterGallery(false)}
           >
-            <div style={{ marginTop: "auto", background: "white", borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "60vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <div style={{ marginTop: "auto", background: "linear-gradient(135deg, #1a1208 0%, #120d05 100%)", borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "60vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--foreground)" }}>Elegir foto</span>
-                <button onClick={() => setShowLetterGallery(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: "var(--foreground-muted)", lineHeight: 1 }}>×</button>
+                <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "white" }}>Elegir foto</span>
+                <button onClick={() => setShowLetterGallery(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: "rgba(255,255,255,0.5)", lineHeight: 1 }}>×</button>
               </div>
               {loadingGallery ? (
-                <div style={{ textAlign: "center", padding: "2rem", color: "var(--foreground-muted)" }}>Cargando fotos...</div>
+                <div style={{ textAlign: "center", padding: "2rem", color: "rgba(255,255,255,0.5)" }}>Cargando fotos...</div>
               ) : galleryPhotos.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "2rem", color: "var(--foreground-muted)" }}>Sin fotos aún</div>
+                <div style={{ textAlign: "center", padding: "2rem", color: "rgba(255,255,255,0.5)" }}>Sin fotos aún</div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.375rem" }}>
                   {galleryPhotos.map(p => (
@@ -1309,19 +1334,18 @@ export function JournalApp({ onBack }: Props) {
             </div>
           </div>
         )}
-        <div className="app-content-header">
+        <div style={J_HEADER_STYLE}>
           <button className="back-btn-phone" onClick={() => setView("letters")}>‹</button>
           <span>Escribir carta</span>
         </div>
-        <div className="app-content-body">
-          <div style={{ background: "linear-gradient(135deg, #fffbf0 0%, #fff8e8 100%)", border: "1.5px solid #f5e6c8", borderRadius: "var(--radius-lg)", padding: "1rem", marginBottom: "1rem" }}>
-            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "#92400e", marginBottom: "0.625rem" }}>A mi amor...</p>
+        <div style={J_BODY_STYLE}>
+          <div style={{ background: "linear-gradient(135deg, #1a1208 0%, #120d05 100%)", border: "1.5px solid rgba(245,158,11,0.3)", borderRadius: "var(--radius-lg)", padding: "1rem", marginBottom: "1rem" }}>
+            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "rgba(251,191,36,0.8)", marginBottom: "0.625rem" }}>A mi amor...</p>
             <input
-              className="input"
               placeholder="Asunto (opcional)"
               value={letterSubject}
               onChange={e => setLetterSubject(e.target.value)}
-              style={{ marginBottom: "0.625rem", background: "rgba(255,255,255,0.7)", borderColor: "#f5e6c8", fontFamily: "'Quicksand', sans-serif" }}
+              style={{ ...J_INPUT_STYLE, marginBottom: "0.625rem", background: "rgba(255,255,255,0.04)", borderColor: "rgba(245,158,11,0.3)", fontFamily: "'Quicksand', sans-serif" }}
             />
             <textarea
               className="textarea"
@@ -1329,7 +1353,7 @@ export function JournalApp({ onBack }: Props) {
               placeholder="Escribe tu carta aquí... sé libre de expresar lo que sientes 💜"
               value={letterContent}
               onChange={e => setLetterContent(e.target.value)}
-              style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", lineHeight: 1.75, background: "rgba(255,255,255,0.7)", borderColor: "#f5e6c8", color: "#3d2000" }}
+              style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", lineHeight: 1.75, background: "rgba(255,255,255,0.04)", borderColor: "rgba(245,158,11,0.3)", color: "rgba(255,245,220,0.9)" }}
             />
             {/* L-B: photo preview */}
             {letterPhoto && (
@@ -1344,19 +1368,19 @@ export function JournalApp({ onBack }: Props) {
           <button
             type="button"
             onClick={openGalleryForLetter}
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 0.875rem", borderRadius: "999px", border: "1.5px solid #f5e6c8", background: "#fffbf0", cursor: "pointer", fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 600, color: "#92400e", marginBottom: "0.75rem" }}
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 0.875rem", borderRadius: "999px", border: "1.5px solid rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.1)", cursor: "pointer", fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 600, color: "#fbbf24", marginBottom: "0.75rem" }}
           >
             📷 Añadir foto
           </button>
 
           {/* L-A: schedule send */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.75rem" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.375rem", cursor: "pointer", fontSize: "0.8125rem", fontWeight: 600, color: scheduleEnabled ? "var(--primary)" : "var(--foreground-muted)" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.375rem", cursor: "pointer", fontSize: "0.8125rem", fontWeight: 600, color: scheduleEnabled ? "#8b5cf6" : "rgba(255,255,255,0.5)" }}>
               <input
                 type="checkbox"
                 checked={scheduleEnabled}
                 onChange={e => { setScheduleEnabled(e.target.checked); if (!e.target.checked) setLetterSendDate("") }}
-                style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
+                style={{ accentColor: "#8b5cf6", width: 16, height: 16 }}
               />
               📅 Programar envío
             </label>
@@ -1365,14 +1389,13 @@ export function JournalApp({ onBack }: Props) {
             <div style={{ marginBottom: "0.75rem" }}>
               <input
                 type="date"
-                className="input"
                 value={letterSendDate}
                 min={todayISO}
                 onChange={e => setLetterSendDate(e.target.value)}
-                style={{ borderColor: "var(--primary-light)", background: "var(--primary-lighter)" }}
+                style={{ ...J_INPUT_STYLE, borderColor: "rgba(139,92,246,0.4)", background: "rgba(139,92,246,0.1)" }}
               />
               {letterSendDate && (
-                <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>
+                <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.5)", marginTop: "0.25rem" }}>
                   Se enviará el {new Date(letterSendDate + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
                 </p>
               )}
@@ -1393,21 +1416,21 @@ export function JournalApp({ onBack }: Props) {
     const sent = letters.filter(l => l.from_user_id === myUid)
     return (
       <>
-        <div className="app-content-header">
+        <div style={J_HEADER_STYLE}>
           <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
           <span>Cartas</span>
           <button
             onClick={() => setView("letters-compose")}
-            style={{ fontSize: "0.6875rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none", background: "var(--secondary)", color: "white", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}
+            style={{ fontSize: "0.6875rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "none", background: "#ec4899", color: "white", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}
           >
             Escribir
           </button>
         </div>
-        <div className="app-content-body">
+        <div style={J_BODY_STYLE}>
           {letters.length === 0 && (
             <div style={{ textAlign: "center", padding: "2rem 0" }}>
               <p style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>💌</p>
-              <p style={{ color: "var(--foreground-muted)", fontSize: "0.875rem" }}>Aún no hay cartas</p>
+              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.875rem" }}>Aún no hay cartas</p>
               <button className="btn btn-primary" style={{ marginTop: "1rem" }} onClick={() => setView("letters-compose")}>
                 Escribir primera carta
               </button>
@@ -1416,26 +1439,26 @@ export function JournalApp({ onBack }: Props) {
 
           {received.length > 0 && (
             <div style={{ marginBottom: "1rem" }}>
-              <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.5rem" }}>RECIBIDAS</p>
+              <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: "0.5rem" }}>RECIBIDAS</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {received.map(l => {
                   const myReaction = l.reactions?.[myUid]
                   return (
                     <button key={l.id} onClick={() => openLetter(l)}
-                      style={{ width: "100%", textAlign: "left", background: l.is_read ? "white" : "linear-gradient(135deg, #fff0fb, #fffbf0)", border: `1.5px solid ${l.is_read ? "var(--border)" : "#f5e6c8"}`, borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
+                      style={{ width: "100%", textAlign: "left", background: l.is_read ? "rgba(255,255,255,0.05)" : "linear-gradient(135deg, rgba(236,72,153,0.08), rgba(245,158,11,0.06))", border: `1.5px solid ${l.is_read ? "rgba(255,255,255,0.1)" : "rgba(236,72,153,0.25)"}`, borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
                     >
                       <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>{l.is_read ? "📩" : "💌"}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.125rem" }}>
                           {!l.is_read && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ec4899", flexShrink: 0, display: "inline-block" }} />}
-                          <span style={{ fontSize: "0.8125rem", fontWeight: l.is_read ? 600 : 700, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <span style={{ fontSize: "0.8125rem", fontWeight: l.is_read ? 600 : 700, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {l.subject ?? "Sin asunto"}
                           </span>
                           {/* L-C: my reaction badge */}
                           {myReaction && <span style={{ fontSize: "0.875rem", flexShrink: 0 }}>{myReaction}</span>}
                         </div>
-                        <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{l.content}</p>
-                        <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", marginTop: "0.25rem" }}>{new Date(l.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}</p>
+                        <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{l.content}</p>
+                        <p style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.5)", marginTop: "0.25rem" }}>{new Date(l.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}</p>
                       </div>
                     </button>
                   )
@@ -1446,21 +1469,21 @@ export function JournalApp({ onBack }: Props) {
 
           {sent.length > 0 && (
             <div>
-              <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.5rem" }}>ENVIADAS</p>
+              <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: "0.5rem" }}>ENVIADAS</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {sent.map(l => {
                   const isScheduled = l.send_at && new Date(l.send_at) > new Date()
                   return (
                     <button key={l.id} onClick={() => openLetter(l)}
-                      style={{ width: "100%", textAlign: "left", background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
+                      style={{ width: "100%", textAlign: "left", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
                     >
                       <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>{isScheduled ? "⏰" : "📤"}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground-light)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
+                        <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "rgba(255,255,255,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
                           {l.subject ?? "Sin asunto"}
                         </span>
-                        <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{l.content}</p>
-                        <p style={{ fontSize: "0.625rem", color: isScheduled ? "var(--primary)" : "var(--foreground-muted)", marginTop: "0.25rem", fontWeight: isScheduled ? 700 : 400 }}>
+                        <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{l.content}</p>
+                        <p style={{ fontSize: "0.625rem", color: isScheduled ? "#8b5cf6" : "rgba(255,255,255,0.5)", marginTop: "0.25rem", fontWeight: isScheduled ? 700 : 400 }}>
                           {isScheduled
                             ? `⏰ Se enviará el ${new Date(l.send_at!).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}`
                             : `${l.is_read ? "✅ Leída" : "⏳ Sin leer"} · ${new Date(l.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}`
@@ -1484,18 +1507,18 @@ export function JournalApp({ onBack }: Props) {
     const partnerE = getPartnerEntry(selectedDate)
     const page = (entry: JournalEntry | undefined, who: "me" | "partner") => {
       const mood = getMoodById(entry?.mood)
-      const accent = who === "me" ? "var(--primary)" : "var(--secondary)"
+      const accent = who === "me" ? "#8b5cf6" : "#ec4899"
       return (
-        <div style={{ background: who === "me" ? "linear-gradient(135deg,#fffdf7,#f7f3ff)" : "linear-gradient(135deg,#fffdf7,#fdf0f7)", border: `1.5px solid ${who === "me" ? "var(--primary-light)" : "#fbcfe8"}`, borderRadius: "var(--radius-md)", padding: "0.875rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+        <div style={{ background: who === "me" ? "linear-gradient(135deg,rgba(139,92,246,0.08),rgba(139,92,246,0.03))" : "linear-gradient(135deg,rgba(236,72,153,0.08),rgba(236,72,153,0.03))", border: `1.5px solid ${who === "me" ? "rgba(139,92,246,0.3)" : "rgba(236,72,153,0.3)"}`, borderRadius: "var(--radius-md)", padding: "0.875rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
             <span style={{ fontSize: "0.75rem", fontWeight: 800, color: accent }}>{who === "me" ? "Tú" : "Tu pareja"}</span>
             {mood && <span style={{ fontSize: "0.625rem", fontWeight: 700, color: mood.accentText, background: mood.accent, padding: "0.0625rem 0.5rem", borderRadius: "999px" }}>{mood.label}</span>}
           </div>
           {entry ? (
-            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "var(--foreground)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.content}</p>
+            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "rgba(255,255,255,0.9)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.content}</p>
           ) : (
             <div style={{ textAlign: "center", padding: "0.75rem 0" }}>
-              <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.5rem" }}>{who === "me" ? "Aún no has escrito este día" : "Tu pareja aún no ha escrito"}</p>
+              <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", marginBottom: "0.5rem" }}>{who === "me" ? "Aún no has escrito este día" : "Tu pareja aún no ha escrito"}</p>
               {who === "me" && (
                 <button className="btn btn-primary" style={{ fontSize: "0.75rem", padding: "0.375rem 0.875rem" }} onClick={() => openDay(selectedDate)}>✏️ Escribir mi parte</button>
               )}
@@ -1506,12 +1529,12 @@ export function JournalApp({ onBack }: Props) {
     }
     return (
       <>
-        <div className="app-content-header">
+        <div style={J_HEADER_STYLE}>
           <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
           <span style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem" }}>Juntos · {formatDateShortEs(selectedDate)}</span>
         </div>
-        <div className="app-content-body" style={{ gap: "0.625rem" }}>
-          <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", textAlign: "center" }}>Vuestras dos versiones del mismo día 💕</p>
+        <div style={{ ...J_BODY_STYLE, gap: "0.625rem" }}>
+          <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.5)", textAlign: "center" }}>Vuestras dos versiones del mismo día 💕</p>
           {page(myE, "me")}
           {page(partnerE, "partner")}
         </div>
@@ -1529,7 +1552,7 @@ export function JournalApp({ onBack }: Props) {
     return (
       <>
         <style>{`@keyframes fadeSlideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-        <div className="app-content-header">
+        <div style={J_HEADER_STYLE}>
           <button className="back-btn-phone" onClick={() => setView("calendar")}>‹</button>
           <span style={{ fontSize: "0.8125rem" }}>{formatDateShortEs(selectedDate)}</span>
           <div style={{ display: "flex", alignItems: "center", gap: "0.125rem" }}>
@@ -1555,19 +1578,19 @@ export function JournalApp({ onBack }: Props) {
             )}
           </div>
         </div>
-        <div className="app-content-body" style={{ animation: "fadeSlideIn 0.2s ease" }}>
+        <div style={{ ...J_BODY_STYLE, animation: "fadeSlideIn 0.2s ease" }}>
           {partnerVisible && (
             <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.75rem" }}>
               {[{ label: "Tu entrada", isPartner: false }, { label: "Pareja", isPartner: true }].map(({ label, isPartner }) => (
                 <button key={label} onClick={() => setShowPartnerEntry(isPartner)}
-                  style={{ flex: 1, padding: "0.375rem 0.5rem", borderRadius: "999px", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, background: showPartnerEntry === isPartner ? "var(--primary)" : "var(--muted)", color: showPartnerEntry === isPartner ? "white" : "var(--foreground-light)" }}
+                  style={{ flex: 1, padding: "0.375rem 0.5rem", borderRadius: "999px", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, background: showPartnerEntry === isPartner ? "#8b5cf6" : "rgba(255,255,255,0.08)", color: showPartnerEntry === isPartner ? "white" : "rgba(255,255,255,0.5)" }}
                 >{label}</button>
               ))}
             </div>
           )}
 
           {/* D2: Diary page aesthetic — date heading */}
-          <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.0625rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.375rem" }}>
+          <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.0625rem", fontWeight: 700, color: "#8b5cf6", marginBottom: "0.375rem" }}>
             {formatDateShortEs(selectedDate)}
           </p>
 
@@ -1578,15 +1601,15 @@ export function JournalApp({ onBack }: Props) {
                 <displayMood.Icon size={18} style={{ color: displayMood.accentBorder }} />
                 <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: displayMood.accentText }}>{displayMood.label}</span>
                 {showPartnerEntry && (
-                  <span style={{ marginLeft: "0.25rem", fontSize: "0.5625rem", fontWeight: 700, color: "var(--foreground-muted)", background: "rgba(0,0,0,0.07)", padding: "0.0625rem 0.375rem", borderRadius: "999px" }}>PAREJA</span>
+                  <span style={{ marginLeft: "0.25rem", fontSize: "0.5625rem", fontWeight: 700, color: "rgba(255,255,255,0.6)", background: "rgba(255,255,255,0.15)", padding: "0.0625rem 0.375rem", borderRadius: "999px" }}>PAREJA</span>
                 )}
               </div>
             )}
             {/* F12: location pill */}
             {displayEntry?.location && (
-              <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.375rem 0.75rem", borderRadius: "999px", background: "#ecfdf5", border: "1.5px solid #6ee7b7" }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.375rem 0.75rem", borderRadius: "999px", background: "rgba(16,185,129,0.1)", border: "1.5px solid rgba(16,185,129,0.3)" }}>
                 <span style={{ fontSize: "0.8125rem" }}>📍</span>
-                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#047857" }}>{displayEntry.location}</span>
+                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#34d399" }}>{displayEntry.location}</span>
               </div>
             )}
           </div>
@@ -1595,7 +1618,7 @@ export function JournalApp({ onBack }: Props) {
           {displayEntry?.tags && displayEntry.tags.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem", marginBottom: "0.75rem" }}>
               {displayEntry.tags.map(t => (
-                <span key={t} style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--primary)", background: "var(--primary-lighter)", border: "1px solid var(--primary-light)", padding: "0.1875rem 0.5rem", borderRadius: "999px" }}>#{t}</span>
+                <span key={t} style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#8b5cf6", background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", padding: "0.1875rem 0.5rem", borderRadius: "999px" }}>#{t}</span>
               ))}
             </div>
           )}
@@ -1603,17 +1626,17 @@ export function JournalApp({ onBack }: Props) {
           {/* F2: Notebook page — ruled lines, paper tint and a folded corner */}
           <div style={{
             position: "relative",
-            background: "linear-gradient(#fffdf7, #fffdf7), repeating-linear-gradient(transparent, transparent 27px, #e8e2d0 27px, #e8e2d0 28px)",
-            backgroundBlendMode: "multiply",
+            background: "linear-gradient(#0f0e0b, #0f0e0b), repeating-linear-gradient(transparent, transparent 27px, rgba(255,255,255,0.05) 27px, rgba(255,255,255,0.05) 28px)",
+            backgroundBlendMode: "normal",
             borderRadius: "var(--radius-md)", padding: "0.75rem 0.75rem 0.75rem 2.25rem",
-            border: "1px solid #e8e2d0", marginBottom: "0.75rem", overflow: "hidden",
-            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.02), 0 2px 8px rgba(0,0,0,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)", marginBottom: "0.75rem", overflow: "hidden",
+            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.02), 0 2px 8px rgba(0,0,0,0.4)",
           }}>
             {/* red margin line */}
             <div style={{ position: "absolute", left: "1.75rem", top: 0, bottom: 0, width: 1.5, background: "#f3b6c2" }} />
             {/* folded corner */}
-            <div style={{ position: "absolute", top: 0, right: 0, width: 0, height: 0, borderStyle: "solid", borderWidth: "0 22px 22px 0", borderColor: "transparent #efe7d2 transparent transparent" }} />
-            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1.0625rem", color: "var(--foreground)", lineHeight: "28px", whiteSpace: "pre-wrap" }}>
+            <div style={{ position: "absolute", top: 0, right: 0, width: 0, height: 0, borderStyle: "solid", borderWidth: "0 22px 22px 0", borderColor: "transparent rgba(255,255,255,0.05) transparent transparent" }} />
+            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1.0625rem", color: "rgba(255,255,255,0.9)", lineHeight: "28px", whiteSpace: "pre-wrap" }}>
               {displayEntry?.content ?? ""}
             </p>
           </div>
@@ -1621,7 +1644,7 @@ export function JournalApp({ onBack }: Props) {
           {/* Firma al pie de la entrada */}
           {displayEntry && (
             <div style={{ textAlign: "right", marginTop: "-0.25rem", marginBottom: "0.625rem" }}>
-              <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.9375rem", color: "var(--foreground-muted)" }}>
+              <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.9375rem", color: "rgba(255,255,255,0.6)" }}>
                 — Con amor, {displayEntry.created_by === myUid ? (user?.displayName?.split(" ")[0] ?? "tú") : "tu pareja"} 💜
               </span>
             </div>
@@ -1639,20 +1662,20 @@ export function JournalApp({ onBack }: Props) {
                 {(myReaction || partnerReaction) && (
                   <div style={{ display: "flex", gap: "0.375rem", marginBottom: isPartnerEntry ? "0.5rem" : 0 }}>
                     {partnerReaction && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.1875rem 0.5rem", borderRadius: "999px", background: "#fce7f3", border: "1px solid #fbcfe8", fontSize: "0.75rem", fontWeight: 700, color: "var(--secondary)" }}>{partnerReaction} pareja</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.1875rem 0.5rem", borderRadius: "999px", background: "rgba(236,72,153,0.15)", border: "1px solid rgba(236,72,153,0.3)", fontSize: "0.75rem", fontWeight: 700, color: "#ec4899" }}>{partnerReaction} pareja</span>
                     )}
                     {myReaction && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.1875rem 0.5rem", borderRadius: "999px", background: "var(--primary-lighter)", border: "1px solid var(--primary-light)", fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)" }}>{myReaction} tú</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.1875rem 0.5rem", borderRadius: "999px", background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", fontSize: "0.75rem", fontWeight: 700, color: "#8b5cf6" }}>{myReaction} tú</span>
                     )}
                   </div>
                 )}
                 {/* react to partner's entry */}
                 {isPartnerEntry && (
                   <div style={{ display: "flex", gap: "0.25rem", alignItems: "center", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", fontWeight: 600, marginRight: "0.125rem" }}>Reaccionar:</span>
+                    <span style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.5)", fontWeight: 600, marginRight: "0.125rem" }}>Reaccionar:</span>
                     {REACTION_EMOJIS.map(emo => (
                       <button key={emo} onClick={() => toggleReaction(displayEntry, emo)} disabled={reactingId === displayEntry.id}
-                        style={{ fontSize: "1.125rem", lineHeight: 1, padding: "0.25rem", borderRadius: "999px", border: myReaction === emo ? "2px solid var(--primary)" : "2px solid transparent", background: myReaction === emo ? "var(--primary-lighter)" : "transparent", cursor: "pointer", transition: "transform 0.1s" }}
+                        style={{ fontSize: "1.125rem", lineHeight: 1, padding: "0.25rem", borderRadius: "999px", border: myReaction === emo ? "2px solid #8b5cf6" : "2px solid transparent", background: myReaction === emo ? "rgba(139,92,246,0.15)" : "transparent", cursor: "pointer", transition: "transform 0.1s" }}
                         onMouseDown={e => (e.currentTarget.style.transform = "scale(1.2)")}
                         onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
                       >{emo}</button>
@@ -1665,9 +1688,9 @@ export function JournalApp({ onBack }: Props) {
 
           {/* Audio player */}
           {displayEntry?.audio_url && (
-            <div style={{ marginBottom: "0.75rem", background: "var(--primary-lighter)", border: "1px solid var(--primary-light)", borderRadius: "var(--radius-md)", padding: "0.625rem 0.875rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)" }}>🎙️ Nota de voz</span>
-              <audio controls src={displayEntry.audio_url} style={{ width: "100%", height: 36, borderRadius: "999px", accentColor: "var(--primary)" }} />
+            <div style={{ marginBottom: "0.75rem", background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", borderRadius: "var(--radius-md)", padding: "0.625rem 0.875rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#8b5cf6" }}>🎙️ Nota de voz</span>
+              <audio controls src={displayEntry.audio_url} style={{ width: "100%", height: 36, borderRadius: "999px", accentColor: "#8b5cf6" }} />
             </div>
           )}
 
@@ -1681,13 +1704,13 @@ export function JournalApp({ onBack }: Props) {
 
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             {!showPartnerEntry && (
-              <button className="btn btn-outline" style={{ fontSize: "0.8125rem", display: "inline-flex", alignItems: "center", gap: "0.375rem" }} onClick={() => startEdit(selectedEntry)}>
+              <button className="btn btn-outline" style={{ fontSize: "0.8125rem", display: "inline-flex", alignItems: "center", gap: "0.375rem", background: "rgba(255,255,255,0.06)", border: "1.5px solid rgba(255,255,255,0.15)", color: "white" }} onClick={() => startEdit(selectedEntry)}>
                 <FileText size={14} /> Editar entrada
               </button>
             )}
             {/* F10: jump to the shared "both of us" spread when both wrote */}
             {partnerEntry && (
-              <button className="btn btn-outline" style={{ fontSize: "0.8125rem", display: "inline-flex", alignItems: "center", gap: "0.375rem" }} onClick={() => setView("spread")}>
+              <button className="btn btn-outline" style={{ fontSize: "0.8125rem", display: "inline-flex", alignItems: "center", gap: "0.375rem", background: "rgba(255,255,255,0.06)", border: "1.5px solid rgba(255,255,255,0.15)", color: "white" }} onClick={() => setView("spread")}>
                 📖 Ver juntos
               </button>
             )}
@@ -1695,10 +1718,10 @@ export function JournalApp({ onBack }: Props) {
 
           {/* Partner section */}
           {partnerVisible && !showPartnerEntry && (
-            <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
+            <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground-muted)" }}>Entrada de pareja</span>
-                <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", background: "var(--muted)", padding: "0.125rem 0.5rem", borderRadius: "999px" }}>SOLO LECTURA</span>
+                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(255,255,255,0.5)" }}>Entrada de pareja</span>
+                <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "rgba(255,255,255,0.5)", background: "rgba(255,255,255,0.08)", padding: "0.125rem 0.5rem", borderRadius: "999px" }}>SOLO LECTURA</span>
               </div>
               {(() => {
                 const pm = getMoodById(partnerEntry?.mood)
@@ -1710,10 +1733,10 @@ export function JournalApp({ onBack }: Props) {
                         <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: pm.accentText }}>{pm.label}</span>
                       </div>
                     )}
-                    <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "var(--foreground)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{partnerEntry?.content}</p>
+                    <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "rgba(255,255,255,0.9)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{partnerEntry?.content}</p>
                     {partnerEntry?.audio_url && (
-                      <div style={{ marginTop: "0.5rem", background: "#fce7f3", border: "1px solid #fbcfe8", borderRadius: "var(--radius-md)", padding: "0.5rem 0.75rem" }}>
-                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--secondary)", display: "block", marginBottom: "0.25rem" }}>🎙️ Nota de voz (pareja)</span>
+                      <div style={{ marginTop: "0.5rem", background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", borderRadius: "var(--radius-md)", padding: "0.5rem 0.75rem" }}>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#ec4899", display: "block", marginBottom: "0.25rem" }}>🎙️ Nota de voz (pareja)</span>
                         <audio controls src={partnerEntry.audio_url} style={{ width: "100%", height: 36, accentColor: "var(--secondary)" }} />
                       </div>
                     )}
@@ -1739,7 +1762,7 @@ export function JournalApp({ onBack }: Props) {
 
     return (
       <>
-        <div className="app-content-header">
+        <div style={J_HEADER_STYLE}>
           <button className="back-btn-phone" onClick={() => { setIsEditing(false); setView(selectedEntry ? "read" : "calendar") }}>‹</button>
           <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>{isEditing ? <><FileText size={14} /> Editando</> : <><PenLine size={14} /> Nueva entrada</>}</span>
           {/* F6: sepia paper toggle */}
@@ -1747,20 +1770,20 @@ export function JournalApp({ onBack }: Props) {
             onClick={() => { const next = paperMode === "sepia" ? "normal" : "sepia"; setPaperMode(next); try { localStorage.setItem("ttd_journal_paper", next) } catch { /* */ } }}
             title="Modo papel sepia"
             style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1rem", padding: "0.25rem" }}
-          ><Moon size={15} style={{ color: paperMode === "sepia" ? "#92400e" : "var(--foreground-muted)" }} /></button>
+          ><Moon size={15} style={{ color: paperMode === "sepia" ? "#92400e" : "rgba(255,255,255,0.5)" }} /></button>
         </div>
-        <div className="app-content-body" style={paperMode === "sepia" ? { background: "linear-gradient(180deg, #f4ecd8 0%, #efe4c8 100%)" } : undefined}>
-          <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.375rem", textTransform: "capitalize" }}>{formatDateShortEs(selectedDate ?? "")}</p>
+        <div style={paperMode === "sepia" ? { ...J_BODY_STYLE, background: "linear-gradient(180deg, #1a1208 0%, #120d05 100%)" } : J_BODY_STYLE}>
+          <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", marginBottom: "0.375rem", textTransform: "capitalize" }}>{formatDateShortEs(selectedDate ?? "")}</p>
 
           {/* F13: Entry templates (only for a fresh, empty entry) */}
           {!isEditing && !writeContent.trim() && (
             <div style={{ marginBottom: "0.625rem" }}>
-              <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.375rem" }}>Empieza con una plantilla</p>
+              <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: "0.375rem" }}>Empieza con una plantilla</p>
               <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", paddingBottom: "0.25rem", scrollbarWidth: "none" }}>
                 {ENTRY_TEMPLATES.map(t => (
                   <button key={t.id}
                     onClick={() => { setWriteContent(t.body); setWriteMood(t.mood); setWriteTags(t.tags) }}
-                    style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: "0.25rem", padding: "0.375rem 0.75rem", borderRadius: "999px", border: "1px solid var(--border)", background: "white", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", whiteSpace: "nowrap" }}>
+                    style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: "0.25rem", padding: "0.375rem 0.75rem", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, color: "rgba(255,255,255,0.7)", whiteSpace: "nowrap" }}>
                     <span>{t.emoji}</span> {t.label}
                   </button>
                 ))}
@@ -1774,7 +1797,7 @@ export function JournalApp({ onBack }: Props) {
               const isSelected = writeMood === m.id
               return (
                 <button key={m.id} onClick={() => setWriteMood(m.id)}
-                  style={{ padding: "0.75rem 0.5rem", borderRadius: "var(--radius-md)", border: isSelected ? `2px solid ${m.accentBorder}` : "2px solid var(--border)", cursor: "pointer", fontFamily: "inherit", background: isSelected ? m.accent : "white", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem", boxShadow: isSelected ? `0 2px 8px ${m.accentBorder}33` : "none", transform: isSelected ? "scale(1.03)" : "scale(1)", transition: "all 0.15s ease", color: isSelected ? m.accentText : "var(--foreground-light)" }}
+                  style={{ padding: "0.75rem 0.5rem", borderRadius: "var(--radius-md)", border: isSelected ? `2px solid ${m.accentBorder}` : "2px solid rgba(255,255,255,0.12)", cursor: "pointer", fontFamily: "inherit", background: isSelected ? m.accent : "rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem", boxShadow: isSelected ? `0 2px 8px ${m.accentBorder}33` : "none", transform: isSelected ? "scale(1.03)" : "scale(1)", transition: "all 0.15s ease", color: isSelected ? m.accentText : "rgba(255,255,255,0.6)" }}
                 >
                   <m.Icon size={28} />
                   <span style={{ fontSize: "0.6875rem", fontWeight: 700 }}>{m.label}</span>
@@ -1790,7 +1813,7 @@ export function JournalApp({ onBack }: Props) {
                 const prompt = PROMPTS[Math.floor(Math.random() * PROMPTS.length)]
                 setWriteContent(prev => prev ? prev + "\n\n" + prompt : prompt)
               }}
-              style={{ fontSize: "0.6875rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "1px solid var(--border)", background: "var(--muted)", cursor: "pointer", fontFamily: "inherit", color: "var(--foreground-muted)", fontWeight: 600 }}
+              style={{ fontSize: "0.6875rem", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.08)", cursor: "pointer", fontFamily: "inherit", color: "rgba(255,255,255,0.5)", fontWeight: 600 }}
             >
               Inspiración
             </button>
@@ -1808,52 +1831,51 @@ export function JournalApp({ onBack }: Props) {
               e.target.style.height = `${e.target.scrollHeight}px`
             }}
             autoFocus
-            style={{ minHeight: "120px", fontFamily: "'Caveat', cursive", fontSize: "1rem", lineHeight: 1.7, marginBottom: "0.625rem", ...(paperMode === "sepia" ? { background: "#fbf6e9", borderColor: "#d8c9a3", color: "#4a3b1e" } : {}) }}
+            style={{ minHeight: "120px", fontFamily: "'Caveat', cursive", fontSize: "1rem", lineHeight: 1.7, marginBottom: "0.625rem", ...(paperMode === "sepia" ? { background: "rgba(26,18,8,0.8)", borderColor: "rgba(245,158,11,0.3)", color: "#fef3c7" } : { background: "rgba(255,255,255,0.04)", border: "1.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.9)" }) }}
           />
 
           {/* Contador de palabras */}
           {writeContent.trim() && (
-            <p style={{ fontSize: "0.625rem", color: "var(--foreground-muted)", textAlign: "right", marginTop: "-0.375rem", marginBottom: "0.375rem" }}>
+            <p style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.4)", textAlign: "right", marginTop: "-0.375rem", marginBottom: "0.375rem" }}>
               {writeContent.trim().split(/\s+/).filter(Boolean).length} palabras
             </p>
           )}
 
           {/* F8: Tags */}
           <div style={{ marginBottom: "0.625rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Tag size={12} /> Etiquetas</label>
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Tag size={12} /> Etiquetas</label>
             {writeTags.length > 0 && (
               <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: "0.375rem" }}>
                 {writeTags.map(t => (
-                  <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.1875rem 0.5rem", borderRadius: "999px", background: "var(--primary-lighter)", border: "1px solid var(--primary-light)", fontSize: "0.6875rem", fontWeight: 700, color: "var(--primary)" }}>
+                  <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.1875rem 0.5rem", borderRadius: "999px", background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", fontSize: "0.6875rem", fontWeight: 700, color: "#8b5cf6" }}>
                     #{t}
-                    <button onClick={() => setWriteTags(prev => prev.filter(x => x !== t))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", fontSize: "0.75rem", lineHeight: 1, padding: 0 }}>×</button>
+                    <button onClick={() => setWriteTags(prev => prev.filter(x => x !== t))} style={{ background: "none", border: "none", cursor: "pointer", color: "#8b5cf6", fontSize: "0.75rem", lineHeight: 1, padding: 0 }}>×</button>
                   </span>
                 ))}
               </div>
             )}
             <input
-              className="input"
               placeholder="Añadir etiqueta y pulsar Enter…"
               value={tagInput}
               onChange={e => setTagInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commitTag(tagInput) } }}
               onBlur={() => commitTag(tagInput)}
+              style={J_INPUT_STYLE}
             />
           </div>
 
           {/* F12: Location */}
           <div style={{ marginBottom: "0.625rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><MapPin size={12} /> Lugar</label>
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><MapPin size={12} /> Lugar</label>
             <div style={{ display: "flex", gap: "0.375rem" }}>
               <input
-                className="input"
                 placeholder="¿Dónde estuvisteis?"
                 value={writeLocation}
                 onChange={e => setWriteLocation(e.target.value)}
-                style={{ flex: 1 }}
+                style={{ ...J_INPUT_STYLE, flex: 1 }}
               />
               <button type="button" onClick={useMyLocation} disabled={gettingLocation}
-                style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0 0.75rem", borderRadius: "var(--radius-md)", border: "1.5px solid var(--primary-light)", background: "var(--primary-lighter)", cursor: gettingLocation ? "wait" : "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, color: "var(--primary)" }}>
+                style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0 0.75rem", borderRadius: "var(--radius-md)", border: "1.5px solid rgba(139,92,246,0.4)", background: "rgba(139,92,246,0.15)", cursor: gettingLocation ? "wait" : "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, color: "#8b5cf6" }}>
                 {gettingLocation ? "…" : "GPS"}
               </button>
             </div>
@@ -1861,7 +1883,7 @@ export function JournalApp({ onBack }: Props) {
 
           {/* Photo file upload */}
           <div style={{ marginBottom: "0.625rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Camera size={14} /> Fotos</label>
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.375rem" }}><Camera size={14} /> Fotos</label>
             <input
               ref={photoFileRef}
               type="file"
@@ -1877,9 +1899,9 @@ export function JournalApp({ onBack }: Props) {
               style={{
                 display: "inline-flex", alignItems: "center", gap: "0.375rem",
                 padding: "0.5rem 0.875rem", borderRadius: "999px",
-                border: "1.5px solid var(--primary-light)", background: "var(--primary-lighter)",
+                border: "1.5px solid rgba(139,92,246,0.4)", background: "rgba(139,92,246,0.15)",
                 cursor: uploadingPhoto ? "wait" : "pointer",
-                fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 600, color: "var(--primary)",
+                fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 600, color: "#8b5cf6",
               }}
             >
               <Camera size={14} />
@@ -1889,7 +1911,7 @@ export function JournalApp({ onBack }: Props) {
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
                 {photoUrls.map((url, i) => (
                   <div key={i} style={{ position: "relative" }}>
-                    <img src={url} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: "8px", border: "2px solid var(--border)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }} />
+                    <img src={url} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: "8px", border: "2px solid rgba(255,255,255,0.15)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }} />
                     <button onClick={() => setPhotoUrls(prev => prev.filter((_, j) => j !== i))}
                       style={{ position: "absolute", top: -6, right: -6, background: "#ef4444", color: "white", border: "none", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", fontSize: "0.625rem", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
                   </div>
@@ -1965,9 +1987,9 @@ export function JournalApp({ onBack }: Props) {
             style={{
               display: "flex", alignItems: "center", gap: "0.5rem",
               padding: "0.5rem 0.75rem", borderRadius: "var(--radius-md)",
-              border: writeIsPrivate ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
-              background: writeIsPrivate ? "var(--primary-lighter)" : "var(--surface)",
-              color: writeIsPrivate ? "var(--primary)" : "var(--foreground-muted)",
+              border: writeIsPrivate ? "1.5px solid #8b5cf6" : "1.5px solid rgba(255,255,255,0.15)",
+              background: writeIsPrivate ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.04)",
+              color: writeIsPrivate ? "#8b5cf6" : "rgba(255,255,255,0.5)",
               fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 600,
               cursor: "pointer", width: "100%", marginTop: "0.25rem",
               transition: "all 0.15s",
@@ -1979,7 +2001,7 @@ export function JournalApp({ onBack }: Props) {
             </span>
             <span style={{
               width: 32, height: 18, borderRadius: 999, flexShrink: 0,
-              background: writeIsPrivate ? "var(--primary)" : "var(--border)",
+              background: writeIsPrivate ? "#8b5cf6" : "rgba(255,255,255,0.2)",
               position: "relative", transition: "background 0.2s",
               display: "inline-block",
             }}>
@@ -2032,8 +2054,12 @@ export function JournalApp({ onBack }: Props) {
         @keyframes recordingPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
         @keyframes slideMonthLeft  { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideMonthRight { from { transform: translateX(20px);  opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes journalCardIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
-      <div className="app-content-header">
+      <div style={J_HEADER_STYLE}>
         <button className="back-btn-phone" onClick={onBack}>‹</button>
         <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Heart size={14} /> Nuestro Diario</span>
       </div>
@@ -2041,7 +2067,7 @@ export function JournalApp({ onBack }: Props) {
       {/* Nav tab strip */}
       <div style={{
         display: "flex", gap: "0.375rem", overflowX: "auto", padding: "0.5rem 0.75rem",
-        background: "var(--surface)", borderBottom: "1px solid var(--border)",
+        background: "rgba(0,0,0,0.3)", borderBottom: "1px solid rgba(139,92,246,0.15)",
         scrollbarWidth: "none", flexShrink: 0,
       }}>
         {NAV_TABS.map(tab => (
@@ -2050,9 +2076,9 @@ export function JournalApp({ onBack }: Props) {
               flexShrink: 0, fontSize: "0.75rem", fontWeight: 700, fontFamily: "inherit",
               padding: "0.375rem 0.875rem", borderRadius: "999px", border: "none", cursor: "pointer",
               background: activeTab === tab.key
-                ? "linear-gradient(135deg, var(--primary), var(--secondary))"
-                : "var(--muted)",
-              color: activeTab === tab.key ? "white" : "var(--foreground-muted)",
+                ? "linear-gradient(135deg, #8b5cf6, #ec4899)"
+                : "rgba(255,255,255,0.08)",
+              color: activeTab === tab.key ? "white" : "rgba(255,255,255,0.5)",
               boxShadow: activeTab === tab.key ? "0 2px 8px rgba(139,92,246,0.3)" : "none",
               transition: "all 0.15s ease",
               whiteSpace: "nowrap",
@@ -2061,24 +2087,24 @@ export function JournalApp({ onBack }: Props) {
         ))}
       </div>
 
-      <div className="app-content-body" style={{ gap: "0.5rem" }}>
+      <div style={{ ...J_BODY_STYLE, gap: "0.5rem" }}>
 
         {/* Feature 4: "On this day last year" banner */}
         {!dismissedOnThisDay && onThisDayEntry && !viewingPartner && !searchQuery.trim() && (
           <div
-            style={{ background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)", border: "1.5px solid #f59e0b", borderRadius: "var(--radius-md)", padding: "0.625rem 0.875rem", display: "flex", alignItems: "center", gap: "0.625rem", cursor: "pointer", marginBottom: "0.25rem" }}
+            style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.12), rgba(251,191,36,0.08))", border: "1.5px solid rgba(245,158,11,0.4)", borderRadius: "var(--radius-md)", padding: "0.625rem 0.875rem", display: "flex", alignItems: "center", gap: "0.625rem", cursor: "pointer", marginBottom: "0.25rem" }}
           >
             <button style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}
               onClick={() => { setSelectedDate(onThisDayEntry.date); setSelectedEntry(onThisDayEntry); setShowPartnerEntry(false); setView("read") }}
             >
-              <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#92400e", display: "block", marginBottom: "0.125rem" }}>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#fbbf24", display: "block", marginBottom: "0.125rem" }}>
                 📅 Hace un año...
               </span>
-              <span style={{ fontSize: "0.75rem", color: "#78350f", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+              <span style={{ fontSize: "0.75rem", color: "rgba(251,191,36,0.7)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                 {onThisDayEntry.content.slice(0, 80)}{onThisDayEntry.content.length > 80 ? "..." : ""}
               </span>
             </button>
-            <button onClick={() => setDismissedOnThisDay(true)} style={{ background: "none", border: "none", cursor: "pointer", color: "#92400e", fontSize: "1rem", padding: "0.125rem", flexShrink: 0 }}>×</button>
+            <button onClick={() => setDismissedOnThisDay(true)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(251,191,36,0.7)", fontSize: "1rem", padding: "0.125rem", flexShrink: 0 }}>×</button>
           </div>
         )}
 
@@ -2117,18 +2143,18 @@ export function JournalApp({ onBack }: Props) {
         {/* Partner view */}
         {viewingPartner ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}><Heart size={12} /> Entradas de tu pareja</p>
+            <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}><Heart size={12} /> Entradas de tu pareja</p>
             {mergedEntries().filter(e => e.created_by !== user?.uid).sort((a, b) => b.date.localeCompare(a.date)).map(e => (
               <button key={e.id} onClick={() => { setViewingPartner(false); openEntry(e) }}
-                style={{ textAlign: "left", background: "linear-gradient(135deg, var(--primary-lighter), white)", border: "1px solid var(--primary-light)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
-                <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--secondary)", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>{formatDateShortEs(e.date)} <Heart size={10} /></div>
-                <div style={{ fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{e.content}</div>
+                style={{ textAlign: "left", background: "linear-gradient(135deg, rgba(139,92,246,0.08), rgba(255,255,255,0.04))", border: "1px solid rgba(139,92,246,0.25)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#ec4899", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>{formatDateShortEs(e.date)} <Heart size={10} /></div>
+                <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.85)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{e.content}</div>
               </button>
             ))}
             {mergedEntries().filter(e => e.created_by !== user?.uid).length === 0 && (
               <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
-                <div style={{ color: "var(--primary)", display: "flex", justifyContent: "center" }}><Heart size={32} /></div>
-                <p style={{ fontSize: "0.8125rem", color: "var(--foreground-muted)", marginTop: "0.375rem" }}>Tu pareja aún no ha escrito</p>
+                <div style={{ color: "#8b5cf6", display: "flex", justifyContent: "center" }}><Heart size={32} /></div>
+                <p style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.5)", marginTop: "0.375rem" }}>Tu pareja aún no ha escrito</p>
               </div>
             )}
           </div>
@@ -2136,8 +2162,8 @@ export function JournalApp({ onBack }: Props) {
           <>
             {/* Search bar */}
             <div style={{ position: "relative", marginBottom: "0.75rem" }}>
-              <span style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--foreground-muted)" }}><SearchIcon size={14} /></span>
-              <input className="input" type="search" placeholder="Buscar en el diario..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ paddingLeft: "2rem" }} />
+              <span style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "rgba(255,255,255,0.5)" }}><SearchIcon size={14} /></span>
+              <input type="search" placeholder="Buscar en el diario..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ ...J_INPUT_STYLE, paddingLeft: "2rem" }} />
             </div>
 
             {/* Search results vs calendar — searches the whole journal, not just this month */}
@@ -2152,17 +2178,17 @@ export function JournalApp({ onBack }: Props) {
                     const isMe = e.created_by === myUid
                     return (
                       <button key={e.id} onClick={() => { openEntry(e); setSearchQuery("") }}
-                        style={{ textAlign: "left", background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                        style={{ textAlign: "left", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.25rem" }}>
-                          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: isMe ? "var(--primary)" : "var(--secondary)" }}>{formatDateShortEs(e.date)}</span>
-                          <span style={{ fontSize: "0.5625rem", fontWeight: 700, padding: "0.0625rem 0.375rem", borderRadius: "999px", background: isMe ? "var(--primary-lighter)" : "#fce7f3", color: isMe ? "var(--primary)" : "var(--secondary)" }}>{isMe ? "Tú" : "Pareja"}</span>
+                          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: isMe ? "#8b5cf6" : "#ec4899" }}>{formatDateShortEs(e.date)}</span>
+                          <span style={{ fontSize: "0.5625rem", fontWeight: 700, padding: "0.0625rem 0.375rem", borderRadius: "999px", background: isMe ? "rgba(139,92,246,0.2)" : "rgba(236,72,153,0.15)", color: isMe ? "#8b5cf6" : "#ec4899" }}>{isMe ? "Tú" : "Pareja"}</span>
                         </div>
-                        <div style={{ fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{e.content}</div>
+                        <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.85)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{e.content}</div>
                       </button>
                     )
                   })}
                   {results.length === 0 && (
-                    <p style={{ textAlign: "center", color: "var(--foreground-muted)", fontSize: "0.8125rem" }}>Sin resultados</p>
+                    <p style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: "0.8125rem" }}>Sin resultados</p>
                   )}
                 </div>
               )
@@ -2178,11 +2204,11 @@ export function JournalApp({ onBack }: Props) {
                   if (monthPhotos.length === 0) return null
                   return (
                     <div style={{ marginBottom: "0.75rem" }}>
-                      <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "0.375rem", display: "flex", alignItems: "center", gap: "0.25rem" }}><Camera size={12} /> Fotos del mes</p>
+                      <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: "0.375rem", display: "flex", alignItems: "center", gap: "0.25rem" }}><Camera size={12} /> Fotos del mes</p>
                       <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", paddingBottom: "0.25rem", scrollbarWidth: "none" }}>
                         {monthPhotos.map(({ url, entry }, i) => (
                           <button key={i} onClick={() => openEntry(entry)}
-                            style={{ flexShrink: 0, padding: 0, border: "2px solid white", borderRadius: "10px", overflow: "hidden", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.12)", lineHeight: 0 }}>
+                            style={{ flexShrink: 0, padding: 0, border: "2px solid rgba(255,255,255,0.15)", borderRadius: "10px", overflow: "hidden", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.12)", lineHeight: 0 }}>
                             <img src={url} alt="" style={{ width: 64, height: 64, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
                           </button>
                         ))}
@@ -2194,14 +2220,14 @@ export function JournalApp({ onBack }: Props) {
                 {/* F7: Mood filter chips */}
                 <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", paddingBottom: "0.25rem", marginBottom: "0.5rem", scrollbarWidth: "none" }}>
                   <button onClick={() => setMoodFilter(null)}
-                    style={{ flexShrink: 0, fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "1px solid var(--border)", cursor: "pointer", background: moodFilter === null ? "var(--foreground)" : "white", color: moodFilter === null ? "white" : "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+                    style={{ flexShrink: 0, fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer", background: moodFilter === null ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.06)", color: moodFilter === null ? "black" : "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>
                     Todos
                   </button>
                   {MOODS.map(m => {
                     const active = moodFilter === m.id
                     return (
                       <button key={m.id} onClick={() => setMoodFilter(active ? null : m.id)}
-                        style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit", padding: "0.25rem 0.625rem", borderRadius: "999px", border: `1px solid ${active ? m.accentBorder : "var(--border)"}`, cursor: "pointer", background: active ? m.accent : "white", color: active ? m.accentText : "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+                        style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit", padding: "0.25rem 0.625rem", borderRadius: "999px", border: `1px solid ${active ? m.accentBorder : "rgba(255,255,255,0.12)"}`, cursor: "pointer", background: active ? m.accent : "rgba(255,255,255,0.06)", color: active ? m.accentText : "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>
                         <m.Icon size={12} /> {m.label}
                       </button>
                     )
@@ -2212,25 +2238,25 @@ export function JournalApp({ onBack }: Props) {
                 <div key={calendarKey} style={{ animation: monthDir === "left" ? "slideMonthLeft 0.22s ease" : monthDir === "right" ? "slideMonthRight 0.22s ease" : undefined }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <button className="back-btn-phone" onClick={() => { setMonthDir("left"); setCalendarKey(k => k + 1); setCurrentDate(new Date(year, month - 1, 1)) }}>‹</button>
-                    <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--foreground)", textTransform: "capitalize" }}>{monthLabel}</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "white", textTransform: "capitalize" }}>{monthLabel}</span>
                     <button className="back-btn-phone" style={{ transform: "rotate(180deg)" }} onClick={() => { setMonthDir("right"); setCalendarKey(k => k + 1); setCurrentDate(new Date(year, month + 1, 1)) }}>‹</button>
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px", textAlign: "center" }}>
                     {weekDays.map((d) => (
-                      <div key={d} style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", padding: "0.25rem 0" }}>{d}</div>
+                      <div key={d} style={{ fontSize: "0.625rem", fontWeight: 700, color: "rgba(255,255,255,0.5)", padding: "0.25rem 0" }}>{d}</div>
                     ))}
                   </div>
 
                   {entriesLoading ? (
-                    <div style={{ textAlign: "center", padding: "2rem 0.5rem", color: "var(--foreground-muted)", fontSize: "0.875rem" }}>
+                    <div style={{ textAlign: "center", padding: "2rem 0.5rem", color: "rgba(255,255,255,0.5)", fontSize: "0.875rem" }}>
                       Cargando...
                     </div>
                   ) : entries.length === 0 ? (
                     <div style={{ textAlign: "center", padding: "2rem 0.5rem" }}>
                       <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}>📓</div>
-                      <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.9375rem", fontWeight: 700, color: "var(--primary)", marginBottom: "0.25rem" }}>Este mes está en blanco</p>
-                      <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)", marginBottom: "0.875rem" }}>¡Empieza a escribir vuestros recuerdos!</p>
+                      <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.9375rem", fontWeight: 700, color: "#8b5cf6", marginBottom: "0.25rem" }}>Este mes está en blanco</p>
+                      <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", marginBottom: "0.875rem" }}>¡Empieza a escribir vuestros recuerdos!</p>
                       <button className="btn btn-primary" style={{ fontSize: "0.8125rem" }} onClick={() => openDay(toLocalDateStr(new Date()))}>✏️ Escribir hoy</button>
                     </div>
                   ) : (
@@ -2251,11 +2277,11 @@ export function JournalApp({ onBack }: Props) {
                           .some(mo => (MOOD_EMOJI_TO_ID[mo ?? ""] ?? mo) === moodFilter)
                         const dimmed = !!moodFilter && hasAny && !matchesFilter
                         const cellBg = isToday
-                          ? "var(--primary-lighter)"
+                          ? "rgba(139,92,246,0.2)"
                           : dayMood
                             ? dayMood.accent
-                            : myEntry ? "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)"
-                            : partnerEntry ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)" : "white"
+                            : myEntry ? "linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(139,92,246,0.04) 100%)"
+                            : partnerEntry ? "linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(236,72,153,0.03) 100%)" : "rgba(255,255,255,0.03)"
                         return (
                           <button
                             key={day}
@@ -2263,13 +2289,13 @@ export function JournalApp({ onBack }: Props) {
                             onPointerDown={e => (e.currentTarget.style.transform = "scale(0.88)")}
                             onPointerUp={e => (e.currentTarget.style.transform = "scale(1)")}
                             onPointerLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-                            style={{ position: "relative", aspectRatio: "1", borderRadius: "10px", border: isToday ? "2px solid var(--primary)" : dayMood ? `1.5px solid ${dayMood.accentBorder}` : hasAny ? "1.5px solid var(--primary-light)" : "1px solid var(--border)", background: cellBg, opacity: dimmed ? 0.32 : 1, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontSize: "0.6875rem", fontWeight: isToday ? 800 : hasAny ? 700 : 400, color: isToday ? "var(--primary)" : dayMood ? dayMood.accentText : hasAny ? "var(--foreground)" : "var(--foreground-muted)", gap: "2px", padding: "3px 2px", boxShadow: isToday ? "0 2px 8px rgba(139,92,246,0.2)" : "none", transition: "transform 0.1s, opacity 0.2s" }}
+                            style={{ position: "relative", aspectRatio: "1", borderRadius: "10px", border: isToday ? "2px solid #8b5cf6" : dayMood ? `1.5px solid ${dayMood.accentBorder}` : hasAny ? "1.5px solid rgba(139,92,246,0.3)" : "1px solid rgba(255,255,255,0.08)", background: cellBg, opacity: dimmed ? 0.32 : 1, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontSize: "0.6875rem", fontWeight: isToday ? 800 : hasAny ? 700 : 400, color: isToday ? "#a78bfa" : dayMood ? dayMood.accentText : hasAny ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)", gap: "2px", padding: "3px 2px", boxShadow: isToday ? "0 2px 8px rgba(139,92,246,0.2)" : "none", transition: "transform 0.1s, opacity 0.2s" }}
                           >
                             <span style={{ lineHeight: 1 }}>{day}</span>
                             {(myEntry || partnerEntry) && (
                               <div style={{ display: "flex", gap: "2px", alignItems: "center" }}>
-                                {myEntry && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--primary)", flexShrink: 0 }} />}
-                                {partnerEntry && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--secondary)", flexShrink: 0 }} />}
+                                {myEntry && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#8b5cf6", flexShrink: 0 }} />}
+                                {partnerEntry && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#ec4899", flexShrink: 0 }} />}
                               </div>
                             )}
                             {/* ❤️ overlay when both partners wrote on this day */}
