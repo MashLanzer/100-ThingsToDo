@@ -883,16 +883,22 @@ export function SettingsModal() {
         </div>
 
         {/* Pill tabs */}
-        <div className="pill-tab-container" style={{ margin: "1.125rem 1.25rem 0.5rem" }}>
+        <div className="pill-tab-container" style={{ margin: "1.125rem 1.25rem 0.5rem", background: isDark ? "#2a1e3a" : "var(--muted)" }}>
           <button
             className={`pill-tab-btn${activeTab === "perfil" ? " active" : ""}`}
             onClick={() => setActiveTab("perfil")}
+            style={activeTab === "perfil"
+              ? { background: isDark ? "#3d2b5e" : "white", color: isDark ? "#f0e8ff" : "var(--foreground)" }
+              : { background: "transparent", color: isDark ? "#9080a8" : "var(--foreground-muted)" }}
           >
             <User size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} /> Perfil
           </button>
           <button
             className={`pill-tab-btn${activeTab === "ajustes" ? " active" : ""}`}
             onClick={() => setActiveTab("ajustes")}
+            style={activeTab === "ajustes"
+              ? { background: isDark ? "#3d2b5e" : "white", color: isDark ? "#f0e8ff" : "var(--foreground)" }
+              : { background: "transparent", color: isDark ? "#9080a8" : "var(--foreground-muted)" }}
           >
             <Settings2 size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} /> Ajustes
           </button>
@@ -1064,13 +1070,13 @@ export function SettingsModal() {
                     {(() => {
                       const days = daysTogether(data.couple.anniversary_date)
                       return days !== null ? (
-                        <div style={{ background: "linear-gradient(135deg, var(--primary-lighter), #fce7f3)", borderRadius: "var(--radius-md)", padding: "0.5rem 0.875rem", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div style={{ background: isDark ? "rgba(139,92,246,0.12)" : "linear-gradient(135deg, var(--primary-lighter), #fce7f3)", borderRadius: "var(--radius-md)", padding: "0.5rem 0.875rem", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                           <span style={{ fontSize: "1.375rem", fontWeight: 700, fontFamily: "'Fredoka', sans-serif", color: "var(--primary)" }}>{days.toLocaleString("es-ES")}</span>
                           <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)" }}>días juntos 💕</span>
                         </div>
                       ) : null
                     })()}
-                    <input type="date" className="input" value={data.couple.anniversary_date ?? ""} max={new Date().toISOString().slice(0, 10)} disabled={updateCouple.isPending} onChange={(e) => handleAnniversaryChange(e.target.value)} />
+                    <input type="date" className="input" value={data.couple.anniversary_date ?? ""} max={new Date().toISOString().slice(0, 10)} disabled={updateCouple.isPending} onChange={(e) => handleAnniversaryChange(e.target.value)} style={{ background: isDark ? "#2e2244" : "white", color: isDark ? "#f0e8ff" : "#1c1917", borderColor: isDark ? "#4a3465" : "#e9d5ff" }} />
 
                     {/* Couple stats pills */}
                     {(completedPlans > 0 || totalTasks > 0 || daysTogether(data.couple.anniversary_date) !== null) && (

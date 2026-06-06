@@ -17,6 +17,7 @@ import type { Plan } from "@/types"
 import { OnboardingModal } from "@/components/shared/onboarding-modal"
 import { PlanCalendar } from "@/components/features/plan-calendar"
 import { Modal } from "@/components/ui/modal"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 import {
   DndContext,
   closestCenter,
@@ -196,6 +197,16 @@ export default function DashboardPage() {
   const partnerNickname = useAppStore((s) => s.partnerNickname)
   const cardSize = useAppStore((s) => s.cardSize)
   const ptr = useWindowPTR(() => { refetch() })
+  const isDark = useDarkMode()
+  const T = {
+    bg:        isDark ? "#1a1225"  : "var(--background)",
+    surface:   isDark ? "#221833"  : "var(--surface)",
+    border:    isDark ? "#4a3465" : "var(--border)",
+    text:      isDark ? "#f0e8ff" : "var(--foreground)",
+    textMuted: isDark ? "#9080a8" : "var(--foreground-muted)",
+    muted:     isDark ? "#2a1e3a" : "var(--muted)",
+    inputBg:   isDark ? "#2e2244" : "var(--muted)",
+  }
 
   // D-A: partner activity feed
   const [partnerActivities, setPartnerActivities] = useState<ActivityEvent[]>([])
@@ -721,14 +732,14 @@ export default function DashboardPage() {
       {/* Search bar */}
       {hasAnyPlans && allPlans.length > 2 && (
         <div style={{ position: "relative", marginBottom: "0.875rem" }}>
-          <Search size={15} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--foreground-muted)", pointerEvents: "none" }} />
+          <Search size={15} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: T.textMuted, pointerEvents: "none" }} />
           <input
             className="input"
             type="search"
             placeholder="Buscar planes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ paddingLeft: "2.25rem" }}
+            style={{ paddingLeft: "2.25rem", background: T.inputBg, borderColor: T.border, color: T.text }}
           />
         </div>
       )}
@@ -757,8 +768,8 @@ export default function DashboardPage() {
               fontFamily: "inherit",
               fontSize: "0.6875rem",
               fontWeight: 600,
-              background: activeTagFilter === null ? "var(--secondary)" : "var(--muted)",
-              color: activeTagFilter === null ? "white" : "var(--foreground-muted)",
+              background: activeTagFilter === null ? "var(--secondary)" : T.muted,
+              color: activeTagFilter === null ? "white" : T.textMuted,
               transition: "background 0.15s, color 0.15s",
               display: "inline-flex",
               alignItems: "center",
@@ -781,8 +792,8 @@ export default function DashboardPage() {
                 fontFamily: "inherit",
                 fontSize: "0.6875rem",
                 fontWeight: 600,
-                background: activeTagFilter === tag ? "var(--primary)" : "var(--muted)",
-                color: activeTagFilter === tag ? "white" : "var(--foreground-muted)",
+                background: activeTagFilter === tag ? "var(--primary)" : T.muted,
+                color: activeTagFilter === tag ? "white" : T.textMuted,
                 transition: "background 0.15s, color 0.15s",
                 scrollSnapAlign: "start",
                 flexShrink: 0,
@@ -805,9 +816,9 @@ export default function DashboardPage() {
                 width: "100%",
                 height: "30px",
                 borderRadius: "999px",
-                border: "1px solid var(--border)",
-                background: "var(--muted)",
-                color: "var(--foreground-muted)",
+                border: `1px solid ${T.border}`,
+                background: T.surface,
+                color: T.textMuted,
                 fontFamily: "inherit",
                 fontSize: "0.6875rem",
                 fontWeight: 600,
@@ -834,8 +845,8 @@ export default function DashboardPage() {
                   position: "absolute",
                   top: "calc(100% + 6px)",
                   left: 0, right: 0,
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
+                  background: T.surface,
+                  border: `1px solid ${T.border}`,
                   borderRadius: "var(--radius-lg)",
                   boxShadow: "var(--shadow-lg)",
                   overflow: "hidden",
@@ -877,7 +888,7 @@ export default function DashboardPage() {
             )}
           </div>
           {/* View mode toggle */}
-          <div style={{ display: "flex", borderRadius: "999px", border: "1px solid var(--border)", overflow: "hidden", flexShrink: 0 }}>
+          <div style={{ display: "flex", borderRadius: "999px", border: `1px solid ${T.border}`, overflow: "hidden", flexShrink: 0 }}>
             {([
               { key: "grid", icon: "▦", title: "Planes" },
               { key: "calendar", icon: "Cal", title: "Calendario" },
@@ -892,8 +903,8 @@ export default function DashboardPage() {
                   cursor: "pointer",
                   fontFamily: "inherit",
                   fontSize: "0.6875rem",
-                  background: viewMode === key ? "var(--primary)" : "var(--muted)",
-                  color: viewMode === key ? "white" : "var(--foreground-muted)",
+                  background: viewMode === key ? "var(--primary)" : T.surface,
+                  color: viewMode === key ? "white" : T.textMuted,
                   transition: "background 0.15s, color 0.15s",
                 }}
               >
@@ -905,10 +916,10 @@ export default function DashboardPage() {
           <button
             onClick={() => setListView(v => !v)}
             style={{
-              background: "var(--muted)", border: "1px solid var(--border)",
+              background: T.surface, border: `1px solid ${T.border}`,
               borderRadius: "var(--radius-md)", padding: "0.375rem 0.625rem",
               cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem",
-              fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)",
+              fontSize: "0.75rem", fontWeight: 600, color: T.textMuted,
               fontFamily: "inherit",
             }}
             title={listView ? "Vista cuadrícula" : "Vista lista"}

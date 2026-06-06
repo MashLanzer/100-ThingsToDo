@@ -2050,11 +2050,12 @@ export function JournalApp({ onBack }: Props) {
           <button key={tab.key} onClick={tab.action}
             style={{
               flexShrink: 0, fontSize: "0.75rem", fontWeight: 700, fontFamily: "inherit",
-              padding: "0.375rem 0.875rem", borderRadius: "999px", border: "none", cursor: "pointer",
+              padding: "0.375rem 0.875rem", borderRadius: "999px", cursor: "pointer",
               background: activeTab === tab.key
                 ? "linear-gradient(135deg, var(--primary), var(--secondary))"
-                : "var(--muted)",
-              color: activeTab === tab.key ? "white" : "var(--foreground-muted)",
+                : isDark ? "#2a1e3a" : "white",
+              color: activeTab === tab.key ? "white" : isDark ? "#9080a8" : "#6b7280",
+              border: activeTab === tab.key ? "none" : isDark ? "1px solid #4a3465" : "1px solid #f3e8ff",
               boxShadow: activeTab === tab.key ? "0 2px 8px rgba(139,92,246,0.3)" : "none",
               transition: "all 0.15s ease",
               whiteSpace: "nowrap",
