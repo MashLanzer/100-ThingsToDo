@@ -360,22 +360,31 @@ export function ChallengesFavorsApp({ onBack }: Props) {
     ? Math.min(100, ((totalPoints - currentLevel.min) / (nextLevel.min - currentLevel.min)) * 100)
     : 100
 
+  const CF_DARK_BG = "linear-gradient(160deg, #0d0d1a 0%, #140d26 55%, #0d1426 100%)"
+  const CF_HEADER: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: "0.5rem",
+    padding: "0.75rem 1rem",
+    background: "linear-gradient(135deg, #1a0d26 0%, #0d0d1a 100%)",
+    borderBottom: "1px solid rgba(139,92,246,0.2)",
+    flexShrink: 0,
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
       {/* Header */}
-      <div className="app-content-header">
-        <button className="back-btn-phone" onClick={onBack}>‹</button>
-        <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-          {mainTab === "challenge" ? <><Shuffle size={14} /> Reto del Día</> : <><Gift size={14} /> Favores</>}
+      <div style={CF_HEADER}>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: "rgba(255,255,255,0.8)", padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white" }}>
+          {mainTab === "challenge" ? <><Shuffle size={14} color="#8b5cf6" /> Reto del Día</> : <><Gift size={14} color="#ec4899" /> Favores</>}
         </span>
         {/* C2: streak badge in header */}
         {mainTab === "challenge" && streak >= 2 && (
           <div style={{
             marginLeft: "auto", display: "flex", alignItems: "center", gap: "3px",
-            background: "linear-gradient(135deg, #FEF3C7, #FDE68A)",
-            border: "1.5px solid #F59E0B", borderRadius: "999px",
-            padding: "2px 8px", fontSize: "0.5625rem", fontWeight: 700, color: "#92400E",
+            background: "rgba(245,158,11,0.2)",
+            border: "1.5px solid rgba(245,158,11,0.5)", borderRadius: "999px",
+            padding: "2px 8px", fontSize: "0.5625rem", fontWeight: 700, color: "#fcd34d",
           }}>
             🔥 {streak} días
           </div>
@@ -383,17 +392,23 @@ export function ChallengesFavorsApp({ onBack }: Props) {
       </div>
 
       {/* Main tab bar */}
-      <div style={{ padding: "0.5rem 0.75rem 0", background: "white", flexShrink: 0 }}>
-        <div className="pill-tab-container">
+      <div style={{ padding: "0.375rem 0.75rem", background: "rgba(13,13,26,0.95)", flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <div style={{ display: "flex", gap: "0.25rem", padding: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "999px" }}>
           {([
-            { id: "challenge", Icon: Shuffle, label: "Reto" },
-            { id: "favors",    Icon: Gift,    label: "Favores" },
+            { id: "challenge", Icon: Shuffle, label: "Reto", color: "#8b5cf6" },
+            { id: "favors",    Icon: Gift,    label: "Favores", color: "#ec4899" },
           ] as const).map((tab) => (
             <button
               key={tab.id}
               onClick={() => setMainTab(tab.id)}
-              className={`pill-tab-btn${mainTab === tab.id ? " active" : ""}`}
-              style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+              style={{
+                flex: 1, padding: "0.3125rem 0.5rem", borderRadius: "999px", border: "none",
+                background: mainTab === tab.id ? `linear-gradient(135deg, ${tab.color}cc, ${tab.color}99)` : "transparent",
+                color: mainTab === tab.id ? "white" : "rgba(255,255,255,0.45)",
+                fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 700,
+                cursor: "pointer", transition: "all 0.15s",
+                display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "4px",
+              }}
             ><tab.Icon size={12} />{tab.label}</button>
           ))}
         </div>
@@ -402,26 +417,31 @@ export function ChallengesFavorsApp({ onBack }: Props) {
       {/* ── CHALLENGE TAB ── */}
       {mainTab === "challenge" && (
         <>
-          <div style={{ padding: "0.375rem 0.75rem 0", background: "white", flexShrink: 0 }}>
-            <div className="pill-tab-container">
+          <div style={{ padding: "0.3125rem 0.75rem", background: "rgba(13,13,26,0.9)", flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+            <div style={{ display: "flex", gap: "0.25rem", padding: "3px", background: "rgba(255,255,255,0.05)", borderRadius: "999px" }}>
               {([
                 { id: "today",   label: "Hoy" },
                 { id: "history", label: "Historial" },
               ] as const).map((t) => (
                 <button key={t.id} onClick={() => setChallengeSubTab(t.id)}
-                  className={`pill-tab-btn${challengeSubTab === t.id ? " active" : ""}`}
-                  style={{ fontSize: "0.6875rem" }}
+                  style={{
+                    flex: 1, padding: "0.25rem 0.5rem", borderRadius: "999px", border: "none",
+                    background: challengeSubTab === t.id ? "rgba(139,92,246,0.5)" : "transparent",
+                    color: challengeSubTab === t.id ? "white" : "rgba(255,255,255,0.4)",
+                    fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 700,
+                    cursor: "pointer", transition: "all 0.15s",
+                  }}
                 >{t.label}</button>
               ))}
             </div>
           </div>
 
           {challengeSubTab === "history" ? (
-            <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem", flex: 1, overflowY: "auto", background: CF_DARK_BG }}>
               {loadingChallenge ? <PhoneLoader /> : challengeHistory.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
                   <div style={{ fontSize: "2rem" }}>📜</div>
-                  <p style={{ color: "var(--foreground-muted)", fontSize: "0.8125rem", marginTop: "0.375rem" }}>No hay retos completados aún</p>
+                  <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.8125rem", marginTop: "0.375rem" }}>No hay retos completados aún</p>
                 </div>
               ) : challengeHistory.map((h) => {
                 const found = CHALLENGES.find((c) => c.text === h.challenge_text)
@@ -429,28 +449,28 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                 return (
                   <div key={h.id} style={{
                     display: "flex", alignItems: "flex-start", gap: "0.75rem",
-                    padding: "0.75rem", borderRadius: "var(--radius-lg)",
-                    background: h.is_completed ? "linear-gradient(135deg, #D1FAE511, #A7F3D011)" : "white",
-                    border: `1px solid ${h.is_completed ? "#10B98133" : "var(--border)"}`,
+                    padding: "0.75rem", borderRadius: "14px",
+                    background: h.is_completed ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.05)",
+                    border: `1px solid ${h.is_completed ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.07)"}`,
                   }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-                      background: `linear-gradient(135deg, ${color.from}33, ${color.to}33)`,
+                      background: `linear-gradient(135deg, ${color.from}33, ${color.to}22)`,
                       display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem",
                     }}>
                       {found?.emoji ?? "🎲"}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)", lineHeight: 1.4, marginBottom: "0.25rem" }}>
+                      <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "rgba(255,255,255,0.85)", lineHeight: 1.4, marginBottom: "0.25rem" }}>
                         {h.challenge_text}
                       </p>
                       <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                         {h.is_completed && (
-                          <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "#065F46", background: "#10B98122", padding: "1px 6px", borderRadius: "999px" }}>
+                          <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "#6ee7b7", background: "rgba(16,185,129,0.18)", padding: "1px 6px", borderRadius: "999px" }}>
                             🏆 Completado
                           </span>
                         )}
-                        <span style={{ fontSize: "0.625rem", color: "var(--foreground-muted)" }}>
+                        <span style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.35)" }}>
                           {new Date(h.accepted_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
                         </span>
                       </div>
@@ -460,7 +480,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
               })}
             </div>
           ) : (
-          <PullToRefresh onRefresh={loadActiveChallenge} style={{ gap: "0.75rem", padding: "0.75rem" }}>
+          <PullToRefresh onRefresh={loadActiveChallenge} style={{ gap: "0.75rem", padding: "0.75rem", background: CF_DARK_BG }}>
             {/* C2: streak banner (≥3 days) */}
             {streak >= 3 && (
               <div style={{
@@ -485,12 +505,14 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                 <button key={c.id}
                   onClick={() => { setCategory(c.id); if (!dbChallenge) { setChallenge(null); setAccepted(false); setCompleted(false) } }}
                   style={{
-                    padding: "0.25rem 0.625rem", borderRadius: "999px",
+                    padding: "0.3125rem 0.75rem", borderRadius: "999px",
                     fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit",
-                    cursor: "pointer", border: "none",
-                    background: category === c.id ? c.bg : "#f0ebfa",
-                    color: category === c.id ? "white" : "#7C3AED",
+                    cursor: "pointer",
+                    border: category === c.id ? `1.5px solid ${c.bg}` : "1.5px solid rgba(255,255,255,0.1)",
+                    background: category === c.id ? `${c.bg}22` : "rgba(255,255,255,0.05)",
+                    color: category === c.id ? c.bg : "rgba(255,255,255,0.5)",
                     display: "inline-flex", alignItems: "center", gap: "4px",
+                    transition: "all 0.15s",
                   }}
                 ><c.Icon size={12} />{c.label}</button>
               ))}
@@ -509,7 +531,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                   fontSize: "3.5rem", lineHeight: 1,
                   animation: "rouletteSpinEmoji 0.15s linear infinite",
                 }}>{spinEmoji}</div>
-                <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "#2D1B3E", margin: 0 }}>
+                <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "white", margin: 0 }}>
                   Eligiendo tu reto...
                 </p>
                 <div style={{ display: "flex", gap: "5px", marginTop: "0.25rem" }}>
@@ -531,22 +553,24 @@ export function ChallengesFavorsApp({ onBack }: Props) {
               }}>
                 <div style={{ fontSize: "3rem", lineHeight: 1 }}>🎁</div>
                 <div>
-                  <p style={{ fontWeight: 700, fontSize: "1rem", color: "#2D1B3E", marginBottom: "0.25rem", fontFamily: "'Fredoka', sans-serif" }}>
+                  <p style={{ fontWeight: 700, fontSize: "1rem", color: "white", marginBottom: "0.25rem", fontFamily: "'Fredoka', sans-serif" }}>
                     ¿Listos para un nuevo reto?
                   </p>
-                  <p style={{ fontSize: "0.75rem", color: "#6B5B7E" }}>{filtered.length} retos disponibles</p>
+                  <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)" }}>{filtered.length} retos disponibles</p>
                 </div>
                 {showCustomChallenge ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", width: "100%" }}>
-                    <textarea className="textarea" rows={3} placeholder="Escribe vuestro reto personalizado..." value={customChallengeText} onChange={(e) => setCustomChallengeText(e.target.value)} maxLength={200} autoFocus />
+                    <textarea
+                      style={{ width: "100%", padding: "0.625rem", borderRadius: "12px", border: "1.5px solid rgba(139,92,246,0.3)", background: "rgba(255,255,255,0.06)", color: "white", fontFamily: "inherit", fontSize: "0.875rem", resize: "none", boxSizing: "border-box", outline: "none" }}
+                      rows={3} placeholder="Escribe vuestro reto personalizado..." value={customChallengeText} onChange={(e) => setCustomChallengeText(e.target.value)} maxLength={200} autoFocus />
                     <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <button className="btn btn-primary" style={{ flex: 2 }} onClick={() => {
+                      <button style={{ flex: 2, padding: "0.625rem", borderRadius: "10px", border: "none", background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", color: "white", fontFamily: "'Fredoka',sans-serif", fontSize: "0.875rem", fontWeight: 700, cursor: "pointer" }} onClick={() => {
                         if (!customChallengeText.trim()) return
                         setChallenge({ emoji: "✨", text: customChallengeText.trim() })
                         setShowCustomChallenge(false); setCustomChallengeText("")
                         setAccepted(false); setCompleted(false); setDbChallenge(null); setRevealed(false)
                       }}>✅ Usar este reto</button>
-                      <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowCustomChallenge(false)}>Cancelar</button>
+                      <button style={{ flex: 1, padding: "0.625rem", borderRadius: "10px", border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.7)", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }} onClick={() => setShowCustomChallenge(false)}>Cancelar</button>
                     </div>
                   </div>
                 ) : (
@@ -559,8 +583,8 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                       cursor: "pointer", boxShadow: `0 6px 20px ${catColor.from}55`,
                     }}>🎡 ¡Girar Ruleta!</button>
                     <button onClick={() => setShowCustomChallenge(true)} style={{
-                      padding: "0.5rem 1rem", borderRadius: "999px", border: "2px solid var(--primary)",
-                      background: "white", color: "var(--primary)", fontFamily: "'Fredoka', sans-serif",
+                      padding: "0.5rem 1rem", borderRadius: "999px", border: "1.5px solid rgba(139,92,246,0.4)",
+                      background: "rgba(139,92,246,0.1)", color: "#a78bfa", fontFamily: "'Fredoka', sans-serif",
                       fontSize: "0.875rem", fontWeight: 700, cursor: "pointer",
                     }}>✏️ Reto propio</button>
                   </>
@@ -608,7 +632,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                     }}>
                       {completed ? "🏆" : challenge.emoji}
                     </div>
-                    <p style={{ fontSize: "0.9375rem", fontWeight: 700, color: "#2D1B3E", lineHeight: 1.55, margin: 0, fontFamily: "'Fredoka', sans-serif" }}>
+                    <p style={{ fontSize: "0.9375rem", fontWeight: 700, color: "white", lineHeight: 1.55, margin: 0, fontFamily: "'Fredoka', sans-serif" }}>
                       {challenge.text}
                     </p>
                     {completed && (
@@ -652,8 +676,8 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                   <div style={{ display: "flex", gap: "0.5rem" }}>
                     <button onClick={pickRandom} style={{
                       flex: 1, padding: "0.75rem", borderRadius: "12px",
-                      border: "2px solid #E9D5FF", background: "white", fontFamily: "inherit",
-                      fontSize: "0.875rem", fontWeight: 700, color: "#7C3AED", cursor: "pointer",
+                      border: "1.5px solid rgba(139,92,246,0.4)", background: "rgba(139,92,246,0.1)",
+                      fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 700, color: "#a78bfa", cursor: "pointer",
                     }}>🎡 Otro</button>
                     {!accepted ? (
                       <button onClick={handleAccept} style={{
@@ -673,7 +697,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                     ) : (
                       /* C5: partner confirmation */
                       <div style={{ flex: 2, display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-                        <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.8125rem", fontWeight: 700, color: "#2D1B3E", margin: 0, textAlign: "center" }}>
+                        <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.8125rem", fontWeight: 700, color: "white", margin: 0, textAlign: "center" }}>
                           ¿Lo habéis hecho juntos? 💑
                         </p>
                         <div style={{ display: "flex", gap: "0.375rem" }}>
@@ -685,9 +709,9 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                           }}>{saving ? "..." : "¡Sí! 🎉"}</button>
                           <button onClick={() => setConfirmingComplete(false)} style={{
                             flex: 2, padding: "0.625rem", borderRadius: "10px",
-                            border: "2px solid #E9D5FF", background: "white",
+                            border: "1.5px solid rgba(139,92,246,0.3)", background: "rgba(139,92,246,0.08)",
                             fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600,
-                            color: "#7C3AED", cursor: "pointer",
+                            color: "#a78bfa", cursor: "pointer",
                           }}>Aún no</button>
                         </div>
                       </div>
@@ -743,12 +767,17 @@ export function ChallengesFavorsApp({ onBack }: Props) {
           </div>
 
           {/* Favors sub-tabs */}
-          <div style={{ padding: "0.375rem 0.75rem", background: "white", flexShrink: 0 }}>
-            <div className="pill-tab-container">
+          <div style={{ padding: "0.3125rem 0.75rem", background: "rgba(13,13,26,0.9)", flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+            <div style={{ display: "flex", gap: "0.25rem", padding: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "999px" }}>
               {(["active", "completed", "create"] as const).map((t) => (
                 <button key={t} onClick={() => setFavTab(t)}
-                  className={`pill-tab-btn${favTab === t ? " active" : ""}`}
-                  style={{ fontSize: "0.6875rem" }}
+                  style={{
+                    flex: 1, padding: "0.25rem 0.375rem", borderRadius: "999px", border: "none",
+                    background: favTab === t ? "linear-gradient(135deg, #ec4899cc, #ec489988)" : "transparent",
+                    color: favTab === t ? "white" : "rgba(255,255,255,0.4)",
+                    fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 700,
+                    cursor: "pointer", transition: "all 0.15s",
+                  }}
                 >
                   {t === "active" ? "Activos" : t === "completed" ? "Hechos ✓" : "+ Crear"}
                 </button>
@@ -756,67 +785,82 @@ export function ChallengesFavorsApp({ onBack }: Props) {
             </div>
           </div>
 
-          <PullToRefresh onRefresh={loadFavors}>
+          <PullToRefresh onRefresh={loadFavors} style={{ background: CF_DARK_BG }}>
             {favTab === "create" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-                <input className="input" placeholder="Título del favor" value={favTitle}
-                  onChange={(e) => setFavTitle(e.target.value)} maxLength={60} />
-                <textarea className="textarea" placeholder="Descripción..." rows={2} value={favDesc}
-                  onChange={(e) => setFavDesc(e.target.value)} maxLength={200} />
+                <input
+                  style={{ width: "100%", padding: "0.625rem 0.875rem", borderRadius: "12px", border: "1.5px solid rgba(236,72,153,0.25)", background: "rgba(255,255,255,0.06)", color: "white", fontFamily: "inherit", fontSize: "0.875rem", boxSizing: "border-box", outline: "none" }}
+                  placeholder="Título del favor" value={favTitle} onChange={(e) => setFavTitle(e.target.value)} maxLength={60} />
+                <textarea
+                  style={{ width: "100%", padding: "0.625rem 0.875rem", borderRadius: "12px", border: "1.5px solid rgba(236,72,153,0.2)", background: "rgba(255,255,255,0.06)", color: "white", fontFamily: "inherit", fontSize: "0.875rem", resize: "none", boxSizing: "border-box", outline: "none" }}
+                  placeholder="Descripción..." rows={2} value={favDesc} onChange={(e) => setFavDesc(e.target.value)} maxLength={200} />
                 {/* Fav-A: ¿Para quién? toggle */}
                 {partner && (
                   <div>
-                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "0.375rem", display: "block" }}>¿Para quién?</label>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "rgba(255,255,255,0.55)", marginBottom: "0.375rem", display: "block" }}>¿Para quién?</label>
                     <div style={{ display: "flex", gap: "0.375rem" }}>
                       <button onClick={() => setAssignedTo(null)} style={{
-                        flex: 1, padding: "0.375rem 0.5rem", borderRadius: "var(--radius-md)",
-                        border: assignedTo === null ? "2px solid var(--primary)" : "2px solid var(--border)",
-                        background: assignedTo === null ? "var(--primary-lighter)" : "white",
+                        flex: 1, padding: "0.375rem 0.5rem", borderRadius: "12px",
+                        border: assignedTo === null ? "2px solid #ec4899" : "2px solid rgba(255,255,255,0.1)",
+                        background: assignedTo === null ? "rgba(236,72,153,0.15)" : "rgba(255,255,255,0.05)",
                         cursor: "pointer", fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
-                        color: assignedTo === null ? "var(--primary)" : "var(--foreground-light)",
+                        color: assignedTo === null ? "#f9a8d4" : "rgba(255,255,255,0.5)",
                       }}>Para mí</button>
                       <button onClick={() => setAssignedTo(partner.id)} style={{
-                        flex: 1, padding: "0.375rem 0.5rem", borderRadius: "var(--radius-md)",
-                        border: assignedTo === partner.id ? "2px solid var(--primary)" : "2px solid var(--border)",
-                        background: assignedTo === partner.id ? "var(--primary-lighter)" : "white",
+                        flex: 1, padding: "0.375rem 0.5rem", borderRadius: "12px",
+                        border: assignedTo === partner.id ? "2px solid #ec4899" : "2px solid rgba(255,255,255,0.1)",
+                        background: assignedTo === partner.id ? "rgba(236,72,153,0.15)" : "rgba(255,255,255,0.05)",
                         cursor: "pointer", fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
-                        color: assignedTo === partner.id ? "var(--primary)" : "var(--foreground-light)",
+                        color: assignedTo === partner.id ? "#f9a8d4" : "rgba(255,255,255,0.5)",
                       }}>Para mi pareja 🎁</button>
                     </div>
                   </div>
                 )}
                 <div>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "0.375rem", display: "block" }}>Dificultad</label>
+                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "rgba(255,255,255,0.55)", marginBottom: "0.375rem", display: "block" }}>Dificultad</label>
                   <div style={{ display: "flex", gap: "0.375rem" }}>
-                    {DIFFICULTIES.map((d) => (
-                      <button key={d.id} onClick={() => setDifficulty(d.id)} style={{
-                        flex: 1, padding: "0.375rem 0.25rem", borderRadius: "var(--radius-md)",
-                        border: difficulty === d.id ? "2px solid var(--primary)" : "2px solid var(--border)",
-                        background: difficulty === d.id ? "var(--primary-lighter)" : "white",
-                        cursor: "pointer", fontFamily: "inherit", fontSize: "0.625rem", fontWeight: 600,
-                        textAlign: "center", color: difficulty === d.id ? "var(--primary)" : "var(--foreground-light)",
-                      }}>
-                        <div style={{ display: "flex", justifyContent: "center", gap: "1px" }}>{Array.from({ length: d.stars }).map((_, i) => <Star key={i} size={8} fill="currentColor" />)}</div>
-                        <div>{d.label}</div><div>{d.pts}pts</div>
-                      </button>
-                    ))}
+                    {DIFFICULTIES.map((d) => {
+                      const diffCol = d.id === "easy" ? "#10b981" : d.id === "medium" ? "#f59e0b" : "#ef4444"
+                      return (
+                        <button key={d.id} onClick={() => setDifficulty(d.id)} style={{
+                          flex: 1, padding: "0.375rem 0.25rem", borderRadius: "12px",
+                          border: difficulty === d.id ? `2px solid ${diffCol}` : "2px solid rgba(255,255,255,0.1)",
+                          background: difficulty === d.id ? `${diffCol}20` : "rgba(255,255,255,0.05)",
+                          cursor: "pointer", fontFamily: "inherit", fontSize: "0.625rem", fontWeight: 600,
+                          textAlign: "center", color: difficulty === d.id ? diffCol : "rgba(255,255,255,0.5)",
+                        }}>
+                          <div style={{ display: "flex", justifyContent: "center", gap: "1px" }}>{Array.from({ length: d.stars }).map((_, i) => <Star key={i} size={8} fill="currentColor" />)}</div>
+                          <div>{d.label}</div><div>{d.pts}pts</div>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "0.375rem", display: "block" }}>Categoría</label>
+                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "rgba(255,255,255,0.55)", marginBottom: "0.375rem", display: "block" }}>Categoría</label>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
                     {CATEGORIES.map((c) => (
                       <button key={c.id} onClick={() => setFavCategory(c.id)} style={{
                         padding: "0.2rem 0.5rem", borderRadius: "999px",
-                        border: favCategory === c.id ? "2px solid var(--primary)" : "2px solid var(--border)",
-                        background: favCategory === c.id ? "var(--primary-lighter)" : "white",
+                        border: favCategory === c.id ? `2px solid ${c.color}` : "2px solid rgba(255,255,255,0.1)",
+                        background: favCategory === c.id ? `${c.color}20` : "rgba(255,255,255,0.04)",
                         cursor: "pointer", fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
-                        color: favCategory === c.id ? "var(--primary)" : "var(--foreground-light)",
+                        color: favCategory === c.id ? c.color : "rgba(255,255,255,0.5)",
                       }}>{c.label}</button>
                     ))}
                   </div>
                 </div>
-                <button className="btn btn-primary" onClick={handleCreateFavor} disabled={savingFavor} style={{ marginTop: "0.25rem" }}>
+                <button
+                  onClick={handleCreateFavor} disabled={savingFavor}
+                  style={{
+                    marginTop: "0.25rem", padding: "0.75rem", borderRadius: "14px", border: "none",
+                    background: favTitle.trim() ? "linear-gradient(135deg, #ec4899, #be185d)" : "rgba(255,255,255,0.1)",
+                    color: "white", fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
+                    cursor: favTitle.trim() && !savingFavor ? "pointer" : "not-allowed",
+                    opacity: favTitle.trim() && !savingFavor ? 1 : 0.5,
+                    boxShadow: favTitle.trim() ? "0 4px 16px rgba(236,72,153,0.4)" : "none",
+                  }}
+                >
                   {savingFavor ? "Creando..." : "Crear Favor 💝"}
                 </button>
               </div>
@@ -825,11 +869,21 @@ export function ChallengesFavorsApp({ onBack }: Props) {
             {(favTab === "active" || favTab === "completed") && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 <div style={{ padding: "0 0.75rem" }}>
-                  <div className="pill-tab-container" style={{ flexWrap: "wrap" }}>
-                    <button className={`pill-tab-btn${favCategoryFilter === "all" ? " active" : ""}`} style={{ fontSize: "0.625rem" }} onClick={() => setFavCategoryFilter("all")}>✨ Todos</button>
-                    {CATEGORIES.map((c) => (
-                      <button key={c.id} className={`pill-tab-btn${favCategoryFilter === c.id ? " active" : ""}`} style={{ fontSize: "0.625rem" }} onClick={() => setFavCategoryFilter(c.id)}>{c.label}</button>
-                    ))}
+                  <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+                    {[{ id: "all" as const, label: "✨ Todos", color: "#ec4899" }, ...CATEGORIES.map(c => ({ id: c.id, label: c.label, color: c.color }))].map((c) => {
+                      const active = favCategoryFilter === c.id
+                      return (
+                        <button key={c.id}
+                          onClick={() => setFavCategoryFilter(c.id)}
+                          style={{
+                            padding: "0.25rem 0.625rem", borderRadius: "999px", fontSize: "0.625rem", fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
+                            border: active ? `1.5px solid ${c.color}` : "1.5px solid rgba(255,255,255,0.1)",
+                            background: active ? `${c.color}20` : "rgba(255,255,255,0.04)",
+                            color: active ? c.color : "rgba(255,255,255,0.45)", transition: "all 0.15s",
+                          }}
+                        >{c.label}</button>
+                      )
+                    })}
                   </div>
                 </div>
                 {loadingFavors ? (
