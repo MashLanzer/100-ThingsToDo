@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 import { getFirebaseToken } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import { RefreshCw, CheckCircle, Trophy } from "lucide-react"
@@ -155,6 +156,20 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
 
   const catColor = CAT_COLORS[category] ?? CAT_COLORS.all
 
+  const isDark = useDarkMode()
+  const T = {
+    bg:        isDark ? "#1a1225"  : "var(--background)",
+    surface:   isDark ? "#221833"  : "var(--surface)",
+    surfaceHov:isDark ? "#2a1e3a" : "var(--surface-hover)",
+    border:    isDark ? "#4a3465" : "var(--border)",
+    borderHov: isDark ? "#5e4480" : "var(--border-hover)",
+    text:      isDark ? "#f0e8ff" : "var(--foreground)",
+    textSub:   isDark ? "#c4b8d8" : "var(--foreground-light)",
+    textMuted: isDark ? "#9080a8" : "var(--foreground-muted)",
+    muted:     isDark ? "#2a1e3a" : "var(--muted)",
+    inputBg:   isDark ? "#2e2244" : "var(--muted)",
+  }
+
   useEffect(() => { loadActiveChallenge() }, [])
 
   useEffect(() => {
@@ -250,12 +265,12 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
       <div style={{
         display: "flex", alignItems: "center", gap: "0.5rem",
         padding: "0.75rem 1rem",
-        background: `linear-gradient(135deg, ${catColor.from}25 0%, rgba(13,13,26,0.98) 100%)`,
+        background: isDark ? `linear-gradient(135deg, ${catColor.from}25 0%, rgba(13,13,26,0.98) 100%)` : `linear-gradient(135deg, ${catColor.from}12 0%, var(--surface) 100%)`,
         borderBottom: `1px solid ${catColor.from}30`,
         flexShrink: 0, transition: "background 0.4s ease",
       }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: "rgba(255,255,255,0.8)", padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
-        <span style={{ flex: 1, fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white" }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: T.text, padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
+        <span style={{ flex: 1, fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: T.text }}>
           🎲 Reto Diario
         </span>
         <button
@@ -271,7 +286,7 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
       <div style={{
         flex: 1, overflowY: "auto", padding: "0.75rem",
         display: "flex", flexDirection: "column", gap: "0.75rem",
-        background: "linear-gradient(160deg, #0d0d1a 0%, #140d26 55%, #0d1426 100%)",
+        background: isDark ? "linear-gradient(160deg, #0d0d1a 0%, #140d26 55%, #0d1426 100%)" : T.bg,
       }}>
 
         {/* Category chips */}
@@ -284,9 +299,9 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
                 padding: "0.3125rem 0.75rem", borderRadius: "999px",
                 fontSize: "0.6875rem", fontWeight: 700,
                 fontFamily: "inherit", cursor: "pointer",
-                border: category === c.id ? `1.5px solid ${c.bg}` : "1.5px solid rgba(255,255,255,0.1)",
-                background: category === c.id ? `${c.bg}22` : "rgba(255,255,255,0.05)",
-                color: category === c.id ? c.bg : "rgba(255,255,255,0.5)",
+                border: category === c.id ? `1.5px solid ${c.bg}` : `1.5px solid ${T.border}`,
+                background: category === c.id ? `${c.bg}22` : T.muted,
+                color: category === c.id ? c.bg : T.textMuted,
                 transition: "all 0.15s",
                 boxShadow: category === c.id ? `0 0 12px ${c.glow}` : "none",
               }}
@@ -295,7 +310,7 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
         </div>
 
         {loadingDb ? (
-          <div style={{ textAlign: "center", padding: "2rem", color: "rgba(255,255,255,0.4)", fontSize: "0.875rem" }}>
+          <div style={{ textAlign: "center", padding: "2rem", color: T.textMuted, fontSize: "0.875rem" }}>
             Cargando...
           </div>
         ) : (
@@ -310,10 +325,10 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
               }}>
                 <div style={{ fontSize: "3rem", lineHeight: 1, animation: "diceFloat 2.5s ease-in-out infinite" }}>🎁</div>
                 <div>
-                  <p style={{ fontWeight: 700, fontSize: "1rem", color: "white", marginBottom: "0.25rem", fontFamily: "'Fredoka',sans-serif" }}>
+                  <p style={{ fontWeight: 700, fontSize: "1rem", color: T.text, marginBottom: "0.25rem", fontFamily: "'Fredoka',sans-serif" }}>
                     ¿Listos para un nuevo reto?
                   </p>
-                  <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.45)" }}>
+                  <p style={{ fontSize: "0.75rem", color: T.textMuted }}>
                     {filtered.length} retos disponibles en esta categoría
                   </p>
                 </div>
@@ -352,7 +367,7 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
                 </div>
 
                 <p style={{
-                  fontSize: "0.9375rem", fontWeight: 700, color: "white",
+                  fontSize: "0.9375rem", fontWeight: 700, color: T.text,
                   lineHeight: 1.55, margin: 0, fontFamily: "'Fredoka',sans-serif",
                 }}>
                   {challenge.text}
@@ -388,9 +403,9 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
                   onClick={pickRandom}
                   style={{
                     flex: 1, padding: "0.75rem", borderRadius: "14px",
-                    border: `1.5px solid ${catColor.from}44`, background: "rgba(255,255,255,0.05)",
+                    border: `1.5px solid ${catColor.from}44`, background: T.muted,
                     fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 700,
-                    color: "rgba(255,255,255,0.7)", cursor: "pointer",
+                    color: T.textSub, cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem",
                   }}
                 >
@@ -454,7 +469,7 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
                     padding: "0.25rem 0", marginBottom: showHistory ? "0.5rem" : 0,
                   }}
                 >
-                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(255,255,255,0.5)" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: T.textMuted }}>
                     📜 Retos recientes ({history.length})
                   </span>
                   <span style={{ fontSize: "0.75rem", color: catColor.from, fontWeight: 600 }}>
@@ -467,11 +482,11 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
                       <div key={i} style={{
                         display: "flex", gap: "0.625rem", alignItems: "flex-start",
                         padding: "0.625rem 0.75rem",
-                        background: "rgba(255,255,255,0.05)", borderRadius: "10px",
-                        border: "1px solid rgba(255,255,255,0.08)",
+                        background: T.surface, borderRadius: "10px",
+                        border: `1px solid ${T.border}`,
                       }}>
                         <span style={{ fontSize: "1.25rem", flexShrink: 0 }}>{h.emoji}</span>
-                        <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.65)", lineHeight: 1.4 }}>{h.text}</span>
+                        <span style={{ fontSize: "0.75rem", color: T.textSub, lineHeight: 1.4 }}>{h.text}</span>
                       </div>
                     ))}
                   </div>

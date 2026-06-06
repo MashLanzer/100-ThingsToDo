@@ -5,6 +5,7 @@ import { getFirebaseToken } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import type { Favor, FavorDifficulty, FavorCategory } from "@/types"
 import { RefreshCw, ChevronLeft } from "lucide-react"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 
 const DIFFICULTIES: { id: FavorDifficulty; label: string; pts: number; emoji: string; color: string; bg: string }[] = [
   { id: "easy",   label: "Fácil",   pts: 10, emoji: "⭐",     color: "#059669", bg: "#d1fae5" },
@@ -49,6 +50,18 @@ export function FavorsApp({ onBack }: Props) {
   const [difficulty, setDifficulty] = useState<FavorDifficulty>("medium")
   const [category, setCategory] = useState<FavorCategory>("romantic")
   const [saving, setSaving] = useState(false)
+
+  const isDark = useDarkMode()
+  const T = {
+    bg:        isDark ? "#1a1225"  : "var(--background)",
+    surface:   isDark ? "#221833"  : "var(--surface)",
+    border:    isDark ? "#4a3465" : "var(--border)",
+    text:      isDark ? "#f0e8ff" : "var(--foreground)",
+    textSub:   isDark ? "#c4b8d8" : "var(--foreground-light)",
+    textMuted: isDark ? "#9080a8" : "var(--foreground-muted)",
+    muted:     isDark ? "#2a1e3a" : "var(--muted)",
+    inputBg:   isDark ? "#2e2244" : "var(--muted)",
+  }
 
   useEffect(() => {
     loadFavors()
@@ -139,7 +152,7 @@ export function FavorsApp({ onBack }: Props) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", background: "white", borderBottom: "1px solid #fce7f3", flexShrink: 0 }}>
+      <div style={{ display: "flex", background: T.surface, borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
         {tabConfig.map((t) => (
           <button
             key={t.id}
@@ -148,7 +161,7 @@ export function FavorsApp({ onBack }: Props) {
               flex: 1, padding: "0.625rem 0.25rem", background: "none", border: "none",
               borderBottom: tab === t.id ? "2.5px solid #be185d" : "2.5px solid transparent",
               cursor: "pointer", fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: tab === t.id ? 700 : 500,
-              color: tab === t.id ? "#be185d" : "#9ca3af", marginBottom: "-1px",
+              color: tab === t.id ? "#be185d" : T.textMuted, marginBottom: "-1px",
               transition: "all 0.15s",
             }}
           >
@@ -158,7 +171,7 @@ export function FavorsApp({ onBack }: Props) {
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0.875rem" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "0.875rem", background: T.bg }}>
 
         {/* CREATE tab */}
         {tab === "create" && (
@@ -171,7 +184,7 @@ export function FavorsApp({ onBack }: Props) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={60}
-                style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "12px", border: "1.5px solid #fce7f3", background: "#fdf2f8", color: "#1c1917", fontSize: "0.9375rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "12px", border: `1.5px solid ${T.border}`, background: T.inputBg, color: T.text, fontSize: "0.9375rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
               />
             </div>
 
@@ -184,7 +197,7 @@ export function FavorsApp({ onBack }: Props) {
                 value={desc}
                 onChange={(e) => setDesc(e.target.value)}
                 maxLength={200}
-                style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "12px", border: "1.5px solid #fce7f3", background: "#fdf2f8", color: "#1c1917", fontSize: "0.875rem", fontFamily: "inherit", outline: "none", resize: "none", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "12px", border: `1.5px solid ${T.border}`, background: T.inputBg, color: T.text, fontSize: "0.875rem", fontFamily: "inherit", outline: "none", resize: "none", boxSizing: "border-box" }}
               />
             </div>
 
@@ -198,10 +211,10 @@ export function FavorsApp({ onBack }: Props) {
                     onClick={() => setDifficulty(d.id)}
                     style={{
                       flex: 1, padding: "0.5rem 0.25rem", borderRadius: "12px",
-                      border: `2px solid ${difficulty === d.id ? d.color : "#f3f4f6"}`,
-                      background: difficulty === d.id ? d.bg : "white",
+                      border: `2px solid ${difficulty === d.id ? d.color : T.border}`,
+                      background: difficulty === d.id ? d.bg : T.surface,
                       cursor: "pointer", fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 700,
-                      textAlign: "center", color: difficulty === d.id ? d.color : "#9ca3af",
+                      textAlign: "center", color: difficulty === d.id ? d.color : T.textMuted,
                       transition: "all 0.15s",
                       boxShadow: difficulty === d.id ? `0 2px 8px ${d.color}30` : "none",
                     }}
@@ -224,10 +237,10 @@ export function FavorsApp({ onBack }: Props) {
                     onClick={() => setCategory(c.id)}
                     style={{
                       padding: "0.3rem 0.75rem", borderRadius: "999px",
-                      border: `2px solid ${category === c.id ? c.color : "#f3f4f6"}`,
-                      background: category === c.id ? c.bg : "white",
+                      border: `2px solid ${category === c.id ? c.color : T.border}`,
+                      background: category === c.id ? c.bg : T.surface,
                       cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 700,
-                      color: category === c.id ? c.color : "#9ca3af",
+                      color: category === c.id ? c.color : T.textMuted,
                       transition: "all 0.15s",
                     }}
                   >
@@ -242,7 +255,7 @@ export function FavorsApp({ onBack }: Props) {
               disabled={saving || !title.trim()}
               style={{
                 padding: "0.8125rem", borderRadius: "14px", border: "none",
-                background: title.trim() && !saving ? "linear-gradient(135deg, #be185d, #db2777)" : "#d1d5db",
+                background: title.trim() && !saving ? "linear-gradient(135deg, #be185d, #db2777)" : T.muted,
                 color: "white", fontWeight: 700, fontSize: "0.9375rem", fontFamily: "inherit",
                 cursor: title.trim() && !saving ? "pointer" : "default",
                 boxShadow: title.trim() ? "0 4px 16px rgba(190,24,93,0.35)" : "none",
@@ -258,7 +271,7 @@ export function FavorsApp({ onBack }: Props) {
         {(tab === "active" || tab === "completed") && (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
             {loading ? (
-              <p style={{ color: "#9ca3af", fontSize: "0.8125rem", textAlign: "center", padding: "1.5rem 0" }}>Cargando...</p>
+              <p style={{ color: T.textMuted, fontSize: "0.8125rem", textAlign: "center", padding: "1.5rem 0" }}>Cargando...</p>
             ) : (
               (tab === "active" ? active : completed).map((f, i) => {
                 const diff = DIFFICULTIES.find((d) => d.id === f.difficulty)
@@ -269,9 +282,9 @@ export function FavorsApp({ onBack }: Props) {
                     key={f.id}
                     style={{
                       padding: "0.875rem",
-                      background: f.is_completed ? "#f9fafb" : catColors.bg,
+                      background: isDark ? (f.is_completed ? T.surface : T.muted) : (f.is_completed ? "#f9fafb" : catColors.bg),
                       borderRadius: "16px",
-                      border: `1.5px solid ${f.is_completed ? "#e5e7eb" : catColors.border}`,
+                      border: isDark ? `1.5px solid ${T.border}` : `1.5px solid ${f.is_completed ? "#e5e7eb" : catColors.border}`,
                       borderLeft: `4px solid ${f.is_completed ? "#9ca3af" : catColors.color}`,
                       opacity: f.is_completed ? 0.75 : 1,
                       animation: `favorCardIn 0.3s ease both`,
@@ -280,28 +293,28 @@ export function FavorsApp({ onBack }: Props) {
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <h4 style={{ fontWeight: 700, fontSize: "0.875rem", color: f.is_completed ? "#6b7280" : "#1c1917", flex: 1, margin: 0 }}>
+                      <h4 style={{ fontWeight: 700, fontSize: "0.875rem", color: f.is_completed ? T.textMuted : T.text, flex: 1, margin: 0 }}>
                         {f.title}
                       </h4>
                       <span style={{
                         fontSize: "0.6875rem", fontWeight: 700, marginLeft: "0.5rem", flexShrink: 0,
                         color: diff?.color ?? "#be185d",
-                        background: diff?.bg ?? "#fdf2f8",
+                        background: isDark ? `${diff?.color ?? "#be185d"}22` : (diff?.bg ?? "#fdf2f8"),
                         borderRadius: "999px", padding: "1px 7px",
                       }}>
                         +{f.points}pts
                       </span>
                     </div>
                     {f.description && (
-                      <p style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem", margin: "0.25rem 0 0" }}>
+                      <p style={{ fontSize: "0.75rem", color: T.textSub, marginTop: "0.25rem", margin: "0.25rem 0 0" }}>
                         {f.description}
                       </p>
                     )}
                     <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.5rem", alignItems: "center" }}>
-                      <span style={{ fontSize: "0.625rem", color: diff?.color ?? "#9ca3af", background: diff?.bg ?? "#f3f4f6", borderRadius: "999px", padding: "1px 6px", fontWeight: 600 }}>
+                      <span style={{ fontSize: "0.625rem", color: diff?.color ?? "#9ca3af", background: isDark ? `${diff?.color ?? "#be185d"}22` : (diff?.bg ?? "#f3f4f6"), borderRadius: "999px", padding: "1px 6px", fontWeight: 600 }}>
                         {diff?.emoji} {diff?.label}
                       </span>
-                      <span style={{ fontSize: "0.625rem", color: catColors.color, background: catColors.bg, borderRadius: "999px", padding: "1px 6px", fontWeight: 600 }}>
+                      <span style={{ fontSize: "0.625rem", color: catColors.color, background: isDark ? `${catColors.color}22` : catColors.bg, borderRadius: "999px", padding: "1px 6px", fontWeight: 600 }}>
                         {cat?.label}
                       </span>
                       {!f.is_completed && (
@@ -324,10 +337,10 @@ export function FavorsApp({ onBack }: Props) {
             {!loading && (tab === "active" ? active : completed).length === 0 && (
               <div style={{ textAlign: "center", padding: "2rem 0" }}>
                 <div style={{ fontSize: "2.5rem", marginBottom: "0.625rem" }}>{tab === "active" ? "💝" : "🏆"}</div>
-                <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "#374151", margin: "0 0 0.25rem" }}>
+                <p style={{ fontSize: "0.875rem", fontWeight: 700, color: T.text, margin: "0 0 0.25rem" }}>
                   {tab === "active" ? "No hay favores activos" : "¡Aún no hay favores completados!"}
                 </p>
-                <p style={{ fontSize: "0.75rem", color: "#9ca3af", margin: 0 }}>
+                <p style={{ fontSize: "0.75rem", color: T.textMuted, margin: 0 }}>
                   {tab === "active" ? "Crea el primero en + Crear" : "Completa un favor y aparecerá aquí"}
                 </p>
               </div>

@@ -10,6 +10,7 @@ import { PhoneLoader } from "@/components/features/phone-loader"
 import type { Favor, FavorDifficulty, FavorCategory } from "@/types"
 import { useAuth } from "@/hooks/use-auth"
 import { useCoupleStatus } from "@/hooks/use-couple"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 
 // ── Challenge data ────────────────────────────────────────────────────────────
 
@@ -360,12 +361,29 @@ export function ChallengesFavorsApp({ onBack }: Props) {
     ? Math.min(100, ((totalPoints - currentLevel.min) / (nextLevel.min - currentLevel.min)) * 100)
     : 100
 
-  const CF_DARK_BG = "linear-gradient(160deg, #0d0d1a 0%, #140d26 55%, #0d1426 100%)"
+  const isDark = useDarkMode()
+  const T = {
+    bg:         isDark ? "#1a1225"  : "var(--background)",
+    surface:    isDark ? "#221833"  : "var(--surface)",
+    surfaceHov: isDark ? "#2a1e3a" : "var(--surface-hover)",
+    border:     isDark ? "#4a3465" : "var(--border)",
+    text:       isDark ? "#f0e8ff" : "var(--foreground)",
+    textSub:    isDark ? "#c4b8d8" : "var(--foreground-light)",
+    textMuted:  isDark ? "#9080a8" : "var(--foreground-muted)",
+    muted:      isDark ? "#2a1e3a" : "var(--muted)",
+    inputBg:    isDark ? "#2e2244" : "var(--muted)",
+  }
+
+  const CF_DARK_BG = isDark
+    ? "linear-gradient(160deg, #0d0d1a 0%, #140d26 55%, #0d1426 100%)"
+    : T.bg
   const CF_HEADER: React.CSSProperties = {
     display: "flex", alignItems: "center", gap: "0.5rem",
     padding: "0.75rem 1rem",
-    background: "linear-gradient(135deg, #1a0d26 0%, #0d0d1a 100%)",
-    borderBottom: "1px solid rgba(139,92,246,0.2)",
+    background: isDark
+      ? "linear-gradient(135deg, #1a0d26 0%, #0d0d1a 100%)"
+      : "linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)",
+    borderBottom: isDark ? "1px solid rgba(139,92,246,0.2)" : `1px solid ${T.border}`,
     flexShrink: 0,
   }
 
@@ -374,8 +392,8 @@ export function ChallengesFavorsApp({ onBack }: Props) {
     <>
       {/* Header */}
       <div style={CF_HEADER}>
-        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: "rgba(255,255,255,0.8)", padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
-        <span style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white" }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: isDark ? "rgba(255,255,255,0.8)" : T.text, padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: T.text }}>
           {mainTab === "challenge" ? <><Shuffle size={14} color="#8b5cf6" /> Reto del Día</> : <><Gift size={14} color="#ec4899" /> Favores</>}
         </span>
         {/* C2: streak badge in header */}
@@ -392,8 +410,8 @@ export function ChallengesFavorsApp({ onBack }: Props) {
       </div>
 
       {/* Main tab bar */}
-      <div style={{ padding: "0.375rem 0.75rem", background: "rgba(13,13,26,0.95)", flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-        <div style={{ display: "flex", gap: "0.25rem", padding: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "999px" }}>
+      <div style={{ padding: "0.375rem 0.75rem", background: isDark ? "rgba(13,13,26,0.95)" : T.surface, flexShrink: 0, borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : T.border}` }}>
+        <div style={{ display: "flex", gap: "0.25rem", padding: "3px", background: isDark ? "rgba(255,255,255,0.06)" : T.muted, borderRadius: "999px" }}>
           {([
             { id: "challenge", Icon: Shuffle, label: "Reto", color: "#8b5cf6" },
             { id: "favors",    Icon: Gift,    label: "Favores", color: "#ec4899" },
@@ -404,7 +422,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
               style={{
                 flex: 1, padding: "0.3125rem 0.5rem", borderRadius: "999px", border: "none",
                 background: mainTab === tab.id ? `linear-gradient(135deg, ${tab.color}cc, ${tab.color}99)` : "transparent",
-                color: mainTab === tab.id ? "white" : "rgba(255,255,255,0.45)",
+                color: mainTab === tab.id ? "white" : isDark ? "rgba(255,255,255,0.45)" : T.textMuted,
                 fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 700,
                 cursor: "pointer", transition: "all 0.15s",
                 display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "4px",
@@ -417,8 +435,8 @@ export function ChallengesFavorsApp({ onBack }: Props) {
       {/* ── CHALLENGE TAB ── */}
       {mainTab === "challenge" && (
         <>
-          <div style={{ padding: "0.3125rem 0.75rem", background: "rgba(13,13,26,0.9)", flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-            <div style={{ display: "flex", gap: "0.25rem", padding: "3px", background: "rgba(255,255,255,0.05)", borderRadius: "999px" }}>
+          <div style={{ padding: "0.3125rem 0.75rem", background: isDark ? "rgba(13,13,26,0.9)" : T.surface, flexShrink: 0, borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.04)" : T.border}` }}>
+            <div style={{ display: "flex", gap: "0.25rem", padding: "3px", background: isDark ? "rgba(255,255,255,0.05)" : T.muted, borderRadius: "999px" }}>
               {([
                 { id: "today",   label: "Hoy" },
                 { id: "history", label: "Historial" },
@@ -427,7 +445,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                   style={{
                     flex: 1, padding: "0.25rem 0.5rem", borderRadius: "999px", border: "none",
                     background: challengeSubTab === t.id ? "rgba(139,92,246,0.5)" : "transparent",
-                    color: challengeSubTab === t.id ? "white" : "rgba(255,255,255,0.4)",
+                    color: challengeSubTab === t.id ? "white" : isDark ? "rgba(255,255,255,0.4)" : T.textMuted,
                     fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 700,
                     cursor: "pointer", transition: "all 0.15s",
                   }}
@@ -441,7 +459,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
               {loadingChallenge ? <PhoneLoader /> : challengeHistory.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
                   <div style={{ fontSize: "2rem" }}>📜</div>
-                  <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.8125rem", marginTop: "0.375rem" }}>No hay retos completados aún</p>
+                  <p style={{ color: isDark ? "rgba(255,255,255,0.45)" : T.textMuted, fontSize: "0.8125rem", marginTop: "0.375rem" }}>No hay retos completados aún</p>
                 </div>
               ) : challengeHistory.map((h) => {
                 const found = CHALLENGES.find((c) => c.text === h.challenge_text)
@@ -450,8 +468,8 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                   <div key={h.id} style={{
                     display: "flex", alignItems: "flex-start", gap: "0.75rem",
                     padding: "0.75rem", borderRadius: "14px",
-                    background: h.is_completed ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.05)",
-                    border: `1px solid ${h.is_completed ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.07)"}`,
+                    background: h.is_completed ? "rgba(16,185,129,0.08)" : isDark ? "rgba(255,255,255,0.05)" : T.surface,
+                    border: `1px solid ${h.is_completed ? "rgba(16,185,129,0.2)" : isDark ? "rgba(255,255,255,0.07)" : T.border}`,
                   }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
@@ -461,7 +479,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                       {found?.emoji ?? "🎲"}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "rgba(255,255,255,0.85)", lineHeight: 1.4, marginBottom: "0.25rem" }}>
+                      <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: isDark ? "rgba(255,255,255,0.85)" : T.text, lineHeight: 1.4, marginBottom: "0.25rem" }}>
                         {h.challenge_text}
                       </p>
                       <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
@@ -470,7 +488,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                             🏆 Completado
                           </span>
                         )}
-                        <span style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.35)" }}>
+                        <span style={{ fontSize: "0.625rem", color: isDark ? "rgba(255,255,255,0.35)" : T.textMuted }}>
                           {new Date(h.accepted_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
                         </span>
                       </div>
@@ -508,9 +526,9 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                     padding: "0.3125rem 0.75rem", borderRadius: "999px",
                     fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit",
                     cursor: "pointer",
-                    border: category === c.id ? `1.5px solid ${c.bg}` : "1.5px solid rgba(255,255,255,0.1)",
-                    background: category === c.id ? `${c.bg}22` : "rgba(255,255,255,0.05)",
-                    color: category === c.id ? c.bg : "rgba(255,255,255,0.5)",
+                    border: category === c.id ? `1.5px solid ${c.bg}` : isDark ? "1.5px solid rgba(255,255,255,0.1)" : `1.5px solid ${T.border}`,
+                    background: category === c.id ? `${c.bg}22` : isDark ? "rgba(255,255,255,0.05)" : T.surface,
+                    color: category === c.id ? c.bg : isDark ? "rgba(255,255,255,0.5)" : T.textMuted,
                     display: "inline-flex", alignItems: "center", gap: "4px",
                     transition: "all 0.15s",
                   }}
@@ -531,7 +549,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                   fontSize: "3.5rem", lineHeight: 1,
                   animation: "rouletteSpinEmoji 0.15s linear infinite",
                 }}>{spinEmoji}</div>
-                <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "white", margin: 0 }}>
+                <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: T.text, margin: 0 }}>
                   Eligiendo tu reto...
                 </p>
                 <div style={{ display: "flex", gap: "5px", marginTop: "0.25rem" }}>
@@ -553,15 +571,15 @@ export function ChallengesFavorsApp({ onBack }: Props) {
               }}>
                 <div style={{ fontSize: "3rem", lineHeight: 1 }}>🎁</div>
                 <div>
-                  <p style={{ fontWeight: 700, fontSize: "1rem", color: "white", marginBottom: "0.25rem", fontFamily: "'Fredoka', sans-serif" }}>
+                  <p style={{ fontWeight: 700, fontSize: "1rem", color: T.text, marginBottom: "0.25rem", fontFamily: "'Fredoka', sans-serif" }}>
                     ¿Listos para un nuevo reto?
                   </p>
-                  <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)" }}>{filtered.length} retos disponibles</p>
+                  <p style={{ fontSize: "0.75rem", color: T.textMuted }}>{filtered.length} retos disponibles</p>
                 </div>
                 {showCustomChallenge ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", width: "100%" }}>
                     <textarea
-                      style={{ width: "100%", padding: "0.625rem", borderRadius: "12px", border: "1.5px solid rgba(139,92,246,0.3)", background: "rgba(255,255,255,0.06)", color: "white", fontFamily: "inherit", fontSize: "0.875rem", resize: "none", boxSizing: "border-box", outline: "none" }}
+                      style={{ width: "100%", padding: "0.625rem", borderRadius: "12px", border: `1.5px solid rgba(139,92,246,0.3)`, background: T.inputBg, color: T.text, fontFamily: "inherit", fontSize: "0.875rem", resize: "none", boxSizing: "border-box", outline: "none" }}
                       rows={3} placeholder="Escribe vuestro reto personalizado..." value={customChallengeText} onChange={(e) => setCustomChallengeText(e.target.value)} maxLength={200} autoFocus />
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <button style={{ flex: 2, padding: "0.625rem", borderRadius: "10px", border: "none", background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", color: "white", fontFamily: "'Fredoka',sans-serif", fontSize: "0.875rem", fontWeight: 700, cursor: "pointer" }} onClick={() => {
@@ -570,7 +588,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                         setShowCustomChallenge(false); setCustomChallengeText("")
                         setAccepted(false); setCompleted(false); setDbChallenge(null); setRevealed(false)
                       }}>✅ Usar este reto</button>
-                      <button style={{ flex: 1, padding: "0.625rem", borderRadius: "10px", border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.7)", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }} onClick={() => setShowCustomChallenge(false)}>Cancelar</button>
+                      <button style={{ flex: 1, padding: "0.625rem", borderRadius: "10px", border: `1.5px solid ${T.border}`, background: T.surface, color: T.textSub, fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }} onClick={() => setShowCustomChallenge(false)}>Cancelar</button>
                     </div>
                   </div>
                 ) : (
@@ -632,7 +650,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                     }}>
                       {completed ? "🏆" : challenge.emoji}
                     </div>
-                    <p style={{ fontSize: "0.9375rem", fontWeight: 700, color: "white", lineHeight: 1.55, margin: 0, fontFamily: "'Fredoka', sans-serif" }}>
+                    <p style={{ fontSize: "0.9375rem", fontWeight: 700, color: T.text, lineHeight: 1.55, margin: 0, fontFamily: "'Fredoka', sans-serif" }}>
                       {challenge.text}
                     </p>
                     {completed && (
@@ -697,7 +715,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                     ) : (
                       /* C5: partner confirmation */
                       <div style={{ flex: 2, display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-                        <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.8125rem", fontWeight: 700, color: "white", margin: 0, textAlign: "center" }}>
+                        <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.8125rem", fontWeight: 700, color: T.text, margin: 0, textAlign: "center" }}>
                           ¿Lo habéis hecho juntos? 💑
                         </p>
                         <div style={{ display: "flex", gap: "0.375rem" }}>
@@ -767,14 +785,14 @@ export function ChallengesFavorsApp({ onBack }: Props) {
           </div>
 
           {/* Favors sub-tabs */}
-          <div style={{ padding: "0.3125rem 0.75rem", background: "rgba(13,13,26,0.9)", flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-            <div style={{ display: "flex", gap: "0.25rem", padding: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "999px" }}>
+          <div style={{ padding: "0.3125rem 0.75rem", background: isDark ? "rgba(13,13,26,0.9)" : T.surface, flexShrink: 0, borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.04)" : T.border}` }}>
+            <div style={{ display: "flex", gap: "0.25rem", padding: "3px", background: isDark ? "rgba(255,255,255,0.06)" : T.muted, borderRadius: "999px" }}>
               {(["active", "completed", "create"] as const).map((t) => (
                 <button key={t} onClick={() => setFavTab(t)}
                   style={{
                     flex: 1, padding: "0.25rem 0.375rem", borderRadius: "999px", border: "none",
                     background: favTab === t ? "linear-gradient(135deg, #ec4899cc, #ec489988)" : "transparent",
-                    color: favTab === t ? "white" : "rgba(255,255,255,0.4)",
+                    color: favTab === t ? "white" : isDark ? "rgba(255,255,255,0.4)" : T.textMuted,
                     fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 700,
                     cursor: "pointer", transition: "all 0.15s",
                   }}
@@ -789,45 +807,45 @@ export function ChallengesFavorsApp({ onBack }: Props) {
             {favTab === "create" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
                 <input
-                  style={{ width: "100%", padding: "0.625rem 0.875rem", borderRadius: "12px", border: "1.5px solid rgba(236,72,153,0.25)", background: "rgba(255,255,255,0.06)", color: "white", fontFamily: "inherit", fontSize: "0.875rem", boxSizing: "border-box", outline: "none" }}
+                  style={{ width: "100%", padding: "0.625rem 0.875rem", borderRadius: "12px", border: `1.5px solid rgba(236,72,153,0.25)`, background: T.inputBg, color: T.text, fontFamily: "inherit", fontSize: "0.875rem", boxSizing: "border-box", outline: "none" }}
                   placeholder="Título del favor" value={favTitle} onChange={(e) => setFavTitle(e.target.value)} maxLength={60} />
                 <textarea
-                  style={{ width: "100%", padding: "0.625rem 0.875rem", borderRadius: "12px", border: "1.5px solid rgba(236,72,153,0.2)", background: "rgba(255,255,255,0.06)", color: "white", fontFamily: "inherit", fontSize: "0.875rem", resize: "none", boxSizing: "border-box", outline: "none" }}
+                  style={{ width: "100%", padding: "0.625rem 0.875rem", borderRadius: "12px", border: `1.5px solid rgba(236,72,153,0.2)`, background: T.inputBg, color: T.text, fontFamily: "inherit", fontSize: "0.875rem", resize: "none", boxSizing: "border-box", outline: "none" }}
                   placeholder="Descripción..." rows={2} value={favDesc} onChange={(e) => setFavDesc(e.target.value)} maxLength={200} />
                 {/* Fav-A: ¿Para quién? toggle */}
                 {partner && (
                   <div>
-                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "rgba(255,255,255,0.55)", marginBottom: "0.375rem", display: "block" }}>¿Para quién?</label>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: T.textSub, marginBottom: "0.375rem", display: "block" }}>¿Para quién?</label>
                     <div style={{ display: "flex", gap: "0.375rem" }}>
                       <button onClick={() => setAssignedTo(null)} style={{
                         flex: 1, padding: "0.375rem 0.5rem", borderRadius: "12px",
-                        border: assignedTo === null ? "2px solid #ec4899" : "2px solid rgba(255,255,255,0.1)",
-                        background: assignedTo === null ? "rgba(236,72,153,0.15)" : "rgba(255,255,255,0.05)",
+                        border: assignedTo === null ? "2px solid #ec4899" : `2px solid ${T.border}`,
+                        background: assignedTo === null ? "rgba(236,72,153,0.15)" : T.surface,
                         cursor: "pointer", fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
-                        color: assignedTo === null ? "#f9a8d4" : "rgba(255,255,255,0.5)",
+                        color: assignedTo === null ? "#f9a8d4" : T.textMuted,
                       }}>Para mí</button>
                       <button onClick={() => setAssignedTo(partner.id)} style={{
                         flex: 1, padding: "0.375rem 0.5rem", borderRadius: "12px",
-                        border: assignedTo === partner.id ? "2px solid #ec4899" : "2px solid rgba(255,255,255,0.1)",
-                        background: assignedTo === partner.id ? "rgba(236,72,153,0.15)" : "rgba(255,255,255,0.05)",
+                        border: assignedTo === partner.id ? "2px solid #ec4899" : `2px solid ${T.border}`,
+                        background: assignedTo === partner.id ? "rgba(236,72,153,0.15)" : T.surface,
                         cursor: "pointer", fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
-                        color: assignedTo === partner.id ? "#f9a8d4" : "rgba(255,255,255,0.5)",
+                        color: assignedTo === partner.id ? "#f9a8d4" : T.textMuted,
                       }}>Para mi pareja 🎁</button>
                     </div>
                   </div>
                 )}
                 <div>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "rgba(255,255,255,0.55)", marginBottom: "0.375rem", display: "block" }}>Dificultad</label>
+                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: T.textSub, marginBottom: "0.375rem", display: "block" }}>Dificultad</label>
                   <div style={{ display: "flex", gap: "0.375rem" }}>
                     {DIFFICULTIES.map((d) => {
                       const diffCol = d.id === "easy" ? "#10b981" : d.id === "medium" ? "#f59e0b" : "#ef4444"
                       return (
                         <button key={d.id} onClick={() => setDifficulty(d.id)} style={{
                           flex: 1, padding: "0.375rem 0.25rem", borderRadius: "12px",
-                          border: difficulty === d.id ? `2px solid ${diffCol}` : "2px solid rgba(255,255,255,0.1)",
-                          background: difficulty === d.id ? `${diffCol}20` : "rgba(255,255,255,0.05)",
+                          border: difficulty === d.id ? `2px solid ${diffCol}` : `2px solid ${T.border}`,
+                          background: difficulty === d.id ? `${diffCol}20` : T.surface,
                           cursor: "pointer", fontFamily: "inherit", fontSize: "0.625rem", fontWeight: 600,
-                          textAlign: "center", color: difficulty === d.id ? diffCol : "rgba(255,255,255,0.5)",
+                          textAlign: "center", color: difficulty === d.id ? diffCol : T.textMuted,
                         }}>
                           <div style={{ display: "flex", justifyContent: "center", gap: "1px" }}>{Array.from({ length: d.stars }).map((_, i) => <Star key={i} size={8} fill="currentColor" />)}</div>
                           <div>{d.label}</div><div>{d.pts}pts</div>
@@ -837,15 +855,15 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "rgba(255,255,255,0.55)", marginBottom: "0.375rem", display: "block" }}>Categoría</label>
+                  <label style={{ fontSize: "0.75rem", fontWeight: 600, color: T.textSub, marginBottom: "0.375rem", display: "block" }}>Categoría</label>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
                     {CATEGORIES.map((c) => (
                       <button key={c.id} onClick={() => setFavCategory(c.id)} style={{
                         padding: "0.2rem 0.5rem", borderRadius: "999px",
-                        border: favCategory === c.id ? `2px solid ${c.color}` : "2px solid rgba(255,255,255,0.1)",
-                        background: favCategory === c.id ? `${c.color}20` : "rgba(255,255,255,0.04)",
+                        border: favCategory === c.id ? `2px solid ${c.color}` : `2px solid ${T.border}`,
+                        background: favCategory === c.id ? `${c.color}20` : T.surface,
                         cursor: "pointer", fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
-                        color: favCategory === c.id ? c.color : "rgba(255,255,255,0.5)",
+                        color: favCategory === c.id ? c.color : T.textMuted,
                       }}>{c.label}</button>
                     ))}
                   </div>
@@ -854,7 +872,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                   onClick={handleCreateFavor} disabled={savingFavor}
                   style={{
                     marginTop: "0.25rem", padding: "0.75rem", borderRadius: "14px", border: "none",
-                    background: favTitle.trim() ? "linear-gradient(135deg, #ec4899, #be185d)" : "rgba(255,255,255,0.1)",
+                    background: favTitle.trim() ? "linear-gradient(135deg, #ec4899, #be185d)" : isDark ? "rgba(255,255,255,0.1)" : T.muted,
                     color: "white", fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
                     cursor: favTitle.trim() && !savingFavor ? "pointer" : "not-allowed",
                     opacity: favTitle.trim() && !savingFavor ? 1 : 0.5,
@@ -877,9 +895,9 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                           onClick={() => setFavCategoryFilter(c.id)}
                           style={{
                             padding: "0.25rem 0.625rem", borderRadius: "999px", fontSize: "0.625rem", fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
-                            border: active ? `1.5px solid ${c.color}` : "1.5px solid rgba(255,255,255,0.1)",
-                            background: active ? `${c.color}20` : "rgba(255,255,255,0.04)",
-                            color: active ? c.color : "rgba(255,255,255,0.45)", transition: "all 0.15s",
+                            border: active ? `1.5px solid ${c.color}` : `1.5px solid ${T.border}`,
+                            background: active ? `${c.color}20` : T.surface,
+                            color: active ? c.color : T.textMuted, transition: "all 0.15s",
                           }}
                         >{c.label}</button>
                       )
@@ -915,7 +933,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                             borderRadius: isExpandingNote ? "var(--radius-lg) var(--radius-lg) 0 0" : "var(--radius-lg)",
                             overflow: "hidden",
                             opacity: f.is_completed ? 0.75 : 1,
-                            background: f.is_completed ? "var(--muted)" : "white",
+                            background: f.is_completed ? "var(--muted)" : T.surface,
                             boxShadow: f.is_completed ? "none" : `0 2px 12px ${cat?.color ?? "#8B5CF6"}1A`,
                           }}>
                             {/* Coupon left panel */}
@@ -1016,7 +1034,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
                               border: `1.5px dashed ${cat?.color ?? "var(--primary)"}66`,
                               borderTop: "none",
                               borderRadius: "0 0 var(--radius-lg) var(--radius-lg)",
-                              background: "white",
+                              background: T.surface,
                               padding: "0.625rem 0.75rem",
                               display: "flex", flexDirection: "column", gap: "0.375rem",
                             }}>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 import { getFirebaseToken } from "@/lib/firebase/client"
 import { toast } from "sonner"
 import type { TimeCapsule, CapsuleType } from "@/types"
@@ -60,28 +61,6 @@ const CAPSULE_CSS = `
 }
 `
 
-const DARK_BG = "linear-gradient(160deg, #0d0d1a 0%, #1a0f2e 55%, #0f1a2e 100%)"
-
-const DARK_HEADER: React.CSSProperties = {
-  display: "flex", alignItems: "center", gap: "0.5rem",
-  padding: "0.75rem 1rem",
-  background: "linear-gradient(135deg, #1a0f2e 0%, #0d0d1a 100%)",
-  borderBottom: "1px solid rgba(139,92,246,0.2)",
-  flexShrink: 0,
-}
-
-const DARK_BODY: React.CSSProperties = {
-  flex: 1, overflowY: "auto", padding: "0.75rem",
-  display: "flex", flexDirection: "column", gap: "0.75rem",
-  background: DARK_BG,
-}
-
-const INPUT_DARK: React.CSSProperties = {
-  width: "100%", padding: "0.625rem 0.875rem", borderRadius: "12px",
-  border: "1.5px solid rgba(139,92,246,0.25)", background: "rgba(255,255,255,0.06)",
-  color: "white", fontFamily: "inherit", fontSize: "0.875rem",
-  boxSizing: "border-box", outline: "none",
-}
 
 export function TimeCapsuleApp({ onBack }: Props) {
   const [view, setView] = useState<View>("list")
@@ -114,6 +93,40 @@ export function TimeCapsuleApp({ onBack }: Props) {
   const [showEditCapsuleGallery, setShowEditCapsuleGallery] = useState(false)
   const [galleryPhotos, setGalleryPhotos] = useState<{ id: string; image_url: string; thumb_url: string | null }[]>([])
   const [loadingGallery, setLoadingGallery] = useState(false)
+
+  const isDark = useDarkMode()
+  const T = {
+    bg:        isDark ? "#1a1225"  : "var(--background)",
+    surface:   isDark ? "#221833"  : "var(--surface)",
+    surfaceHov:isDark ? "#2a1e3a" : "var(--surface-hover)",
+    border:    isDark ? "#4a3465" : "var(--border)",
+    borderHov: isDark ? "#5e4480" : "var(--border-hover)",
+    text:      isDark ? "#f0e8ff" : "var(--foreground)",
+    textSub:   isDark ? "#c4b8d8" : "var(--foreground-light)",
+    textMuted: isDark ? "#9080a8" : "var(--foreground-muted)",
+    muted:     isDark ? "#2a1e3a" : "var(--muted)",
+    inputBg:   isDark ? "#2e2244" : "var(--muted)",
+  }
+  const CAPSULE_BG = isDark ? "linear-gradient(160deg, #0d0d1a 0%, #1a0f2e 55%, #0f1a2e 100%)" : T.bg
+  const HEADER_STYLE: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: "0.5rem",
+    padding: "0.75rem 1rem",
+    background: isDark ? "linear-gradient(135deg, #1a0f2e 0%, #0d0d1a 100%)" : "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)",
+    borderBottom: isDark ? "1px solid rgba(139,92,246,0.2)" : "1px solid var(--border)",
+    flexShrink: 0,
+  }
+  const BODY_STYLE: React.CSSProperties = {
+    flex: 1, overflowY: "auto", padding: "0.75rem",
+    display: "flex", flexDirection: "column", gap: "0.75rem",
+    background: CAPSULE_BG,
+  }
+  const INPUT_STYLE: React.CSSProperties = {
+    width: "100%", padding: "0.625rem 0.875rem", borderRadius: "12px",
+    border: isDark ? "1.5px solid rgba(139,92,246,0.25)" : "1.5px solid var(--border)",
+    background: T.inputBg,
+    color: T.text, fontFamily: "inherit", fontSize: "0.875rem",
+    boxSizing: "border-box", outline: "none",
+  }
 
   useEffect(() => { loadCapsules() }, [])
 
@@ -331,13 +344,13 @@ export function TimeCapsuleApp({ onBack }: Props) {
     return (
       <>
         <style>{CAPSULE_CSS}</style>
-        <div style={DARK_HEADER}>
-          <button onClick={() => setView("list")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: "rgba(255,255,255,0.8)", padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
-          <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white", display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={HEADER_STYLE}>
+          <button onClick={() => setView("list")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: T.text, padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
+          <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: T.text, display: "flex", alignItems: "center", gap: 6 }}>
             <Gem size={14} color="#8b5cf6" /> Cápsula Abierta
           </span>
         </div>
-        <div style={{ ...DARK_BODY, alignItems: "center", gap: "0.875rem" }}>
+        <div style={{ ...BODY_STYLE, alignItems: "center", gap: "0.875rem" }}>
           {/* Type banner */}
           <div style={{
             background: `${t?.color ?? "#8b5cf6"}18`,
@@ -347,10 +360,10 @@ export function TimeCapsuleApp({ onBack }: Props) {
             boxSizing: "border-box",
           }}>
             {t ? <t.Icon size={40} color={t.color} /> : <Gem size={40} color="#8b5cf6" />}
-            <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 700, fontSize: "1.125rem", color: "white" }}>
+            <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 700, fontSize: "1.125rem", color: T.text }}>
               Cápsula de {t?.label}
             </span>
-            <span style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.45)" }}>
+            <span style={{ fontSize: "0.6875rem", color: T.textMuted }}>
               Creada el {formatDate(selected.created_at)}
             </span>
           </div>
@@ -364,7 +377,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
           )}
 
           <div style={{
-            background: "rgba(255,255,255,0.06)", borderRadius: "16px",
+            background: T.surface, borderRadius: "16px",
             padding: "1.125rem", width: "100%",
             border: `1px solid ${t?.color ?? "#8b5cf6"}22`,
             boxSizing: "border-box",
@@ -372,13 +385,13 @@ export function TimeCapsuleApp({ onBack }: Props) {
             <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: t?.color ?? "#8b5cf6", marginBottom: "0.625rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
               <Mail size={11} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} /> Mensaje
             </p>
-            <p style={{ fontSize: "0.875rem", lineHeight: 1.75, color: "rgba(255,255,255,0.88)", whiteSpace: "pre-wrap" }}>
+            <p style={{ fontSize: "0.875rem", lineHeight: 1.75, color: T.text, whiteSpace: "pre-wrap" }}>
               {selected.message}
             </p>
           </div>
 
           <div style={{ textAlign: "center", width: "100%" }}>
-            <span style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.4)" }}>
+            <span style={{ fontSize: "0.6875rem", color: T.textMuted }}>
               <Calendar size={11} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} /> Fecha de apertura: {formatDate(selected.unlock_date)}
             </span>
           </div>
@@ -413,34 +426,34 @@ export function TimeCapsuleApp({ onBack }: Props) {
     return (
       <>
         <style>{CAPSULE_CSS}</style>
-        <div style={DARK_HEADER}>
-          <button onClick={() => setView("list")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: "rgba(255,255,255,0.8)", padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
-          <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white", display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={HEADER_STYLE}>
+          <button onClick={() => setView("list")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: T.text, padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
+          <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: T.text, display: "flex", alignItems: "center", gap: 6 }}>
             <Sparkles size={14} color="#8b5cf6" /> Nueva Cápsula
           </span>
         </div>
-        <div style={DARK_BODY}>
+        <div style={BODY_STYLE}>
           {/* Message */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: 4 }}>
+            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: T.textSub, display: "flex", alignItems: "center", gap: 4 }}>
               <Mail size={13} /> Tu Mensaje
             </label>
             <textarea
-              style={{ ...INPUT_DARK, resize: "none" }}
+              style={{ ...INPUT_STYLE, resize: "none" }}
               rows={5}
               placeholder={"Querido yo del futuro...\n\nHoy es un día especial porque..."}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               maxLength={2000}
             />
-            <span style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.3)", alignSelf: "flex-end" }}>
+            <span style={{ fontSize: "0.6875rem", color: T.textMuted, alignSelf: "flex-end" }}>
               {message.length}/2000
             </span>
           </div>
 
           {/* Type */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>Tipo de Cápsula</label>
+            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: T.textSub }}>Tipo de Cápsula</label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.375rem" }}>
               {CAPSULE_TYPES.map((t) => (
                 <button
@@ -448,14 +461,14 @@ export function TimeCapsuleApp({ onBack }: Props) {
                   onClick={() => setCapsuleType(t.id)}
                   style={{
                     padding: "0.5rem 0.25rem", borderRadius: "12px",
-                    border: capsuleType === t.id ? `2px solid ${t.color}` : "2px solid rgba(255,255,255,0.1)",
-                    background: capsuleType === t.id ? `${t.color}20` : "rgba(255,255,255,0.05)",
+                    border: capsuleType === t.id ? `2px solid ${t.color}` : `2px solid ${T.border}`,
+                    background: capsuleType === t.id ? `${t.color}20` : T.muted,
                     cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px",
                     fontFamily: "inherit", transition: "all 0.15s",
                   }}
                 >
                   <t.Icon size={18} color={t.color} />
-                  <span style={{ fontSize: "0.625rem", fontWeight: 600, color: capsuleType === t.id ? t.color : "rgba(255,255,255,0.5)" }}>
+                  <span style={{ fontSize: "0.625rem", fontWeight: 600, color: capsuleType === t.id ? t.color : T.textMuted }}>
                     {t.label}
                   </span>
                 </button>
@@ -465,7 +478,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
 
           {/* Date */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: 4 }}>
+            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: T.textSub, display: "flex", alignItems: "center", gap: 4 }}>
               <Calendar size={13} /> Fecha de Apertura
             </label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.375rem" }}>
@@ -475,10 +488,10 @@ export function TimeCapsuleApp({ onBack }: Props) {
                   onClick={() => { setUnlockDays(p.days); setUseCustom(false) }}
                   style={{
                     padding: "0.5rem", borderRadius: "12px",
-                    border: unlockDays === p.days && !useCustom ? "2px solid #8b5cf6" : "2px solid rgba(255,255,255,0.1)",
-                    background: unlockDays === p.days && !useCustom ? "rgba(139,92,246,0.2)" : "rgba(255,255,255,0.05)",
+                    border: unlockDays === p.days && !useCustom ? "2px solid #8b5cf6" : `2px solid ${T.border}`,
+                    background: unlockDays === p.days && !useCustom ? "rgba(139,92,246,0.2)" : T.muted,
                     cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600,
-                    color: unlockDays === p.days && !useCustom ? "#a78bfa" : "rgba(255,255,255,0.5)",
+                    color: unlockDays === p.days && !useCustom ? "#a78bfa" : T.textMuted,
                   }}
                 >
                   <Calendar size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} />{p.label}
@@ -488,10 +501,10 @@ export function TimeCapsuleApp({ onBack }: Props) {
                 onClick={() => setUseCustom(true)}
                 style={{
                   padding: "0.5rem", borderRadius: "12px",
-                  border: useCustom ? "2px solid #8b5cf6" : "2px solid rgba(255,255,255,0.1)",
-                  background: useCustom ? "rgba(139,92,246,0.2)" : "rgba(255,255,255,0.05)",
+                  border: useCustom ? "2px solid #8b5cf6" : `2px solid ${T.border}`,
+                  background: useCustom ? "rgba(139,92,246,0.2)" : T.muted,
                   cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600,
-                  color: useCustom ? "#a78bfa" : "rgba(255,255,255,0.5)",
+                  color: useCustom ? "#a78bfa" : T.textMuted,
                 }}
               >
                 🎯 Personalizada
@@ -499,10 +512,10 @@ export function TimeCapsuleApp({ onBack }: Props) {
             </div>
             {useCustom && (
               <div style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-                <input type="date" style={INPUT_DARK} value={customDate} min={now} onChange={(e) => setCustomDate(e.target.value)} />
+                <input type="date" style={INPUT_STYLE} value={customDate} min={now} onChange={(e) => setCustomDate(e.target.value)} />
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <input type="time" style={{ ...INPUT_DARK, flex: 1 }} value={customTime} onChange={(e) => setCustomTime(e.target.value)} />
-                  <span style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.35)", whiteSpace: "nowrap" }}>hora (opcional)</span>
+                  <input type="time" style={{ ...INPUT_STYLE, flex: 1 }} value={customTime} onChange={(e) => setCustomTime(e.target.value)} />
+                  <span style={{ fontSize: "0.6875rem", color: T.textMuted, whiteSpace: "nowrap" }}>hora (opcional)</span>
                 </div>
               </div>
             )}
@@ -514,15 +527,15 @@ export function TimeCapsuleApp({ onBack }: Props) {
               style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.7)", display: "flex", flexDirection: "column" }}
               onClick={() => setShowCapsuleGallery(false)}
             >
-              <div style={{ marginTop: "auto", background: "#1a0f2e", borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "60vh", overflowY: "auto", border: "1px solid rgba(139,92,246,0.3)" }} onClick={e => e.stopPropagation()}>
+              <div style={{ marginTop: "auto", background: T.surface, borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "60vh", overflowY: "auto", border: "1px solid rgba(139,92,246,0.3)" }} onClick={e => e.stopPropagation()}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                  <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 700, fontSize: "1rem", color: "white" }}>Elegir foto</span>
-                  <button onClick={() => setShowCapsuleGallery(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: "rgba(255,255,255,0.5)", lineHeight: 1 }}>×</button>
+                  <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 700, fontSize: "1rem", color: T.text }}>Elegir foto</span>
+                  <button onClick={() => setShowCapsuleGallery(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: T.textMuted, lineHeight: 1 }}>×</button>
                 </div>
                 {loadingGallery ? (
-                  <div style={{ textAlign: "center", padding: "2rem", color: "rgba(255,255,255,0.4)" }}>Cargando fotos...</div>
+                  <div style={{ textAlign: "center", padding: "2rem", color: T.textMuted }}>Cargando fotos...</div>
                 ) : galleryPhotos.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "2rem", color: "rgba(255,255,255,0.4)" }}>Sin fotos aún</div>
+                  <div style={{ textAlign: "center", padding: "2rem", color: T.textMuted }}>Sin fotos aún</div>
                 ) : (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.375rem" }}>
                     {galleryPhotos.map(p => (
@@ -538,7 +551,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>📷 Foto (opcional)</label>
+            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: T.textSub }}>📷 Foto (opcional)</label>
             <button
               type="button"
               onClick={() => { setShowCapsuleGallery(true); loadGallery() }}
@@ -577,14 +590,14 @@ export function TimeCapsuleApp({ onBack }: Props) {
     <>
       <style>{CAPSULE_CSS}</style>
 
-      <div style={DARK_HEADER}>
-        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: "rgba(255,255,255,0.8)", padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
-        <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white", display: "flex", alignItems: "center", gap: 6 }}>
+      <div style={HEADER_STYLE}>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: T.text, padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
+        <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: T.text, display: "flex", alignItems: "center", gap: 6 }}>
           <Clock size={14} color="#8b5cf6" /> Cápsulas del Tiempo
         </span>
       </div>
 
-      <div style={DARK_BODY}>
+      <div style={BODY_STYLE}>
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", textAlign: "center" }}>
           {[
@@ -592,15 +605,15 @@ export function TimeCapsuleApp({ onBack }: Props) {
             { label: "Pendientes", value: capsules.filter((c) => !c.is_opened).length },
             { label: "Abiertas",  value: capsules.filter((c) => c.is_opened).length },
           ].map((s) => (
-            <div key={s.label} style={{ background: "rgba(255,255,255,0.06)", borderRadius: "12px", padding: "0.5rem", border: "1px solid rgba(139,92,246,0.15)" }}>
+            <div key={s.label} style={{ background: T.surface, borderRadius: "12px", padding: "0.5rem", border: `1px solid ${T.border}` }}>
               <div style={{ fontWeight: 700, fontSize: "1.25rem", color: "#a78bfa" }}>{s.value}</div>
-              <div style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.4)" }}>{s.label}</div>
+              <div style={{ fontSize: "0.625rem", color: T.textMuted }}>{s.label}</div>
             </div>
           ))}
         </div>
 
         {/* Filter pills */}
-        <div style={{ display: "flex", gap: "0.25rem", padding: "3px", background: "rgba(255,255,255,0.05)", borderRadius: "999px" }}>
+        <div style={{ display: "flex", gap: "0.25rem", padding: "3px", background: T.muted, borderRadius: "999px" }}>
           {([
             { id: "all",     label: "Todas" },
             { id: "waiting", label: "Esperando" },
@@ -613,7 +626,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
               style={{
                 flex: 1, padding: "0.3rem 0.25rem", borderRadius: "999px", border: "none",
                 background: filter === f.id ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" : "transparent",
-                color: filter === f.id ? "white" : "rgba(255,255,255,0.4)",
+                color: filter === f.id ? "white" : T.textMuted,
                 fontFamily: "inherit", fontSize: "0.5625rem", fontWeight: 700,
                 cursor: "pointer", transition: "all 0.15s",
               }}
@@ -640,7 +653,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
                 <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "#a78bfa", margin: 0 }}>
                   {readyCount === 1 ? "¡Tienes una cápsula lista!" : `¡Tienes ${readyCount} cápsulas listas!`}
                 </p>
-                <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>Toca para abrir</p>
+                <p style={{ fontSize: "0.6875rem", color: T.textMuted, margin: 0 }}>Toca para abrir</p>
               </div>
             </div>
           )
@@ -651,10 +664,10 @@ export function TimeCapsuleApp({ onBack }: Props) {
         ) : filteredCapsules.length === 0 ? (
           <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
             <div style={{ fontSize: "2.5rem", opacity: 0.4 }}>⏳</div>
-            <p style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "rgba(255,255,255,0.7)", margin: 0 }}>
+            <p style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: T.textSub, margin: 0 }}>
               {filter === "all" ? "Sin cápsulas aún" : "Ninguna en esta categoría"}
             </p>
-            <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", margin: 0 }}>
+            <p style={{ fontSize: "0.75rem", color: T.textMuted, margin: 0 }}>
               {filter === "all" ? "Guarda un mensaje para el futuro" : "Prueba otro filtro"}
             </p>
           </div>
@@ -672,22 +685,22 @@ export function TimeCapsuleApp({ onBack }: Props) {
                       display: "flex", alignItems: "center", gap: "0.75rem",
                       padding: "0.875rem",
                       background: c.is_opened
-                        ? "rgba(255,255,255,0.03)"
+                        ? T.muted
                         : canOpen
                         ? "rgba(139,92,246,0.1)"
-                        : "rgba(255,255,255,0.05)",
+                        : T.muted,
                       borderRadius: editingId === c.id ? "14px 14px 0 0" : "14px",
                       border: canOpen && !c.is_opened
                         ? "1.5px solid rgba(139,92,246,0.4)"
-                        : `1px solid rgba(255,255,255,0.07)`,
-                      borderLeft: `4px solid ${c.is_opened ? "rgba(255,255,255,0.12)" : t?.color ?? "#8b5cf6"}`,
+                        : `1px solid ${T.border}`,
+                      borderLeft: `4px solid ${c.is_opened ? T.border : t?.color ?? "#8b5cf6"}`,
                       opacity: c.is_opened ? 0.6 : 1,
                       boxShadow: canOpen && !c.is_opened ? "0 0 16px rgba(139,92,246,0.25)" : "none",
                     }}
                   >
                     {/* Icon / ring */}
                     {c.is_opened ? (
-                      <div style={{ flexShrink: 0, opacity: 0.4 }}><MailOpen size={28} color="rgba(255,255,255,0.5)" /></div>
+                      <div style={{ flexShrink: 0, opacity: 0.4 }}><MailOpen size={28} color={T.textMuted} /></div>
                     ) : canOpen ? (
                       <div style={{ flexShrink: 0, animation: "capsulePulse 1.5s ease-in-out infinite" }}>
                         <MailOpen size={30} color="#8b5cf6" />
@@ -701,7 +714,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
                           const dash = fill * circ
                           return (
                             <svg width="36" height="36" style={{ transform: "rotate(-90deg)" }}>
-                              <circle cx="18" cy="18" r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3.5" />
+                              <circle cx="18" cy="18" r={r} fill="none" stroke={T.border} strokeWidth="3.5" />
                               <circle cx="18" cy="18" r={r} fill="none" stroke={t?.color ?? "#8b5cf6"} strokeWidth="3.5"
                                 strokeLinecap="round" strokeDasharray={`${dash} ${circ}`} />
                             </svg>
@@ -717,11 +730,11 @@ export function TimeCapsuleApp({ onBack }: Props) {
 
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => handleOpen(c)}>
-                      <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "white", display: "flex", alignItems: "center", gap: 4, marginBottom: "2px" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.875rem", color: T.text, display: "flex", alignItems: "center", gap: 4, marginBottom: "2px" }}>
                         {t && <t.Icon size={14} color={t.color} />}{t?.label}
                         {c.photo_url && <span style={{ fontSize: "0.75rem" }}>📷</span>}
                       </div>
-                      <div style={{ fontSize: "0.6875rem", color: canOpen && !c.is_opened ? "#a78bfa" : "rgba(255,255,255,0.4)", fontWeight: canOpen && !c.is_opened ? 700 : 400 }}>
+                      <div style={{ fontSize: "0.6875rem", color: canOpen && !c.is_opened ? "#a78bfa" : T.textMuted, fontWeight: canOpen && !c.is_opened ? 700 : 400 }}>
                         {c.is_opened
                           ? `Abierta el ${formatDate(c.unlock_date)}`
                           : canOpen
@@ -763,7 +776,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
                         ><Pencil size={13} /></button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
-                          style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", padding: "4px", display: "flex", alignItems: "center" }}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: T.textMuted, padding: "4px", display: "flex", alignItems: "center" }}
                         ><Trash2 size={13} /></button>
                       </div>
                     )}
@@ -778,15 +791,15 @@ export function TimeCapsuleApp({ onBack }: Props) {
                       {showEditCapsuleGallery && (
                         <div style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.7)", display: "flex", flexDirection: "column" }}
                           onClick={() => setShowEditCapsuleGallery(false)}>
-                          <div style={{ marginTop: "auto", background: "#1a0f2e", borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "60vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+                          <div style={{ marginTop: "auto", background: T.surface, borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "60vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                              <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 700, fontSize: "1rem", color: "white" }}>Elegir foto</span>
-                              <button onClick={() => setShowEditCapsuleGallery(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: "rgba(255,255,255,0.5)", lineHeight: 1 }}>×</button>
+                              <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 700, fontSize: "1rem", color: T.text }}>Elegir foto</span>
+                              <button onClick={() => setShowEditCapsuleGallery(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: T.textMuted, lineHeight: 1 }}>×</button>
                             </div>
                             {loadingGallery ? (
-                              <div style={{ textAlign: "center", padding: "2rem", color: "rgba(255,255,255,0.4)" }}>Cargando...</div>
+                              <div style={{ textAlign: "center", padding: "2rem", color: T.textMuted }}>Cargando...</div>
                             ) : galleryPhotos.length === 0 ? (
-                              <div style={{ textAlign: "center", padding: "2rem", color: "rgba(255,255,255,0.4)" }}>Sin fotos</div>
+                              <div style={{ textAlign: "center", padding: "2rem", color: T.textMuted }}>Sin fotos</div>
                             ) : (
                               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.375rem" }}>
                                 {galleryPhotos.map(p => (
@@ -800,11 +813,11 @@ export function TimeCapsuleApp({ onBack }: Props) {
                           </div>
                         </div>
                       )}
-                      <textarea style={{ ...INPUT_DARK, resize: "none" }} rows={3} value={editMessage}
+                      <textarea style={{ ...INPUT_STYLE, resize: "none" }} rows={3} value={editMessage}
                         onChange={(e) => setEditMessage(e.target.value)} maxLength={2000} autoFocus />
                       <div style={{ display: "flex", gap: "0.375rem" }}>
-                        <input type="date" style={{ ...INPUT_DARK, flex: 1 }} value={editDate} min={now} onChange={(e) => setEditDate(e.target.value)} />
-                        <input type="time" style={{ ...INPUT_DARK, flex: "0 0 100px" }} value={editTime} onChange={(e) => setEditTime(e.target.value)} />
+                        <input type="date" style={{ ...INPUT_STYLE, flex: 1 }} value={editDate} min={now} onChange={(e) => setEditDate(e.target.value)} />
+                        <input type="time" style={{ ...INPUT_STYLE, flex: "0 0 100px" }} value={editTime} onChange={(e) => setEditTime(e.target.value)} />
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <button type="button" onClick={() => { setShowEditCapsuleGallery(true); loadGallery() }}
@@ -825,7 +838,7 @@ export function TimeCapsuleApp({ onBack }: Props) {
                         >{saving ? "..." : "Guardar"}</button>
                         <button
                           onClick={() => setEditingId(null)}
-                          style={{ flex: 1, padding: "0.5rem", borderRadius: "10px", border: "1.5px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
+                          style={{ flex: 1, padding: "0.5rem", borderRadius: "10px", border: `1.5px solid ${T.border}`, background: T.muted, color: T.textSub, fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
                         >Cancelar</button>
                       </div>
                     </div>
