@@ -473,22 +473,47 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   const coverThumb = track?.url ? getYtThumb(track.url) : null
   const likedCount = tracks.filter(t => likedTracks.has(t.id)).length
 
+  const MUSIC_DARK_BG = "linear-gradient(160deg, #0d0d1a 0%, #1a0d26 55%, #0d0d1a 100%)"
+  const MUSIC_HEADER_STYLE: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: "0.5rem",
+    padding: "0.75rem 1rem",
+    background: "linear-gradient(135deg, #1a0d26 0%, #0d0d1a 100%)",
+    borderBottom: "1px solid rgba(139,92,246,0.2)",
+    flexShrink: 0,
+  }
+  const MUSIC_BODY_STYLE: React.CSSProperties = {
+    flex: 1, overflowY: "auto", padding: "0.75rem",
+    display: "flex", flexDirection: "column", gap: "0.5rem",
+    background: MUSIC_DARK_BG,
+  }
+  const MUSIC_INPUT: React.CSSProperties = {
+    width: "100%", padding: "0.625rem 0.875rem", borderRadius: "12px",
+    border: "1.5px solid rgba(139,92,246,0.25)", background: "rgba(255,255,255,0.06)",
+    color: "white", fontFamily: "inherit", fontSize: "0.875rem",
+    boxSizing: "border-box", outline: "none",
+  }
+  const MUSIC_BACK: React.CSSProperties = {
+    background: "none", border: "none", cursor: "pointer",
+    fontSize: "1.5rem", color: "rgba(255,255,255,0.8)",
+    padding: "0 0.25rem", lineHeight: 1,
+  }
+
   // ── PLAYLISTS VIEW ──────────────────────────────────────────────────────────
   if (view === "playlists") return (
     <>
-      <div className="app-content-header">
-        <button className="back-btn-phone" onClick={() => setView("player")}>‹</button>
-        <span>🎵 Mis Playlists</span>
+      <div style={MUSIC_HEADER_STYLE}>
+        <button style={MUSIC_BACK} onClick={() => setView("player")}>‹</button>
+        <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white" }}>🎵 Mis Playlists</span>
       </div>
-      <div className="app-content-body" style={{ gap: "0.375rem" }}>
+      <div style={MUSIC_BODY_STYLE}>
         <button
           onClick={() => setView("addPlaylist")}
           style={{
             display: "flex", alignItems: "center", gap: "0.5rem", width: "100%",
             padding: "0.625rem 0.75rem", marginBottom: "0.25rem",
-            background: "var(--primary-lighter)", border: "2px dashed var(--primary)",
-            borderRadius: "var(--radius-md)", cursor: "pointer",
-            fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 700, color: "var(--primary)",
+            background: "rgba(139,92,246,0.1)", border: "2px dashed rgba(139,92,246,0.4)",
+            borderRadius: "12px", cursor: "pointer",
+            fontFamily: "inherit", fontSize: "0.8125rem", fontWeight: 700, color: "#a78bfa",
           }}
         >
           <Plus size={15} /> Nueva playlist
@@ -501,20 +526,21 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
               style={{
                 display: "flex", alignItems: "center", gap: "0.5rem", width: "100%",
                 padding: "0.625rem 0.75rem", textAlign: "left",
-                background: i === playlistIdx ? "var(--primary-lighter)" : "white",
-                border: `2px solid ${i === playlistIdx ? "var(--primary)" : "var(--border)"}`,
-                borderRadius: "var(--radius-md)", cursor: "pointer", fontFamily: "inherit",
+                background: i === playlistIdx ? "rgba(139,92,246,0.18)" : "rgba(255,255,255,0.05)",
+                border: `1.5px solid ${i === playlistIdx ? "rgba(139,92,246,0.5)" : "rgba(255,255,255,0.08)"}`,
+                borderRadius: "12px", cursor: "pointer", fontFamily: "inherit",
+                transition: "all 0.15s",
               }}
             >
               <span style={{ fontSize: "1.125rem" }}>🎵</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: i === playlistIdx ? "var(--primary)" : "var(--foreground)" }}>{pl.name}</div>
-                <div style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>
+                <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: i === playlistIdx ? "#a78bfa" : "white" }}>{pl.name}</div>
+                <div style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.4)" }}>
                   {pl.tracks.length} canciones{plLiked > 0 ? ` · ❤️ ${plLiked}` : ""}
                 </div>
               </div>
               {playlists.length > 1 && (
-                <span onClick={(e) => { e.stopPropagation(); deletePlaylist(i) }} style={{ cursor: "pointer", color: "var(--foreground-muted)", padding: "4px" }}>
+                <span onClick={(e) => { e.stopPropagation(); deletePlaylist(i) }} style={{ cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: "4px" }}>
                   <Trash2 size={13} />
                 </span>
               )}
@@ -523,11 +549,11 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
         })}
         {likedCount > 0 && (
           <div style={{
-            padding: "0.625rem 0.75rem", borderRadius: "var(--radius-md)", marginTop: "0.25rem",
-            background: "linear-gradient(135deg, #fce4ec, #fdf4ff)",
-            border: "1.5px solid #EC489966", fontSize: "0.6875rem", color: "var(--foreground-muted)",
+            padding: "0.625rem 0.75rem", borderRadius: "12px", marginTop: "0.25rem",
+            background: "rgba(236,72,153,0.1)",
+            border: "1.5px solid rgba(236,72,153,0.25)", fontSize: "0.6875rem", color: "rgba(255,255,255,0.6)",
           }}>
-            ❤️ Tienes <strong>{likedCount}</strong> canciones favoritas
+            ❤️ Tienes <strong style={{ color: "#f9a8d4" }}>{likedCount}</strong> canciones favoritas
           </div>
         )}
       </div>
@@ -537,14 +563,23 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   // ── ADD PLAYLIST VIEW ───────────────────────────────────────────────────────
   if (view === "addPlaylist") return (
     <>
-      <div className="app-content-header">
-        <button className="back-btn-phone" onClick={() => setView("playlists")}>‹</button>
-        <span>Nueva Playlist</span>
+      <div style={MUSIC_HEADER_STYLE}>
+        <button style={MUSIC_BACK} onClick={() => setView("playlists")}>‹</button>
+        <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white" }}>Nueva Playlist</span>
       </div>
-      <div className="app-content-body" style={{ gap: "0.75rem" }}>
-        <input className="input" placeholder="Nombre de la playlist" value={newPlaylistName}
+      <div style={{ ...MUSIC_BODY_STYLE, gap: "0.75rem" }}>
+        <input style={MUSIC_INPUT} placeholder="Nombre de la playlist" value={newPlaylistName}
           onChange={(e) => setNewPlaylistName(e.target.value)} maxLength={50} autoFocus />
-        <button className="btn btn-primary" onClick={addPlaylist} disabled={!newPlaylistName.trim()}>
+        <button
+          onClick={addPlaylist} disabled={!newPlaylistName.trim()}
+          style={{
+            padding: "0.75rem", borderRadius: "12px", border: "none",
+            background: newPlaylistName.trim() ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" : "rgba(255,255,255,0.1)",
+            color: "white", fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
+            cursor: newPlaylistName.trim() ? "pointer" : "not-allowed", opacity: newPlaylistName.trim() ? 1 : 0.5,
+            boxShadow: newPlaylistName.trim() ? "0 4px 16px rgba(139,92,246,0.4)" : "none",
+          }}
+        >
           Crear Playlist
         </button>
       </div>
@@ -554,58 +589,77 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   // ── ADD / EDIT TRACK VIEW ───────────────────────────────────────────────────
   if (view === "addTrack") return (
     <>
-      <div className="app-content-header">
-        <button className="back-btn-phone" onClick={editingTrack ? cancelEditTrack : () => setView("player")}>‹</button>
-        <span>{editingTrack ? "✏️ Editar Canción" : "Añadir Canción"}</span>
+      <div style={MUSIC_HEADER_STYLE}>
+        <button style={MUSIC_BACK} onClick={editingTrack ? cancelEditTrack : () => setView("player")}>‹</button>
+        <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white" }}>
+          {editingTrack ? "✏️ Editar Canción" : "Añadir Canción"}
+        </span>
       </div>
-      <div className="app-content-body" style={{ gap: "0.625rem" }}>
-        <input className="input" placeholder="Título *" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} maxLength={80} autoFocus />
-        <input className="input" placeholder="Artista" value={newArtist} onChange={(e) => setNewArtist(e.target.value)} maxLength={60} />
-        <input className="input" placeholder="URL de YouTube o MP3 (opcional)" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} />
-        {/* M5: dedication field */}
+      <div style={{ ...MUSIC_BODY_STYLE, gap: "0.625rem" }}>
+        <input style={MUSIC_INPUT} placeholder="Título *" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} maxLength={80} autoFocus />
+        <input style={MUSIC_INPUT} placeholder="Artista" value={newArtist} onChange={(e) => setNewArtist(e.target.value)} maxLength={60} />
+        <input style={MUSIC_INPUT} placeholder="URL de YouTube o MP3 (opcional)" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} />
         <input
-          className="input"
+          style={MUSIC_INPUT}
           placeholder="💌 Dedicatoria (aparece al reproducir, opcional)"
           value={newDedication}
           onChange={(e) => setNewDedication(e.target.value)}
           maxLength={120}
         />
-        <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", margin: 0 }}>
+        <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>
           💡 Pega un enlace de YouTube o una URL directa de MP3. Sin URL la canción es solo visual.
         </p>
         <div>
-          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-light)", marginBottom: "0.375rem" }}>Icono</p>
+          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "rgba(255,255,255,0.55)", marginBottom: "0.375rem" }}>Icono</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
             {EMOJI_OPTIONS.map((e) => (
               <button key={e} onClick={() => setNewEmoji(e)} style={{
                 width: "34px", height: "34px", borderRadius: "8px", fontSize: "1.125rem",
-                border: `2px solid ${newEmoji === e ? "var(--primary)" : "var(--border)"}`,
-                background: newEmoji === e ? "var(--primary-lighter)" : "white",
+                border: `2px solid ${newEmoji === e ? "#8b5cf6" : "rgba(255,255,255,0.1)"}`,
+                background: newEmoji === e ? "rgba(139,92,246,0.2)" : "rgba(255,255,255,0.05)",
                 cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
               }}>{e}</button>
             ))}
           </div>
         </div>
         <div>
-          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--foreground-light)", marginBottom: "0.375rem" }}>Color del disco</p>
+          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "rgba(255,255,255,0.55)", marginBottom: "0.375rem" }}>Color del disco</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
             {COLOR_OPTIONS.map((c) => (
               <button key={c} onClick={() => setNewColor(c)} style={{
                 width: "26px", height: "26px", borderRadius: "50%", background: c, cursor: "pointer",
-                border: `3px solid ${newColor === c ? "var(--primary)" : "transparent"}`,
-                outline: newColor === c ? "2px solid var(--primary)" : "none", outlineOffset: "2px",
+                border: `3px solid ${newColor === c ? "#8b5cf6" : "transparent"}`,
+                outline: newColor === c ? "2px solid #a78bfa" : "none", outlineOffset: "2px",
               }} />
             ))}
           </div>
         </div>
-        <button className="btn btn-primary" onClick={addTrack} disabled={!newTitle.trim()}>
+        <button
+          onClick={addTrack} disabled={!newTitle.trim()}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "5px",
+            padding: "0.75rem", borderRadius: "12px", border: "none",
+            background: newTitle.trim() ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" : "rgba(255,255,255,0.1)",
+            color: "white", fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
+            cursor: newTitle.trim() ? "pointer" : "not-allowed", opacity: newTitle.trim() ? 1 : 0.5,
+            boxShadow: newTitle.trim() ? "0 4px 16px rgba(139,92,246,0.4)" : "none",
+          }}
+        >
           {editingTrack
-            ? <><Pencil size={15} style={{ marginRight: "5px" }} /> Guardar cambios</>
-            : <><Plus size={15} style={{ marginRight: "5px" }} /> Añadir Canción</>
+            ? <><Pencil size={15} /> Guardar cambios</>
+            : <><Plus size={15} /> Añadir Canción</>
           }
         </button>
         {editingTrack && (
-          <button className="btn btn-outline" onClick={cancelEditTrack}>
+          <button
+            onClick={cancelEditTrack}
+            style={{
+              padding: "0.75rem", borderRadius: "12px",
+              border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)",
+              color: "rgba(255,255,255,0.7)", fontFamily: "inherit", fontSize: "0.875rem",
+              fontWeight: 600, cursor: "pointer",
+            }}
+          >
             Cancelar
           </button>
         )}
@@ -616,13 +670,21 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   // ── PLAYER VIEW ─────────────────────────────────────────────────────────────
   return (
     <>
-      <div className="app-content-header">
-        <button className="back-btn-phone" onClick={onBack}>‹</button>
-        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: "0.5rem",
+        padding: "0.625rem 1rem",
+        background: track
+          ? `linear-gradient(135deg, ${track.color}30 0%, #0d0d1a 100%)`
+          : "linear-gradient(135deg, #1a0d26 0%, #0d0d1a 100%)",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        flexShrink: 0, transition: "background 0.5s ease",
+      }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: "rgba(255,255,255,0.7)", padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
+        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white" }}>
           🎧 {playlist.name}
         </span>
         <button onClick={() => setView("playlists")}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "4px", display: "flex", flexShrink: 0 }}>
+          style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", padding: "4px", display: "flex", flexShrink: 0 }}>
           <ListMusic size={18} />
         </button>
       </div>
@@ -908,6 +970,10 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
         @keyframes vinylEnter {
           from { transform: scale(0.75) rotate(-30deg); opacity: 0.2; }
           to   { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        @keyframes vizBar {
+          from { transform: scaleY(0.25); }
+          to   { transform: scaleY(1); }
         }
       `}</style>
     </>

@@ -103,11 +103,11 @@ function getCategory(text: string) {
 }
 
 const CATS = [
-  { id: "all",       label: "✨ Todos",     bg: "#8B5CF6" },
-  { id: "romantic",  label: "💕 Romántico", bg: "#EC4899" },
-  { id: "adventure", label: "🗺️ Aventura",  bg: "#F59E0B" },
-  { id: "chill",     label: "😌 Relax",     bg: "#10B981" },
-  { id: "creative",  label: "🎨 Creativo",  bg: "#3B82F6" },
+  { id: "all",       label: "✨ Todos",     bg: "#8B5CF6", glow: "rgba(139,92,246,0.5)" },
+  { id: "romantic",  label: "💕 Romántico", bg: "#EC4899", glow: "rgba(236,72,153,0.5)" },
+  { id: "adventure", label: "🗺️ Aventura",  bg: "#F59E0B", glow: "rgba(245,158,11,0.5)" },
+  { id: "chill",     label: "😌 Relax",     bg: "#10B981", glow: "rgba(16,185,129,0.5)" },
+  { id: "creative",  label: "🎨 Creativo",  bg: "#3B82F6", glow: "rgba(59,130,246,0.5)" },
 ]
 
 const CAT_COLORS: Record<string, { from: string; to: string }> = {
@@ -117,6 +117,17 @@ const CAT_COLORS: Record<string, { from: string; to: string }> = {
   chill:     { from: "#10B981", to: "#3B82F6" },
   creative:  { from: "#3B82F6", to: "#8B5CF6" },
 }
+
+const CHALLENGE_CSS = `
+@keyframes challengeReveal {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes diceFloat {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  50%     { transform: translateY(-6px) rotate(8deg); }
+}
+`
 
 interface DbChallenge {
   id: string
@@ -144,11 +155,8 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
 
   const catColor = CAT_COLORS[category] ?? CAT_COLORS.all
 
-  useEffect(() => {
-    loadActiveChallenge()
-  }, [])
+  useEffect(() => { loadActiveChallenge() }, [])
 
-  // Auto-refresh every 30s
   useEffect(() => {
     const t = setInterval(loadActiveChallenge, 30_000)
     return () => clearInterval(t)
@@ -162,11 +170,9 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
       const res = await fetch("/api/challenges/daily", { headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) {
         const data = await res.json()
-        // API returns { today: ..., history: [...] }
         const todayChallenge = data?.today
         if (todayChallenge && todayChallenge.challenge_text) {
           setDbChallenge(todayChallenge)
-          // Find the matching challenge in our list
           const found = CHALLENGES.find((c) => c.text === todayChallenge.challenge_text)
           if (found) {
             setChallenge(found)
@@ -214,14 +220,12 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
       const token = await getFirebaseToken()
       if (token) {
         if (dbChallenge?.id) {
-          // Mark the existing DB challenge as completed via PATCH
           await fetch("/api/challenges/daily", {
             method: "PATCH",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify({ id: dbChallenge.id }),
           })
         } else {
-          // No DB record yet, just save as completed
           await fetch("/api/challenges/daily", {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -236,21 +240,40 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
     } finally { setSaving(false) }
   }
 
+  const activeCat = CATS.find(c => c.id === category)
+
   return (
     <>
-      <div className="app-content-header">
-        <button className="back-btn-phone" onClick={onBack}>‹</button>
-        <span>🎲 Reto Diario</span>
+      <style>{CHALLENGE_CSS}</style>
+
+      {/* Header */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: "0.5rem",
+        padding: "0.75rem 1rem",
+        background: `linear-gradient(135deg, ${catColor.from}25 0%, rgba(13,13,26,0.98) 100%)`,
+        borderBottom: `1px solid ${catColor.from}30`,
+        flexShrink: 0, transition: "background 0.4s ease",
+      }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: "rgba(255,255,255,0.8)", padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
+        <span style={{ flex: 1, fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white" }}>
+          🎲 Reto Diario
+        </span>
         <button
           onClick={loadActiveChallenge}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: "4px", display: "flex", marginLeft: "auto" }}
+          style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "flex", color: catColor.from }}
           title="Actualizar"
         >
           <RefreshCw size={15} />
         </button>
       </div>
 
-      <div className="app-content-body" style={{ gap: "0.75rem", padding: "0.75rem" }}>
+      {/* Body */}
+      <div style={{
+        flex: 1, overflowY: "auto", padding: "0.75rem",
+        display: "flex", flexDirection: "column", gap: "0.75rem",
+        background: "linear-gradient(160deg, #0d0d1a 0%, #140d26 55%, #0d1426 100%)",
+      }}>
+
         {/* Category chips */}
         <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
           {CATS.map((c) => (
@@ -258,40 +281,39 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
               key={c.id}
               onClick={() => { setCategory(c.id); if (!dbChallenge) { setChallenge(null); setAccepted(false); setCompleted(false) } }}
               style={{
-                padding: "0.25rem 0.625rem", borderRadius: "999px",
+                padding: "0.3125rem 0.75rem", borderRadius: "999px",
                 fontSize: "0.6875rem", fontWeight: 700,
-                fontFamily: "inherit", cursor: "pointer", border: "none",
-                background: category === c.id ? c.bg : "#f0ebfa",
-                color: category === c.id ? "white" : "#7C3AED",
+                fontFamily: "inherit", cursor: "pointer",
+                border: category === c.id ? `1.5px solid ${c.bg}` : "1.5px solid rgba(255,255,255,0.1)",
+                background: category === c.id ? `${c.bg}22` : "rgba(255,255,255,0.05)",
+                color: category === c.id ? c.bg : "rgba(255,255,255,0.5)",
                 transition: "all 0.15s",
+                boxShadow: category === c.id ? `0 0 12px ${c.glow}` : "none",
               }}
             >{c.label}</button>
           ))}
         </div>
 
         {loadingDb ? (
-          <div style={{ textAlign: "center", padding: "2rem", color: "var(--foreground-muted)", fontSize: "0.875rem" }}>
+          <div style={{ textAlign: "center", padding: "2rem", color: "rgba(255,255,255,0.4)", fontSize: "0.875rem" }}>
             Cargando...
           </div>
         ) : (
           <>
             {/* Challenge card */}
             {!challenge ? (
-              /* ── Idle state ─────────────────────────────────── */
               <div style={{
-                background: `linear-gradient(135deg, ${catColor.from}22, ${catColor.to}22)`,
-                border: `2px dashed ${catColor.from}66`,
-                borderRadius: "20px",
-                padding: "2rem 1.25rem",
-                display: "flex", flexDirection: "column",
-                alignItems: "center", gap: "0.875rem", textAlign: "center",
+                background: `linear-gradient(135deg, ${catColor.from}18, ${catColor.to}0a)`,
+                border: `2px dashed ${catColor.from}44`,
+                borderRadius: "20px", padding: "2rem 1.25rem",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: "0.875rem", textAlign: "center",
               }}>
-                <div style={{ fontSize: "3rem", lineHeight: 1 }}>🎁</div>
+                <div style={{ fontSize: "3rem", lineHeight: 1, animation: "diceFloat 2.5s ease-in-out infinite" }}>🎁</div>
                 <div>
-                  <p style={{ fontWeight: 700, fontSize: "1rem", color: "#2D1B3E", marginBottom: "0.25rem", fontFamily: "'Fredoka', sans-serif" }}>
+                  <p style={{ fontWeight: 700, fontSize: "1rem", color: "white", marginBottom: "0.25rem", fontFamily: "'Fredoka',sans-serif" }}>
                     ¿Listos para un nuevo reto?
                   </p>
-                  <p style={{ fontSize: "0.75rem", color: "#6B5B7E" }}>
+                  <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.45)" }}>
                     {filtered.length} retos disponibles en esta categoría
                   </p>
                 </div>
@@ -300,56 +322,48 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
                   style={{
                     padding: "0.75rem 1.5rem", borderRadius: "999px", border: "none",
                     background: `linear-gradient(135deg, ${catColor.from}, ${catColor.to})`,
-                    color: "white", fontFamily: "'Fredoka', sans-serif",
+                    color: "white", fontFamily: "'Fredoka',sans-serif",
                     fontSize: "1rem", fontWeight: 700, cursor: "pointer",
-                    boxShadow: `0 6px 20px ${catColor.from}55`,
+                    boxShadow: `0 6px 24px ${catColor.from}55`,
                   }}
                 >
                   🎲 ¡Descubrir Reto!
                 </button>
               </div>
             ) : (
-              /* ── Revealed state ──────────────────────────────── */
               <div style={{
                 background: completed
-                  ? "linear-gradient(135deg, #D1FAE5, #A7F3D0)"
-                  : `linear-gradient(135deg, ${catColor.from}18, ${catColor.to}18)`,
-                border: `2px solid ${completed ? "#10B981" : catColor.from}`,
-                borderRadius: "20px",
-                padding: "1.5rem 1.25rem",
-                display: "flex", flexDirection: "column",
-                alignItems: "center", gap: "1rem", textAlign: "center",
+                  ? "linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.08))"
+                  : `linear-gradient(135deg, ${catColor.from}18, ${catColor.to}0a)`,
+                border: `2px solid ${completed ? "#10B981" : catColor.from}55`,
+                borderRadius: "20px", padding: "1.5rem 1.25rem",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", textAlign: "center",
+                animation: "challengeReveal 0.35s ease both",
               }}>
-                {/* Big emoji */}
                 <div style={{
                   width: "72px", height: "72px", borderRadius: "50%",
-                  background: `linear-gradient(135deg, ${catColor.from}33, ${catColor.to}33)`,
+                  background: `linear-gradient(135deg, ${catColor.from}33, ${catColor.to}22)`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: "2.25rem", lineHeight: 1,
                   border: `2px solid ${catColor.from}44`,
+                  boxShadow: `0 0 20px ${catColor.from}30`,
                 }}>
                   {completed ? "🏆" : challenge.emoji}
                 </div>
 
-                {/* Challenge text — ALWAYS visible */}
                 <p style={{
-                  fontSize: "0.9375rem",
-                  fontWeight: 700,
-                  color: "#2D1B3E",
-                  lineHeight: 1.55,
-                  margin: 0,
-                  fontFamily: "'Fredoka', sans-serif",
+                  fontSize: "0.9375rem", fontWeight: 700, color: "white",
+                  lineHeight: 1.55, margin: 0, fontFamily: "'Fredoka',sans-serif",
                 }}>
                   {challenge.text}
                 </p>
 
-                {/* Status badge */}
                 {completed && (
                   <div style={{
                     display: "flex", alignItems: "center", gap: "0.375rem",
-                    background: "#10B98122", borderRadius: "999px",
+                    background: "rgba(16,185,129,0.2)", borderRadius: "999px",
                     padding: "0.375rem 0.875rem",
-                    fontSize: "0.8125rem", fontWeight: 700, color: "#065F46",
+                    fontSize: "0.8125rem", fontWeight: 700, color: "#6ee7b7",
                   }}>
                     <Trophy size={14} /> ¡Reto completado! ¡Sois geniales!
                   </div>
@@ -357,9 +371,9 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
                 {accepted && !completed && (
                   <div style={{
                     display: "flex", alignItems: "center", gap: "0.375rem",
-                    background: "#8B5CF622", borderRadius: "999px",
+                    background: `${catColor.from}22`, borderRadius: "999px",
                     padding: "0.375rem 0.875rem",
-                    fontSize: "0.8125rem", fontWeight: 700, color: "#5B21B6",
+                    fontSize: "0.8125rem", fontWeight: 700, color: catColor.from,
                   }}>
                     <CheckCircle size={14} /> Reto aceptado · ¡A por ello!
                   </div>
@@ -373,10 +387,10 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
                 <button
                   onClick={pickRandom}
                   style={{
-                    flex: 1, padding: "0.75rem", borderRadius: "12px",
-                    border: "2px solid #E9D5FF", background: "white",
+                    flex: 1, padding: "0.75rem", borderRadius: "14px",
+                    border: `1.5px solid ${catColor.from}44`, background: "rgba(255,255,255,0.05)",
                     fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 700,
-                    color: "#7C3AED", cursor: "pointer",
+                    color: "rgba(255,255,255,0.7)", cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem",
                   }}
                 >
@@ -386,11 +400,11 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
                   <button
                     onClick={handleAccept}
                     style={{
-                      flex: 2, padding: "0.75rem", borderRadius: "12px", border: "none",
+                      flex: 2, padding: "0.75rem", borderRadius: "14px", border: "none",
                       background: `linear-gradient(135deg, ${catColor.from}, ${catColor.to})`,
-                      fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 700,
+                      fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
                       color: "white", cursor: "pointer",
-                      boxShadow: `0 4px 16px ${catColor.from}44`,
+                      boxShadow: `0 4px 18px ${catColor.from}55`,
                     }}
                   >
                     ✅ ¡Aceptar Reto!
@@ -400,12 +414,12 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
                     onClick={handleComplete}
                     disabled={saving}
                     style={{
-                      flex: 2, padding: "0.75rem", borderRadius: "12px", border: "none",
+                      flex: 2, padding: "0.75rem", borderRadius: "14px", border: "none",
                       background: "linear-gradient(135deg, #10B981, #059669)",
-                      fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 700,
+                      fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
                       color: "white", cursor: saving ? "not-allowed" : "pointer",
                       opacity: saving ? 0.7 : 1,
-                      boxShadow: "0 4px 16px #10B98144",
+                      boxShadow: "0 4px 18px rgba(16,185,129,0.5)",
                     }}
                   >
                     {saving ? "..." : "🏆 ¡Completado!"}
@@ -414,15 +428,15 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
               </div>
             )}
 
-            {/* New challenge after completion */}
             {completed && (
               <button
                 onClick={pickRandom}
                 style={{
-                  width: "100%", padding: "0.75rem", borderRadius: "12px", border: "none",
-                  background: "linear-gradient(135deg, #8B5CF6, #EC4899)",
-                  fontFamily: "'Fredoka', sans-serif", fontSize: "1rem", fontWeight: 700,
+                  width: "100%", padding: "0.75rem", borderRadius: "14px", border: "none",
+                  background: `linear-gradient(135deg, ${catColor.from}, ${catColor.to})`,
+                  fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
                   color: "white", cursor: "pointer",
+                  boxShadow: `0 4px 18px ${catColor.from}55`,
                 }}
               >
                 🎲 Nuevo Reto
@@ -440,8 +454,12 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
                     padding: "0.25rem 0", marginBottom: showHistory ? "0.5rem" : 0,
                   }}
                 >
-                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6B5B7E" }}>📜 Retos recientes ({history.length})</span>
-                  <span style={{ fontSize: "0.75rem", color: "#8B5CF6", fontWeight: 600 }}>{showHistory ? "▲ Ocultar" : "▼ Ver"}</span>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(255,255,255,0.5)" }}>
+                    📜 Retos recientes ({history.length})
+                  </span>
+                  <span style={{ fontSize: "0.75rem", color: catColor.from, fontWeight: 600 }}>
+                    {showHistory ? "▲ Ocultar" : "▼ Ver"}
+                  </span>
                 </button>
                 {showHistory && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
@@ -449,11 +467,11 @@ export function DailyChallengeApp({ onBack }: { onBack: () => void }) {
                       <div key={i} style={{
                         display: "flex", gap: "0.625rem", alignItems: "flex-start",
                         padding: "0.625rem 0.75rem",
-                        background: "white", borderRadius: "10px",
-                        border: "1px solid #E9D5FF",
+                        background: "rgba(255,255,255,0.05)", borderRadius: "10px",
+                        border: "1px solid rgba(255,255,255,0.08)",
                       }}>
                         <span style={{ fontSize: "1.25rem", flexShrink: 0 }}>{h.emoji}</span>
-                        <span style={{ fontSize: "0.75rem", color: "#2D1B3E", lineHeight: 1.4 }}>{h.text}</span>
+                        <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.65)", lineHeight: 1.4 }}>{h.text}</span>
                       </div>
                     ))}
                   </div>

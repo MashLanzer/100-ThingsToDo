@@ -5,7 +5,7 @@ import { getFirebaseToken } from "@/lib/firebase/client"
 import { useAppStore } from "@/stores/app-store"
 import { toast } from "sonner"
 import type { Place } from "@/types"
-import { Plus, Trash2, Search, Globe, MapPin, Star, Sparkles, Map, Plane, type LucideProps } from "lucide-react"
+import { Plus, Trash2, Search, Globe, MapPin, Star, Sparkles, Map, type LucideProps } from "lucide-react"
 import { showConfirm } from "@/lib/confirm"
 import { PhoneLoader } from "@/components/features/phone-loader"
 
@@ -13,10 +13,48 @@ type PlaceStatus = "visited" | "wishlist"
 
 interface Props { onBack: () => void }
 
-const STATUS_OPTIONS: { id: PlaceStatus; Icon: React.FC<LucideProps>; iconColor: string; label: string; bg: string; border: string }[] = [
-  { id: "visited",  Icon: MapPin, iconColor: "#059669", label: "Ya visitamos",    bg: "#d1fae5", border: "#6ee7b7" },
-  { id: "wishlist", Icon: Star,   iconColor: "#d97706", label: "En nuestra lista", bg: "#fef9c3", border: "#fde047" },
+const STATUS_OPTIONS: { id: PlaceStatus; Icon: React.FC<LucideProps>; iconColor: string; label: string; accentBg: string; accentBorder: string }[] = [
+  { id: "visited",  Icon: MapPin, iconColor: "#10b981", label: "Ya visitamos",    accentBg: "rgba(16,185,129,0.15)", accentBorder: "#10b981" },
+  { id: "wishlist", Icon: Star,   iconColor: "#f59e0b", label: "En nuestra lista", accentBg: "rgba(245,158,11,0.15)", accentBorder: "#f59e0b" },
 ]
+
+const MAP_CSS = `
+@keyframes mapCardIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes globePulse {
+  0%,100% { filter: drop-shadow(0 0 4px rgba(16,185,129,0.4)); }
+  50%     { filter: drop-shadow(0 0 10px rgba(16,185,129,0.8)); }
+}
+`
+
+const DARK_HEADER: React.CSSProperties = {
+  display: "flex", alignItems: "center", gap: "0.5rem",
+  padding: "0.75rem 1rem",
+  background: "linear-gradient(135deg, #0a2518 0%, #163322 100%)",
+  borderBottom: "1px solid rgba(255,255,255,0.07)",
+  flexShrink: 0,
+}
+
+const DARK_BODY: React.CSSProperties = {
+  flex: 1, overflowY: "auto", padding: "0.75rem",
+  display: "flex", flexDirection: "column", gap: "0.625rem",
+  background: "linear-gradient(160deg, #0a1f12 0%, #162e1c 60%, #0d2418 100%)",
+}
+
+const BACK_BTN: React.CSSProperties = {
+  background: "none", border: "none", cursor: "pointer",
+  fontSize: "1.5rem", color: "rgba(255,255,255,0.8)",
+  padding: "0 0.25rem", lineHeight: 1,
+}
+
+const INPUT_DARK: React.CSSProperties = {
+  width: "100%", padding: "0.625rem 0.875rem", borderRadius: "12px",
+  border: "1.5px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.07)",
+  color: "white", fontFamily: "inherit", fontSize: "0.875rem",
+  boxSizing: "border-box", outline: "none",
+}
 
 export function MapApp({ onBack }: Props) {
   const { openMapModal, closePhoneModal } = useAppStore()
@@ -95,9 +133,7 @@ export function MapApp({ onBack }: Props) {
       })
       toast.success("Lugar guardado")
       setName(""); setCountry(""); setLat(""); setLng(""); setNote(""); setSearchQuery("")
-      setStatus("wishlist")
-      setFormStep(1)
-      setView("list")
+      setStatus("wishlist"); setFormStep(1); setView("list")
       loadPlaces()
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error")
@@ -113,10 +149,7 @@ export function MapApp({ onBack }: Props) {
     } catch { toast.error("Error") }
   }
 
-  function openGlobe() {
-    closePhoneModal()
-    openMapModal()
-  }
+  function openGlobe() { closePhoneModal(); openMapModal() }
 
   function startAdd() {
     setName(""); setCountry(""); setLat(""); setLng(""); setNote(""); setSearchQuery("")
@@ -130,51 +163,61 @@ export function MapApp({ onBack }: Props) {
   if (view === "add") {
     return (
       <>
-        <div className="app-content-header">
-          <button className="back-btn-phone" onClick={() => formStep === 2 ? setFormStep(1) : setView("list")}>‹</button>
-          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <style>{MAP_CSS}</style>
+        <div style={DARK_HEADER}>
+          <button style={BACK_BTN} onClick={() => formStep === 2 ? setFormStep(1) : setView("list")}>‹</button>
+          <span style={{ flex: 1, fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white", display: "flex", alignItems: "center", gap: 6 }}>
             {formStep === 1
-              ? <><MapPin size={14} /> Paso 1 · Ubicación</>
-              : <><Sparkles size={14} /> Paso 2 · Detalles</>
+              ? <><MapPin size={14} color="#10b981" /> Paso 1 · Ubicación</>
+              : <><Sparkles size={14} color="#10b981" /> Paso 2 · Detalles</>
             }
           </span>
-          <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", fontWeight: 500 }}>{formStep}/2</span>
+          <span style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>{formStep}/2</span>
         </div>
-        <div className="app-content-body">
+
+        <div style={DARK_BODY}>
           {formStep === 1 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
               <div style={{ display: "flex", gap: "0.375rem" }}>
                 <input
-                  className="input"
+                  style={{ ...INPUT_DARK, flex: 1 }}
                   placeholder="Buscar ciudad o lugar..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  style={{ fontSize: "0.875rem" }}
                   autoFocus
                 />
                 <button
-                  className="btn btn-primary"
                   onClick={handleSearch}
                   disabled={searching}
-                  style={{ flexShrink: 0, padding: "0 0.75rem" }}
+                  style={{
+                    flexShrink: 0, padding: "0 0.875rem", borderRadius: "12px", border: "none",
+                    background: "linear-gradient(135deg, #10b981, #059669)", color: "white",
+                    cursor: searching ? "not-allowed" : "pointer", display: "flex", alignItems: "center",
+                    opacity: searching ? 0.7 : 1,
+                  }}
                 >
                   <Search size={15} />
                 </button>
               </div>
-              <input className="input" placeholder="Nombre del lugar" value={name} onChange={(e) => setName(e.target.value)} />
-              <input className="input" placeholder="País" value={country} onChange={(e) => setCountry(e.target.value)} />
+              <input style={INPUT_DARK} placeholder="Nombre del lugar" value={name} onChange={(e) => setName(e.target.value)} />
+              <input style={INPUT_DARK} placeholder="País" value={country} onChange={(e) => setCountry(e.target.value)} />
               <div style={{ display: "flex", gap: "0.375rem" }}>
-                <input className="input" placeholder="Latitud" value={lat} onChange={(e) => setLat(e.target.value)} type="number" step="any" />
-                <input className="input" placeholder="Longitud" value={lng} onChange={(e) => setLng(e.target.value)} type="number" step="any" />
+                <input style={{ ...INPUT_DARK, flex: 1 }} placeholder="Latitud" value={lat} onChange={(e) => setLat(e.target.value)} type="number" step="any" />
+                <input style={{ ...INPUT_DARK, flex: 1 }} placeholder="Longitud" value={lng} onChange={(e) => setLng(e.target.value)} type="number" step="any" />
               </div>
               <button
-                className="btn btn-primary"
                 onClick={() => {
                   if (!name.trim() || !country.trim()) { toast.error("Nombre y país son requeridos"); return }
                   setFormStep(2)
                 }}
-                style={{ marginTop: "0.25rem" }}
+                style={{
+                  padding: "0.75rem", borderRadius: "14px", border: "none",
+                  background: "linear-gradient(135deg, #10b981, #059669)", color: "white",
+                  fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
+                  cursor: "pointer", marginTop: "0.25rem",
+                  boxShadow: "0 4px 18px rgba(16,185,129,0.4)",
+                }}
               >
                 Siguiente →
               </button>
@@ -182,29 +225,32 @@ export function MapApp({ onBack }: Props) {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               <div style={{
-                background: "var(--primary-lighter)", borderRadius: "var(--radius-md)",
-                padding: "0.625rem 0.875rem", display: "flex", alignItems: "center", gap: "0.5rem",
+                background: "rgba(16,185,129,0.1)", borderRadius: "14px",
+                padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.625rem",
+                border: "1.5px solid rgba(16,185,129,0.25)",
               }}>
-                <MapPin size={20} color="var(--primary)" />
+                <MapPin size={20} color="#10b981" />
                 <div>
-                  <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--primary)" }}>{name}</p>
-                  <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>{country}</p>
+                  <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "#10b981", margin: 0 }}>{name}</p>
+                  <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", margin: 0 }}>{country}</p>
                 </div>
               </div>
 
               <div>
-                <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--foreground-light)", marginBottom: "0.5rem" }}>Estado</p>
+                <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "rgba(255,255,255,0.6)", marginBottom: "0.5rem" }}>Estado</p>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   {STATUS_OPTIONS.map((s) => (
                     <button
                       key={s.id}
                       onClick={() => setStatus(s.id)}
                       style={{
-                        flex: 1, padding: "0.625rem 0.375rem", borderRadius: "var(--radius-md)",
-                        border: status === s.id ? `2px solid ${s.border}` : "2px solid var(--border)",
-                        background: status === s.id ? s.bg : "white",
+                        flex: 1, padding: "0.75rem 0.375rem", borderRadius: "14px",
+                        border: `2px solid ${status === s.id ? s.accentBorder : "rgba(255,255,255,0.1)"}`,
+                        background: status === s.id ? s.accentBg : "rgba(255,255,255,0.04)",
                         cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600,
-                        color: "var(--foreground)", display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
+                        color: status === s.id ? s.iconColor : "rgba(255,255,255,0.5)",
+                        display: "flex", flexDirection: "column", alignItems: "center", gap: "4px",
+                        transition: "all 0.15s",
                       }}
                     >
                       <s.Icon size={20} color={s.iconColor} />
@@ -215,7 +261,7 @@ export function MapApp({ onBack }: Props) {
               </div>
 
               <textarea
-                className="textarea"
+                style={{ ...INPUT_DARK, resize: "none" }}
                 placeholder="Nota o recuerdo especial... (opcional)"
                 rows={3}
                 value={note}
@@ -223,11 +269,29 @@ export function MapApp({ onBack }: Props) {
               />
 
               <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setFormStep(1)}>
+                <button
+                  style={{
+                    flex: 1, padding: "0.75rem", borderRadius: "14px",
+                    border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)",
+                    color: "rgba(255,255,255,0.8)", fontFamily: "inherit", fontSize: "0.875rem",
+                    fontWeight: 600, cursor: "pointer",
+                  }}
+                  onClick={() => setFormStep(1)}
+                >
                   ← Volver
                 </button>
-                <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSave} disabled={saving}>
-                  {saving ? "Guardando..." : "Guardar lugar"}
+                <button
+                  style={{
+                    flex: 2, padding: "0.75rem", borderRadius: "14px", border: "none",
+                    background: "linear-gradient(135deg, #10b981, #059669)", color: "white",
+                    fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
+                    cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1,
+                    boxShadow: "0 4px 18px rgba(16,185,129,0.4)",
+                  }}
+                  onClick={handleSave}
+                  disabled={saving}
+                >
+                  {saving ? "Guardando..." : "💾 Guardar lugar"}
                 </button>
               </div>
             </div>
@@ -239,38 +303,67 @@ export function MapApp({ onBack }: Props) {
 
   return (
     <>
-      <div className="app-content-header">
-        <button className="back-btn-phone" onClick={onBack}>‹</button>
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Map size={14} /> Aventuras</span>
+      <style>{MAP_CSS}</style>
+
+      {/* Header */}
+      <div style={DARK_HEADER}>
+        <button style={BACK_BTN} onClick={onBack}>‹</button>
+        <span style={{ flex: 1, fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white", display: "flex", alignItems: "center", gap: 6 }}>
+          <Map size={14} color="#10b981" /> Aventuras
+        </span>
         <button
           onClick={openGlobe}
-          style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}
+          style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem", display: "flex" }}
           title="Ver globo"
         >
-          <Globe size={14} color="var(--primary)" />
+          <Globe size={16} color="#10b981" style={{ animation: "globePulse 2.5s ease-in-out infinite" }} />
         </button>
       </div>
 
-      {/* Counter */}
-      <div style={{ padding: "0.5rem 1rem 0", display: "flex", gap: "0.5rem", alignItems: "center" }}>
-        <span style={{ fontSize: "0.75rem", color: "var(--foreground-light)", fontWeight: 600, display: "flex", alignItems: "center", gap: 3 }}>
-          <Map size={12} /> <strong style={{ color: "var(--foreground)" }}>{visitedCount}</strong> visitados
-        </span>
-        <span style={{ color: "var(--border)", fontSize: "0.75rem" }}>·</span>
-        <span style={{ fontSize: "0.75rem", color: "var(--foreground-light)", fontWeight: 600, display: "flex", alignItems: "center", gap: 3 }}>
-          <Star size={12} /> <strong style={{ color: "var(--foreground)" }}>{wishlistCount}</strong> en lista
-        </span>
+      {/* Stats row */}
+      <div style={{
+        padding: "0.4375rem 1rem",
+        background: "rgba(10,31,18,0.9)",
+        display: "flex", gap: "1rem", alignItems: "center", flexShrink: 0,
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+          <MapPin size={12} color="#10b981" />
+          <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.45)", fontWeight: 600 }}>
+            <strong style={{ color: "#10b981" }}>{visitedCount}</strong> visitados
+          </span>
+        </div>
+        <span style={{ color: "rgba(255,255,255,0.15)", fontSize: "0.75rem" }}>·</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+          <Star size={12} color="#f59e0b" />
+          <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.45)", fontWeight: 600 }}>
+            <strong style={{ color: "#f59e0b" }}>{wishlistCount}</strong> en lista
+          </span>
+        </div>
       </div>
 
-      {/* Tabs — pill style */}
-      <div style={{ padding: "0.375rem 0.75rem", background: "white" }}>
-        <div className="pill-tab-container">
+      {/* Tab pills */}
+      <div style={{ padding: "0.375rem 0.75rem", background: "rgba(10,25,15,0.8)", flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+        <div style={{ display: "flex", gap: "0.25rem", padding: "3px", background: "rgba(255,255,255,0.05)", borderRadius: "999px" }}>
           {(["all", "visited", "wishlist"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`pill-tab-btn${tab === t ? " active" : ""}`}
-              style={{ fontSize: "0.6875rem", display: "flex", alignItems: "center", gap: 3 }}
+              style={{
+                flex: 1, padding: "0.3rem 0.5rem", borderRadius: "999px",
+                border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: "0.6875rem", fontWeight: 700,
+                background: tab === t
+                  ? t === "visited"
+                    ? "linear-gradient(135deg, #10b981, #059669)"
+                    : t === "wishlist"
+                    ? "linear-gradient(135deg, #f59e0b, #d97706)"
+                    : "rgba(255,255,255,0.14)"
+                  : "transparent",
+                color: tab === t ? "white" : "rgba(255,255,255,0.45)",
+                transition: "all 0.15s",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "3px",
+              }}
             >
               {t === "all"
                 ? "Todos"
@@ -283,85 +376,84 @@ export function MapApp({ onBack }: Props) {
         </div>
       </div>
 
-      <div className="app-content-body">
-        <button className="btn btn-primary" style={{ fontSize: "0.8125rem" }} onClick={startAdd}>
-          <Plus size={14} /> Añadir Lugar
+      {/* Body */}
+      <div style={DARK_BODY}>
+        <button
+          onClick={startAdd}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem",
+            padding: "0.75rem", borderRadius: "14px", border: "none",
+            background: "linear-gradient(135deg, #10b981, #059669)", color: "white",
+            fontFamily: "'Fredoka',sans-serif", fontSize: "0.9375rem", fontWeight: 700,
+            cursor: "pointer", boxShadow: "0 4px 20px rgba(16,185,129,0.35)",
+          }}
+        >
+          <Plus size={16} /> Añadir Lugar
         </button>
 
         {loading ? (
           <PhoneLoader />
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "1.5rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
-            <div className="animate-bounce-slow">
-              {tab === "visited"
-                ? <Globe size={36} color="var(--foreground-muted)" />
-                : tab === "wishlist"
-                  ? <Star size={36} color="var(--foreground-muted)" />
-                  : <Map size={36} color="var(--foreground-muted)" />
-              }
+          <div style={{ textAlign: "center", padding: "2rem 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+            <div style={{ fontSize: "2.5rem", opacity: 0.4 }}>
+              {tab === "visited" ? "🌍" : tab === "wishlist" ? "⭐" : "🗺️"}
             </div>
-            <p style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--foreground)" }}>
+            <p style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "rgba(255,255,255,0.7)", margin: 0 }}>
               {tab === "visited" ? "¡Aún por explorar!" : tab === "wishlist" ? "¡La lista está vacía!" : "¡Sin aventuras aún!"}
             </p>
-            <p style={{ fontSize: "0.75rem", color: "var(--foreground-muted)" }}>
+            <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", margin: 0 }}>
               {tab === "visited"
                 ? "Añade los lugares que habéis visitado juntos"
                 : tab === "wishlist"
-                  ? <><Plane size={12} style={{ display: "inline", verticalAlign: "middle" }} /> ¿Adónde queréis ir?</>
+                  ? "¿Adónde queréis ir?"
                   : "Empieza a guardar vuestros destinos"
               }
             </p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {filtered.map((p) => {
+            {filtered.map((p, idx) => {
               const isVisited = p.status === "visited"
               return (
                 <div
                   key={p.id}
                   style={{
-                    padding: "0.75rem",
-                    background: isVisited
-                      ? "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)"
-                      : "linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)",
-                    borderRadius: "var(--radius-lg)",
-                    border: isVisited ? "1.5px solid #a7f3d0" : "1.5px solid #fde68a",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.625rem",
-                    transition: "transform 0.12s ease",
+                    padding: "0.75rem 0.875rem",
+                    background: "rgba(255,255,255,0.05)",
+                    borderRadius: "14px",
+                    border: `1px solid ${isVisited ? "rgba(16,185,129,0.2)" : "rgba(245,158,11,0.2)"}`,
+                    borderLeft: `4px solid ${isVisited ? "#10b981" : "#f59e0b"}`,
+                    display: "flex", alignItems: "flex-start", gap: "0.625rem",
+                    animation: "mapCardIn 0.3s ease both",
+                    animationDelay: `${idx * 0.04}s`,
                   }}
                 >
                   <div style={{ flexShrink: 0, marginTop: "1px" }}>
-                    {isVisited
-                      ? <MapPin size={18} color="#059669" />
-                      : <Star size={18} color="#d97706" />
-                    }
+                    {isVisited ? <MapPin size={18} color="#10b981" /> : <Star size={18} color="#f59e0b" />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.125rem" }}>
-                      <p style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>
                         {p.name}
                       </p>
                       <span style={{
-                        fontSize: "0.5625rem", fontWeight: 700, padding: "1px 6px", borderRadius: "999px",
-                        background: isVisited ? "#6ee7b7" : "#fde047",
-                        color: isVisited ? "#064e3b" : "#713f12",
-                        flexShrink: 0,
+                        fontSize: "0.5625rem", fontWeight: 700, padding: "1px 6px", borderRadius: "999px", flexShrink: 0,
+                        background: isVisited ? "rgba(16,185,129,0.18)" : "rgba(245,158,11,0.18)",
+                        color: isVisited ? "#10b981" : "#f59e0b",
                       }}>
                         {isVisited ? "Visitado" : "Pendiente"}
                       </span>
                     </div>
-                    <p style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)" }}>{p.country}</p>
+                    <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.45)", margin: 0 }}>{p.country}</p>
                     {p.note && (
-                      <p style={{ fontSize: "0.625rem", color: "var(--foreground-light)", marginTop: "0.25rem", fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        "{p.note}"
+                      <p style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.3)", marginTop: "0.25rem", fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        &ldquo;{p.note}&rdquo;
                       </p>
                     )}
                   </div>
                   <button
                     onClick={() => handleDelete(p.id)}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem", color: "var(--foreground-muted)", flexShrink: 0, opacity: 0.6 }}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem", color: "rgba(255,255,255,0.25)", flexShrink: 0 }}
                   >
                     <Trash2 size={13} />
                   </button>
