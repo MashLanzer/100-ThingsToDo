@@ -833,10 +833,11 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
                 <button key={ctrl}
                   onClick={() => ctrl === "shuffle" ? setIsShuffle(s => !s) : setIsLoop(l => !l)}
                   style={{
-                    padding: "4px 10px", borderRadius: "999px", border: active ? "none" : "1px solid var(--border)",
+                    padding: "4px 10px", borderRadius: "999px",
+                    border: active ? "none" : `1px solid ${isDark ? "#4a3465" : "#e9d5ff"}`,
                     cursor: "pointer", fontFamily: "inherit", fontSize: "0.625rem", fontWeight: 700,
-                    background: active ? "var(--primary)" : "white",
-                    color: active ? "white" : "var(--foreground-muted)",
+                    background: active ? "var(--primary)" : (isDark ? "rgba(255,255,255,0.08)" : "white"),
+                    color: active ? "white" : (isDark ? "#c4b8d8" : "var(--foreground-muted)"),
                     transition: "all 0.15s",
                   }}
                 >{ctrl === "shuffle" ? "🔀 Aleatoria" : "🔁 Repetir"}</button>
@@ -848,9 +849,9 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
                   padding: "4px 10px", borderRadius: "999px", cursor: "pointer",
                   fontFamily: "inherit", fontSize: "0.625rem", fontWeight: 700,
                   display: "flex", alignItems: "center", gap: "4px",
-                  background: sleepMinutesLeft !== null ? "var(--primary)" : "white",
-                  color: sleepMinutesLeft !== null ? "white" : "var(--foreground-muted)",
-                  border: sleepMinutesLeft !== null ? "none" : "1px solid var(--border)",
+                  background: sleepMinutesLeft !== null ? "var(--primary)" : (isDark ? "rgba(255,255,255,0.08)" : "white"),
+                  color: sleepMinutesLeft !== null ? "white" : (isDark ? "#c4b8d8" : "var(--foreground-muted)"),
+                  border: sleepMinutesLeft !== null ? "none" : `1px solid ${isDark ? "#4a3465" : "#e9d5ff"}`,
                   transition: "all 0.15s",
                 }}
               >

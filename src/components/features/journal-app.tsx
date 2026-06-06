@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import type { JournalEntry, Letter } from "@/types"
 import { areCelebrationsEnabled } from "@/lib/utils"
 import { Lock, Unlock, Flame, Smile, Heart, Laugh, Frown, Meh, Moon, User, Camera, Mail, FileText, CheckCircle2, PenLine, Search as SearchIcon, BarChart2, Mic, MicOff, Square, Trash2, Tag, MapPin } from "lucide-react"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 
 const MOODS = [
   { id: "happy",    Icon: Smile,  label: "Feliz",       accent: "#FEF3C7", accentBorder: "#F59E0B", accentText: "#92400E" },
@@ -184,6 +185,7 @@ type GetUserMediaLegacy = (
 
 export function JournalApp({ onBack }: Props) {
   const { user } = useAuth()
+  const isDark = useDarkMode()
   const myUid = user?.uid ?? ""
   const [view, setView] = useState<View>("calendar")
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -933,19 +935,19 @@ export function JournalApp({ onBack }: Props) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.625rem", width: "100%", maxWidth: 240 }}>
             {[1,2,3,4,5,6,7,8,9].map(n => (
               <button key={n} onClick={() => handlePinKeyPress(String(n))}
-                style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid var(--border)", background: "white", cursor: "pointer", fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 600, color: "var(--foreground)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.06)", transition: "background 0.1s, transform 0.1s" }}
+                style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid var(--border)", background: isDark ? "#2e2244" : "white", cursor: "pointer", fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 600, color: isDark ? "#f0e8ff" : "#2D1B3E", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.06)", transition: "background 0.1s, transform 0.1s" }}
                 onMouseDown={e => (e.currentTarget.style.transform = "scale(0.92)")}
                 onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
               >{n}</button>
             ))}
             <div />
             <button onClick={() => handlePinKeyPress("0")}
-              style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid var(--border)", background: "white", cursor: "pointer", fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 600, color: "var(--foreground)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.06)", transition: "background 0.1s, transform 0.1s" }}
+              style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid var(--border)", background: isDark ? "#2e2244" : "white", cursor: "pointer", fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 600, color: isDark ? "#f0e8ff" : "#2D1B3E", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.06)", transition: "background 0.1s, transform 0.1s" }}
               onMouseDown={e => (e.currentTarget.style.transform = "scale(0.92)")}
               onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
             >0</button>
             <button onClick={handlePinBackspace}
-              style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid var(--border)", background: "white", cursor: "pointer", fontSize: "1.125rem", color: "var(--foreground-light)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.06)", transition: "background 0.1s, transform 0.1s" }}
+              style={{ aspectRatio: "1", borderRadius: "50%", border: "2px solid var(--border)", background: isDark ? "#2e2244" : "white", cursor: "pointer", fontSize: "1.125rem", color: isDark ? "#f0e8ff" : "var(--foreground-light)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.06)", transition: "background 0.1s, transform 0.1s" }}
               onMouseDown={e => (e.currentTarget.style.transform = "scale(0.92)")}
               onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
             >⌫</button>
@@ -1017,7 +1019,7 @@ export function JournalApp({ onBack }: Props) {
     const favDowLabel = ES_DAYS[favDow].charAt(0).toUpperCase() + ES_DAYS[favDow].slice(1)
 
     const statCard = (emoji: string, label: string, value: string) => (
-      <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+      <div style={{ background: isDark ? "#1e1530" : "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
         <span style={{ fontSize: "1.25rem" }}>{emoji}</span>
         <span style={{ fontSize: "0.6875rem", color: "var(--foreground-muted)", fontWeight: 600 }}>{label}</span>
         <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.125rem", fontWeight: 700, color: "var(--primary)" }}>{value}</span>
@@ -1040,7 +1042,7 @@ export function JournalApp({ onBack }: Props) {
             {statCard("📖", "Total juntos", `${statsEntries.length}`)}
           </div>
 
-          <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem" }}>
+          <div style={{ background: isDark ? "#1e1530" : "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem" }}>
             <p style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.9375rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "0.75rem" }}>Mis estados de ánimo</p>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
               {MOODS.map(m => {
@@ -1149,10 +1151,10 @@ export function JournalApp({ onBack }: Props) {
                 return (
                   <div key={entry.id} style={{ position: "relative" }}>
                     {/* Dot on the line */}
-                    <div style={{ position: "absolute", left: -20, top: "1rem", width: 10, height: 10, borderRadius: "50%", background: isMe ? "var(--primary)" : "var(--secondary)", border: "2px solid white", boxShadow: "0 0 0 2px " + (isMe ? "var(--primary)" : "var(--secondary)"), zIndex: 1 }} />
+                    <div style={{ position: "absolute", left: -20, top: "1rem", width: 10, height: 10, borderRadius: "50%", background: isMe ? "var(--primary)" : "var(--secondary)", border: `2px solid ${isDark ? "#1a1228" : "white"}`, boxShadow: "0 0 0 2px " + (isMe ? "var(--primary)" : "var(--secondary)"), zIndex: 1 }} />
                     <button
                       onClick={() => openEntry(entry)}
-                      style={{ width: "100%", textAlign: "left", background: "white", border: `1.5px solid ${isMe ? "var(--primary-light)" : "var(--secondary-light)"}`, borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", boxShadow: "var(--shadow-sm)", display: "flex", gap: "0.75rem", alignItems: "flex-start" }}
+                      style={{ width: "100%", textAlign: "left", background: isDark ? "#1e1530" : "white", border: `1.5px solid ${isMe ? "var(--primary-light)" : "var(--secondary-light)"}`, borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", boxShadow: "var(--shadow-sm)", display: "flex", gap: "0.75rem", alignItems: "flex-start" }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
                         {/* Date + author badge */}
@@ -1287,7 +1289,7 @@ export function JournalApp({ onBack }: Props) {
             style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.6)", display: "flex", flexDirection: "column" }}
             onClick={() => setShowLetterGallery(false)}
           >
-            <div style={{ marginTop: "auto", background: "white", borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "60vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <div style={{ marginTop: "auto", background: isDark ? "#1e1530" : "white", borderRadius: "20px 20px 0 0", padding: "1rem", maxHeight: "60vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
                 <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--foreground)" }}>Elegir foto</span>
                 <button onClick={() => setShowLetterGallery(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: "var(--foreground-muted)", lineHeight: 1 }}>×</button>
@@ -1422,7 +1424,7 @@ export function JournalApp({ onBack }: Props) {
                   const myReaction = l.reactions?.[myUid]
                   return (
                     <button key={l.id} onClick={() => openLetter(l)}
-                      style={{ width: "100%", textAlign: "left", background: l.is_read ? "white" : "linear-gradient(135deg, #fff0fb, #fffbf0)", border: `1.5px solid ${l.is_read ? "var(--border)" : "#f5e6c8"}`, borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
+                      style={{ width: "100%", textAlign: "left", background: l.is_read ? (isDark ? "#1e1530" : "white") : "linear-gradient(135deg, #fff0fb, #fffbf0)", border: `1.5px solid ${l.is_read ? "var(--border)" : "#f5e6c8"}`, borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
                     >
                       <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>{l.is_read ? "📩" : "💌"}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1452,7 +1454,7 @@ export function JournalApp({ onBack }: Props) {
                   const isScheduled = l.send_at && new Date(l.send_at) > new Date()
                   return (
                     <button key={l.id} onClick={() => openLetter(l)}
-                      style={{ width: "100%", textAlign: "left", background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
+                      style={{ width: "100%", textAlign: "left", background: isDark ? "#1e1530" : "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.875rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}
                     >
                       <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>{isScheduled ? "⏰" : "📤"}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1760,7 +1762,7 @@ export function JournalApp({ onBack }: Props) {
                 {ENTRY_TEMPLATES.map(t => (
                   <button key={t.id}
                     onClick={() => { setWriteContent(t.body); setWriteMood(t.mood); setWriteTags(t.tags) }}
-                    style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: "0.25rem", padding: "0.375rem 0.75rem", borderRadius: "999px", border: "1px solid var(--border)", background: "white", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", whiteSpace: "nowrap" }}>
+                    style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: "0.25rem", padding: "0.375rem 0.75rem", borderRadius: "999px", border: "1px solid var(--border)", background: isDark ? "#2e2244" : "white", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground-light)", whiteSpace: "nowrap" }}>
                     <span>{t.emoji}</span> {t.label}
                   </button>
                 ))}
@@ -1774,7 +1776,7 @@ export function JournalApp({ onBack }: Props) {
               const isSelected = writeMood === m.id
               return (
                 <button key={m.id} onClick={() => setWriteMood(m.id)}
-                  style={{ padding: "0.75rem 0.5rem", borderRadius: "var(--radius-md)", border: isSelected ? `2px solid ${m.accentBorder}` : "2px solid var(--border)", cursor: "pointer", fontFamily: "inherit", background: isSelected ? m.accent : "white", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem", boxShadow: isSelected ? `0 2px 8px ${m.accentBorder}33` : "none", transform: isSelected ? "scale(1.03)" : "scale(1)", transition: "all 0.15s ease", color: isSelected ? m.accentText : "var(--foreground-light)" }}
+                  style={{ padding: "0.75rem 0.5rem", borderRadius: "var(--radius-md)", border: isSelected ? `2px solid ${m.accentBorder}` : "2px solid var(--border)", cursor: "pointer", fontFamily: "inherit", background: isSelected ? m.accent : (isDark ? "#2e2244" : "white"), display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem", boxShadow: isSelected ? `0 2px 8px ${m.accentBorder}33` : "none", transform: isSelected ? "scale(1.03)" : "scale(1)", transition: "all 0.15s ease", color: isSelected ? m.accentText : "var(--foreground-light)" }}
                 >
                   <m.Icon size={28} />
                   <span style={{ fontSize: "0.6875rem", fontWeight: 700 }}>{m.label}</span>
@@ -2152,7 +2154,7 @@ export function JournalApp({ onBack }: Props) {
                     const isMe = e.created_by === myUid
                     return (
                       <button key={e.id} onClick={() => { openEntry(e); setSearchQuery("") }}
-                        style={{ textAlign: "left", background: "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                        style={{ textAlign: "left", background: isDark ? "#1e1530" : "white", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.75rem", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.25rem" }}>
                           <span style={{ fontSize: "0.75rem", fontWeight: 700, color: isMe ? "var(--primary)" : "var(--secondary)" }}>{formatDateShortEs(e.date)}</span>
                           <span style={{ fontSize: "0.5625rem", fontWeight: 700, padding: "0.0625rem 0.375rem", borderRadius: "999px", background: isMe ? "var(--primary-lighter)" : "#fce7f3", color: isMe ? "var(--primary)" : "var(--secondary)" }}>{isMe ? "Tú" : "Pareja"}</span>
@@ -2194,14 +2196,14 @@ export function JournalApp({ onBack }: Props) {
                 {/* F7: Mood filter chips */}
                 <div style={{ display: "flex", gap: "0.375rem", overflowX: "auto", paddingBottom: "0.25rem", marginBottom: "0.5rem", scrollbarWidth: "none" }}>
                   <button onClick={() => setMoodFilter(null)}
-                    style={{ flexShrink: 0, fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "1px solid var(--border)", cursor: "pointer", background: moodFilter === null ? "var(--foreground)" : "white", color: moodFilter === null ? "white" : "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+                    style={{ flexShrink: 0, fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit", padding: "0.25rem 0.625rem", borderRadius: "999px", border: "1px solid var(--border)", cursor: "pointer", background: moodFilter === null ? "var(--foreground)" : (isDark ? "#2e2244" : "white"), color: moodFilter === null ? "white" : "var(--foreground-muted)", whiteSpace: "nowrap" }}>
                     Todos
                   </button>
                   {MOODS.map(m => {
                     const active = moodFilter === m.id
                     return (
                       <button key={m.id} onClick={() => setMoodFilter(active ? null : m.id)}
-                        style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit", padding: "0.25rem 0.625rem", borderRadius: "999px", border: `1px solid ${active ? m.accentBorder : "var(--border)"}`, cursor: "pointer", background: active ? m.accent : "white", color: active ? m.accentText : "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+                        style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit", padding: "0.25rem 0.625rem", borderRadius: "999px", border: `1px solid ${active ? m.accentBorder : "var(--border)"}`, cursor: "pointer", background: active ? m.accent : (isDark ? "#2e2244" : "white"), color: active ? m.accentText : "var(--foreground-muted)", whiteSpace: "nowrap" }}>
                         <m.Icon size={12} /> {m.label}
                       </button>
                     )
@@ -2255,7 +2257,7 @@ export function JournalApp({ onBack }: Props) {
                           : dayMood
                             ? dayMood.accent
                             : myEntry ? "linear-gradient(135deg, var(--primary-lighter) 0%, var(--muted) 100%)"
-                            : partnerEntry ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)" : "white"
+                            : partnerEntry ? "linear-gradient(135deg, #fce7f3 0%, #fff 100%)" : (isDark ? "#221833" : "white")
                         return (
                           <button
                             key={day}

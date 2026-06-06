@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { daysTogether } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 import { usePlans } from "@/hooks/use-plans"
 import { toast } from "sonner"
 import { X, Copy, Check, User, Settings2, Heart, Moon, Bell, Vibrate, Lock, Upload, LogOut, CalendarHeart, Camera, Trash2, Loader2, Fingerprint } from "lucide-react"
@@ -173,8 +174,8 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 function SettingsCard({ title, children }: { title?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section style={{
-      background: "white",
-      border: "1px solid var(--border)",
+      background: "var(--modal-surface, white)",
+      border: "1px solid var(--modal-border, var(--border))",
       borderRadius: "var(--radius-lg)",
       padding: "1rem",
       boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
@@ -338,6 +339,19 @@ export function SettingsModal() {
       setDeleteConfirmText("")
     }
   }, [showSettingsModal])
+
+  const isDark = useDarkMode()
+  const T = {
+    bg:         isDark ? "#1a1225"  : "var(--background)",
+    surface:    isDark ? "#221833"  : "var(--surface)",
+    surfaceHov: isDark ? "#2a1e3a" : "var(--surface-hover)",
+    border:     isDark ? "#4a3465" : "var(--border)",
+    text:       isDark ? "#f0e8ff" : "var(--foreground)",
+    textSub:    isDark ? "#c4b8d8" : "var(--foreground-light)",
+    textMuted:  isDark ? "#9080a8" : "var(--foreground-muted)",
+    muted:      isDark ? "#2a1e3a" : "var(--muted)",
+    inputBg:    isDark ? "#2e2244" : "var(--muted)",
+  }
 
   if (!showSettingsModal) return null
 
@@ -849,7 +863,20 @@ export function SettingsModal() {
 
   return (
     <div className="modal-overlay-bg" onClick={closeSettingsModal}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{
+        background: T.surface,
+        color: T.text,
+        "--modal-surface": T.surface,
+        "--modal-border": T.border,
+        "--background": T.bg,
+        "--surface": T.surface,
+        "--surface-hover": T.surfaceHov,
+        "--border": T.border,
+        "--foreground": T.text,
+        "--foreground-light": T.textSub,
+        "--foreground-muted": T.textMuted,
+        "--muted": T.muted,
+      } as React.CSSProperties}>
         <div className="modal-header">
           <h2 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Settings2 size={18} /> Configuración</h2>
           <button className="modal-close-btn" onClick={closeSettingsModal}><X size={14} /></button>
@@ -946,9 +973,9 @@ export function SettingsModal() {
                         <label style={{
                           display: "inline-flex", alignItems: "center", gap: "0.375rem",
                           padding: "0.4rem 0.875rem", borderRadius: "var(--radius-md)",
-                          border: "1.5px solid var(--border)", background: "white",
+                          border: `1.5px solid ${T.border}`, background: T.surface,
                           cursor: avatarUploading ? "wait" : "pointer",
-                          fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)",
+                          fontSize: "0.8125rem", fontWeight: 600, color: T.text,
                           width: "fit-content",
                         }}>
                           {avatarUploading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Camera size={13} />}
@@ -1152,9 +1179,9 @@ export function SettingsModal() {
                             border: "none",
                             cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                             boxShadow: selected
-                              ? `0 0 0 3px white, 0 0 0 5px ${t.primary}`
+                              ? `0 0 0 3px ${T.surface}, 0 0 0 5px ${t.primary}`
                               : hoveredTheme === t.id
-                              ? `0 0 0 2px white, 0 0 0 4px ${t.primary}88`
+                              ? `0 0 0 2px ${T.surface}, 0 0 0 4px ${t.primary}88`
                               : "none",
                             transform: hoveredTheme === t.id ? "scale(1.12)" : "scale(1)",
                             fontSize: "0.9rem",
@@ -1181,12 +1208,12 @@ export function SettingsModal() {
                         onClick={() => handleFont(size)}
                         style={{
                           flex: 1, padding: "0.5rem", borderRadius: "var(--radius-md)",
-                          border: currentFont === size ? "2px solid var(--primary)" : "2px solid var(--border)",
-                          background: currentFont === size ? "var(--primary-lighter)" : "white",
+                          border: currentFont === size ? "2px solid var(--primary)" : `2px solid ${T.border}`,
+                          background: currentFont === size ? "var(--primary-lighter)" : T.surface,
                           cursor: "pointer", fontFamily: "inherit",
                           fontSize: size === "large" ? "0.9375rem" : "0.8125rem",
                           fontWeight: 600,
-                          color: currentFont === size ? "var(--primary)" : "var(--foreground-light)",
+                          color: currentFont === size ? "var(--primary)" : T.textMuted,
                         }}
                       >
                         {size === "normal" ? "Normal" : "Grande"}
@@ -1231,8 +1258,8 @@ export function SettingsModal() {
                           onClick={() => handleDashboardBg(bg.id)}
                           style={{
                             height: 52, borderRadius: "var(--radius-md)", cursor: "pointer",
-                            border: sel ? "2.5px solid var(--primary)" : "2px solid var(--border)",
-                            background: bg.preview, position: "relative",
+                            border: sel ? "2.5px solid var(--primary)" : `2px solid ${T.border}`,
+                            background: sel ? bg.preview : T.surface, position: "relative",
                             boxShadow: sel ? "0 0 0 3px var(--primary-lighter)" : "none",
                             transition: "box-shadow 0.15s, border-color 0.15s",
                             overflow: "hidden",
@@ -1243,7 +1270,7 @@ export function SettingsModal() {
                               <Check size={8} color="white" />
                             </span>
                           )}
-                          <span style={{ position: "absolute", bottom: 4, left: 0, right: 0, textAlign: "center", fontSize: "0.5625rem", fontWeight: 700, color: sel ? "var(--primary)" : "var(--foreground-muted)" }}>
+                          <span style={{ position: "absolute", bottom: 4, left: 0, right: 0, textAlign: "center", fontSize: "0.5625rem", fontWeight: 700, color: sel ? "var(--primary)" : T.textMuted }}>
                             {bg.label}
                           </span>
                         </button>
@@ -1268,8 +1295,8 @@ export function SettingsModal() {
                           style={{
                             padding: "0.625rem 0.25rem",
                             borderRadius: "var(--radius-md)",
-                            border: sel ? "2px solid var(--primary)" : "2px solid var(--border)",
-                            background: sel ? "var(--primary-lighter)" : "white",
+                            border: sel ? "2px solid var(--primary)" : `2px solid ${T.border}`,
+                            background: sel ? "var(--primary-lighter)" : T.surface,
                             cursor: "pointer",
                             display: "flex", flexDirection: "column", alignItems: "center", gap: "0.125rem",
                           }}
@@ -1609,12 +1636,12 @@ export function SettingsModal() {
                         onClick={() => handleWeekStarts(monday)}
                         style={{
                           flex: 1, padding: "0.5rem", borderRadius: "var(--radius-md)",
-                          border: weekStartsMonday === monday ? "2px solid var(--primary)" : "2px solid var(--border)",
-                          background: weekStartsMonday === monday ? "var(--primary-lighter)" : "white",
+                          border: weekStartsMonday === monday ? "2px solid var(--primary)" : `2px solid ${T.border}`,
+                          background: weekStartsMonday === monday ? "var(--primary-lighter)" : T.surface,
                           cursor: "pointer", fontFamily: "inherit",
                           fontSize: "0.875rem",
                           fontWeight: 600,
-                          color: weekStartsMonday === monday ? "var(--primary)" : "var(--foreground-light)",
+                          color: weekStartsMonday === monday ? "var(--primary)" : T.textMuted,
                         }}
                       >
                         {label}
@@ -1660,7 +1687,7 @@ export function SettingsModal() {
                     style={{
                       width: "100%", padding: "0.625rem 0.875rem",
                       borderRadius: "var(--radius-md)", border: "1.5px solid #ef4444",
-                      background: showDeleteZone ? "#fef2f2" : "white", cursor: "pointer",
+                      background: showDeleteZone ? "#fef2f2" : T.surface, cursor: "pointer",
                       color: "#ef4444", fontWeight: 700, fontSize: "0.875rem",
                       fontFamily: "inherit", textAlign: "left",
                       display: "flex", alignItems: "center", justifyContent: "space-between",

@@ -20,6 +20,7 @@ import {
   MoreVertical,
 } from "lucide-react"
 import { toast } from "sonner"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 
 type FilterType = "all" | "thingstodo" | "14feb"
 type ViewMode = "polaroid" | "masonry" | "feed" | "albums"
@@ -1811,6 +1812,7 @@ function findMemoryPhotos(photos: Photo[]): { label: string; photos: Photo[] } |
 }
 
 export default function FotosPage() {
+  const isDark = useDarkMode()
   const qc = useQueryClient()
   const { data: photos, isLoading, error: photosError } = usePhotos()
   const uploadPhoto = useUploadPhoto()
@@ -2186,10 +2188,11 @@ export default function FotosPage() {
                 key={key}
                 onClick={() => setFilter(key)}
                 style={{
-                  padding: "3px 12px", borderRadius: "999px", border: "none", cursor: "pointer",
+                  padding: "3px 12px", borderRadius: "999px", cursor: "pointer",
                   fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
-                  background: filter === key ? "var(--primary)" : "var(--muted)",
-                  color: filter === key ? "white" : "var(--foreground-muted)",
+                  background: filter === key ? "var(--primary)" : (isDark ? "rgba(255,255,255,0.08)" : "var(--muted)"),
+                  color: filter === key ? "white" : (isDark ? "#c4b8d8" : "var(--foreground-muted)"),
+                  border: filter === key ? "none" : `1px solid ${isDark ? "#4a3465" : "transparent"}`,
                   transition: "background 0.15s, color 0.15s",
                 }}
               >
@@ -2247,10 +2250,11 @@ export default function FotosPage() {
           <button
             onClick={() => setSelectedMonth(null)}
             style={{
-              padding: "3px 12px", borderRadius: "999px", border: "none", cursor: "pointer",
+              padding: "3px 12px", borderRadius: "999px", cursor: "pointer",
               fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
-              background: !selectedMonth ? "var(--primary)" : "var(--muted)",
-              color: !selectedMonth ? "white" : "var(--foreground-muted)",
+              background: !selectedMonth ? "var(--primary)" : (isDark ? "rgba(255,255,255,0.08)" : "var(--muted)"),
+              color: !selectedMonth ? "white" : (isDark ? "#c4b8d8" : "var(--foreground-muted)"),
+              border: !selectedMonth ? "none" : `1px solid ${isDark ? "#4a3465" : "transparent"}`,
               whiteSpace: "nowrap", flexShrink: 0,
               transition: "background 0.15s, color 0.15s",
             }}
@@ -2262,10 +2266,11 @@ export default function FotosPage() {
               key={monthLabel}
               onClick={() => setSelectedMonth(monthLabel === selectedMonth ? null : monthLabel)}
               style={{
-                padding: "3px 12px", borderRadius: "999px", border: "none", cursor: "pointer",
+                padding: "3px 12px", borderRadius: "999px", cursor: "pointer",
                 fontFamily: "inherit", fontSize: "0.6875rem", fontWeight: 600,
-                background: selectedMonth === monthLabel ? "var(--secondary)" : "var(--muted)",
-                color: selectedMonth === monthLabel ? "white" : "var(--foreground-muted)",
+                background: selectedMonth === monthLabel ? "var(--secondary)" : (isDark ? "rgba(255,255,255,0.08)" : "var(--muted)"),
+                color: selectedMonth === monthLabel ? "white" : (isDark ? "#c4b8d8" : "var(--foreground-muted)"),
+                border: selectedMonth === monthLabel ? "none" : `1px solid ${isDark ? "#4a3465" : "transparent"}`,
                 whiteSpace: "nowrap", flexShrink: 0,
                 transition: "background 0.15s, color 0.15s",
               }}
