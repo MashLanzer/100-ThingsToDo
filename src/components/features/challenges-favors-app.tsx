@@ -740,19 +740,19 @@ export function ChallengesFavorsApp({ onBack }: Props) {
           <div style={{
             margin: "0.5rem 0.75rem 0",
             padding: "0.625rem 0.875rem",
-            background: `linear-gradient(135deg, ${currentLevel.color}15, ${currentLevel.color}06)`,
-            border: `1.5px solid ${currentLevel.color}44`,
-            borderRadius: "var(--radius-lg)",
+            background: "linear-gradient(135deg, rgba(236,72,153,0.12) 0%, rgba(139,92,246,0.08) 100%)",
+            border: "1.5px solid rgba(236,72,153,0.3)",
+            borderRadius: "16px",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.375rem" }}>
-              <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.875rem", fontWeight: 700, color: currentLevel.color }}>
+              <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "0.875rem", fontWeight: 700, color: "#f472b6" }}>
                 {currentLevel.name}
               </span>
-              <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: currentLevel.color }}>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#f472b6" }}>
                 {totalPoints} pts
               </span>
             </div>
-            <div style={{ height: "5px", background: "var(--muted)", borderRadius: "999px", overflow: "hidden" }}>
+            <div style={{ height: "5px", background: "rgba(255,255,255,0.1)", borderRadius: "999px", overflow: "hidden" }}>
               <div style={{
                 height: "100%", width: `${levelProgress}%`,
                 background: `linear-gradient(90deg, ${currentLevel.color}, ${nextLevel?.color ?? currentLevel.color})`,
@@ -760,7 +760,7 @@ export function ChallengesFavorsApp({ onBack }: Props) {
               }} />
             </div>
             {nextLevel && (
-              <p style={{ fontSize: "0.5rem", color: "var(--foreground-muted)", margin: "0.25rem 0 0", textAlign: "right" }}>
+              <p style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.5)", margin: "0.25rem 0 0", textAlign: "right" }}>
                 {nextLevel.min - totalPoints} pts para {nextLevel.name}
               </p>
             )}

@@ -539,7 +539,17 @@ export function SeriesApp({ onBack }: Props) {
             </p>
             {entries.filter(e => e.added_by !== myUid).slice(0, 4).map(e => (
               <div key={e.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.375rem" }}>
-                <span style={{ fontSize: "0.75rem" }}>{STATUS_META[e.status].emoji}</span>
+                {e.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={e.image_url}
+                    alt=""
+                    style={{ width: 40, height: 56, objectFit: "cover", borderRadius: 6, flexShrink: 0 }}
+                    onError={ev => { (ev.target as HTMLImageElement).style.display = "none" }}
+                  />
+                ) : (
+                  <span style={{ fontSize: "0.75rem" }}>{STATUS_META[e.status].emoji}</span>
+                )}
                 <span style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.5)", fontWeight: 500, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</span>
               </div>
             ))}
