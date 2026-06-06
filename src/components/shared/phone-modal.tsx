@@ -13,6 +13,7 @@ import { SeriesApp } from "@/components/features/series-app"
 import { MomentsApp } from "@/components/features/moments-app"
 import { BookApp } from "@/components/features/book-app"
 import { useState, useEffect, useRef } from "react"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 
 type AppDef = { id: string; Icon: React.FC<{ size?: number; color?: string }>; name: string; bg: string; iconColor: string }
 const APPS: AppDef[] = [
@@ -86,6 +87,8 @@ export function PhoneModal() {
     }
   }, [showPhoneModal])
 
+  const isDark = useDarkMode()
+
   if (!showPhoneModal) return null
 
   function goHome() {
@@ -136,7 +139,9 @@ export function PhoneModal() {
               {activePhoneApp === "home" && (
                 <div className="phone-app-view active">
                   <div className="phone-homescreen" style={{
-                    background: "linear-gradient(160deg, #fdf4ff 0%, #fce7f3 55%, #ede9fe 100%)",
+                    background: isDark
+                      ? "linear-gradient(160deg, #1a1225 0%, #221833 55%, #1a2035 100%)"
+                      : "linear-gradient(160deg, #fdf4ff 0%, #fce7f3 55%, #ede9fe 100%)",
                     position: "relative",
                   }}>
                     <div className="phone-status-bar">

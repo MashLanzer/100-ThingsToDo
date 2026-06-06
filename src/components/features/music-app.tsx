@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { Play, Pause, SkipForward, SkipBack, Plus, Trash2, ListMusic, Heart, Moon, X, Pencil, Search } from "lucide-react"
 import { useAppStore } from "@/stores/app-store"
 import { toast } from "sonner"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 
 interface Track {
   id: string
@@ -148,6 +149,19 @@ function formatTime(s: number): string {
 }
 
 export function MusicApp({ onBack }: { onBack: () => void }) {
+  const isDark = useDarkMode()
+  const T = {
+    bg:         isDark ? "#1a1225"  : "var(--background)",
+    surface:    isDark ? "#221833"  : "var(--surface)",
+    surfaceHov: isDark ? "#2a1e3a" : "var(--surface-hover)",
+    border:     isDark ? "#4a3465" : "var(--border)",
+    borderHov:  isDark ? "#5e4480" : "var(--border-hover)",
+    text:       isDark ? "#f0e8ff" : "var(--foreground)",
+    textSub:    isDark ? "#c4b8d8" : "var(--foreground-light)",
+    textMuted:  isDark ? "#9080a8" : "var(--foreground-muted)",
+    muted:      isDark ? "#2a1e3a" : "var(--muted)",
+    inputBg:    isDark ? "#2e2244" : "var(--muted)",
+  }
   const { setNowPlayingTrack, setMusicIsPlaying } = useAppStore()
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [playlistIdx, setPlaylistIdx] = useState(0)
@@ -473,12 +487,14 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   const coverThumb = track?.url ? getYtThumb(track.url) : null
   const likedCount = tracks.filter(t => likedTracks.has(t.id)).length
 
-  const MUSIC_DARK_BG = "linear-gradient(160deg, #0d0d1a 0%, #1a0d26 55%, #0d0d1a 100%)"
+  const MUSIC_DARK_BG = isDark
+    ? "linear-gradient(160deg, #0d0d1a 0%, #1a0d26 55%, #0d0d1a 100%)"
+    : T.bg
   const MUSIC_HEADER_STYLE: React.CSSProperties = {
     display: "flex", alignItems: "center", gap: "0.5rem",
     padding: "0.75rem 1rem",
-    background: "linear-gradient(135deg, #1a0d26 0%, #0d0d1a 100%)",
-    borderBottom: "1px solid rgba(139,92,246,0.2)",
+    background: isDark ? "linear-gradient(135deg, #1a0d26 0%, #0d0d1a 100%)" : T.surface,
+    borderBottom: `1px solid ${isDark ? "rgba(139,92,246,0.2)" : T.border}`,
     flexShrink: 0,
   }
   const MUSIC_BODY_STYLE: React.CSSProperties = {
@@ -488,13 +504,14 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
   }
   const MUSIC_INPUT: React.CSSProperties = {
     width: "100%", padding: "0.625rem 0.875rem", borderRadius: "12px",
-    border: "1.5px solid rgba(139,92,246,0.25)", background: "rgba(255,255,255,0.06)",
-    color: "white", fontFamily: "inherit", fontSize: "0.875rem",
+    border: `1.5px solid ${isDark ? "rgba(139,92,246,0.25)" : T.border}`,
+    background: T.inputBg,
+    color: T.text, fontFamily: "inherit", fontSize: "0.875rem",
     boxSizing: "border-box", outline: "none",
   }
   const MUSIC_BACK: React.CSSProperties = {
     background: "none", border: "none", cursor: "pointer",
-    fontSize: "1.5rem", color: "rgba(255,255,255,0.8)",
+    fontSize: "1.5rem", color: isDark ? "rgba(255,255,255,0.8)" : T.textSub,
     padding: "0 0.25rem", lineHeight: 1,
   }
 
@@ -503,7 +520,7 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
     <>
       <div style={MUSIC_HEADER_STYLE}>
         <button style={MUSIC_BACK} onClick={() => setView("player")}>‹</button>
-        <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white" }}>🎵 Mis Playlists</span>
+        <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: T.text }}>🎵 Mis Playlists</span>
       </div>
       <div style={MUSIC_BODY_STYLE}>
         <button
@@ -526,21 +543,21 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
               style={{
                 display: "flex", alignItems: "center", gap: "0.5rem", width: "100%",
                 padding: "0.625rem 0.75rem", textAlign: "left",
-                background: i === playlistIdx ? "rgba(139,92,246,0.18)" : "rgba(255,255,255,0.05)",
-                border: `1.5px solid ${i === playlistIdx ? "rgba(139,92,246,0.5)" : "rgba(255,255,255,0.08)"}`,
+                background: i === playlistIdx ? "rgba(139,92,246,0.18)" : (isDark ? "rgba(255,255,255,0.05)" : T.surface),
+                border: `1.5px solid ${i === playlistIdx ? "rgba(139,92,246,0.5)" : T.border}`,
                 borderRadius: "12px", cursor: "pointer", fontFamily: "inherit",
                 transition: "all 0.15s",
               }}
             >
               <span style={{ fontSize: "1.125rem" }}>🎵</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: i === playlistIdx ? "#a78bfa" : "white" }}>{pl.name}</div>
-                <div style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.4)" }}>
+                <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: i === playlistIdx ? "#a78bfa" : T.text }}>{pl.name}</div>
+                <div style={{ fontSize: "0.6875rem", color: T.textMuted }}>
                   {pl.tracks.length} canciones{plLiked > 0 ? ` · ❤️ ${plLiked}` : ""}
                 </div>
               </div>
               {playlists.length > 1 && (
-                <span onClick={(e) => { e.stopPropagation(); deletePlaylist(i) }} style={{ cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: "4px" }}>
+                <span onClick={(e) => { e.stopPropagation(); deletePlaylist(i) }} style={{ cursor: "pointer", color: T.textMuted, padding: "4px" }}>
                   <Trash2 size={13} />
                 </span>
               )}
@@ -551,7 +568,7 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
           <div style={{
             padding: "0.625rem 0.75rem", borderRadius: "12px", marginTop: "0.25rem",
             background: "rgba(236,72,153,0.1)",
-            border: "1.5px solid rgba(236,72,153,0.25)", fontSize: "0.6875rem", color: "rgba(255,255,255,0.6)",
+            border: "1.5px solid rgba(236,72,153,0.25)", fontSize: "0.6875rem", color: T.textSub,
           }}>
             ❤️ Tienes <strong style={{ color: "#f9a8d4" }}>{likedCount}</strong> canciones favoritas
           </div>
@@ -565,7 +582,7 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
     <>
       <div style={MUSIC_HEADER_STYLE}>
         <button style={MUSIC_BACK} onClick={() => setView("playlists")}>‹</button>
-        <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white" }}>Nueva Playlist</span>
+        <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: T.text }}>Nueva Playlist</span>
       </div>
       <div style={{ ...MUSIC_BODY_STYLE, gap: "0.75rem" }}>
         <input style={MUSIC_INPUT} placeholder="Nombre de la playlist" value={newPlaylistName}
@@ -574,8 +591,8 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
           onClick={addPlaylist} disabled={!newPlaylistName.trim()}
           style={{
             padding: "0.75rem", borderRadius: "12px", border: "none",
-            background: newPlaylistName.trim() ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" : "rgba(255,255,255,0.1)",
-            color: "white", fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
+            background: newPlaylistName.trim() ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" : T.muted,
+            color: T.text, fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
             cursor: newPlaylistName.trim() ? "pointer" : "not-allowed", opacity: newPlaylistName.trim() ? 1 : 0.5,
             boxShadow: newPlaylistName.trim() ? "0 4px 16px rgba(139,92,246,0.4)" : "none",
           }}
@@ -591,7 +608,7 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
     <>
       <div style={MUSIC_HEADER_STYLE}>
         <button style={MUSIC_BACK} onClick={editingTrack ? cancelEditTrack : () => setView("player")}>‹</button>
-        <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white" }}>
+        <span style={{ fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: T.text }}>
           {editingTrack ? "✏️ Editar Canción" : "Añadir Canción"}
         </span>
       </div>
@@ -606,24 +623,24 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
           onChange={(e) => setNewDedication(e.target.value)}
           maxLength={120}
         />
-        <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>
+        <p style={{ fontSize: "0.6875rem", color: T.textMuted, margin: 0 }}>
           💡 Pega un enlace de YouTube o una URL directa de MP3. Sin URL la canción es solo visual.
         </p>
         <div>
-          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "rgba(255,255,255,0.55)", marginBottom: "0.375rem" }}>Icono</p>
+          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: T.textSub, marginBottom: "0.375rem" }}>Icono</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
             {EMOJI_OPTIONS.map((e) => (
               <button key={e} onClick={() => setNewEmoji(e)} style={{
                 width: "34px", height: "34px", borderRadius: "8px", fontSize: "1.125rem",
-                border: `2px solid ${newEmoji === e ? "#8b5cf6" : "rgba(255,255,255,0.1)"}`,
-                background: newEmoji === e ? "rgba(139,92,246,0.2)" : "rgba(255,255,255,0.05)",
+                border: `2px solid ${newEmoji === e ? "#8b5cf6" : T.border}`,
+                background: newEmoji === e ? "rgba(139,92,246,0.2)" : T.muted,
                 cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
               }}>{e}</button>
             ))}
           </div>
         </div>
         <div>
-          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "rgba(255,255,255,0.55)", marginBottom: "0.375rem" }}>Color del disco</p>
+          <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: T.textSub, marginBottom: "0.375rem" }}>Color del disco</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
             {COLOR_OPTIONS.map((c) => (
               <button key={c} onClick={() => setNewColor(c)} style={{
@@ -639,8 +656,8 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: "5px",
             padding: "0.75rem", borderRadius: "12px", border: "none",
-            background: newTitle.trim() ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" : "rgba(255,255,255,0.1)",
-            color: "white", fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
+            background: newTitle.trim() ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" : T.muted,
+            color: T.text, fontFamily: "'Fredoka',sans-serif", fontSize: "1rem", fontWeight: 700,
             cursor: newTitle.trim() ? "pointer" : "not-allowed", opacity: newTitle.trim() ? 1 : 0.5,
             boxShadow: newTitle.trim() ? "0 4px 16px rgba(139,92,246,0.4)" : "none",
           }}
@@ -655,8 +672,8 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
             onClick={cancelEditTrack}
             style={{
               padding: "0.75rem", borderRadius: "12px",
-              border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)",
-              color: "rgba(255,255,255,0.7)", fontFamily: "inherit", fontSize: "0.875rem",
+              border: `1.5px solid ${T.border}`, background: T.muted,
+              color: T.textSub, fontFamily: "inherit", fontSize: "0.875rem",
               fontWeight: 600, cursor: "pointer",
             }}
           >
@@ -674,17 +691,21 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
         display: "flex", alignItems: "center", gap: "0.5rem",
         padding: "0.625rem 1rem",
         background: track
-          ? `linear-gradient(135deg, ${track.color}30 0%, #0d0d1a 100%)`
-          : "linear-gradient(135deg, #1a0d26 0%, #0d0d1a 100%)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+          ? isDark
+            ? `linear-gradient(135deg, ${track.color}30 0%, #0d0d1a 100%)`
+            : `linear-gradient(135deg, ${track.color}20 0%, ${T.surface} 100%)`
+          : isDark
+            ? "linear-gradient(135deg, #1a0d26 0%, #0d0d1a 100%)"
+            : T.surface,
+        borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : T.border}`,
         flexShrink: 0, transition: "background 0.5s ease",
       }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: "rgba(255,255,255,0.7)", padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
-        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "white" }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: isDark ? "rgba(255,255,255,0.7)" : T.textSub, padding: "0 0.25rem", lineHeight: 1 }}>‹</button>
+        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "'Fredoka',sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: T.text }}>
           🎧 {playlist.name}
         </span>
         <button onClick={() => setView("playlists")}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", padding: "4px", display: "flex", flexShrink: 0 }}>
+          style={{ background: "none", border: "none", cursor: "pointer", color: T.textMuted, padding: "4px", display: "flex", flexShrink: 0 }}>
           <ListMusic size={18} />
         </button>
       </div>
@@ -693,9 +714,13 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
         {/* Soft gradient background */}
         <div aria-hidden style={{
           position: "absolute", inset: 0, zIndex: 0,
-          background: track
-            ? `linear-gradient(160deg, ${track.color}50 0%, #fdf4ff 50%, #fce7f3 100%)`
-            : "linear-gradient(160deg, #ede9fe 0%, #fdf4ff 60%, #fce7f3 100%)",
+          background: isDark
+            ? (track
+                ? `linear-gradient(160deg, ${track.color}40 0%, #0d0d1a 50%, #1a0d26 100%)`
+                : "linear-gradient(160deg, #1a0d26 0%, #0d0d1a 60%, #1a0d26 100%)")
+            : (track
+                ? `linear-gradient(160deg, ${track.color}50 0%, #fdf4ff 50%, #fce7f3 100%)`
+                : "linear-gradient(160deg, #ede9fe 0%, #fdf4ff 60%, #fce7f3 100%)"),
         }} />
 
         <div style={{
@@ -834,15 +859,15 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
               {showSleepMenu && (
                 <div style={{
                   position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)",
-                  background: "white", borderRadius: "12px", padding: "0.5rem",
+                  background: T.surface, borderRadius: "12px", padding: "0.5rem",
                   boxShadow: "0 8px 32px rgba(0,0,0,0.15)", zIndex: 99,
                   display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: "100px",
-                  border: "1.5px solid var(--border)",
+                  border: `1.5px solid ${T.border}`,
                 }}>
-                  <p style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--foreground-muted)", margin: "0 0 2px", textAlign: "center" }}>Parar en...</p>
+                  <p style={{ fontSize: "0.625rem", fontWeight: 700, color: T.textMuted, margin: "0 0 2px", textAlign: "center" }}>Parar en...</p>
                   {SLEEP_OPTIONS.map(m => (
                     <button key={m} onClick={() => startSleepTimer(m)}
-                      style={{ padding: "0.375rem", borderRadius: "8px", border: "none", background: "var(--muted)", cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground)" }}>
+                      style={{ padding: "0.375rem", borderRadius: "8px", border: "none", background: T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: "0.75rem", fontWeight: 600, color: T.text }}>
                       {m} min
                     </button>
                   ))}
@@ -898,7 +923,7 @@ export function MusicApp({ onBack }: { onBack: () => void }) {
               </button>
             </div>
 
-            <div style={{ flex: 1, overflowY: "auto", minHeight: 0, borderRadius: "var(--radius-md)", background: "rgba(255,255,255,0.55)", backdropFilter: "blur(4px)" }}>
+            <div style={{ flex: 1, overflowY: "auto", minHeight: 0, borderRadius: "var(--radius-md)", background: isDark ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.8)", backdropFilter: "blur(4px)" }}>
               {tracks.length === 0 && (
                 <div style={{ padding: "1.25rem", textAlign: "center" }}>
                   <p style={{ fontSize: "1.25rem", marginBottom: "0.25rem" }}>🎵</p>

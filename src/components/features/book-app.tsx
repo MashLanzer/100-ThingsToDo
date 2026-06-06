@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { ChevronLeft, Trash2 } from "lucide-react"
 import { getFirebaseToken, getFirebaseAuth } from "@/lib/firebase/client"
 import { toast } from "sonner"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 
 interface BookEntry {
   id: string
@@ -70,6 +71,19 @@ export function BookApp({ onBack }: { onBack: () => void }) {
     }
   }, [entries, loading])
 
+  const isDark = useDarkMode()
+  const T = {
+    bg:         isDark ? "#1a1225"  : "var(--background)",
+    surface:    isDark ? "#221833"  : "var(--surface)",
+    surfaceHov: isDark ? "#2a1e3a" : "var(--surface-hover)",
+    border:     isDark ? "#4a3465" : "var(--border)",
+    text:       isDark ? "#f0e8ff" : "var(--foreground)",
+    textSub:    isDark ? "#c4b8d8" : "var(--foreground-light)",
+    textMuted:  isDark ? "#9080a8" : "var(--foreground-muted)",
+    muted:      isDark ? "#2a1e3a" : "var(--muted)",
+    inputBg:    isDark ? "#2e2244" : "var(--muted)",
+  }
+
   const lastEntry = entries[entries.length - 1]
   const isMyTurn = !lastEntry || lastEntry.author_id !== myUid
 
@@ -103,12 +117,27 @@ export function BookApp({ onBack }: { onBack: () => void }) {
   }
 
   function getAuthorColor(authorId: string): { bg: string; border: string; nameColor: string; barColor: string } {
-    if (!entries.length) return { bg: "#fdf2f8", border: "#f9a8d4", nameColor: "#be185d", barColor: "#f9a8d4" }
+    if (!entries.length) return {
+      bg: isDark ? T.surface : "#fdf2f8",
+      border: isDark ? "#7c3aed" : "#f9a8d4",
+      nameColor: isDark ? "#f9a8d4" : "#be185d",
+      barColor: isDark ? "#ec4899" : "#f9a8d4",
+    }
     const firstAuthor = entries[0].author_id
     if (authorId === firstAuthor) {
-      return { bg: "linear-gradient(135deg, #fdf2f8 0%, #fff0f5 100%)", border: "#f9a8d4", nameColor: "#be185d", barColor: "#ec4899" }
+      return {
+        bg: isDark ? "linear-gradient(135deg, #2d1640 0%, #3a1a50 100%)" : "linear-gradient(135deg, #fdf2f8 0%, #fff0f5 100%)",
+        border: isDark ? "#7c3aed" : "#f9a8d4",
+        nameColor: isDark ? "#f9a8d4" : "#be185d",
+        barColor: "#ec4899",
+      }
     }
-    return { bg: "linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%)", border: "#93c5fd", nameColor: "#1d4ed8", barColor: "#3b82f6" }
+    return {
+      bg: isDark ? "linear-gradient(135deg, #1a2640 0%, #1a2e50 100%)" : "linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%)",
+      border: isDark ? "#3b82f6" : "#93c5fd",
+      nameColor: isDark ? "#93c5fd" : "#1d4ed8",
+      barColor: "#3b82f6",
+    }
   }
 
   const charPercent = Math.round((text.length / 300) * 100)
@@ -120,7 +149,7 @@ export function BookApp({ onBack }: { onBack: () => void }) {
       {/* Header */}
       <div style={{
         padding: "1rem 1rem 0.875rem", flexShrink: 0,
-        background: "linear-gradient(135deg, #78350f 0%, #92400e 50%, #b45309 100%)",
+        background: isDark ? "linear-gradient(135deg, #3d1a05 0%, #78350f 50%, #92400e 100%)" : "linear-gradient(135deg, #78350f 0%, #92400e 50%, #b45309 100%)",
         boxShadow: "0 2px 12px rgba(120,53,15,0.3)",
       }}>
         <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: "0.8125rem", padding: 0, fontFamily: "inherit", marginBottom: "0.5rem" }}>
@@ -140,16 +169,16 @@ export function BookApp({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Book content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "1rem", background: "#fffbeb" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "1rem", background: isDark ? T.bg : "#fffbeb" }}>
         {loading ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#b45309", fontSize: "0.875rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: isDark ? T.textSub : "#b45309", fontSize: "0.875rem" }}>
             Cargando el libro...
           </div>
         ) : entries.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "0.75rem", paddingBottom: "2rem", textAlign: "center" }}>
             <span style={{ fontSize: "4rem", lineHeight: 1 }}>📖</span>
-            <p style={{ fontFamily: "Georgia, serif", fontSize: "1rem", fontWeight: 700, color: "#92400e", margin: 0 }}>El libro aún está en blanco</p>
-            <p style={{ fontSize: "0.8125rem", color: "#b45309", margin: 0, maxWidth: "220px", lineHeight: 1.55 }}>
+            <p style={{ fontFamily: "Georgia, serif", fontSize: "1rem", fontWeight: 700, color: isDark ? "#fcd34d" : "#92400e", margin: 0 }}>El libro aún está en blanco</p>
+            <p style={{ fontSize: "0.8125rem", color: isDark ? T.textSub : "#b45309", margin: 0, maxWidth: "220px", lineHeight: 1.55 }}>
               Empieza tú la historia. Tu pareja añadirá el siguiente párrafo.
             </p>
           </div>
@@ -191,7 +220,7 @@ export function BookApp({ onBack }: { onBack: () => void }) {
                       )}
                     </div>
                   </div>
-                  <p style={{ fontFamily: "Georgia, serif", fontSize: "0.9375rem", color: "#1c1917", lineHeight: 1.7, margin: 0 }}>
+                  <p style={{ fontFamily: "Georgia, serif", fontSize: "0.9375rem", color: T.text, lineHeight: 1.7, margin: 0 }}>
                     {e.content}
                   </p>
                   <span style={{ position: "absolute", top: "0.5rem", right: "0.875rem", fontSize: "0.6875rem", color: colors.nameColor, opacity: 0.4, fontFamily: "Georgia, serif" }}>
@@ -206,10 +235,10 @@ export function BookApp({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Write area */}
-      <div style={{ flexShrink: 0, padding: "0.75rem 1rem", borderTop: "2px solid #fde68a", background: "linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)" }}>
+      <div style={{ flexShrink: 0, padding: "0.75rem 1rem", borderTop: `2px solid ${isDark ? T.border : "#fde68a"}`, background: isDark ? T.surface : "linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)" }}>
         {isMyTurn ? (
           <>
-            <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#92400e", margin: "0 0 0.5rem", display: "flex", alignItems: "center", gap: "0.25rem", animation: "turnPulse 2s ease-in-out infinite" }}>
+            <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: isDark ? "#fcd34d" : "#92400e", margin: "0 0 0.5rem", display: "flex", alignItems: "center", gap: "0.25rem", animation: "turnPulse 2s ease-in-out infinite" }}>
               ✍️ {entries.length === 0 ? "Empieza la historia..." : "Tu turno — continúa la historia"}
             </p>
             <textarea
@@ -218,14 +247,14 @@ export function BookApp({ onBack }: { onBack: () => void }) {
               placeholder="Escribe el siguiente párrafo..."
               maxLength={300}
               rows={3}
-              style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "12px", border: "1.5px solid #fde68a", background: "white", color: "#1c1917", fontSize: "0.9375rem", fontFamily: "Georgia, serif", outline: "none", resize: "none", boxSizing: "border-box", lineHeight: 1.65, boxShadow: "inset 0 1px 4px rgba(0,0,0,0.04)" }}
+              style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "12px", border: `1.5px solid ${isDark ? T.border : "#fde68a"}`, background: T.inputBg, color: T.text, fontSize: "0.9375rem", fontFamily: "Georgia, serif", outline: "none", resize: "none", boxSizing: "border-box", lineHeight: 1.65, boxShadow: "inset 0 1px 4px rgba(0,0,0,0.04)" }}
             />
             {/* Progress bar */}
             <div style={{ height: 3, background: "#fef3c7", borderRadius: "999px", margin: "0.375rem 0 0.375rem", overflow: "hidden" }}>
               <div style={{ height: "100%", width: `${charPercent}%`, background: charPercent > 90 ? "#ef4444" : "#92400e", borderRadius: "999px", transition: "width 0.1s ease" }} />
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "0.625rem", color: charPercent > 90 ? "#ef4444" : "#b45309", fontWeight: 600 }}>{text.length}/300</span>
+              <span style={{ fontSize: "0.625rem", color: charPercent > 90 ? "#ef4444" : isDark ? "#fcd34d" : "#b45309", fontWeight: 600 }}>{text.length}/300</span>
               <button
                 onClick={handleSubmit}
                 disabled={submitting || !text.trim()}
@@ -248,8 +277,8 @@ export function BookApp({ onBack }: { onBack: () => void }) {
               ⏳
             </div>
             <div>
-              <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "#92400e", margin: 0 }}>Esperando a tu pareja</p>
-              <p style={{ fontSize: "0.6875rem", color: "#b45309", margin: 0 }}>Es su turno de continuar la historia</p>
+              <p style={{ fontSize: "0.875rem", fontWeight: 700, color: isDark ? "#fcd34d" : "#92400e", margin: 0 }}>Esperando a tu pareja</p>
+              <p style={{ fontSize: "0.6875rem", color: isDark ? T.textSub : "#b45309", margin: 0 }}>Es su turno de continuar la historia</p>
             </div>
           </div>
         )}

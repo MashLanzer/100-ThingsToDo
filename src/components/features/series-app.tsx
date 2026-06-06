@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { getFirebaseToken } from "@/lib/firebase/client"
 import { PhoneLoader } from "@/components/features/phone-loader"
 import { useAuth } from "@/hooks/use-auth"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,14 +36,6 @@ interface TVMazeShow {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const STATUS_META: Record<SeriesStatus, { label: string; emoji: string; color: string; bg: string }> = {
-  wishlist:  { label: "Quiero ver",  emoji: "🔖", color: "#0369a1", bg: "#eff6ff" },
-  watching:  { label: "Viendo",      emoji: "👀", color: "#7c3aed", bg: "#f5f3ff" },
-  completed: { label: "Terminada",   emoji: "✅", color: "#059669", bg: "#ecfdf5" },
-  paused:    { label: "Pausada",     emoji: "⏸",  color: "#b45309", bg: "#fffbeb" },
-  abandoned: { label: "Abandonada",  emoji: "❌", color: "#dc2626", bg: "#fef2f2" },
-}
 
 const STATUS_ORDER: SeriesStatus[] = ["watching", "wishlist", "paused", "completed", "abandoned"]
 
@@ -94,6 +87,26 @@ export function SeriesApp({ onBack }: Props) {
   // Detail / edit
   const [selected, setSelected] = useState<CoupleEntry | null>(null)
   const [saving, setSaving] = useState(false)
+
+  const isDark = useDarkMode()
+  const T = {
+    bg:        isDark ? "#1a1225"  : "var(--background)",
+    surface:   isDark ? "#221833"  : "var(--surface)",
+    border:    isDark ? "#4a3465" : "var(--border)",
+    text:      isDark ? "#f0e8ff" : "var(--foreground)",
+    textSub:   isDark ? "#c4b8d8" : "var(--foreground-light)",
+    textMuted: isDark ? "#9080a8" : "var(--foreground-muted)",
+    muted:     isDark ? "#2a1e3a" : "var(--muted)",
+    inputBg:   isDark ? "#2e2244" : "var(--muted)",
+  }
+
+  const STATUS_META: Record<SeriesStatus, { label: string; emoji: string; color: string; bg: string }> = {
+    wishlist:  { label: "Quiero ver",  emoji: "🔖", color: "#0369a1", bg: isDark ? "rgba(3,105,161,0.2)"   : "#eff6ff" },
+    watching:  { label: "Viendo",      emoji: "👀", color: "#7c3aed", bg: isDark ? "rgba(124,58,237,0.2)"  : "#f5f3ff" },
+    completed: { label: "Terminada",   emoji: "✅", color: "#059669", bg: isDark ? "rgba(5,150,105,0.2)"   : "#ecfdf5" },
+    paused:    { label: "Pausada",     emoji: "⏸",  color: "#b45309", bg: isDark ? "rgba(180,83,9,0.2)"    : "#fffbeb" },
+    abandoned: { label: "Abandonada",  emoji: "❌", color: "#dc2626", bg: isDark ? "rgba(220,38,38,0.2)"   : "#fef2f2" },
+  }
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
@@ -197,25 +210,25 @@ export function SeriesApp({ onBack }: Props) {
         {/* Header */}
         <div style={{
           padding: "0.875rem 1rem 0.625rem",
-          background: "linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%)",
+          background: isDark ? "linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%)" : "linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)",
         }}>
           <button
             onClick={() => { setView("list"); setSearchQ(""); setSearchResults([]) }}
-            style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: "0.8125rem", marginBottom: "0.625rem", fontFamily: "inherit" }}
+            style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: isDark ? "rgba(255,255,255,0.6)" : "var(--foreground-light)", fontWeight: 600, fontSize: "0.8125rem", marginBottom: "0.625rem", fontFamily: "inherit" }}
           >
             <ChevronLeft size={16} /> Mi lista
           </button>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(255,255,255,0.12)", borderRadius: "12px", padding: "0.5rem 0.75rem", border: "1px solid rgba(255,255,255,0.15)" }}>
-            <Search size={15} style={{ color: "rgba(255,255,255,0.5)", flexShrink: 0 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: T.muted, borderRadius: "12px", padding: "0.5rem 0.75rem", border: `1px solid ${T.border}` }}>
+            <Search size={15} style={{ color: T.textMuted, flexShrink: 0 }} />
             <input
               autoFocus
               value={searchQ}
               onChange={e => setSearchQ(e.target.value)}
               placeholder="Buscar serie o película..."
-              style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: "0.875rem", color: "white", fontFamily: "inherit" }}
+              style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: "0.875rem", color: T.text, fontFamily: "inherit" }}
             />
             {searchQ && (
-              <button onClick={() => setSearchQ("")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "rgba(255,255,255,0.5)", display: "flex" }}>
+              <button onClick={() => setSearchQ("")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: T.textMuted, display: "flex" }}>
                 <X size={14} />
               </button>
             )}
@@ -223,17 +236,17 @@ export function SeriesApp({ onBack }: Props) {
         </div>
 
         {/* Results */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "0.25rem 0", background: "#0f0f1a" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "0.25rem 0", background: T.bg }}>
           {searching && (
-            <p style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: "0.8125rem", padding: "1.5rem" }}>Buscando...</p>
+            <p style={{ textAlign: "center", color: T.textMuted, fontSize: "0.8125rem", padding: "1.5rem" }}>Buscando...</p>
           )}
           {!searching && searchQ && searchResults.length === 0 && (
-            <p style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: "0.8125rem", padding: "1.5rem" }}>Sin resultados para &quot;{searchQ}&quot;</p>
+            <p style={{ textAlign: "center", color: T.textMuted, fontSize: "0.8125rem", padding: "1.5rem" }}>Sin resultados para &quot;{searchQ}&quot;</p>
           )}
           {!searching && !searchQ && (
             <div style={{ textAlign: "center", padding: "2rem 1rem" }}>
               <p style={{ fontSize: "2.5rem", margin: "0 0 0.5rem" }}>🎬</p>
-              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8125rem" }}>Escribe para buscar series y películas</p>
+              <p style={{ color: T.textMuted, fontSize: "0.8125rem" }}>Escribe para buscar series y películas</p>
             </div>
           )}
           {searchResults.map((show, i) => {
@@ -244,25 +257,25 @@ export function SeriesApp({ onBack }: Props) {
                 style={{
                   display: "flex", alignItems: "center", gap: "0.75rem",
                   padding: "0.75rem 1rem",
-                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                  borderBottom: `1px solid ${T.border}`,
                   animation: `searchResultIn 0.25s ease both`,
                   animationDelay: `${i * 0.04}s`,
                 }}
               >
                 {show.image?.medium ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={show.image.medium} alt={show.name} style={{ width: 44, height: 62, objectFit: "cover", borderRadius: "8px", flexShrink: 0, border: "1px solid rgba(255,255,255,0.1)" }} />
+                  <img src={show.image.medium} alt={show.name} style={{ width: 44, height: 62, objectFit: "cover", borderRadius: "8px", flexShrink: 0, border: `1px solid ${T.border}` }} />
                 ) : (
-                  <div style={{ width: 44, height: 62, borderRadius: "8px", background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.375rem" }}>📺</div>
+                  <div style={{ width: 44, height: 62, borderRadius: "8px", background: T.muted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.375rem" }}>📺</div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "white", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{show.name}</p>
-                  <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.4)", margin: "0.125rem 0 0" }}>
+                  <p style={{ fontWeight: 700, fontSize: "0.875rem", color: T.text, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{show.name}</p>
+                  <p style={{ fontSize: "0.6875rem", color: T.textMuted, margin: "0.125rem 0 0" }}>
                     {show.network?.name ?? show.webChannel?.name ?? ""}
                     {show.genres?.length ? ` · ${show.genres.slice(0, 2).join(", ")}` : ""}
                   </p>
                   {show.summary && (
-                    <p style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.3)", margin: "0.25rem 0 0", lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
+                    <p style={{ fontSize: "0.625rem", color: T.textMuted, margin: "0.25rem 0 0", lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
                       {stripHtml(show.summary)}
                     </p>
                   )}
@@ -273,8 +286,8 @@ export function SeriesApp({ onBack }: Props) {
                   style={{
                     flexShrink: 0, width: 34, height: 34, borderRadius: "50%", border: "none",
                     cursor: alreadyMine ? "default" : "pointer",
-                    background: alreadyMine ? "rgba(255,255,255,0.1)" : "#7c3aed",
-                    color: "white", display: "flex", alignItems: "center", justifyContent: "center",
+                    background: alreadyMine ? T.muted : "#7c3aed",
+                    color: alreadyMine ? T.textMuted : "white", display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: alreadyMine ? "0.875rem" : "1rem",
                     boxShadow: alreadyMine ? "none" : "0 2px 8px rgba(124,58,237,0.4)",
                   }}
@@ -320,11 +333,11 @@ export function SeriesApp({ onBack }: Props) {
           </p>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "0.875rem 1rem", background: "#0f0f1a" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "0.875rem 1rem", background: T.bg }}>
           {/* Status chips */}
           {isOwn && (
             <>
-              <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Estado</p>
+              <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: T.textMuted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Estado</p>
               <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: "1rem" }}>
                 {(Object.entries(STATUS_META) as [SeriesStatus, typeof STATUS_META[SeriesStatus]][]).map(([s, m]) => (
                   <button
@@ -333,9 +346,9 @@ export function SeriesApp({ onBack }: Props) {
                     onClick={() => handlePatch(selected.id, { status: s })}
                     style={{
                       padding: "0.3rem 0.75rem", borderRadius: "999px",
-                      border: `1.5px solid ${selected.status === s ? m.color : "rgba(255,255,255,0.1)"}`,
+                      border: `1.5px solid ${selected.status === s ? m.color : T.border}`,
                       background: selected.status === s ? `${m.color}25` : "transparent",
-                      color: selected.status === s ? m.color : "rgba(255,255,255,0.4)",
+                      color: selected.status === s ? m.color : T.textMuted,
                       fontWeight: 600, fontSize: "0.6875rem", cursor: "pointer", fontFamily: "inherit",
                       transition: "all 0.15s",
                     }}
@@ -348,27 +361,27 @@ export function SeriesApp({ onBack }: Props) {
               {/* Progress */}
               {(selected.status === "watching" || selected.status === "paused") && (
                 <>
-                  <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Progreso</p>
+                  <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: T.textMuted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Progreso</p>
                   <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
                     {(["current_season", "current_episode"] as const).map(field => {
                       const label = field === "current_season" ? "Temporada" : "Episodio"
                       const val = selected[field]
                       return (
                         <div key={field} style={{ flex: 1 }}>
-                          <p style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.4)", fontWeight: 600, margin: "0 0 0.25rem" }}>{label}</p>
+                          <p style={{ fontSize: "0.625rem", color: T.textMuted, fontWeight: 600, margin: "0 0 0.25rem" }}>{label}</p>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
                             <button
                               disabled={saving || val <= (field === "current_season" ? 1 : 0)}
                               onClick={() => handlePatch(selected.id, { [field]: val - 1 })}
-                              style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "8px", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.6)" }}
+                              style={{ background: T.muted, border: "none", borderRadius: "8px", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.textSub }}
                             >
                               <ChevronDown size={14} />
                             </button>
-                            <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "white", minWidth: 28, textAlign: "center" }}>{val}</span>
+                            <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: T.text, minWidth: 28, textAlign: "center" }}>{val}</span>
                             <button
                               disabled={saving}
                               onClick={() => handlePatch(selected.id, { [field]: val + 1 })}
-                              style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "8px", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.6)" }}
+                              style={{ background: T.muted, border: "none", borderRadius: "8px", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.textSub }}
                             >
                               <ChevronUp size={14} />
                             </button>
@@ -391,7 +404,7 @@ export function SeriesApp({ onBack }: Props) {
           )}
 
           {!isOwn && (
-            <p style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.5)" }}>
+            <p style={{ fontSize: "0.8125rem", color: T.textSub }}>
               Esta serie está en la lista de tu pareja — {STATUS_META[selected.status].emoji} {STATUS_META[selected.status].label}
             </p>
           )}
@@ -417,21 +430,21 @@ export function SeriesApp({ onBack }: Props) {
       {/* Header */}
       <div style={{
         padding: "0.875rem 1rem 0",
-        background: "linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%)",
+        background: isDark ? "linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%)" : "linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)",
         flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.625rem" }}>
           <div>
-            <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", fontWeight: 600, fontSize: "0.8125rem", marginBottom: "0.125rem", fontFamily: "inherit", padding: 0 }}>
+            <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: isDark ? "rgba(255,255,255,0.5)" : "var(--foreground-light)", fontWeight: 600, fontSize: "0.8125rem", marginBottom: "0.125rem", fontFamily: "inherit", padding: 0 }}>
               <ChevronLeft size={16} /> Inicio
             </button>
-            <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", fontWeight: 700, color: "white", margin: 0 }}>
+            <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.25rem", fontWeight: 700, color: isDark ? "white" : "var(--foreground)", margin: 0 }}>
               🎬 Peliculero
             </h2>
           </div>
           <button
             onClick={() => setView("search")}
-            style={{ background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.2)", borderRadius: "12px", padding: "0.5rem 0.875rem", color: "white", fontWeight: 700, fontSize: "0.8125rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.375rem", fontFamily: "inherit", backdropFilter: "blur(4px)" }}
+            style={{ background: isDark ? "rgba(255,255,255,0.15)" : "rgba(124,58,237,0.12)", border: isDark ? "1.5px solid rgba(255,255,255,0.2)" : "1.5px solid rgba(124,58,237,0.3)", borderRadius: "12px", padding: "0.5rem 0.875rem", color: isDark ? "white" : "#7c3aed", fontWeight: 700, fontSize: "0.8125rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.375rem", fontFamily: "inherit", backdropFilter: "blur(4px)" }}
           >
             <Plus size={14} /> Añadir
           </button>
@@ -448,9 +461,9 @@ export function SeriesApp({ onBack }: Props) {
                 onClick={() => setActiveFilter(tab.key)}
                 style={{
                   flexShrink: 0, padding: "0.3rem 0.75rem", borderRadius: "999px",
-                  border: `1.5px solid ${active ? (meta?.color ?? "rgba(255,255,255,0.5)") : "rgba(255,255,255,0.15)"}`,
-                  background: active ? (meta ? `${meta.color}30` : "rgba(255,255,255,0.15)") : "transparent",
-                  color: active ? (meta?.color ?? "white") : "rgba(255,255,255,0.5)",
+                  border: `1.5px solid ${active ? (meta?.color ?? (isDark ? "rgba(255,255,255,0.5)" : "var(--foreground-light)")) : T.border}`,
+                  background: active ? (meta ? `${meta.color}30` : (isDark ? "rgba(255,255,255,0.15)" : "var(--muted)")) : "transparent",
+                  color: active ? (meta?.color ?? (isDark ? "white" : "var(--foreground)")) : T.textMuted,
                   fontWeight: 600, fontSize: "0.6875rem", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
                   transition: "all 0.15s",
                 }}
@@ -463,14 +476,14 @@ export function SeriesApp({ onBack }: Props) {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: "auto", background: "#0f0f1a" }}>
+      <div style={{ flex: 1, overflowY: "auto", background: T.bg }}>
         {filtered.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "0.5rem", padding: "1.5rem" }}>
             <span style={{ fontSize: "2.5rem" }}>{activeFilter === "juntos" ? "💕" : "🎬"}</span>
-            <p style={{ fontWeight: 700, color: "white", fontSize: "0.9375rem", margin: 0, textAlign: "center" }}>
+            <p style={{ fontWeight: 700, color: T.text, fontSize: "0.9375rem", margin: 0, textAlign: "center" }}>
               {activeFilter === "juntos" ? "Nada en común aún" : "Tu lista está vacía"}
             </p>
-            <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", margin: 0, textAlign: "center" }}>
+            <p style={{ fontSize: "0.75rem", color: T.textMuted, margin: 0, textAlign: "center" }}>
               {activeFilter === "juntos"
                 ? "Cuando los dos añadáis la misma serie, aparecerá aquí"
                 : "Pulsa \"Añadir\" para buscar series y películas"}
@@ -485,7 +498,7 @@ export function SeriesApp({ onBack }: Props) {
                 <div style={{ padding: "0.75rem 1rem 0.25rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <span style={{ fontSize: "0.75rem" }}>{meta.emoji}</span>
                   <span style={{ fontSize: "0.625rem", fontWeight: 700, color: meta.color, textTransform: "uppercase", letterSpacing: "0.06em" }}>{meta.label}</span>
-                  <span style={{ fontSize: "0.5625rem", color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.06)", borderRadius: "999px", padding: "0 5px" }}>({items.length})</span>
+                  <span style={{ fontSize: "0.5625rem", color: T.textMuted, background: T.muted, borderRadius: "999px", padding: "0 5px" }}>({items.length})</span>
                 </div>
                 {items.map((entry, i) => {
                   const isJuntos = juntosIds.has(entry.tvmaze_id)
@@ -498,7 +511,7 @@ export function SeriesApp({ onBack }: Props) {
                         padding: "0.625rem 1rem", border: "none",
                         background: "transparent",
                         cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                        borderBottom: "1px solid rgba(255,255,255,0.05)",
+                        borderBottom: `1px solid ${T.border}`,
                         borderLeft: `3px solid ${meta.color}`,
                         animation: `seriesCardIn 0.25s ease both`,
                         animationDelay: `${i * 0.04}s`,
@@ -507,12 +520,12 @@ export function SeriesApp({ onBack }: Props) {
                     >
                       {entry.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={entry.image_url} alt={entry.title} style={{ width: 40, height: 56, objectFit: "cover", borderRadius: "8px", flexShrink: 0, border: "1px solid rgba(255,255,255,0.1)" }} />
+                        <img src={entry.image_url} alt={entry.title} style={{ width: 40, height: 56, objectFit: "cover", borderRadius: "8px", flexShrink: 0, border: `1px solid ${T.border}` }} />
                       ) : (
-                        <div style={{ width: 40, height: 56, borderRadius: "8px", background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1rem" }}>📺</div>
+                        <div style={{ width: 40, height: 56, borderRadius: "8px", background: T.muted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1rem" }}>📺</div>
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "white", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <p style={{ fontWeight: 700, fontSize: "0.875rem", color: T.text, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {entry.title}
                           {isJuntos && <span style={{ marginLeft: "0.375rem", fontSize: "0.6875rem" }}>💕</span>}
                         </p>
@@ -522,7 +535,7 @@ export function SeriesApp({ onBack }: Props) {
                           </p>
                         )}
                       </div>
-                      <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.25)", flexShrink: 0 }}>›</span>
+                      <span style={{ fontSize: "0.75rem", color: T.textMuted, flexShrink: 0 }}>›</span>
                     </button>
                   )
                 })}
@@ -533,28 +546,18 @@ export function SeriesApp({ onBack }: Props) {
 
         {/* Partner list preview */}
         {entries.some(e => e.added_by !== myUid) && activeFilter === "all" && (
-          <div style={{ padding: "1rem", borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: "0.5rem" }}>
-            <p style={{ fontSize: "0.625rem", fontWeight: 700, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>
+          <div style={{ padding: "1rem", borderTop: `1px solid ${T.border}`, marginTop: "0.5rem" }}>
+            <p style={{ fontSize: "0.625rem", fontWeight: 700, color: T.textMuted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>
               Lista de tu pareja
             </p>
             {entries.filter(e => e.added_by !== myUid).slice(0, 4).map(e => (
               <div key={e.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.375rem" }}>
-                {e.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={e.image_url}
-                    alt=""
-                    style={{ width: 40, height: 56, objectFit: "cover", borderRadius: 6, flexShrink: 0 }}
-                    onError={ev => { (ev.target as HTMLImageElement).style.display = "none" }}
-                  />
-                ) : (
-                  <span style={{ fontSize: "0.75rem" }}>{STATUS_META[e.status].emoji}</span>
-                )}
-                <span style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.5)", fontWeight: 500, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</span>
+                <span style={{ fontSize: "0.75rem" }}>{STATUS_META[e.status].emoji}</span>
+                <span style={{ fontSize: "0.8125rem", color: T.textSub, fontWeight: 500, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</span>
               </div>
             ))}
             {entries.filter(e => e.added_by !== myUid).length > 4 && (
-              <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.25)", margin: "0.25rem 0 0" }}>
+              <p style={{ fontSize: "0.6875rem", color: T.textMuted, margin: "0.25rem 0 0" }}>
                 +{entries.filter(e => e.added_by !== myUid).length - 4} más
               </p>
             )}

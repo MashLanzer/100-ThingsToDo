@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { ChevronLeft } from "lucide-react"
+import { useDarkMode } from "@/hooks/use-dark-mode"
 
 // ── Static game data (fallback local — full pool served by /api/games/question) ──
 
@@ -513,11 +514,6 @@ const MODES = [
   { id: "36-preguntas" as View, emoji: "💬", name: "36 Preguntas",    desc: "El estudio que une corazones",         color: "#b45309", count: "36 preguntas" },
 ]
 
-const DARK_BG: React.CSSProperties = {
-  background: "linear-gradient(160deg, #0d0d1a 0%, #1a0f2e 55%, #0f1a2e 100%)",
-  minHeight: "100%",
-}
-
 export function CoupleGamesApp({ onBack }: Props) {
   const [view, setView] = useState<View>("home")
 
@@ -590,6 +586,19 @@ export function CoupleGamesApp({ onBack }: Props) {
   // cleanup burst timer on unmount
   useEffect(() => () => { if (burstTimer.current) clearTimeout(burstTimer.current) }, [])
 
+  const isDark = useDarkMode()
+  const T = {
+    bg:        isDark ? "#1a1225"  : "var(--background)",
+    surface:   isDark ? "#221833"  : "var(--surface)",
+    surfaceHov:isDark ? "#2a1e3a" : "var(--surface-hover)",
+    border:    isDark ? "#4a3465" : "var(--border)",
+    text:      isDark ? "#f0e8ff" : "var(--foreground)",
+    textSub:   isDark ? "#c4b8d8" : "var(--foreground-light)",
+    textMuted: isDark ? "#9080a8" : "var(--foreground-muted)",
+    muted:     isDark ? "#2a1e3a" : "var(--muted)",
+    inputBg:   isDark ? "#2e2244" : "var(--muted)",
+  }
+
   // — Derived —
   const currentVerdad = verdades[vIdx % Math.max(verdades.length, 1)]
   const currentReto   = retos[rIdx % Math.max(retos.length, 1)]
@@ -621,14 +630,30 @@ export function CoupleGamesApp({ onBack }: Props) {
   // ── Views ─────────────────────────────────────────────────────────────────
 
   if (view === "home") {
+    const homeBg = isDark
+      ? "linear-gradient(160deg, #0d0d1a 0%, #1a0f2e 55%, #0f1a2e 100%)"
+      : "linear-gradient(160deg, #f5f3ff 0%, #ede9fe 50%, #f5f3ff 100%)"
+
+    const cardGradients: Record<string, string> = {
+      "verdad-reto": isDark
+        ? "linear-gradient(135deg, #7c3aed25, #ea580c10)"
+        : "linear-gradient(135deg, #ede9fe, #fef3c7)",
+      "prefieres": isDark
+        ? `linear-gradient(135deg, #0369a128 0%, #0369a110 100%)`
+        : "linear-gradient(135deg, #dbeafe, #ede9fe)",
+      "36-preguntas": isDark
+        ? `linear-gradient(135deg, #b4530928 0%, #b4530910 100%)`
+        : "linear-gradient(135deg, #fce7f3, #ede9fe)",
+    }
+
     return (
-      <div style={{ ...DARK_BG, padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
+      <div style={{ background: homeBg, minHeight: "100%", padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
         <style>{GAME_KEYFRAMES}</style>
 
         {/* Back button */}
         <button
           onClick={onBack}
-          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.45)", fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "1.25rem" }}
+          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: isDark ? "rgba(255,255,255,0.45)" : T.text, fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "1.25rem" }}
         >
           <ChevronLeft size={16} /> Inicio
         </button>
@@ -638,10 +663,10 @@ export function CoupleGamesApp({ onBack }: Props) {
           <div style={{ fontSize: "3rem", lineHeight: 1, marginBottom: "0.625rem", animation: "glowPulse 2.8s ease-in-out infinite" }}>
             🎮
           </div>
-          <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.625rem", fontWeight: 700, color: "white", margin: 0, marginBottom: "0.375rem" }}>
+          <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.625rem", fontWeight: 700, color: isDark ? "white" : T.text, margin: 0, marginBottom: "0.375rem" }}>
             Juegos de Pareja
           </h2>
-          <p style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.45)", margin: 0 }}>
+          <p style={{ fontSize: "0.8125rem", color: isDark ? "rgba(255,255,255,0.45)" : T.textMuted, margin: 0 }}>
             Para conectar, reír y conocerse más
           </p>
         </div>
@@ -655,10 +680,10 @@ export function CoupleGamesApp({ onBack }: Props) {
               style={{
                 display: "flex", alignItems: "center", gap: "1rem",
                 padding: "1.125rem 1.25rem", borderRadius: "20px",
-                background: `linear-gradient(135deg, ${m.color}28 0%, ${m.color}10 100%)`,
-                border: `1.5px solid ${m.color}45`,
+                background: cardGradients[m.id] ?? `linear-gradient(135deg, ${m.color}28 0%, ${m.color}10 100%)`,
+                border: isDark ? `1.5px solid ${m.color}45` : "1.5px solid var(--border)",
                 cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                boxShadow: `0 4px 24px ${m.color}18, inset 0 1px 0 rgba(255,255,255,0.06)`,
+                boxShadow: isDark ? `0 4px 24px ${m.color}18, inset 0 1px 0 rgba(255,255,255,0.06)` : "var(--shadow-sm)",
                 animation: `gameCardIn 0.4s ease both`,
                 animationDelay: `${idx * 0.09}s`,
                 position: "relative", overflow: "hidden",
@@ -670,8 +695,8 @@ export function CoupleGamesApp({ onBack }: Props) {
                 {m.emoji}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontWeight: 700, fontSize: "1rem", color: "white", margin: 0 }}>{m.name}</p>
-                <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", margin: 0, marginTop: "0.125rem" }}>{m.desc}</p>
+                <p style={{ fontWeight: 700, fontSize: "1rem", color: isDark ? "white" : T.text, margin: 0 }}>{m.name}</p>
+                <p style={{ fontSize: "0.75rem", color: isDark ? "rgba(255,255,255,0.5)" : T.textMuted, margin: 0, marginTop: "0.125rem" }}>{m.desc}</p>
               </div>
               <span style={{ fontSize: "0.625rem", fontWeight: 700, color: m.color, background: `${m.color}22`, border: `1px solid ${m.color}40`, borderRadius: "999px", padding: "3px 8px", flexShrink: 0, letterSpacing: "0.02em" }}>
                 {m.count}
@@ -695,21 +720,25 @@ export function CoupleGamesApp({ onBack }: Props) {
     const cardIdx = isVerdad ? vIdx + 1 : rIdx + 1
     const cardTotal = isVerdad ? verdades.length : retos.length
 
+    const vorBg = isDark
+      ? "linear-gradient(160deg, #0d0d1a 0%, #1a0f2e 55%, #0f1a2e 100%)"
+      : T.bg
+
     return (
-      <div style={{ ...DARK_BG, padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      <div style={{ background: vorBg, minHeight: "100%", padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
         <style>{GAME_KEYFRAMES}</style>
 
         {/* Back */}
         <button
           onClick={() => setView("home")}
-          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.45)", fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "0.75rem" }}
+          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: isDark ? "rgba(255,255,255,0.45)" : T.text, fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "0.75rem" }}
         >
           <ChevronLeft size={16} /> Juegos
         </button>
 
         {/* Header row */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
-          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "white", margin: 0 }}>
+          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: isDark ? "white" : T.text, margin: 0 }}>
             🎴 Verdad o Reto
           </h3>
           {!vorLoading && cardTotal > 0 && (
@@ -721,7 +750,7 @@ export function CoupleGamesApp({ onBack }: Props) {
 
         {/* Category toggle */}
         <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.625rem" }}>
-          <div style={{ display: "inline-flex", background: "rgba(255,255,255,0.07)", borderRadius: "999px", padding: "3px", gap: "2px" }}>
+          <div style={{ display: "inline-flex", background: isDark ? "rgba(255,255,255,0.07)" : T.muted, borderRadius: "999px", padding: "3px", gap: "2px" }}>
             {(["parejas", "neutral"] as const).map((cat) => {
               const active = vorCategory === cat
               const catColor = cat === "parejas" ? "#7c3aed" : "#0369a1"
@@ -737,8 +766,8 @@ export function CoupleGamesApp({ onBack }: Props) {
                   }}
                   style={{
                     width: "6.25rem", padding: "0.3rem 0", borderRadius: "999px", border: "none",
-                    background: active ? catColor : "transparent",
-                    color: active ? "white" : "rgba(255,255,255,0.45)",
+                    background: active ? catColor : isDark ? "transparent" : T.muted,
+                    color: active ? "white" : isDark ? "rgba(255,255,255,0.45)" : T.textMuted,
                     fontWeight: 700, fontSize: "0.75rem", cursor: vorLoading ? "default" : "pointer", fontFamily: "inherit",
                     transition: "all 0.18s ease",
                   }}
@@ -763,9 +792,9 @@ export function CoupleGamesApp({ onBack }: Props) {
                 onClick={() => { setVorMode(mode); setVorFlipped(false) }}
                 style={{
                   padding: "0.4rem 1rem", borderRadius: "999px",
-                  border: `2px solid ${active ? color : "rgba(255,255,255,0.15)"}`,
+                  border: `2px solid ${active ? color : isDark ? "rgba(255,255,255,0.15)" : T.border}`,
                   background: active ? color : "transparent",
-                  color: active ? "white" : "rgba(255,255,255,0.45)",
+                  color: active ? "white" : isDark ? "rgba(255,255,255,0.45)" : T.textMuted,
                   fontWeight: 700, fontSize: "0.8125rem", cursor: "pointer", fontFamily: "inherit",
                   transition: "all 0.15s ease",
                 }}
@@ -840,29 +869,29 @@ export function CoupleGamesApp({ onBack }: Props) {
     const optColors: Record<"a" | "b", string> = { a: "#0369a1", b: "#7c3aed" }
 
     return (
-      <div style={{ ...DARK_BG, padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      <div style={{ background: isDark ? "linear-gradient(160deg, #0d0d1a 0%, #1a0f2e 55%, #0f1a2e 100%)" : T.bg, minHeight: "100%", padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
         <style>{GAME_KEYFRAMES}</style>
 
         {/* Back */}
         <button
           onClick={() => setView("home")}
-          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.45)", fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "0.75rem" }}
+          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: isDark ? "rgba(255,255,255,0.45)" : T.text, fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "0.75rem" }}
         >
           <ChevronLeft size={16} /> Juegos
         </button>
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "white", margin: 0 }}>
+          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: isDark ? "white" : T.text, margin: 0 }}>
             ⚖️ ¿Qué prefieres?
           </h3>
-          <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>
+          <span style={{ fontSize: "0.75rem", color: isDark ? "rgba(255,255,255,0.4)" : T.textMuted, fontWeight: 600 }}>
             {dIdx + 1} / {dilemmas.length}
           </span>
         </div>
 
         {/* Progress bar */}
-        <div style={{ height: 5, borderRadius: "999px", background: "rgba(255,255,255,0.08)", overflow: "hidden", marginBottom: "0.75rem" }}>
+        <div style={{ height: 5, borderRadius: "999px", background: isDark ? "rgba(255,255,255,0.08)" : T.border, overflow: "hidden", marginBottom: "0.75rem" }}>
           <div style={{
             height: "100%",
             width: `${((dIdx + 1) / Math.max(dilemmas.length, 1)) * 100}%`,
@@ -872,7 +901,7 @@ export function CoupleGamesApp({ onBack }: Props) {
           }} />
         </div>
 
-        <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", marginBottom: "0.875rem" }}>
+        <p style={{ fontSize: "0.75rem", color: isDark ? "rgba(255,255,255,0.4)" : T.textMuted, marginBottom: "0.875rem" }}>
           Cada uno elige en voz alta. ¡Sin pensar mucho!
         </p>
 
@@ -891,8 +920,8 @@ export function CoupleGamesApp({ onBack }: Props) {
                   onClick={() => pickChoice(opt)}
                   style={{
                     width: "100%", height: "100%", padding: "1rem 1rem", borderRadius: "18px",
-                    border: `2px solid ${selected ? color : "rgba(255,255,255,0.1)"}`,
-                    background: selected ? `${color}20` : "rgba(255,255,255,0.04)",
+                    border: `2px solid ${selected ? color : T.border}`,
+                    background: selected ? `${color}20` : isDark ? "rgba(255,255,255,0.05)" : T.surface,
                     cursor: "pointer", fontFamily: "inherit", textAlign: "left",
                     display: "flex", alignItems: "center", gap: "0.875rem",
                     transition: "border-color 0.15s ease, background 0.15s ease",
@@ -902,8 +931,8 @@ export function CoupleGamesApp({ onBack }: Props) {
                 >
                   <span style={{
                     width: 34, height: 34, borderRadius: "50%",
-                    background: selected ? color : "rgba(255,255,255,0.1)",
-                    color: selected ? "white" : "rgba(255,255,255,0.5)",
+                    background: selected ? color : isDark ? "rgba(255,255,255,0.1)" : T.muted,
+                    color: selected ? "white" : isDark ? "rgba(255,255,255,0.5)" : T.textMuted,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontWeight: 800, fontSize: "0.875rem", flexShrink: 0,
                     transition: "all 0.15s ease",
@@ -911,7 +940,7 @@ export function CoupleGamesApp({ onBack }: Props) {
                   }}>
                     {label}
                   </span>
-                  <span style={{ fontWeight: 600, fontSize: "0.9rem", color: "rgba(255,255,255,0.9)", lineHeight: 1.4 }}>
+                  <span style={{ fontWeight: 600, fontSize: "0.9rem", color: isDark ? "white" : T.text, lineHeight: 1.4 }}>
                     {text}
                   </span>
                 </button>
@@ -967,24 +996,24 @@ export function CoupleGamesApp({ onBack }: Props) {
     const setColorL = setColorLight[q36Set] ?? "#fbbf24"
 
     return (
-      <div style={{ ...DARK_BG, padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      <div style={{ background: isDark ? "linear-gradient(160deg, #0d0d1a 0%, #1a0f2e 55%, #0f1a2e 100%)" : T.bg, minHeight: "100%", padding: "1rem", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
         <style>{GAME_KEYFRAMES}</style>
 
         {/* Back */}
         <button
           onClick={() => setView("home")}
-          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.45)", fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "0.75rem" }}
+          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", cursor: "pointer", color: isDark ? "rgba(255,255,255,0.45)" : T.text, fontWeight: 600, fontSize: "0.8125rem", padding: "0.25rem 0", fontFamily: "inherit", marginBottom: "0.75rem" }}
         >
           <ChevronLeft size={16} /> Juegos
         </button>
 
         {/* Header row */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "white", margin: 0 }}>
+          <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: isDark ? "white" : T.text, margin: 0 }}>
             💬 36 Preguntas
           </h3>
           {!finished && (
-            <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.75rem", color: isDark ? "rgba(255,255,255,0.4)" : T.textMuted, fontWeight: 600 }}>
               {q36Progress} / 36
             </span>
           )}
@@ -1002,18 +1031,18 @@ export function CoupleGamesApp({ onBack }: Props) {
                 <div key={s} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
                   <div style={{
                     width: 28, height: 28, borderRadius: "50%",
-                    background: done ? dotColor : active ? `linear-gradient(135deg, ${dotColor}, ${dotLight})` : "rgba(255,255,255,0.08)",
-                    border: `2px solid ${(done || active) ? dotColor : "rgba(255,255,255,0.15)"}`,
+                    background: done ? dotColor : active ? `linear-gradient(135deg, ${dotColor}, ${dotLight})` : isDark ? "rgba(255,255,255,0.08)" : T.muted,
+                    border: `2px solid ${(done || active) ? dotColor : isDark ? "rgba(255,255,255,0.15)" : T.border}`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: "0.6875rem", fontWeight: 800,
-                    color: (done || active) ? "white" : "rgba(255,255,255,0.25)",
+                    color: (done || active) ? "white" : isDark ? "rgba(255,255,255,0.25)" : T.textMuted,
                     boxShadow: active ? `0 0 10px ${dotColor}60` : "none",
                     transition: "all 0.3s ease",
                   }}>
                     {done ? "✓" : s}
                   </div>
                   {s < 3 && (
-                    <div style={{ flex: 1, height: 2, width: 24, background: s < q36Set ? dotColor : "rgba(255,255,255,0.1)", borderRadius: "1px", transition: "background 0.3s ease" }} />
+                    <div style={{ flex: 1, height: 2, width: 24, background: s < q36Set ? dotColor : isDark ? "rgba(255,255,255,0.1)" : T.border, borderRadius: "1px", transition: "background 0.3s ease" }} />
                   )}
                 </div>
               )
@@ -1025,7 +1054,7 @@ export function CoupleGamesApp({ onBack }: Props) {
         )}
 
         {/* Progress bar */}
-        <div style={{ height: 7, borderRadius: "999px", background: "rgba(255,255,255,0.08)", overflow: "hidden", marginBottom: "1rem" }}>
+        <div style={{ height: 7, borderRadius: "999px", background: isDark ? "rgba(255,255,255,0.08)" : T.border, overflow: "hidden", marginBottom: "1rem" }}>
           <div style={{
             height: "100%",
             width: `${(q36Progress / 36) * 100}%`,
@@ -1039,10 +1068,10 @@ export function CoupleGamesApp({ onBack }: Props) {
         {finished ? (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", textAlign: "center" }}>
             <span style={{ fontSize: "5rem", lineHeight: 1, animation: "celebratePop 0.7s ease both" }}>🎉</span>
-            <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: "white", margin: 0 }}>
+            <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: "1.375rem", fontWeight: 700, color: isDark ? "white" : T.text, margin: 0 }}>
               ¡Lo lograron!
             </h3>
-            <p style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.55)", margin: 0, lineHeight: 1.55, maxWidth: "85%" }}>
+            <p style={{ fontSize: "0.875rem", color: isDark ? "rgba(255,255,255,0.55)" : T.textMuted, margin: 0, lineHeight: 1.55, maxWidth: "85%" }}>
               Según el estudio de Arthur Aron, responder estas 36 preguntas juntos crea un vínculo profundo y duradero. ¡Enhorabuena a los dos! ❤️
             </p>
             <button
@@ -1062,17 +1091,17 @@ export function CoupleGamesApp({ onBack }: Props) {
             {/* Question card */}
             <div style={{
               flex: 1, borderRadius: "20px", padding: "1.375rem",
-              background: "rgba(255,255,255,0.04)",
-              border: `1px solid rgba(255,255,255,0.08)`,
+              background: isDark ? "rgba(255,255,255,0.04)" : T.surface,
+              border: `1px solid ${T.border}`,
               borderLeft: `4px solid ${setColor}`,
               display: "flex", flexDirection: "column", justifyContent: "space-between",
               marginBottom: "1rem",
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
+              boxShadow: isDark ? `inset 0 1px 0 rgba(255,255,255,0.05)` : "none",
             }}>
-              <p style={{ fontSize: "1.0625rem", fontWeight: 600, color: "white", lineHeight: 1.55, margin: 0 }}>
+              <p style={{ fontSize: "1.0625rem", fontWeight: 600, color: isDark ? "white" : T.text, lineHeight: 1.55, margin: 0 }}>
                 {currentQ36.text}
               </p>
-              <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.3)", margin: 0, marginTop: "1rem" }}>
+              <p style={{ fontSize: "0.6875rem", color: isDark ? "rgba(255,255,255,0.3)" : T.textMuted, margin: 0, marginTop: "1rem" }}>
                 Turnarse para responder. Tomad vuestro tiempo.
               </p>
             </div>
@@ -1084,9 +1113,9 @@ export function CoupleGamesApp({ onBack }: Props) {
                   onClick={() => setQ36Idx(i => i - 1)}
                   style={{
                     padding: "0.8125rem 1rem", borderRadius: "14px",
-                    border: "1.5px solid rgba(255,255,255,0.12)",
-                    cursor: "pointer", background: "rgba(255,255,255,0.06)",
-                    color: "rgba(255,255,255,0.7)", fontWeight: 700, fontSize: "0.9375rem",
+                    border: `1.5px solid ${T.border}`,
+                    cursor: "pointer", background: isDark ? "rgba(255,255,255,0.06)" : T.surface,
+                    color: isDark ? "rgba(255,255,255,0.7)" : T.text, fontWeight: 700, fontSize: "0.9375rem",
                     fontFamily: "inherit", flexShrink: 0,
                   }}
                 >
