@@ -864,18 +864,10 @@ export function SettingsModal() {
   return (
     <div className="modal-overlay-bg" onClick={closeSettingsModal}>
       <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{
-        background: T.surface,
+        background: isDark ? "#221833" : "#ffffff",
         color: T.text,
-        "--modal-surface": T.surface,
+        "--modal-surface": isDark ? "#221833" : "#ffffff",
         "--modal-border": T.border,
-        "--background": T.bg,
-        "--surface": T.surface,
-        "--surface-hover": T.surfaceHov,
-        "--border": T.border,
-        "--foreground": T.text,
-        "--foreground-light": T.textSub,
-        "--foreground-muted": T.textMuted,
-        "--muted": T.muted,
       } as React.CSSProperties}>
         <div className="modal-header">
           <h2 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}><Settings2 size={18} /> Configuración</h2>

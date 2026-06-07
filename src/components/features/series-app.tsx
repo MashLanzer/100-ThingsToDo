@@ -551,8 +551,13 @@ export function SeriesApp({ onBack }: Props) {
               Lista de tu pareja
             </p>
             {entries.filter(e => e.added_by !== myUid).slice(0, 4).map(e => (
-              <div key={e.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.375rem" }}>
-                <span style={{ fontSize: "0.75rem" }}>{STATUS_META[e.status].emoji}</span>
+              <div key={e.id} style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.5rem" }}>
+                {e.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={e.image_url} alt="" style={{ width: 32, height: 46, objectFit: "cover", borderRadius: "6px", flexShrink: 0, border: `1px solid ${T.border}` }} onError={ev => { (ev.target as HTMLImageElement).style.display = "none" }} />
+                ) : (
+                  <span style={{ fontSize: "0.75rem", flexShrink: 0 }}>{STATUS_META[e.status].emoji}</span>
+                )}
                 <span style={{ fontSize: "0.8125rem", color: T.textSub, fontWeight: 500, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</span>
               </div>
             ))}
